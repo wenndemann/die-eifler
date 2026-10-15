@@ -9,10 +9,11 @@
   --ink-dim: #c9bda6;
   --shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
   font-family: 'Alegreya Sans', 'Segoe UI', sans-serif;
+  color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: #1a1c1e; color: var(--ink); }
-#app canvas { display: block; }
+#app > canvas { display: block; position: fixed; inset: 0; }
 #loading {
   position: fixed; inset: 0; display: grid; place-items: center;
   font: 700 28px 'Alegreya SC', serif; color: var(--gold); background: #1a1c1e; letter-spacing: 0.04em;
@@ -70,3 +71,32 @@ kbd {
 
 .perf { left: 14px; top: 14px; padding: 8px 12px; white-space: pre; font: 12px ui-monospace, monospace; color: #cfe8c8; }
 .credits { position: fixed; left: 50%; bottom: 4px; transform: translateX(-50%); font-size: 11px; color: rgba(255,255,255,0.55); text-shadow: 0 1px 2px #000; }
+
+.settings h3 { cursor: pointer; user-select: none; }
+.settings h3::after { content: '▾'; float: right; color: var(--gold-dim); }
+.settings.collapsed { width: auto; }
+.settings.collapsed h3 { margin: 0; }
+.settings.collapsed h3::after { content: '▸'; margin-left: 10px; }
+.settings.collapsed > :not(h3) { display: none; }
+.settings select {
+  width: 100%; margin-top: 2px; padding: 3px 6px; border-radius: 6px; font: inherit; color: var(--ink);
+  background: rgba(0,0,0,0.3); border: 1px solid rgba(231,194,122,0.35);
+}
+
+/* Handy: kleinere Kopfleiste, Minimap und Schrift */
+@media (max-width: 700px) {
+  .topbar { top: calc(8px + env(safe-area-inset-top, 0px)); left: calc(10px + env(safe-area-inset-left, 0px)); transform: none; padding: 5px 14px 5px 6px; gap: 8px; }
+  .crest { width: 28px; height: 28px; font-size: 16px; }
+  .title b { font-size: 16px; }
+  .title span { font-size: 11px; }
+  .settings { top: calc(8px + env(safe-area-inset-top, 0px)); right: calc(8px + env(safe-area-inset-right, 0px)); max-width: calc(100vw - 16px); }
+  .minimap { right: calc(8px + env(safe-area-inset-right, 0px)); bottom: calc(8px + env(safe-area-inset-bottom, 0px)); padding: 4px; }
+  .minimap canvas { width: 130px; height: auto; }
+  .info { left: calc(8px + env(safe-area-inset-left, 0px)); bottom: calc(8px + env(safe-area-inset-bottom, 0px)); min-width: 0; padding: 6px 10px; font-size: 12px; }
+  .info b { font-size: 14px; }
+  .label { font-size: 12px; }
+  .label.stadt { font-size: 16px; }
+  .label.weiler { font-size: 11px; }
+  .label.gewaesser { font-size: 13px; }
+  .credits { font-size: 8px; left: 8px; right: 150px; transform: none; bottom: 2px; }
+}

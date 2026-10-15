@@ -2,7 +2,7 @@
 """Holt OpenStreetMap-Daten für die Karten-Bbox per Overpass und cacht sie in raw/osm_<id>.json.
 
 Kartendaten © OpenStreetMap-Mitwirkende, ODbL.
-Aufruf: python3 tools/map/fetch_osm.py [--endpoint URL]
+Aufruf: python3 tools/map/fetch_osm.py [--map ID] [--endpoint URL]
 """
 import argparse
 import json
@@ -14,7 +14,7 @@ import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from build_map import MAP  # noqa: E402
+from build_map import map_config  # noqa: E402
 
 ENDPOINTS = [
     "https://overpass-api.de/api/interpreter",
@@ -46,10 +46,12 @@ out geom;"""
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--map", default="monschau-rursee")
     ap.add_argument("--endpoint", action="append")
     args = ap.parse_args()
-    data = urllib.parse.urlencode({"data": query(MAP["bbox"])}).encode()
-    out = os.path.join(HERE, "raw", f"osm_{MAP['id']}.json")
+    meta = map_config(args.map)
+    data = urllib.parse.urlencode({"data": query(meta["bbox"])}).encode()
+    out = os.path.join(HERE, "raw", f"osm_{meta['id']}.json")
     for attempt in range(6):
         for ep in args.endpoint or ENDPOINTS:
             try:

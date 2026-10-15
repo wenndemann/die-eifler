@@ -1,0 +1,745 @@
+{
+ "id": "rureifel",
+ "name": "Rureifel & Dürener Land",
+ "bbox": [
+  6.35,
+  50.62,
+  6.62,
+  50.83
+ ],
+ "cell": 30.0,
+ "width": 634,
+ "height": 774,
+ "heightMin": 94.86887513276781,
+ "heightMax": 520.0810437931932,
+ "exaggeration": 2.5,
+ "start": "Düren",
+ "cover": [
+  "wasser",
+  "wiese",
+  "acker",
+  "wald",
+  "heide",
+  "moor",
+  "fels",
+  "siedlung"
+ ],
+ "hex": {
+  "size": 90.0,
+  "cols": 121,
+  "rows": 171,
+  "layout": "pointy-odd-r",
+  "terrain": [
+   "wasser",
+   "wiese",
+   "wald",
+   "heide",
+   "moor",
+   "stein",
+   "siedlung"
+  ]
+ },
+ "places": [
+  {
+   "name": "Düren",
+   "kind": "stadt",
+   "x": 9307.8,
+   "z": 2966.9
+  },
+  {
+   "name": "Kreuzau",
+   "kind": "stadt",
+   "x": 9818.6,
+   "z": 9193.6
+  },
+  {
+   "name": "Abenden",
+   "kind": "dorf",
+   "x": 8969.4,
+   "z": 17583.6
+  },
+  {
+   "name": "Berg",
+   "kind": "dorf",
+   "x": 17007.9,
+   "z": 21677.5
+  },
+  {
+   "name": "Berg",
+   "kind": "dorf",
+   "x": 12031.2,
+   "z": 16458.7
+  },
+  {
+   "name": "Bergheim",
+   "kind": "dorf",
+   "x": 8016.6,
+   "z": 9970.0
+  },
+  {
+   "name": "Bergstein",
+   "kind": "dorf",
+   "x": 5600.5,
+   "z": 14964.6
+  },
+  {
+   "name": "Berzbuir",
+   "kind": "dorf",
+   "x": 7795.1,
+   "z": 7563.2
+  },
+  {
+   "name": "Bilstein",
+   "kind": "dorf",
+   "x": 7654.0,
+   "z": 10713.3
+  },
+  {
+   "name": "Binsfeld",
+   "kind": "dorf",
+   "x": 13355.6,
+   "z": 3857.7
+  },
+  {
+   "name": "Birgel",
+   "kind": "dorf",
+   "x": 6630.9,
+   "z": 6127.6
+  },
+  {
+   "name": "Birkesdorf",
+   "kind": "dorf",
+   "x": 8040.6,
+   "z": 523.9
+  },
+  {
+   "name": "Blens",
+   "kind": "dorf",
+   "x": 9194.0,
+   "z": 18913.8
+  },
+  {
+   "name": "Bogheim",
+   "kind": "dorf",
+   "x": 6084.7,
+   "z": 11079.4
+  },
+  {
+   "name": "Boich",
+   "kind": "dorf",
+   "x": 10374.0,
+   "z": 12832.9
+  },
+  {
+   "name": "Boisdorfer Siedlung",
+   "kind": "dorf",
+   "x": 8419.2,
+   "z": 5744.2
+  },
+  {
+   "name": "Brandenberg",
+   "kind": "dorf",
+   "x": 4304.9,
+   "z": 14269.7
+  },
+  {
+   "name": "Bürvenich",
+   "kind": "dorf",
+   "x": 17284.3,
+   "z": 19383.3
+  },
+  {
+   "name": "D'horn",
+   "kind": "dorf",
+   "x": 3465.8,
+   "z": 2518.5
+  },
+  {
+   "name": "Derichsweiler",
+   "kind": "dorf",
+   "x": 5697.7,
+   "z": 3493.3
+  },
+  {
+   "name": "Drove",
+   "kind": "dorf",
+   "x": 11518.2,
+   "z": 10821.9
+  },
+  {
+   "name": "Echtz",
+   "kind": "dorf",
+   "x": 4886.9,
+   "z": 549.8
+  },
+  {
+   "name": "Eicks",
+   "kind": "dorf",
+   "x": 18917.7,
+   "z": 22737.2
+  },
+  {
+   "name": "Embken",
+   "kind": "dorf",
+   "x": 15835.1,
+   "z": 16095.4
+  },
+  {
+   "name": "Eschweiler über Feld",
+   "kind": "dorf",
+   "x": 16600.3,
+   "z": 2015.1
+  },
+  {
+   "name": "Floisdorf",
+   "kind": "dorf",
+   "x": 18474.1,
+   "z": 21428.0
+  },
+  {
+   "name": "Frangenheim",
+   "kind": "dorf",
+   "x": 15054.2,
+   "z": 11531.7
+  },
+  {
+   "name": "Frauwüllesheim",
+   "kind": "dorf",
+   "x": 15641.6,
+   "z": 4061.7
+  },
+  {
+   "name": "Froitzheim",
+   "kind": "dorf",
+   "x": 15528.3,
+   "z": 12932.5
+  },
+  {
+   "name": "Füssenich",
+   "kind": "dorf",
+   "x": 18924.0,
+   "z": 14171.0
+  },
+  {
+   "name": "Geich",
+   "kind": "dorf",
+   "x": 3506.8,
+   "z": 1340.0
+  },
+  {
+   "name": "Gey",
+   "kind": "dorf",
+   "x": 4952.3,
+   "z": 8954.6
+  },
+  {
+   "name": "Ginnick",
+   "kind": "dorf",
+   "x": 15380.3,
+   "z": 14241.2
+  },
+  {
+   "name": "Girbelsrath",
+   "kind": "dorf",
+   "x": 14257.0,
+   "z": 1979.6
+  },
+  {
+   "name": "Großhau",
+   "kind": "dorf",
+   "x": 2752.2,
+   "z": 10520.7
+  },
+  {
+   "name": "Gürzenich",
+   "kind": "dorf",
+   "x": 6895.4,
+   "z": 4062.9
+  },
+  {
+   "name": "Harscheidt",
+   "kind": "dorf",
+   "x": 5186.6,
+   "z": 17561.0
+  },
+  {
+   "name": "Hasenfeld",
+   "kind": "dorf",
+   "x": 7666.4,
+   "z": 21153.5
+  },
+  {
+   "name": "Hausen",
+   "kind": "dorf",
+   "x": 9910.5,
+   "z": 19783.7
+  },
+  {
+   "name": "Heimbach",
+   "kind": "dorf",
+   "x": 8919.8,
+   "z": 21625.8
+  },
+  {
+   "name": "Hergarten",
+   "kind": "dorf",
+   "x": 13647.5,
+   "z": 23207.3
+  },
+  {
+   "name": "Horm",
+   "kind": "dorf",
+   "x": 6202.8,
+   "z": 9184.2
+  },
+  {
+   "name": "Hoven",
+   "kind": "dorf",
+   "x": 6372.1,
+   "z": 58.0
+  },
+  {
+   "name": "Hürtgen",
+   "kind": "dorf",
+   "x": 2189.6,
+   "z": 12950.3
+  },
+  {
+   "name": "Jakobwüllesheim",
+   "kind": "dorf",
+   "x": 14757.2,
+   "z": 7387.2
+  },
+  {
+   "name": "Juntersdorf",
+   "kind": "dorf",
+   "x": 18052.8,
+   "z": 15559.7
+  },
+  {
+   "name": "Jüngersdorf",
+   "kind": "dorf",
+   "x": 1654.4,
+   "z": 2126.5
+  },
+  {
+   "name": "Kelz",
+   "kind": "dorf",
+   "x": 17321.6,
+   "z": 6838.8
+  },
+  {
+   "name": "Kleinhau",
+   "kind": "dorf",
+   "x": 3074.7,
+   "z": 11747.7
+  },
+  {
+   "name": "Kommerscheidt",
+   "kind": "dorf",
+   "x": 3417.0,
+   "z": 18010.4
+  },
+  {
+   "name": "Konzendorf",
+   "kind": "dorf",
+   "x": 4851.4,
+   "z": 2234.1
+  },
+  {
+   "name": "Kufferath",
+   "kind": "dorf",
+   "x": 8153.7,
+   "z": 8686.1
+  },
+  {
+   "name": "Langenbroich",
+   "kind": "dorf",
+   "x": 7435.3,
+   "z": 9860.4
+  },
+  {
+   "name": "Langendorf",
+   "kind": "dorf",
+   "x": 18723.2,
+   "z": 17114.1
+  },
+  {
+   "name": "Langerwehe",
+   "kind": "dorf",
+   "x": 568.8,
+   "z": 1366.9
+  },
+  {
+   "name": "Lendersdorf",
+   "kind": "dorf",
+   "x": 8921.5,
+   "z": 7233.1
+  },
+  {
+   "name": "Leversbach",
+   "kind": "dorf",
+   "x": 8402.1,
+   "z": 12417.3
+  },
+  {
+   "name": "Mariaweiler",
+   "kind": "dorf",
+   "x": 6557.4,
+   "z": 1537.6
+  },
+  {
+   "name": "Merode",
+   "kind": "dorf",
+   "x": 2925.9,
+   "z": 3395.0
+  },
+  {
+   "name": "Merzenich",
+   "kind": "dorf",
+   "x": 12297.6,
+   "z": 207.0
+  },
+  {
+   "name": "Muldenau",
+   "kind": "dorf",
+   "x": 14667.7,
+   "z": 15704.0
+  },
+  {
+   "name": "Nideggen",
+   "kind": "dorf",
+   "x": 9345.4,
+   "z": 15330.4
+  },
+  {
+   "name": "Niederau",
+   "kind": "dorf",
+   "x": 10120.5,
+   "z": 7288.8
+  },
+  {
+   "name": "Obergeich",
+   "kind": "dorf",
+   "x": 2904.0,
+   "z": 1627.5
+  },
+  {
+   "name": "Obermaubach",
+   "kind": "dorf",
+   "x": 6399.3,
+   "z": 12437.3
+  },
+  {
+   "name": "Pier",
+   "kind": "dorf",
+   "x": 2034.3,
+   "z": 2423.4
+  },
+  {
+   "name": "Rath",
+   "kind": "dorf",
+   "x": 8383.2,
+   "z": 13891.6
+  },
+  {
+   "name": "Rommelsheim",
+   "kind": "dorf",
+   "x": 14183.7,
+   "z": 5190.0
+  },
+  {
+   "name": "Schafberg",
+   "kind": "dorf",
+   "x": 5317.5,
+   "z": 10357.8
+  },
+  {
+   "name": "Schlagstein",
+   "kind": "dorf",
+   "x": 7531.0,
+   "z": 11980.8
+  },
+  {
+   "name": "Schlich",
+   "kind": "dorf",
+   "x": 3634.4,
+   "z": 3443.5
+  },
+  {
+   "name": "Schmidt",
+   "kind": "dorf",
+   "x": 4082.7,
+   "z": 18618.0
+  },
+  {
+   "name": "Soller",
+   "kind": "dorf",
+   "x": 14558.9,
+   "z": 10716.9
+  },
+  {
+   "name": "Steckenborn",
+   "kind": "dorf",
+   "x": 66.9,
+   "z": 22377.7
+  },
+  {
+   "name": "Stockheim",
+   "kind": "dorf",
+   "x": 12305.1,
+   "z": 8152.6
+  },
+  {
+   "name": "Straß",
+   "kind": "dorf",
+   "x": 5697.6,
+   "z": 9806.0
+  },
+  {
+   "name": "Thum",
+   "kind": "dorf",
+   "x": 12073.1,
+   "z": 13754.3
+  },
+  {
+   "name": "Untermaubach",
+   "kind": "dorf",
+   "x": 7395.8,
+   "z": 11239.0
+  },
+  {
+   "name": "Vettweiß",
+   "kind": "dorf",
+   "x": 17443.3,
+   "z": 10056.6
+  },
+  {
+   "name": "Vlatten",
+   "kind": "dorf",
+   "x": 13983.8,
+   "z": 19795.6
+  },
+  {
+   "name": "Vossenack",
+   "kind": "dorf",
+   "x": 1689.3,
+   "z": 15964.3
+  },
+  {
+   "name": "Woffelsbach",
+   "kind": "dorf",
+   "x": 2651.2,
+   "z": 22505.4
+  },
+  {
+   "name": "Wollersheim",
+   "kind": "dorf",
+   "x": 15090.4,
+   "z": 17558.5
+  },
+  {
+   "name": "Üdingen",
+   "kind": "dorf",
+   "x": 9314.7,
+   "z": 11319.7
+  },
+  {
+   "name": "Brück",
+   "kind": "weiler",
+   "x": 8464.9,
+   "z": 15676.2
+  },
+  {
+   "name": "Bubenheim",
+   "kind": "weiler",
+   "x": 14175.2,
+   "z": 6464.0
+  },
+  {
+   "name": "Distelrath",
+   "kind": "weiler",
+   "x": 11750.2,
+   "z": 1874.8
+  },
+  {
+   "name": "Eppenich",
+   "kind": "weiler",
+   "x": 16787.7,
+   "z": 18480.4
+  },
+  {
+   "name": "Froitscheidt",
+   "kind": "weiler",
+   "x": 4170.5,
+   "z": 17569.3
+  },
+  {
+   "name": "Geisief",
+   "kind": "weiler",
+   "x": 4338.9,
+   "z": 17959.1
+  },
+  {
+   "name": "Grüngürtel",
+   "kind": "weiler",
+   "x": 10322.5,
+   "z": 2076.6
+  },
+  {
+   "name": "Gut Hommelsheim",
+   "kind": "weiler",
+   "x": 16905.1,
+   "z": 3264.1
+  },
+  {
+   "name": "Hechelscheid",
+   "kind": "weiler",
+   "x": 1213.1,
+   "z": 21678.1
+  },
+  {
+   "name": "Isweiler",
+   "kind": "weiler",
+   "x": 16682.0,
+   "z": 4899.9
+  },
+  {
+   "name": "Kettenheim",
+   "kind": "weiler",
+   "x": 17327.5,
+   "z": 9252.8
+  },
+  {
+   "name": "Lüppenau",
+   "kind": "weiler",
+   "x": 8631.1,
+   "z": 18481.3
+  },
+  {
+   "name": "Mariawald",
+   "kind": "weiler",
+   "x": 9177.5,
+   "z": 23205.2
+  },
+  {
+   "name": "Mausbach",
+   "kind": "weiler",
+   "x": 4121.0,
+   "z": 17053.6
+  },
+  {
+   "name": "Ollesheim",
+   "kind": "weiler",
+   "x": 18391.4,
+   "z": 1959.3
+  },
+  {
+   "name": "Scheidbaum",
+   "kind": "weiler",
+   "x": 5803.1,
+   "z": 19234.3
+  },
+  {
+   "name": "Siedlung Hürtgen",
+   "kind": "weiler",
+   "x": 1082.1,
+   "z": 14282.1
+  },
+  {
+   "name": "Siedlung Kleinhau",
+   "kind": "weiler",
+   "x": 1461.8,
+   "z": 11460.1
+  },
+  {
+   "name": "Siedlung Lindenkreuz",
+   "kind": "weiler",
+   "x": 18046.7,
+   "z": 1177.5
+  },
+  {
+   "name": "Stütgerloch",
+   "kind": "weiler",
+   "x": 1374.7,
+   "z": 1432.3
+  },
+  {
+   "name": "Thuir",
+   "kind": "weiler",
+   "x": 12774.8,
+   "z": 15223.1
+  },
+  {
+   "name": "Walbig",
+   "kind": "weiler",
+   "x": 11999.2,
+   "z": 21963.3
+  },
+  {
+   "name": "Wörthsiedlung",
+   "kind": "weiler",
+   "x": 10856.4,
+   "z": 3868.6
+  },
+  {
+   "name": "Zerkall",
+   "kind": "weiler",
+   "x": 7037.6,
+   "z": 15158.4
+  },
+  {
+   "name": "Naturschutzsee Füssenich",
+   "kind": "gewaesser",
+   "x": 19005.0,
+   "z": 14685.0
+  },
+  {
+   "name": "Stausee Obermaubach",
+   "kind": "gewaesser",
+   "x": 6345.0,
+   "z": 13125.0
+  },
+  {
+   "name": "Staubecken Heimbach",
+   "kind": "gewaesser",
+   "x": 7755.0,
+   "z": 22125.0
+  },
+  {
+   "name": "Dürener Badesee",
+   "kind": "gewaesser",
+   "x": 6435.0,
+   "z": 2895.0
+  },
+  {
+   "name": "Badesee Düren-Echtz",
+   "kind": "gewaesser",
+   "x": 5175.0,
+   "z": 1275.0
+  },
+  {
+   "name": "Wehebachtalsperre",
+   "kind": "gewaesser",
+   "x": 15.0,
+   "z": 8985.0
+  },
+  {
+   "name": "Rursee",
+   "kind": "gewaesser",
+   "x": 6075.0,
+   "z": 20805.0
+  },
+  {
+   "name": "Rur",
+   "kind": "gewaesser",
+   "x": 8368.2,
+   "z": 18562.8
+  }
+ ],
+ "credits": [
+  "Höhendaten: Copernicus GLO-30 DEM © DLR e.V. 2010–2014 und © Airbus Defence and Space GmbH 2014–2018, bereitgestellt unter COPERNICUS durch die Europäische Union und ESA",
+  "Landbedeckung: ESA WorldCover 2021 (v200), © ESA, CC BY 4.0",
+  "Kartendaten © OpenStreetMap-Mitwirkende (ODbL)"
+ ]
+}

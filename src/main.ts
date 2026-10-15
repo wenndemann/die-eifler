@@ -18,12 +18,19 @@ const TERRAIN_NAMES: Record<string, string> = {
 async function main() {
   const app = document.getElementById('app')!;
   const loading = document.getElementById('loading')!;
-  const map = await MapData.load(`${import.meta.env.BASE_URL}maps/monschau-rursee`);
+  const mapsBase = `${import.meta.env.BASE_URL}maps`;
+  const maps = (await (await fetch(`${mapsBase}/index.json`)).json()) as { id: string; name: string }[];
+  // Karte: #id (auch in veröffentlichten Seiten), ?map=id, zuletzt gewählte, sonst die erste
+  let remembered: string | null = null;
+  try { remembered = localStorage.getItem('eifeler.map'); } catch { /* egal */ }
+  const wanted = location.hash.slice(1) || new URLSearchParams(location.search).get('map') || remembered;
+  const mapId = maps.find((m) => m.id === wanted)?.id ?? maps[0]?.id ?? 'monschau-rursee';
+  const map = await MapData.load(`${mapsBase}/${mapId}`);
   const grid = new HexGrid(map.info.hex.size, map.info.hex.cols, map.info.hex.rows);
   const base = map.info.heightMin - 5;
 
   const stage = new Stage(app);
-  const hud = new Hud(app, map);
+  const hud = new Hud(app, map, maps);
   let ex = hud.settings.exaggeration;
 
   const terrain = new Terrain(map, base, new THREE.Vector2(grid.ox, grid.oz));
@@ -36,7 +43,7 @@ async function main() {
 
   const yAt = (x: number, z: number) => (map.surfaceAt(x, z) - base) * ex;
   const cam = new RtsCamera(stage.renderer.domElement, { groundY: yAt, bounds: { x: map.sizeX, z: map.sizeZ } });
-  const start = map.info.places.find((p) => p.name === 'Rurberg') ?? { x: map.sizeX / 2, z: map.sizeZ / 2 };
+  const start = map.info.places.find((p) => p.name === map.info.start) ?? { x: map.sizeX / 2, z: map.sizeZ / 2 };
   cam.lookAt(start.x, start.z + 600, true);
   cam.setDistance(3800);
 

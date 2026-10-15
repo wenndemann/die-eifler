@@ -28,6 +28,7 @@ Zahlen-Wahrheit sind `data/*.json`; bei Abweichung gewinnt die JSON, diese Datei
 | Region | Ausschnitt | Charakter |
 |---|---|---|
 | **Monschauer Land & Rursee** (erste Karte) | Monschau – Simmerath – Heimbach | Hohes Venn (Moor), Heckenland, Rursee/Obersee/Urftsee, tiefe Rurschleifen |
+| **Rureifel & Dürener Land** (zweite Karte) | Heimbach – Nideggen – Kreuzau – Düren | Rurtal mit Buntsandstein-Felsen, Stausee Obermaubach, Drover Heide; im Norden die flache Börde mit **Düren** als großem Flachländer-Nachbarn |
 | Vulkaneifel | Daun – Gerolstein – Manderscheid | Maare, Basalt, Sprudelquellen |
 | Ahrtal | Altenahr – Bad Neuenahr | Steile Weinhänge, enges Tal |
 | Laacher See & Mayener Land | Maria Laach – Mayen – Mendig | Vulkansee, Basalt-Mühlsteine, Schiefer, Kloster |
@@ -42,6 +43,7 @@ Jede Region bringt eine **Bevölkerungs-Eigenart** mit: einen Bonus, eine Spezia
 |---|---|---|---|
 | **Monschauer & Venner** | Hecken wachsen 25 % schneller (Heckenland gegen den Venn-Wind) | Tuch: Schafwolle → Spinnerei → Tuchmacherei (Rotes Haus), Monschauer Senf | Bauen nur ungern im Moor („Do bliev ich stäche!“) |
 | **Rursee-Leute** | Fischerei an Talsperren | Fisch → Räucherei | Bei Regen arbeitet der Bootsverleih nicht |
+| **Rureifeler** | Steinbrüche im Buntsandstein ergiebiger (Nideggener Felsen) | Rotsandstein → Steinmetz; Papier aus Rurwasser (Papiermühlen an der Rur) | Schielen ständig nach Düren („Do jitt et alles, ävver nix Jescheits“) |
 | **Vulkaneifeler** | Basalt- und Steinbrüche ergiebiger | Sprudel aus Quellen, Lavastein | Maare sind heilig, dort wird nicht gebaut |
 | **Ahrtaler** | Wein auf Steilhängen (Hänge sind sonst schlecht) | Trauben → Kelter → Rotwein | Feste dauern länger (Arbeitspause nach der Kirmes) |
 | **Laacher & Mayener** | Mühlsteine als wertvolle Handelsware | Basalt → Steinmetz → Mühlstein; Schiefer → Dächer | Mönche verlangen Ruhe: kein Lärmgebäude nahe der Abtei |
@@ -281,6 +283,7 @@ Jedes Dorf wächst über **Kirmes-Stufen**. Man baut einen Kirmesplatz und liefe
 ### 10.2 Finderei und Nachbarn
 
 - **Flachländer-Dörfer** (KI-Nachbarn) liegen am Kartenrand, sie sind echte größere Orte. Jedes hat ein Lager und eine Wachsamkeit.
+  Beispiel Rureifel: **Düren** am Nordrand ist eine große Flachländer-Stadt mit vollem Lager, aber hoher Wachsamkeit. Kreuzau und Nideggen sind kleinere Nachbarn.
 - **Finderhütte** schickt Finder über das Wegenetz in Nachbardörfer. Sie bringen Funde mit oder werden erwischt und müssen dann in die **Ausredenstube**.
 - **Fundbüro** wertet Funde auf, die **Schatzhöhle** sichert große Funde.
 - **Spielziel einer Region:** „Der Große Fund“. Teile eines seltenen Objekts aus mehreren Nachbardörfern finden, im Fundbüro zusammenführen und in der Schatzhöhle sichern.

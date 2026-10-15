@@ -7,7 +7,7 @@
 | Datei | Quelle |
 |---|---|
 | `cop_N50_E006.tif` | Copernicus GLO-30 DEM, Kachel N50 E006: `https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_N50_00_E006_00_DEM/Copernicus_DSM_COG_10_N50_00_E006_00_DEM.tif` |
-| `worldcover_monschau.tif` | Ausschnitt aus ESA WorldCover 2021 v200, Kachel N48E006 (per HTTP-Range mit rasterio gelesen, Bbox 6.15–6.55 °O, 50.50–50.69 °N) |
+| `worldcover_<id>.tif` | Ausschnitt aus ESA WorldCover 2021 v200, Kachel N48E006 (per HTTP-Range mit rasterio gelesen, Bbox 6.15–6.55 °O, 50.50–50.69 °N) |
 | `osm_monschau-rursee.json` | OpenStreetMap per Overpass (`python3 tools/map/fetch_osm.py`), © OpenStreetMap-Mitwirkende, ODbL |
 
 WorldCover im Agent-Container: per rasterio `/vsicurl/` mit `CURL_CA_BUNDLE=/root/.ccr/ca-bundle.crt`
@@ -20,10 +20,23 @@ Steinbrüche und benannte Orte (city/town/village/hamlet).
 
 Abhängigkeiten: `pip install numpy scipy rasterio pillow shapely`
 
+## Karten
+
+Karten stehen in `MAPS` in `build_map.py` (Name, Bbox, Startort). Vorhanden: `monschau-rursee`, `rureifel`.
+Rohdaten heißen je Karte `worldcover_<id>.tif` und `osm_<id>.json`; die DEM-Kachel teilen sich alle.
+
 ## Aufruf
 
-    python3 tools/map/fetch_osm.py                      # einmalig bzw. zum Aktualisieren
-    python3 tools/map/build_map.py --preview vorschau.png
+    python3 tools/map/fetch_worldcover.py --map rureifel   # einmalig je Karte
+    python3 tools/map/fetch_osm.py --map rureifel          # einmalig bzw. zum Aktualisieren
+    python3 tools/map/build_map.py --map rureifel --preview vorschau.png
+
+`build_map.py` schreibt außerdem `public/maps/index.json` (Kartenwahl im Viewer, `#<id>` in der URL).
+
+## Teilen-Version
+
+`npm run build:share` baut nach `dist-share/` eine eigenständige Fassung mit relativen Pfaden.
+Die Raster liegen dort als Base64-Text (`.bin.txt`), weil manche Hoster (z. B. Artifact-Seiten) keine Binärdateien ausliefern.
 
 ## Was aus OSM kommt
 

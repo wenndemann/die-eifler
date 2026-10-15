@@ -11,7 +11,8 @@ export class Stage {
 
   constructor(container: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    const touch = matchMedia('(pointer: coarse)').matches;
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, touch ? 1.5 : 2));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
     this.renderer.shadowMap.enabled = true;
@@ -26,7 +27,7 @@ export class Stage {
     this.sunDir.set(Math.cos(elev) * Math.sin(azim), Math.sin(elev), -Math.cos(elev) * Math.cos(azim)).normalize();
     this.sun = new THREE.DirectionalLight('#ffeccc', 3.2);
     this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(4096, 4096);
+    this.sun.shadow.mapSize.set(touch ? 2048 : 4096, touch ? 2048 : 4096);
     this.sun.shadow.bias = -0.0004;
     this.sun.shadow.normalBias = 1.5;
     this.scene.add(this.sun, this.sun.target);

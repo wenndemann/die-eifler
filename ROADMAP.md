@@ -38,9 +38,12 @@ Offen:
 
 **Ziel:** die ganze Eifel (Aachen – Trier – Maria Laach) als Weltkarte, von der aus man eine Region startet.
 
-- [ ] Pipeline verallgemeinern: Region als Konfiguration (Bbox, Raster, Hex-Größe, Völkchen), mehrere DEM-Kacheln (N49/N50 × E006/E007)
+- [x] Karten als Konfiguration im Konverter (`MAPS` in `build_map.py`, `--map <id>`), Kartenwahl im Viewer (`#id`)
+- [x] Zweite Karte: **Rureifel & Dürener Land** (Heimbach – Nideggen – Kreuzau – Düren)
+- [x] Teilen-Version für Handy/Tablet (`npm run build:share`), Touch-Steuerung
+- [ ] Pipeline verallgemeinern: Hex-Größe und Völkchen je Region, mehrere DEM-Kacheln (N49/N50 × E006/E007)
 - [ ] Übersichtskarte mit ~100 m Raster, Regionen als markierte Flächen, Ortsnamen, Fortschritt der Kampagne
-- [ ] Mindestens 2 Regionen als Spielkarten: Monschauer Land & Rursee, Vulkaneifel
+- [ ] Weitere Regionen als Spielkarten, zuerst die Vulkaneifel
 - [ ] `data/regions.json`: Völkchen, Boni, Startwaren, Sprüche (DESIGN §2.2)
 - [ ] Übergang Übersicht → Region (Kamerafahrt)
 

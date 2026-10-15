@@ -1,6 +1,7 @@
 // Strategie-Kamera: Zielpunkt auf dem Gelände, Abstand, Drehung. Nah = flacher Blick, fern = steiler.
 // Steuerung: WASD/Pfeile oder rechte Maustaste ziehen = verschieben, Mausrad = Zoom,
 // Q/E oder mittlere Maustaste ziehen = drehen.
+// Touch: ein Finger = verschieben, zwei Finger = zoomen (Spreizen) und drehen.
 import * as THREE from 'three';
 
 export interface CameraHost {
@@ -16,6 +17,8 @@ export class RtsCamera {
   private goal = { x: 0, z: 0, distance: 2600, yaw: 0 };
   private keys = new Set<string>();
   private drag: { button: number; x: number; y: number } | null = null;
+  private touches = new Map<number, { x: number; y: number }>();
+  private pinch: { dist: number; angle: number } | null = null;
   minDistance = 180;
   maxDistance = 16000;
 
@@ -25,14 +28,51 @@ export class RtsCamera {
     addEventListener('keyup', (e) => this.keys.delete(e.code));
     addEventListener('blur', () => this.keys.clear());
     dom.addEventListener('contextmenu', (e) => e.preventDefault());
+    dom.style.touchAction = 'none';
+    const pinchState = () => {
+      const [a, b] = [...this.touches.values()];
+      return { dist: Math.hypot(b.x - a.x, b.y - a.y), angle: Math.atan2(b.y - a.y, b.x - a.x) };
+    };
+    const endTouch = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') return;
+      this.touches.delete(e.pointerId);
+      this.pinch = this.touches.size === 2 ? pinchState() : null;
+    };
     dom.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'touch') {
+        this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        this.pinch = this.touches.size === 2 ? pinchState() : null;
+        try { dom.setPointerCapture(e.pointerId); } catch { /* Zeiger schon weg */ }
+        return;
+      }
       if (e.button === 1 || e.button === 2) {
         this.drag = { button: e.button, x: e.clientX, y: e.clientY };
         dom.setPointerCapture(e.pointerId);
       }
     });
-    dom.addEventListener('pointerup', () => { this.drag = null; });
+    dom.addEventListener('pointerup', (e) => { this.drag = null; endTouch(e); });
+    dom.addEventListener('pointercancel', (e) => { this.drag = null; endTouch(e); });
     dom.addEventListener('pointermove', (e) => {
+      const t = this.touches.get(e.pointerId);
+      if (t) {
+        const dx = e.clientX - t.x, dy = e.clientY - t.y;
+        t.x = e.clientX; t.y = e.clientY;
+        if (this.touches.size === 1) {
+          const k = (this.goal.distance / dom.clientHeight) * 1.1;
+          this.pan(-dx * k, -dy * k);
+          this.snap();
+        } else if (this.touches.size === 2 && this.pinch) {
+          const now = pinchState();
+          this.goal.distance = THREE.MathUtils.clamp(this.goal.distance * (this.pinch.dist / Math.max(now.dist, 1)),
+            this.minDistance, this.maxDistance);
+          let da = now.angle - this.pinch.angle;
+          if (da > Math.PI) da -= 2 * Math.PI;
+          if (da < -Math.PI) da += 2 * Math.PI;
+          this.goal.yaw += da;
+          this.pinch = now;
+        }
+        return;
+      }
       if (!this.drag) return;
       const dx = e.clientX - this.drag.x, dy = e.clientY - this.drag.y;
       this.drag.x = e.clientX; this.drag.y = e.clientY;

@@ -24,7 +24,7 @@ export class Hud {
   onSettings: (s: Settings) => void = () => {};
   onMinimap: (x: number, z: number) => void = () => {};
 
-  constructor(root: HTMLElement, private map: MapData) {
+  constructor(root: HTMLElement, private map: MapData, maps: { id: string; name: string }[] = []) {
     this.settings = loadSettings(map.info.exaggeration);
 
     // Kopfleiste
@@ -42,7 +42,7 @@ export class Hud {
 
     // Minimap
     const box = el('div', 'panel minimap');
-    this.miniScale = 280 / map.info.width;
+    this.miniScale = 280 / Math.max(map.info.width, map.info.height * 0.8);
     this.miniBg = this.renderMinimap();
     this.mini = document.createElement('canvas');
     this.mini.width = this.miniBg.width; this.mini.height = this.miniBg.height;
@@ -58,15 +58,28 @@ export class Hud {
 
     // Einstellungen
     const set = el('div', 'panel settings');
+    const touch = matchMedia('(pointer: coarse)').matches;
+    if (touch || innerWidth < 700) set.classList.add('collapsed');
+    const options = maps.map((m) => `<option value="${m.id}"${m.id === map.info.id ? ' selected' : ''}>${m.name}</option>`).join('');
     set.innerHTML = `
       <h3>Ansicht</h3>
+      ${maps.length > 1 ? `<label class="mapsel">Karte <select>${options}</select></label>` : ''}
       <label>Überhöhung <output></output><input type="range" min="1" max="5" step="0.25" data-k="exaggeration"></label>
       <label><input type="checkbox" data-k="grid"> Hex-Raster <kbd>G</kbd></label>
       <label><input type="checkbox" data-k="shadows"> Schatten</label>
       <label><input type="checkbox" data-k="trees"> Wald</label>
       <label><input type="checkbox" data-k="perf"> Leistung <kbd>F3</kbd></label>
-      <p class="help"><kbd>WASD</kbd> bewegen · <kbd>Q</kbd><kbd>E</kbd> drehen · Rad zoomen · rechte Maustaste ziehen</p>`;
+      <p class="help">${touch
+        ? 'Ein Finger: verschieben · zwei Finger: zoomen und drehen'
+        : '<kbd>WASD</kbd> bewegen · <kbd>Q</kbd><kbd>E</kbd> drehen · Rad zoomen · rechte Maustaste ziehen'}</p>`;
     root.append(set);
+    set.querySelector('h3')!.addEventListener('click', () => set.classList.toggle('collapsed'));
+    set.querySelector('select')?.addEventListener('change', (e) => {
+      const id = (e.target as HTMLSelectElement).value;
+      try { localStorage.setItem('eifeler.map', id); } catch { /* egal */ }
+      location.hash = id;
+      location.reload();
+    });
     const credits = el('div', 'credits');
     credits.textContent = map.info.credits.map((c) => c.split(',')[0]).join(' · ');
     credits.title = map.info.credits.join('\n');
@@ -180,7 +193,7 @@ function el(tag: string, cls: string) {
 }
 
 function loadSettings(ex: number): Settings {
-  const def: Settings = { exaggeration: ex, grid: false, shadows: true, trees: true, perf: false };
+  const def: Settings = { exaggeration: ex, grid: false, shadows: !matchMedia('(pointer: coarse)').matches, trees: true, perf: false };
   try {
     return { ...def, ...JSON.parse(localStorage.getItem('eifeler.view') ?? '{}') };
   } catch {

@@ -18,6 +18,8 @@ export interface MapInfo {
   heightMin: number;
   heightMax: number;
   exaggeration: number;
+  /** Ort, auf den die Kamera beim Start schaut. */
+  start?: string;
   cover: string[];
   hex: { size: number; cols: number; rows: number; layout: string; terrain: string[] };
   places: Place[];
@@ -46,10 +48,16 @@ export class MapData {
   }
 
   static async load(base: string): Promise<MapData> {
+    // Teilen-Version (npm run build:share): Raster als Base64-Text, weil dort nur Text ausgeliefert wird
+    const b64 = import.meta.env.VITE_MAP_B64 === '1';
     const get = async (f: string) => {
-      const res = await fetch(`${base}/${f}`);
+      const res = await fetch(`${base}/${f}${b64 ? '.txt' : ''}`);
       if (!res.ok) throw new Error(`${f}: ${res.status}`);
-      return res.arrayBuffer();
+      if (!b64) return res.arrayBuffer();
+      const bin = atob((await res.text()).trim());
+      const out = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      return out.buffer;
     };
     const info = (await (await fetch(`${base}/map.json`)).json()) as MapInfo;
     const [h, w, c, x] = await Promise.all([get('height.bin'), get('water.bin'), get('cover.bin'), get('hex.bin')]);

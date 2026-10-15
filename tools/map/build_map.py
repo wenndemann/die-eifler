@@ -35,15 +35,30 @@ import osm
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 
-MAP = {
-    "id": "monschau-rursee",
-    "name": "Monschauer Land & Rursee",
-    # lon_min, lat_min, lon_max, lat_max
-    "bbox": [6.17, 50.51, 6.52, 50.67],
+# Regionen (Spielkarten). bbox: lon_min, lat_min, lon_max, lat_max (alle in DEM-Kachel N50E006)
+MAPS = {
+    "monschau-rursee": {
+        "name": "Monschauer Land & Rursee",
+        "bbox": [6.17, 50.51, 6.52, 50.67],
+        "start": "Rurberg",
+    },
+    "rureifel": {
+        "name": "Rureifel & Dürener Land",
+        "bbox": [6.35, 50.62, 6.62, 50.83],
+        "start": "Düren",
+    },
+}
+DEFAULTS = {
     "cell": 30.0,        # Rasterweite in Metern
     "hexSize": 90.0,     # Hex-Umkreisradius in Metern (pointy-top)
     "exaggeration": 2.5, # Standard-Überhöhung (im Spiel einstellbar)
 }
+
+
+def map_config(map_id):
+    if map_id not in MAPS:
+        raise SystemExit(f"Unbekannte Karte {map_id!r}, vorhanden: {', '.join(MAPS)}")
+    return {"id": map_id, **DEFAULTS, **MAPS[map_id]}
 
 # Bedeckungsklassen (Optik + Grundlage für Hex-Gelände)
 COVER = ["wasser", "wiese", "acker", "wald", "heide", "moor", "fels", "siedlung"]
@@ -111,14 +126,14 @@ def sample(path, bbox, lons, lats, order, sub=1):
 
 
 def build(args):
-    meta = dict(MAP)
+    meta = map_config(args.map)
     raw = os.path.join(HERE, "raw")
     nx, nz, lons, lats, m_lon, m_lat = lonlat_grid(meta)
     cell = meta["cell"]
     print(f"Raster {nx}×{nz} Zellen à {cell:.0f} m = {nx*cell/1000:.1f} × {nz*cell/1000:.1f} km")
 
     # --- Landbedeckung: Anteil je Klasse pro Zelle ---------------------------
-    wc = sample(os.path.join(raw, "worldcover_monschau.tif"), meta["bbox"], lons, lats, 0, sub=4)
+    wc = sample(os.path.join(raw, f"worldcover_{meta['id']}.tif"), meta["bbox"], lons, lats, 0, sub=4)
     lut = np.full(256, C["wiese"], np.uint8)
     for code, name in WORLDCOVER.items():
         lut[code] = C[name]
@@ -279,7 +294,7 @@ def build(args):
         "id": meta["id"], "name": meta["name"], "bbox": meta["bbox"],
         "cell": cell, "width": nx, "height": nz,
         "heightMin": float(ground.min()), "heightMax": float(ground.max()),
-        "exaggeration": meta["exaggeration"],
+        "exaggeration": meta["exaggeration"], "start": meta["start"],
         "cover": COVER,
         "hex": {"size": R, "cols": cols, "rows": rows, "layout": "pointy-odd-r", "terrain": HEX_TERRAIN},
         "places": places,
@@ -290,6 +305,12 @@ def build(args):
     }
     with open(os.path.join(out, "map.json"), "w", encoding="utf-8") as f:
         json.dump(info, f, ensure_ascii=False, indent=1)
+    # Kartenliste für die Kartenwahl im Viewer (nur bereits gebaute Karten)
+    maps_dir = os.path.dirname(out)
+    index = [{"id": k, "name": v["name"]} for k, v in MAPS.items()
+             if os.path.exists(os.path.join(maps_dir, k, "map.json"))]
+    with open(os.path.join(maps_dir, "index.json"), "w", encoding="utf-8") as f:
+        json.dump(index, f, ensure_ascii=False, indent=1)
 
     hc = np.bincount(hexes.ravel(), minlength=len(HEX_TERRAIN))
     print(f"Hex-Gitter {cols}×{rows} = {cols*rows} Hexe:",
@@ -482,5 +503,6 @@ def preview(path, ground, cover, water, cell):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
+    ap.add_argument("--map", default="monschau-rursee", help="Karten-Id aus MAPS")
     ap.add_argument("--preview", help="PNG mit Hillshade + Bedeckung schreiben")
     build(ap.parse_args())

@@ -3,3 +3,4 @@ dist/
 tools/map/raw/*.tif
 __pycache__/
 tools/map/raw/*.json
+dist-share/
