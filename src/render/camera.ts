@@ -101,10 +101,12 @@ export class RtsCamera {
 
   private snap() { this.target.x = this.goal.x; this.target.z = this.goal.z; }
 
-  private pan(right: number, forward: number) {
+  /** Verschieben in Bildschirm-Richtungen: right = nach rechts, back = zur Kamera hin (nach unten im Bild). */
+  private pan(right: number, back: number) {
+    // Kamera steht in Richtung (sin yaw, cos yaw) vom Ziel: rechts = (cos, -sin), zurück = (sin, cos)
     const s = Math.sin(this.goal.yaw), c = Math.cos(this.goal.yaw);
-    this.goal.x += right * c - forward * s;
-    this.goal.z += right * s + forward * c;
+    this.goal.x += right * c + back * s;
+    this.goal.z += -right * s + back * c;
     this.goal.x = THREE.MathUtils.clamp(this.goal.x, 0, this.host.bounds.x);
     this.goal.z = THREE.MathUtils.clamp(this.goal.z, 0, this.host.bounds.z);
   }
