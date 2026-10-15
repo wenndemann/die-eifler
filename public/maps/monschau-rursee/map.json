@@ -1,0 +1,209 @@
+{
+ "id": "monschau-rursee",
+ "name": "Monschauer Land & Rursee",
+ "bbox": [
+  6.17,
+  50.51,
+  6.52,
+  50.67
+ ],
+ "cell": 30.0,
+ "width": 824,
+ "height": 589,
+ "heightMin": 170.76078757471493,
+ "heightMax": 669.4055086614435,
+ "exaggeration": 2.5,
+ "cover": [
+  "wasser",
+  "wiese",
+  "acker",
+  "wald",
+  "heide",
+  "moor",
+  "fels",
+  "siedlung"
+ ],
+ "hex": {
+  "size": 90.0,
+  "cols": 158,
+  "rows": 130,
+  "layout": "pointy-odd-r",
+  "terrain": [
+   "wasser",
+   "wiese",
+   "wald",
+   "heide",
+   "moor",
+   "stein",
+   "siedlung"
+  ]
+ },
+ "places": [
+  {
+   "name": "Monschau",
+   "kind": "stadt",
+   "x": 4982.5,
+   "z": 12749.2
+  },
+  {
+   "name": "Imgenbroich",
+   "kind": "dorf",
+   "x": 6714.0,
+   "z": 11057.4
+  },
+  {
+   "name": "Konzen",
+   "kind": "dorf",
+   "x": 4593.8,
+   "z": 9398.8
+  },
+  {
+   "name": "Mützenich",
+   "kind": "dorf",
+   "x": 2968.3,
+   "z": 11831.4
+  },
+  {
+   "name": "Höfen",
+   "kind": "dorf",
+   "x": 5229.8,
+   "z": 15038.1
+  },
+  {
+   "name": "Kalterherberg",
+   "kind": "dorf",
+   "x": 3639.7,
+   "z": 16365.0
+  },
+  {
+   "name": "Rohren",
+   "kind": "weiler",
+   "x": 8127.4,
+   "z": 13490.0
+  },
+  {
+   "name": "Eicherscheid",
+   "kind": "dorf",
+   "x": 8763.5,
+   "z": 8624.8
+  },
+  {
+   "name": "Simmerath",
+   "kind": "dorf",
+   "x": 9187.5,
+   "z": 7220.5
+  },
+  {
+   "name": "Lammersdorf",
+   "kind": "dorf",
+   "x": 7067.3,
+   "z": 4091.2
+  },
+  {
+   "name": "Kesternich",
+   "kind": "dorf",
+   "x": 11095.7,
+   "z": 7187.3
+  },
+  {
+   "name": "Steckenborn",
+   "kind": "dorf",
+   "x": 12367.8,
+   "z": 4975.8
+  },
+  {
+   "name": "Woffelsbach",
+   "kind": "weiler",
+   "x": 13880.2,
+   "z": 3903.3
+  },
+  {
+   "name": "Rurberg",
+   "kind": "dorf",
+   "x": 14700.0,
+   "z": 6523.9
+  },
+  {
+   "name": "Einruhr",
+   "kind": "dorf",
+   "x": 14841.4,
+   "z": 9398.8
+  },
+  {
+   "name": "Erkensruhr",
+   "kind": "weiler",
+   "x": 13505.7,
+   "z": 11743.0
+  },
+  {
+   "name": "Dedenborn",
+   "kind": "weiler",
+   "x": 12367.8,
+   "z": 10725.7
+  },
+  {
+   "name": "Hammer",
+   "kind": "weiler",
+   "x": 11307.7,
+   "z": 11610.3
+  },
+  {
+   "name": "Schmidt",
+   "kind": "dorf",
+   "x": 16219.5,
+   "z": 1846.6
+  },
+  {
+   "name": "Vogelsang",
+   "kind": "weiler",
+   "x": 18982.8,
+   "z": 8414.7
+  },
+  {
+   "name": "Dreiborn",
+   "kind": "dorf",
+   "x": 18120.6,
+   "z": 12959.3
+  },
+  {
+   "name": "Hasenfeld",
+   "kind": "weiler",
+   "x": 20693.1,
+   "z": 3848.0
+  },
+  {
+   "name": "Heimbach",
+   "kind": "stadt",
+   "x": 21675.5,
+   "z": 3682.1
+  },
+  {
+   "name": "Gemünd",
+   "kind": "stadt",
+   "x": 22968.8,
+   "z": 10172.8
+  },
+  {
+   "name": "Rursee",
+   "kind": "gewaesser",
+   "x": 17314.9,
+   "z": 4644.1
+  },
+  {
+   "name": "Obersee",
+   "kind": "gewaesser",
+   "x": 15901.5,
+   "z": 7740.2
+  },
+  {
+   "name": "Urftsee",
+   "kind": "gewaesser",
+   "x": 18728.4,
+   "z": 7740.2
+  }
+ ],
+ "credits": [
+  "Höhendaten: Copernicus GLO-30 DEM © DLR e.V. 2010–2014 und © Airbus Defence and Space GmbH 2014–2018, bereitgestellt unter COPERNICUS durch die Europäische Union und ESA",
+  "Landbedeckung: ESA WorldCover 2021 (v200), © ESA, CC BY 4.0"
+ ]
+}

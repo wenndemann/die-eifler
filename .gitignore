@@ -1,0 +1,4 @@
+node_modules/
+dist/
+tools/map/raw/*.tif
+__pycache__/
