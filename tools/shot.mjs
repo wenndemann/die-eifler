@@ -15,6 +15,7 @@ const views = JSON.parse(process.argv[3] || '[{}]');
 let n = 0;
 for (const v of views) {
   if (v.x !== undefined) await p.evaluate((v) => { const e = window.eifeler; const pl = e.map.info.places.find(p=>p.name===v.place); e.cam.lookAt(pl ? pl.x : v.x, pl ? pl.z + (v.dz||0) : v.z, true); e.cam.setDistance(v.d); e.cam.distance = v.d; if (v.yaw!==undefined) {e.cam.goal.yaw=v.yaw; e.cam.yaw=v.yaw;} }, v);
+  if (v.js) await p.evaluate(v.js);
   if (v.key) await p.keyboard.press(v.key);
   if (v.mouse) await p.mouse.move(v.mouse[0], v.mouse[1]);
   await p.waitForTimeout(v.wait || 8000);

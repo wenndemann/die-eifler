@@ -10,6 +10,7 @@ import { Trees } from './render/trees';
 import { Houses } from './render/houses';
 import { RtsCamera } from './render/camera';
 import { Hud } from './ui/hud';
+import { buildMockup } from './render/mockup';
 
 const TERRAIN_NAMES: Record<string, string> = {
   wasser: 'Wasser', wiese: 'Wiese', wald: 'Wald', heide: 'Heide', moor: 'Moor (Venn)', stein: 'Fels', siedlung: 'Ortschaft',
@@ -174,7 +175,18 @@ async function main() {
     requestAnimationFrame(frame);
   };
   loading.remove();
-  (window as unknown as { eifeler: unknown }).eifeler = { map, cam, stage, terrain, trees };
+  // Entwicklungswerkzeug: Maßstabs-Probe (Musterdorf) ein- und ausblenden
+  let mock: THREE.Group | null = null;
+  const mockup = (scale: number, place = 'Einruhr') => {
+    if (mock) stage.scene.remove(mock);
+    mock = null;
+    if (!scale) return null;
+    const r = buildMockup({ map, grid, base, ex: () => ex }, scale, place);
+    mock = r.group;
+    stage.scene.add(mock);
+    return r.center;
+  };
+  (window as unknown as { eifeler: unknown }).eifeler = { map, cam, stage, terrain, trees, hud, mockup };
   frame();
 }
 
