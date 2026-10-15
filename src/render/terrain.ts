@@ -6,6 +6,7 @@ import type { MapData } from '../map/mapdata';
 export const CHUNK = 64;                 // Rasterzellen pro Chunk-Kante
 const LOD_STEPS = [1, 2, 4, 8];
 const SKIRT = 25;                        // Schürzen-Tiefe (m, unskaliert)
+const RIVER_BED = 2.5;                   // Flussbett liegt so tief unter dem Spiegel (wie im Konverter)
 
 // Farben je Bedeckung (sRGB), Reihenfolge wie MapInfo.cover
 const COVER_COLORS = [
@@ -156,11 +157,23 @@ export class Terrain {
     const nor = new Float32Array(vcount * 3);
     const colr = new Float32Array(vcount * 3);
     const g = this.map.ground;
+    // Grobe LODs: liegt ein Flussbett im ausgelassenen Bereich, Punkt auf dessen Höhe absenken,
+    // sonst verschwindet das schmale eingegrabene Tal zwischen den Gitterpunkten
+    const r = step >> 1;
+    const heightOf = (i: number, j: number, k: number) => {
+      let h = g[k];
+      if (step === 1) return h;
+      for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) {
+        const kk = this.map.idx(i + di, j + dj);
+        if (this.map.cover[kk] === 0 && this.map.water[kk] <= 0) h = Math.min(h, g[kk] + RIVER_BED);
+      }
+      return h;
+    };
     const put = (v: number, i: number, j: number, drop: number) => {
       i = Math.min(i, width - 1); j = Math.min(j, height - 1);
       const k = j * width + i;
       pos[v * 3] = (i + 0.5) * cell;
-      pos[v * 3 + 1] = g[k] - this.base - drop;
+      pos[v * 3 + 1] = heightOf(i, j, k) - this.base - drop;
       pos[v * 3 + 2] = (j + 0.5) * cell;
       nor[v * 3] = this.nx[k]; nor[v * 3 + 1] = this.ny[k]; nor[v * 3 + 2] = this.nz[k];
       colr[v * 3] = this.colors[k * 3]; colr[v * 3 + 1] = this.colors[k * 3 + 1]; colr[v * 3 + 2] = this.colors[k * 3 + 2];

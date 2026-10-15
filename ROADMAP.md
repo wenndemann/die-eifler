@@ -18,10 +18,11 @@ Erledigt:
 - [x] Talsperren und Seen mit ebenem Spiegel, Tiefenfarbe, Schaum und Wellen
 - [x] Wald (Fichte/Buche) und Häuser per Instancing, Wind, Schatten
 - [x] Strategie-Kamera, Hex-Hover mit Info, Ortsnamen, Minimap, Überhöhungs-Regler, Hex-Raster (G), Leistungsanzeige (F3)
+- [x] **OpenStreetMap eingebunden** (`tools/map/fetch_osm.py`): Rur und Bäche als Flüsse, echte Heide- und Moorflächen (Hohes Venn), Steinbrüche, Orte mit echten Koordinaten (`places.json` nur noch Fallback)
+- [x] Flüsse als eigene Wasserbänder mit Strömung und Stromschnellen, Bett ins Gelände gegraben (keine Raster-Treppen)
+- [x] Seen und Talsperren mit echter OSM-Uferlinie (Polygon statt Raster)
 
 Offen:
-- [ ] **OpenStreetMap einbinden:** Rur und Bäche als Flüsse, echte Heide- und Moorflächen, Steinbrüche, Orte mit echten Koordinaten (ersetzt `places.json` und die Näherungs-Regionen)
-- [ ] Flüsse als eigene Wasserbänder mit Strömung (statt Raster-Treppen)
 - [ ] Maßstab: Häuser und Bäume im Spiel-Maßstab aufeinander abstimmen
 - [ ] Hecken im Monschauer Heckenland an Feldgrenzen (Kulisse)
 - [ ] Post-Processing: SSAO, dezentes Bloom, Farb-Grading, Qualitätsstufen

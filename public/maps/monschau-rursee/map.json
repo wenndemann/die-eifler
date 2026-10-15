@@ -10,7 +10,7 @@
  "cell": 30.0,
  "width": 824,
  "height": 589,
- "heightMin": 170.76078757471493,
+ "heightMin": 168.53968811035156,
  "heightMax": 669.4055086614435,
  "exaggeration": 2.5,
  "cover": [
@@ -42,168 +42,607 @@
   {
    "name": "Monschau",
    "kind": "stadt",
-   "x": 4982.5,
-   "z": 12749.2
+   "x": 5003.3,
+   "z": 12774.8
   },
   {
-   "name": "Imgenbroich",
-   "kind": "dorf",
-   "x": 6714.0,
-   "z": 11057.4
-  },
-  {
-   "name": "Konzen",
-   "kind": "dorf",
-   "x": 4593.8,
-   "z": 9398.8
-  },
-  {
-   "name": "Mützenich",
-   "kind": "dorf",
-   "x": 2968.3,
-   "z": 11831.4
-  },
-  {
-   "name": "Höfen",
-   "kind": "dorf",
-   "x": 5229.8,
-   "z": 15038.1
-  },
-  {
-   "name": "Kalterherberg",
-   "kind": "dorf",
-   "x": 3639.7,
-   "z": 16365.0
-  },
-  {
-   "name": "Rohren",
-   "kind": "weiler",
-   "x": 8127.4,
-   "z": 13490.0
-  },
-  {
-   "name": "Eicherscheid",
-   "kind": "dorf",
-   "x": 8763.5,
-   "z": 8624.8
+   "name": "Schleiden",
+   "kind": "stadt",
+   "x": 21637.0,
+   "z": 15636.1
   },
   {
    "name": "Simmerath",
+   "kind": "stadt",
+   "x": 9224.7,
+   "z": 6938.5
+  },
+  {
+   "name": "Berescheid",
    "kind": "dorf",
-   "x": 9187.5,
-   "z": 7220.5
+   "x": 17248.2,
+   "z": 15142.2
   },
   {
-   "name": "Lammersdorf",
+   "name": "Blens",
    "kind": "dorf",
-   "x": 7067.3,
-   "z": 4091.2
+   "x": 21941.6,
+   "z": 1222.0
   },
   {
-   "name": "Kesternich",
+   "name": "Broich",
    "kind": "dorf",
-   "x": 11095.7,
-   "z": 7187.3
+   "x": 23484.5,
+   "z": 16259.5
   },
   {
-   "name": "Steckenborn",
+   "name": "Bronsfeld",
    "kind": "dorf",
-   "x": 12367.8,
-   "z": 4975.8
-  },
-  {
-   "name": "Woffelsbach",
-   "kind": "weiler",
-   "x": 13880.2,
-   "z": 3903.3
-  },
-  {
-   "name": "Rurberg",
-   "kind": "dorf",
-   "x": 14700.0,
-   "z": 6523.9
-  },
-  {
-   "name": "Einruhr",
-   "kind": "dorf",
-   "x": 14841.4,
-   "z": 9398.8
-  },
-  {
-   "name": "Erkensruhr",
-   "kind": "weiler",
-   "x": 13505.7,
-   "z": 11743.0
+   "x": 19570.4,
+   "z": 16569.9
   },
   {
    "name": "Dedenborn",
-   "kind": "weiler",
-   "x": 12367.8,
-   "z": 10725.7
-  },
-  {
-   "name": "Hammer",
-   "kind": "weiler",
-   "x": 11307.7,
-   "z": 11610.3
-  },
-  {
-   "name": "Schmidt",
    "kind": "dorf",
-   "x": 16219.5,
-   "z": 1846.6
-  },
-  {
-   "name": "Vogelsang",
-   "kind": "weiler",
-   "x": 18982.8,
-   "z": 8414.7
+   "x": 13098.9,
+   "z": 9659.3
   },
   {
    "name": "Dreiborn",
    "kind": "dorf",
-   "x": 18120.6,
-   "z": 12959.3
+   "x": 16920.6,
+   "z": 13779.3
   },
   {
-   "name": "Hasenfeld",
-   "kind": "weiler",
-   "x": 20693.1,
-   "z": 3848.0
+   "name": "Eicherscheid",
+   "kind": "dorf",
+   "x": 9508.1,
+   "z": 10032.3
   },
   {
-   "name": "Heimbach",
-   "kind": "stadt",
-   "x": 21675.5,
-   "z": 3682.1
+   "name": "Einruhr",
+   "kind": "dorf",
+   "x": 14894.1,
+   "z": 9589.5
+  },
+  {
+   "name": "Ettelscheid",
+   "kind": "dorf",
+   "x": 19330.1,
+   "z": 15160.1
   },
   {
    "name": "Gemünd",
-   "kind": "stadt",
-   "x": 22968.8,
-   "z": 10172.8
+   "kind": "dorf",
+   "x": 23287.7,
+   "z": 10821.8
+  },
+  {
+   "name": "Hammer",
+   "kind": "dorf",
+   "x": 11318.7,
+   "z": 11620.1
+  },
+  {
+   "name": "Harperscheid",
+   "kind": "dorf",
+   "x": 16980.2,
+   "z": 16661.1
+  },
+  {
+   "name": "Hasenfeld",
+   "kind": "dorf",
+   "x": 20409.6,
+   "z": 3461.7
+  },
+  {
+   "name": "Hausen",
+   "kind": "dorf",
+   "x": 22660.2,
+   "z": 2091.9
+  },
+  {
+   "name": "Heimbach",
+   "kind": "dorf",
+   "x": 21666.6,
+   "z": 3934.0
+  },
+  {
+   "name": "Herhahn",
+   "kind": "dorf",
+   "x": 20127.2,
+   "z": 12640.7
+  },
+  {
+   "name": "Huppenbroich",
+   "kind": "dorf",
+   "x": 10519.3,
+   "z": 8745.6
+  },
+  {
+   "name": "Höfen",
+   "kind": "dorf",
+   "x": 6142.3,
+   "z": 14890.7
+  },
+  {
+   "name": "Imgenbroich",
+   "kind": "dorf",
+   "x": 6486.3,
+   "z": 10757.3
+  },
+  {
+   "name": "Kalterherberg",
+   "kind": "dorf",
+   "x": 3561.3,
+   "z": 16469.0
+  },
+  {
+   "name": "Kerperscheid",
+   "kind": "dorf",
+   "x": 22423.2,
+   "z": 17455.4
+  },
+  {
+   "name": "Kesternich",
+   "kind": "dorf",
+   "x": 11225.3,
+   "z": 7104.3
+  },
+  {
+   "name": "Kommerscheidt",
+   "kind": "dorf",
+   "x": 16148.0,
+   "z": 318.5
+  },
+  {
+   "name": "Konzen",
+   "kind": "dorf",
+   "x": 5994.7,
+   "z": 9311.0
+  },
+  {
+   "name": "Küchelscheid",
+   "kind": "dorf",
+   "x": 2376.2,
+   "z": 16552.2
+  },
+  {
+   "name": "Lammersdorf",
+   "kind": "dorf",
+   "x": 7451.6,
+   "z": 4237.8
+  },
+  {
+   "name": "Morsbach",
+   "kind": "dorf",
+   "x": 19557.7,
+   "z": 11903.8
+  },
+  {
+   "name": "Nierfeld",
+   "kind": "dorf",
+   "x": 23205.0,
+   "z": 11936.9
+  },
+  {
+   "name": "Oberhausen",
+   "kind": "dorf",
+   "x": 20877.9,
+   "z": 17498.4
+  },
+  {
+   "name": "Olef",
+   "kind": "dorf",
+   "x": 22442.6,
+   "z": 13841.8
+  },
+  {
+   "name": "Paustenbach",
+   "kind": "dorf",
+   "x": 7732.5,
+   "z": 5319.0
+  },
+  {
+   "name": "Petergensfeld",
+   "kind": "dorf",
+   "x": 738.0,
+   "z": 2290.8
+  },
+  {
+   "name": "Roetgen",
+   "kind": "dorf",
+   "x": 1892.1,
+   "z": 2525.5
+  },
+  {
+   "name": "Rohren",
+   "kind": "dorf",
+   "x": 8098.0,
+   "z": 13450.3
+  },
+  {
+   "name": "Rollesbroich",
+   "kind": "dorf",
+   "x": 9957.0,
+   "z": 4570.0
+  },
+  {
+   "name": "Rurberg",
+   "kind": "dorf",
+   "x": 14902.8,
+   "z": 6155.2
+  },
+  {
+   "name": "Scheuren",
+   "kind": "dorf",
+   "x": 20952.2,
+   "z": 14863.3
+  },
+  {
+   "name": "Schmidt",
+   "kind": "dorf",
+   "x": 16815.7,
+   "z": 926.2
+  },
+  {
+   "name": "Schöneseiffen",
+   "kind": "dorf",
+   "x": 16052.7,
+   "z": 16630.4
+  },
+  {
+   "name": "Steckenborn",
+   "kind": "dorf",
+   "x": 12788.2,
+   "z": 4685.8
+  },
+  {
+   "name": "Strauch",
+   "kind": "dorf",
+   "x": 11646.7,
+   "z": 5038.2
+  },
+  {
+   "name": "Vogelsang Internationaler Platz (IP)",
+   "kind": "dorf",
+   "x": 19628.1,
+   "z": 9456.7
+  },
+  {
+   "name": "Wintzen",
+   "kind": "dorf",
+   "x": 23934.1,
+   "z": 14786.5
+  },
+  {
+   "name": "Witzerath",
+   "kind": "dorf",
+   "x": 9583.5,
+   "z": 6199.4
+  },
+  {
+   "name": "Woffelsbach",
+   "kind": "dorf",
+   "x": 15380.0,
+   "z": 4813.5
+  },
+  {
+   "name": "Wolfgarten",
+   "kind": "dorf",
+   "x": 22874.6,
+   "z": 8798.2
+  },
+  {
+   "name": "Alzen",
+   "kind": "weiler",
+   "x": 6580.2,
+   "z": 15876.1
+  },
+  {
+   "name": "Am Gericht",
+   "kind": "weiler",
+   "x": 8234.5,
+   "z": 8523.1
+  },
+  {
+   "name": "Belgenbacher Mühle",
+   "kind": "weiler",
+   "x": 8079.3,
+   "z": 10694.8
+  },
+  {
+   "name": "Bickerath",
+   "kind": "weiler",
+   "x": 8425.1,
+   "z": 6433.5
+  },
+  {
+   "name": "Entenpfuhl",
+   "kind": "weiler",
+   "x": 5730.2,
+   "z": 7820.3
+  },
+  {
+   "name": "Erkensruhr",
+   "kind": "weiler",
+   "x": 14039.6,
+   "z": 11255.2
+  },
+  {
+   "name": "Eschweide",
+   "kind": "weiler",
+   "x": 2361.4,
+   "z": 12981.4
+  },
+  {
+   "name": "Finkenauel",
+   "kind": "weiler",
+   "x": 13053.2,
+   "z": 12073.5
+  },
+  {
+   "name": "Geisief",
+   "kind": "weiler",
+   "x": 17072.5,
+   "z": 267.3
+  },
+  {
+   "name": "Hargard",
+   "kind": "weiler",
+   "x": 5408.3,
+   "z": 11551.4
+  },
+  {
+   "name": "Hechelscheid",
+   "kind": "weiler",
+   "x": 13937.8,
+   "z": 3986.3
+  },
+  {
+   "name": "Heidgen",
+   "kind": "weiler",
+   "x": 5606.8,
+   "z": 13861.0
+  },
+  {
+   "name": "Heilstein",
+   "kind": "weiler",
+   "x": 16835.8,
+   "z": 10564.7
+  },
+  {
+   "name": "Hirschrott",
+   "kind": "weiler",
+   "x": 13306.2,
+   "z": 12595.8
+  },
+  {
+   "name": "Hof",
+   "kind": "weiler",
+   "x": 11708.5,
+   "z": 4297.8
+  },
+  {
+   "name": "Hohenfried",
+   "kind": "weiler",
+   "x": 22443.5,
+   "z": 11967.8
+  },
+  {
+   "name": "Hoscheit",
+   "kind": "weiler",
+   "x": 6557.0,
+   "z": 7063.2
+  },
+  {
+   "name": "Hühnerbusch",
+   "kind": "weiler",
+   "x": 20746.0,
+   "z": 12998.4
+  },
+  {
+   "name": "Kämpchen",
+   "kind": "weiler",
+   "x": 6737.9,
+   "z": 3296.7
+  },
+  {
+   "name": "Leykaul",
+   "kind": "weiler",
+   "x": 2564.3,
+   "z": 16783.5
+  },
+  {
+   "name": "Leykaul",
+   "kind": "weiler",
+   "x": 13546.2,
+   "z": 13663.2
+  },
+  {
+   "name": "Leyloch",
+   "kind": "weiler",
+   "x": 1677.4,
+   "z": 14103.1
+  },
+  {
+   "name": "Lüppenau",
+   "kind": "weiler",
+   "x": 21377.1,
+   "z": 789.5
+  },
+  {
+   "name": "Malsbenden",
+   "kind": "weiler",
+   "x": 22128.2,
+   "z": 10248.1
+  },
+  {
+   "name": "Mariagrube",
+   "kind": "weiler",
+   "x": 9962.2,
+   "z": 8166.9
+  },
+  {
+   "name": "Mariawald",
+   "kind": "weiler",
+   "x": 21925.1,
+   "z": 5513.3
+  },
+  {
+   "name": "Mauel",
+   "kind": "weiler",
+   "x": 24267.1,
+   "z": 11037.2
+  },
+  {
+   "name": "Menzerath",
+   "kind": "weiler",
+   "x": 6147.6,
+   "z": 12099.4
+  },
+  {
+   "name": "Pleushütte",
+   "kind": "weiler",
+   "x": 14649.1,
+   "z": 9899.6
+  },
+  {
+   "name": "Rauchenauel",
+   "kind": "weiler",
+   "x": 13462.4,
+   "z": 9060.9
+  },
+  {
+   "name": "Ruitzhof",
+   "kind": "weiler",
+   "x": 1737.8,
+   "z": 15964.8
+  },
+  {
+   "name": "Scheidbaum",
+   "kind": "weiler",
+   "x": 18541.0,
+   "z": 1542.4
+  },
+  {
+   "name": "Schwerzfeld",
+   "kind": "weiler",
+   "x": 923.5,
+   "z": 4382.6
+  },
+  {
+   "name": "Seifenauel",
+   "kind": "weiler",
+   "x": 13577.3,
+   "z": 9506.7
+  },
+  {
+   "name": "Waldsiedlung",
+   "kind": "weiler",
+   "x": 6762.2,
+   "z": 2808.8
+  },
+  {
+   "name": "Weidenbroich",
+   "kind": "weiler",
+   "x": 11978.8,
+   "z": 4344.3
+  },
+  {
+   "name": "Weilersbroich",
+   "kind": "weiler",
+   "x": 2927.2,
+   "z": 12412.5
+  },
+  {
+   "name": "Widdau",
+   "kind": "weiler",
+   "x": 9166.5,
+   "z": 12064.2
+  },
+  {
+   "name": "Wiesgen",
+   "kind": "weiler",
+   "x": 21007.1,
+   "z": 17020.5
+  },
+  {
+   "name": "Dreilägerbachtalsperre",
+   "kind": "gewaesser",
+   "x": 3135.0,
+   "z": 1065.0
+  },
+  {
+   "name": "Staubecken Heimbach",
+   "kind": "gewaesser",
+   "x": 20505.0,
+   "z": 4455.0
+  },
+  {
+   "name": "Kalltalsperre",
+   "kind": "gewaesser",
+   "x": 9765.0,
+   "z": 2775.0
+  },
+  {
+   "name": "Perlenbachtalsperre",
+   "kind": "gewaesser",
+   "x": 4905.0,
+   "z": 14655.0
   },
   {
    "name": "Rursee",
    "kind": "gewaesser",
-   "x": 17314.9,
-   "z": 4644.1
+   "x": 18795.0,
+   "z": 3165.0
   },
   {
    "name": "Obersee",
    "kind": "gewaesser",
-   "x": 15901.5,
-   "z": 7740.2
+   "x": 15915.0,
+   "z": 7215.0
   },
   {
    "name": "Urftsee",
    "kind": "gewaesser",
-   "x": 18728.4,
-   "z": 7740.2
+   "x": 18495.0,
+   "z": 8235.0
+  },
+  {
+   "name": "Rur",
+   "kind": "gewaesser",
+   "x": 10106.2,
+   "z": 11617.9
+  },
+  {
+   "name": "Olef",
+   "kind": "gewaesser",
+   "x": 22660.4,
+   "z": 14506.5
+  },
+  {
+   "name": "Urft",
+   "kind": "gewaesser",
+   "x": 21906.8,
+   "z": 10180.1
+  },
+  {
+   "name": "Brombach",
+   "kind": "gewaesser",
+   "x": 10899.6,
+   "z": 9049.3
+  },
+  {
+   "name": "Roessief",
+   "kind": "gewaesser",
+   "x": 14214.4,
+   "z": 8527.0
   }
  ],
  "credits": [
   "Höhendaten: Copernicus GLO-30 DEM © DLR e.V. 2010–2014 und © Airbus Defence and Space GmbH 2014–2018, bereitgestellt unter COPERNICUS durch die Europäische Union und ESA",
-  "Landbedeckung: ESA WorldCover 2021 (v200), © ESA, CC BY 4.0"
+  "Landbedeckung: ESA WorldCover 2021 (v200), © ESA, CC BY 4.0",
+  "Kartendaten © OpenStreetMap-Mitwirkende (ODbL)"
  ]
 }

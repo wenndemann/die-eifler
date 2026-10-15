@@ -16,5 +16,5 @@ for (const v of views) {
   await p.waitForTimeout(v.wait || 8000);
   await p.screenshot({ path: `${out}-${n++}.png` });
 }
-console.log(logs.slice(0, 20).join('\n'));
+console.log(logs.slice(0, 20).map((l) => l.slice(0, 1500)).join('\n'));
 await b.close();

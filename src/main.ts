@@ -5,6 +5,7 @@ import { HexGrid } from './map/hex';
 import { Stage } from './render/scene';
 import { Terrain } from './render/terrain';
 import { Water } from './render/water';
+import { Rivers } from './render/rivers';
 import { Trees } from './render/trees';
 import { Houses } from './render/houses';
 import { RtsCamera } from './render/camera';
@@ -27,7 +28,8 @@ async function main() {
 
   const terrain = new Terrain(map, base, new THREE.Vector2(grid.ox, grid.oz));
   const water = new Water(map, base);
-  terrain.group.add(water.mesh);
+  const rivers = new Rivers(map, base);
+  terrain.group.add(water.mesh, rivers.mesh);
   const trees = new Trees(map, base, ex);
   const houses = new Houses(map, base, ex);
   stage.scene.add(terrain.group, trees.group, houses.group);
@@ -115,6 +117,7 @@ async function main() {
     terrain.update(cam.camera.position);
     trees.update(cam.camera.position);
     water.uniforms.uTime.value += dt;
+    rivers.uniforms.uTime.value += dt;
     trees.uniforms.uTime.value += dt;
 
     // Hover-Kachel (gedrosselt)

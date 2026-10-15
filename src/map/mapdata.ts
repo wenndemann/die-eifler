@@ -2,6 +2,12 @@
 
 export interface Place { name: string; kind: 'stadt' | 'dorf' | 'weiler' | 'gewaesser'; x: number; z: number }
 
+/** Fließgewässer aus OSM: k 0 = Fluss, 1 = Bach, 2 = Kanal; w Breite (m); p = [x, z, Spiegel m ü. NN, ...]. */
+export interface River { n: string; k: number; w: number; p: number[] }
+
+/** See/Talsperre aus OSM: Spiegel l (m ü. NN), Außenring o und Löcher h als [x, z, ...]. */
+export interface Lake { n: string; l: number; o: number[]; h: number[][] }
+
 export interface MapInfo {
   id: string;
   name: string;
@@ -25,6 +31,8 @@ export class MapData {
   readonly water: Float32Array;
   readonly cover: Uint8Array;
   readonly hexTerrain: Uint8Array;
+  rivers: River[] = [];
+  lakes: Lake[] = [];
   readonly sizeX: number;
   readonly sizeZ: number;
 
@@ -45,7 +53,11 @@ export class MapData {
     };
     const info = (await (await fetch(`${base}/map.json`)).json()) as MapInfo;
     const [h, w, c, x] = await Promise.all([get('height.bin'), get('water.bin'), get('cover.bin'), get('hex.bin')]);
-    return new MapData(info, new Uint16Array(h), new Uint16Array(w), new Uint8Array(c), new Uint8Array(x));
+    const map = new MapData(info, new Uint16Array(h), new Uint16Array(w), new Uint8Array(c), new Uint8Array(x));
+    const [rv, lk] = await Promise.all([fetch(`${base}/rivers.json`), fetch(`${base}/lakes.json`)]);
+    if (rv.ok) map.rivers = (await rv.json()) as River[];
+    if (lk.ok) map.lakes = (await lk.json()) as Lake[];
+    return map;
   }
 
   /** Rasterindex, geklemmt. */

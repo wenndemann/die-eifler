@@ -2,3 +2,4 @@ node_modules/
 dist/
 tools/map/raw/*.tif
 __pycache__/
+tools/map/raw/*.json
