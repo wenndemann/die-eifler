@@ -5,11 +5,11 @@ Ein Kapitel gilt als **beschlossen**, wenn wir es gemeinsam durchgesprochen habe
 
 | Kapitel | Stand |
 |---|---|
-| 1. Idee und Ton | ✅ beschlossen (Grundzüge) |
+| 1. Idee und Ton | ✅ beschlossen (Grundzüge), Erzählfiguren je Völkchen, „Mer renne nit.“ |
 | 2. Spielmodi | ✅ beschlossen (Grundzüge) |
 | 3. Welt und Maßstab | ✅ beschlossen (Grundzüge) |
 | 4. Kern-Spielschleife | ✅ beschlossen (Grundzüge) |
-| 5. Wirtschaft und Gebäude | ✅ beschlossen (Grundzüge), Einzelwerte offen |
+| 5. Wirtschaft und Gebäude | ✅ beschlossen (Grundzüge), Grenzvölkchen fest; Kirmes-Warenlisten offen |
 | 6. Finden, Nachbarn, Ziele | ✅ beschlossen (Grundzüge) |
 | 7. Stil und Figuren | ✅ beschlossen (Grundzüge) |
 | 8. Technik und Mehrspieler | ✅ beschlossen (Grundzüge) |
@@ -40,7 +40,7 @@ Ein Kapitel gilt als **beschlossen**, wenn wir es gemeinsam durchgesprochen habe
 | **„Preußisch Sibirien“** | Ab 1815 galt die Eifel als Armenhaus Preußens. | Das Selbstmitleid der Eifeler als Gag: Meldungen bei Kälte und Missernte, ein Zuschuss-Gebäude („Eifelfonds“) für arme Dörfer. |
 | **Kirmes** | Die Dürener Annakirmes geht auf 1501 zurück. | Kirmes als großes Ziel jedes Dorfes. Die Annakirmes in Düren ist das Fest, auf das alle neidisch sind. |
 | **Schützenfest** | Schützenbruderschaften, Vogelschuss und Schützenkönig sind in den Dörfern fest verankert. | Zweites großes Fest neben der Kirmes, ähnlich behandelt (Vorschlag zur Abgrenzung in Kapitel 6). Der Vogelschuss auf den Holzvogel ist die einzige Schießerei im ganzen Spiel. Der Schützenkönig muss die Runde zahlen. |
-| **„Et jit net jerannt.“** | geflügeltes Wort (Kolumne „Eifel-Einsichten“) | Träger-Spruch, wenn man das Tempo hochdreht. Klären, ob wir das Zitat so verwenden. |
+| **„Mer renne nit.“** | angelehnt an das geflügelte Wort „Et jit net jerannt“ | Träger-Spruch, wenn man das Tempo hochdreht. **Beschlossen:** eigene Abwandlungen statt des wörtlichen Zitats (Buchtitel), z. B. „Mer renne nit.“ oder „Langsam, mir sin en d'r Eifel.“ |
 | **„Von bei Aachen“** | Früher verschwiegen Eifeler im Urlaub ihre Herkunft. | Händler aus der Eifel stellen sich in der Stadt als „von bei Aachen“ oder „von bei Trier“ vor. |
 | **Grenzsteine** | Volkssage: Wer Grenzsteine versetzt, muss nach dem Tod als Geist umgehen. | Finder können Grenzsteine „finden“ und dabei ein Stück weiter tragen (siehe 2.3). Spukende Grenzsteinversetzer als Nachtgeräusch. |
 
@@ -51,7 +51,16 @@ Ein Kapitel gilt als **beschlossen**, wenn wir es gemeinsam durchgesprochen habe
 - **Vulkaneifel:** Maare, Sprudel, Basalt. Hillesheim und Gerolstein liegen am Eifelsteig.
 - **Sprache:** Im Norden ripuarisches Platt (nah am Kölsch und Öcher Platt), im Süden moselfränkisch (nah am Luxemburgischen). Die Sprüche der Völkchen färben sich danach.
 
-Offen: eine Erzähler- oder Beraterfigur (z. B. eine resolute Dorfälteste), die durch Kampagne und Tutorial führt.
+### 1.4 Erzählfiguren (beschlossen)
+
+**Jedes Völkchen hat seine eigene Erzählfigur.** Sie begrüßt, kündigt das Wetter als Bauernregel an, kommentiert Feste und Funde und führt durch Einführung und Kampagne.
+
+| Völkchen | Figur | Charakter |
+|---|---|---|
+| **Monschauer & Venner** | **der Europa-Schützenkönig** | Hat einmal den europäischen Königsschuss geholt und erzählt das jedem. Wichtig, gönnerhaft, mit Königskette auch beim Holzhacken. Sagt in jedem Satz **„sag ich mal“**. Erfundene Figur, kein echter Schützenkönig. |
+| weitere Völkchen | Vorlagen, noch zu verteilen | **Oma Billa:** resolute Dorfälteste mit Kittelschürze und Gehstock, trocken, lobt nie zu viel. **Tante Fin:** Wirtin der Schänke, erzählt alles als Gerücht. **Pastor und Küsterin:** Er will das Gute, sie weiß, wie es wirklich läuft. |
+
+Die übrigen Figuren werden mit den Völkchen ausgearbeitet (ROADMAP M10/M11).
 
 ---
 
@@ -224,10 +233,10 @@ Jedes Völkchen hat einen **Bonus**, eine **Spezialkette** (2–3 Gebäude, ab S
 | **Laacher & Mayener** | Mühlsteine als wertvolle Handelsware | Basalt → Mühlstein; Schiefer → Dächer | Kein Lärm nahe der Abtei |
 | **Südeifeler** | Bier besser und schneller | Hopfen → Edelbier; Römerstraße (schnelle Wege) | Finden dauernd „alte Steine“ |
 | **Schneifeler** | Holz und Köhlerei ergiebiger | Holzkohle im großen Stil, Harz | Kurzer Sommer, Felder langsamer |
-| **Ostbelgier** (Eupen, Venn, St. Vith) | Torf aus dem Venn als Brennstoff | Torfstich; Schinken-Räucherei | Zweisprachige Schilder, keiner versteht die Meldungen ganz |
-| **Öslinger** (Nord-Luxemburg) | Schiefer und Gerberei (Wiltz) | Leder; Quetsch-Schnaps | Halten alle anderen für arm |
+| **Ostbelgier** (Eupen, Venn, St. Vith) | Torfstich im Venn als Brennstoff (statt Holzkohle) | Milch → Molkerei → **Butter** (Butterland Eupen); **Vennbahn** als schnelle Trasse | Formulare in drei Sprachen: neue Gebäude starten etwas langsamer |
+| **Öslinger** (Nord-Luxemburg) | Schiefer fürs Dach, Gebäude günstiger | Lohhecke (Eichen) → Lohe → **Gerberei** (Wiltz) → Leder; **Éislécker Ham** (Räucherschinken) | Halten alle anderen für arm und handeln teurer |
 
-Die zwei Grenzvölkchen sind ein erster Vorschlag und werden noch recherchiert. Wo nicht klar ist, zu welchem Völkchen ein Startort gehört, entscheidet eine Gebietskarte im Konverter.
+Die zwei Grenzvölkchen sind beschlossen (Hintergrund: Eupener Butter und die alte Vennbahn-Trasse; Lohhecken und Gerbereien in Wiltz, Éislécker Ham als Spezialität des Ösling). Wo nicht klar ist, zu welchem Völkchen ein Startort gehört, entscheidet eine Gebietskarte im Konverter.
 
 ## 6. Finden, Nachbarn, Ziele
 
