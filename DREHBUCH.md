@@ -7,7 +7,7 @@ Ein Kapitel gilt als **beschlossen**, wenn wir es gemeinsam durchgesprochen habe
 |---|---|
 | 1. Idee und Ton | ✅ beschlossen (Grundzüge) |
 | 2. Spielmodi | ✅ beschlossen (Grundzüge) |
-| 3. Welt und Maßstab | 🟡 offen, erste Festlegungen |
+| 3. Welt und Maßstab | 🟡 teilweise beschlossen |
 | 4. Kern-Spielschleife | ⬜ offen |
 | 5. Wirtschaft und Gebäude | ⬜ offen |
 | 6. Finden, Nachbarn, Ziele | ⬜ offen |
@@ -18,7 +18,9 @@ Ein Kapitel gilt als **beschlossen**, wenn wir es gemeinsam durchgesprochen habe
 
 ## 1. Idee und Ton
 
-**In einem Satz:** Ein Aufbauspiel im Geist von Siedler 2 auf der echten Eifel um 1750. Man spielt ein kleines, krummbeiniges, schlitzohriges Bergvolk, das niemals stiehlt. Es **findet** Dinge.
+**In einem Satz:** Ein Aufbauspiel im Geist von Siedler 2 auf der echten Eifel von heute. Man spielt ein kleines, krummbeiniges, schlitzohriges Bergvolk, das niemals stiehlt. Es **findet** Dinge.
+
+**Keine feste Epoche.** Das Gelände ist das von heute, mit Talsperren und allem. Die Gags kommen bunt aus allen Zeiten: Kaffeeschmuggel, „Preußisch Sibirien“, Tuchmacher, Kirmes, Eifelsteig. Die Architektur lehnt sich an das Fachwerk des 18. Jahrhunderts an, aber bunt und verspielt wie in Siedler.
 
 ### 1.1 Der Ton
 
@@ -33,9 +35,9 @@ Ein Kapitel gilt als **beschlossen**, wenn wir es gemeinsam durchgesprochen habe
 |---|---|---|
 | **„Die Eifel fängt erst hinter meinem Dorf an.“** Das Nachbardorf ist immer noch Flachland. | Selbstbild in der Region | Jedes Dorf hält die Nachbarn für „Flachländer“. Tooltips über Nachbardörfern: „Noch keine Eifel.“ Eigene Dörfer bekommen Rivalität untereinander. |
 | **Finden statt Stehlen** | Spielidee | Finder, Fundbüro, Ausredenstube. Wer erwischt wird, braucht eine gute Ausrede. |
-| **Schmuggel und Zöllner** | Die Nordeifel war 1945–1953 Zentrum des Kaffeeschmuggels („Aachener Kaffeefront“), besonders Mützenich. | Um 1750 ist die Eifel ein Flickenteppich kleiner Herrschaften: an jeder Grenze ein Zöllner, also Gelegenheit zum „Finden“. Kaffee ist eine Luxusware, die irgendwie immer über die Grenze kommt. |
+| **Schmuggel und Zöllner** | Die Nordeifel war 1945–1953 Zentrum des Kaffeeschmuggels („Aachener Kaffeefront“), besonders Mützenich. | An Regionsgrenzen stehen Zöllner, also Gelegenheit zum „Finden“. Kaffee ist eine Luxusware, die irgendwie immer über die Grenze kommt. Mützenich als Schmugglernest. |
 | **Das Wetter** | rau, nass, windig; das Hohe Venn | Regen ist ein Dauerzustand. Bauern-Sprüche zum Wetter, der Bootsverleih am Rursee hat nie geöffnet. |
-| **„Preußisch Sibirien“** | Ab 1815 galt die Eifel als Armenhaus Preußens. | Um 1750 liegt das noch in der Zukunft. Ein Wahrsager oder alter Kauz warnt: „Wartet ab, bis die Preußen kommen …“ |
+| **„Preußisch Sibirien“** | Ab 1815 galt die Eifel als Armenhaus Preußens. | Das Selbstmitleid der Eifeler als Gag: Meldungen bei Kälte und Missernte, ein Zuschuss-Gebäude („Eifelfonds“) für arme Dörfer. |
 | **Kirmes** | Die Dürener Annakirmes geht auf 1501 zurück. | Kirmes als großes Ziel jedes Dorfes. Die Annakirmes in Düren ist das Fest, auf das alle neidisch sind. |
 | **„Et jit net jerannt.“** | geflügeltes Wort (Kolumne „Eifel-Einsichten“) | Träger-Spruch, wenn man das Tempo hochdreht. Klären, ob wir das Zitat so verwenden. |
 | **„Von bei Aachen“** | Früher verschwiegen Eifeler im Urlaub ihre Herkunft. | Händler aus der Eifel stellen sich in der Stadt als „von bei Aachen“ oder „von bei Trier“ vor. |
@@ -43,7 +45,7 @@ Ein Kapitel gilt als **beschlossen**, wenn wir es gemeinsam durchgesprochen habe
 
 ### 1.3 Regionale Eigenheiten (Material für die Völkchen)
 
-- **Monschauer Land:** Tuchmacher-Stadt, das Rote Haus (Tuchmacher Scheibler, um 1752–1768, also genau unsere Zeit). Heckenland gegen den Venn-Wind, Hohes Venn. Senf erst ab 1882, also im Spiel nur als Augenzwinkern („Das wird mal was“).
+- **Monschauer Land:** Tuchmacher-Stadt, das Rote Haus (Tuchmacher Scheibler, um 1752–1768), Monschauer Senf (seit 1882). Heckenland gegen den Venn-Wind, Hohes Venn, Kaffeeschmuggel in Mützenich.
 - **Rureifel und Dürener Land:** Rurtal, Buntsandsteinfelsen um Nideggen, Papiermühlen an der Rur (Düren als Papierstadt), Annakirmes. Düren als großer Flachländer-Nachbar.
 - **Vulkaneifel:** Maare, Sprudel, Basalt. Hillesheim und Gerolstein liegen am Eifelsteig.
 - **Sprache:** Im Norden ripuarisches Platt (nah am Kölsch und Öcher Platt), im Süden moselfränkisch (nah am Luxemburgischen). Die Sprüche der Völkchen färben sich danach.
@@ -55,6 +57,8 @@ Offen: eine Erzähler- oder Beraterfigur (z. B. eine resolute Dorfälteste), die
 ## 2. Spielmodi
 
 ### 2.1 Kampagne „Der Eifelsteig“
+
+**Später.** Erst muss das Spiel im freien Spiel funktionieren und Spaß machen, dann bauen wir Missionen.
 
 Die Einzelkampagne folgt dem echten **Eifelsteig**: 15 Etappen, rund 313 km, von Aachen-Kornelimünster nach Trier. Jede Kampagnenkarte ist eine Region entlang des Weges; man wandert sozusagen mit seinem Völkchen durch die Eifel.
 
@@ -91,15 +95,15 @@ Jede vorhandene Region mit frei wählbarem Startort, Nachbarn und Siegbedingung.
 
 Erste Festlegungen:
 
-- **Die Eifel von damals:** Das Spiel spielt um 1750. Heutige Häuser fallen weg. Echte Orte gibt es nur als kleine Kerne (Kirche, ein paar Höfe) an der richtigen Stelle, das Land drumherum ist frei. Gelände, Flüsse und Seen bleiben echt. Die Talsperren gibt es um 1750 natürlich noch nicht (Augenzwinkern oder Rückbau, offen).
+- **Gelände von heute, Orte als Kerne:** Gelände, Flüsse, Seen und Talsperren sind die von heute. Die heutigen Häuser fallen weg. Echte Orte gibt es nur als kleine Kerne (Kirche, ein paar Höfe) an der richtigen Stelle, das Land drumherum ist frei. Dort kann man sein Dorf gründen und wachsen lassen.
+- **Eine Partie dauert etwa 2 Stunden** (Mehrspieler-Abend, freies Spiel).
 - **Gebäude etwa 3× echte Größe**, damit sie aus der Spielansicht gut lesbar sind (Maßstabs-Probe bei Einruhr).
 - **Bauplätze werden planiert**, damit Gebäude am Hang nicht im Boden versinken. An steilen Hängen nur kleine Gebäude.
 
 Offene Fragen:
 
 - Hex-Größe, Gebäudegröße und Kartengröße gemeinsam festlegen. Mit 90-m-Hexen ist Einruhr nach fünf Gebäuden voll. Kleinere Hexe verlangen kleinere Kartenausschnitte, sonst wird eine Partie endlos.
-- Wie lang soll eine Partie dauern (Kampagnen-Etappe, Mehrspieler-Abend)?
-- Die Talsperren um 1750: weglassen (Rur als Fluss) oder als Augenzwinkern behalten?
+- Kartengröße für 2-Stunden-Partien: Vorschlag folgt, sobald die Spielschleife (Kapitel 4) steht.
 
 ## 4. Kern-Spielschleife (offen)
 
@@ -118,6 +122,9 @@ Finderei, Ausreden, Grenzsteine, Gebiet ohne Krieg, Siegbedingungen in Kampagne 
 Lustiger Siedler-Look: übertriebene Proportionen, krummbeinige Figuren, Gebäude mit Charakter, Sprüche und Animationen.
 
 ## 8. Technik und Mehrspieler (offen)
+
+- **Karten sind fertige Dateien.** Der Konverter (`tools/map/`) erzeugt sie einmal auf dem Entwicklerrechner aus den Rohdaten. Die fertigen Karten (etwa 3 MB je Region, gepackt rund 1 MB) liegen im Repo unter `public/maps/` und werden wie Bilder einer Webseite ausgeliefert. Die Rohdaten (rund 40 MB) bleiben draußen und lassen sich jederzeit neu laden.
+- **Der Server rechnet keine Karten.** Jeder Spieler lädt die komplette Karte der Region. Im Mehrspieler prüfen alle per Prüfsumme, dass sie dieselbe Kartenversion haben, und tauschen danach nur noch Befehle aus.
 
 - Simulation von Anfang an **deterministisch und befehlsbasiert**, damit Mehrspieler im Gleichschritt (Lockstep) später möglich ist.
 - Lobby ohne Konto: ein kleiner Vermittlungs-Server (Lobby, Verbindungsaufbau), die Spiele laufen zwischen den Browsern.
