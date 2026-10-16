@@ -10,8 +10,8 @@ Ein Kapitel gilt als **beschlossen**, wenn wir es gemeinsam durchgesprochen habe
 | 3. Welt und Maßstab | ✅ beschlossen (Grundzüge) |
 | 4. Kern-Spielschleife | ✅ beschlossen (Grundzüge) |
 | 5. Wirtschaft und Gebäude | ✅ beschlossen (Grundzüge), Einzelwerte offen |
-| 6. Finden, Nachbarn, Ziele | ✅ beschlossen (Grundzüge), Hecke offen |
-| 7. Stil und Figuren | ⬜ offen |
+| 6. Finden, Nachbarn, Ziele | ✅ beschlossen (Grundzüge) |
+| 7. Stil und Figuren | 🟡 teilweise beschlossen |
 | 8. Technik und Mehrspieler | 🟡 Vorschlag Weltdaten und Ausschnitte |
 
 ---
@@ -243,7 +243,7 @@ Alle drei Wege sind beschlossen und greifen ineinander:
 
 Gebäude werden nie zerstört. Wechselt ein Hex mit Gebäude den Besitzer, steht das Gebäude still, bis man es zurückgewinnt oder freiwillig abreißt.
 
-**Hecken (Vorschlag, noch offen):** Die hohen Buchenhecken um die Höfe in Höfen und im Monschauer Land werden **Spezialität der Monschauer & Venner**, keine Regel für alle. Sie schützen vor dem Venn-Wind (Gebäude dahinter arbeiten im Winter schneller) und sind eine **lebende Grenze**: Grenzsteine hinter einer Hecke lassen sich kaum versetzen. Sie brauchen Setzlinge und Jahre zum Wachsen. In anderen Gegenden gibt es Hecken nur als Kulisse.
+**Hecken (beschlossen):** Die hohen Buchenhecken um die Höfe in Höfen und im Monschauer Land werden **Spezialität der Monschauer & Venner**, keine Regel für alle. Sie schützen vor dem Venn-Wind (Gebäude dahinter arbeiten im Winter schneller) und sind eine **lebende Grenze**: Grenzsteine hinter einer Hecke lassen sich kaum versetzen. Sie brauchen Setzlinge und Jahre zum Wachsen. In anderen Gegenden gibt es Hecken nur als Kulisse.
 
 ### 6.2 Nachbarn
 
@@ -279,9 +279,20 @@ Beide Feste funktionieren ähnlich: Man baut einen Festplatz, liefert eine Waren
 
 **Vogelschuss:** vor allem **Vorbereitung** mit einem kleinen **Glücksanteil**. Wer einen Schießstand hat, seine Schützen trainiert und ein besseres Gewehr „gefunden“ hat, trifft öfter. Ganz sicher ist es nie.
 
-## 7. Stil und Figuren (offen)
+## 7. Stil und Figuren
 
 Lustiger Siedler-Look: übertriebene Proportionen, krummbeinige Figuren, Gebäude mit Charakter, Sprüche und Animationen.
+
+### 7.1 Figuren
+
+- **Mischung aus Siedler 2 und Asterix-Comic:** knubbelig wie in Siedler (großer Kopf, krumme Beine, dicke Nase, Kappe oder Kopftuch), dazu mehr Mimik und übertriebene Gesten wie im Comic.
+- Jedes **Völkchen erkennt man an Tracht und Farbe**.
+- **Betrunkene erkennt man sofort:** rote Nase und Wangen, Schlagseite, Torkeln im Zickzack, Hicksen mit Bläschen über dem Kopf, schiefe Mütze, Flasche unterm Arm. Je mehr Schnaps, desto deutlicher (leicht angeheitert bis sternhagelvoll). Das ist wichtig fürs Spiel, weil beschwipste Boten und Finder anders laufen und leichter erwischt werden.
+
+### 7.2 Sprache und Stimmen
+
+- **Hochdeutsch mit Platt-Prisen:** Meldungen und Menüs auf Hochdeutsch, damit alle mitkommen. Sprüche und Ausrufe auf Platt, je Völkchen gefärbt (Norden ripuarisch, Süden moselfränkisch, Ostbelgien und Ösling mit eigenem Einschlag). Ein Tooltip übersetzt für Flachländer.
+- **Gebrabbel statt Sprecher:** Die Figuren brabbeln ein kurzes Kauderwelsch mit Eifeler Klang (wie bei den Sims), der Spruch steht als Text dabei. Betrunkene brabbeln schleppender und singen.
 
 ## 8. Technik und Mehrspieler (offen)
 
