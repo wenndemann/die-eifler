@@ -552,7 +552,19 @@ def wanderwege(elements, proj, gebiet_box=None, mindestlaenge=1500.0, toleranz=1
     Liefert [{n, ref, netz, p:[[x,z,...],...]}]."""
     from shapely.geometry import LineString
     rels = {e["id"]: e for e in elements if e["type"] == "relation" and e.get("tags", {}).get("route") == "hiking"}
-    kinder = {m["ref"] for r in rels.values() for m in r.get("members", []) if m["type"] == "relation" and m["ref"] in rels}
+
+    def etappe(eltern, kind):
+        """Unterrelation ist Etappe der Hauptroute, wenn sie deren Namen trägt oder „Etappe“ heißt;
+        Sammel-Relationen („Hauptwanderwege des Eifelvereins“) fassen dagegen eigenständige Routen zusammen."""
+        pn = (eltern["tags"].get("name") or "").lower().strip()
+        kn = (kind["tags"].get("name") or "").lower().strip()
+        return (not kn) or "etappe" in kn or "stage" in kn or (pn and kn.startswith(pn))
+
+    def etappen(r):
+        return [m["ref"] for m in r.get("members", []) if m["type"] == "relation" and m["ref"] in rels
+                and etappe(r, rels[m["ref"]])]
+
+    kinder = {c for r in rels.values() for c in etappen(r)}
     out = []
     for rid, r in rels.items():
         if rid in kinder:
@@ -566,10 +578,9 @@ def wanderwege(elements, proj, gebiet_box=None, mindestlaenge=1500.0, toleranz=1
             gesehen.add(cur)
             if not netz and rels[cur]["tags"].get("network") in WEGE_NETZE:
                 netz = rels[cur]["tags"]["network"]
+            stack += etappen(rels[cur])
             for m in rels[cur].get("members", []):
-                if m["type"] == "relation":
-                    stack.append(m["ref"])
-                elif m["type"] == "way" and m.get("geometry"):
+                if m["type"] == "way" and m.get("geometry"):
                     g = proj.pts(m["geometry"])
                     if len(g) >= 2:
                         linien.append(g)
