@@ -9,8 +9,8 @@ Ein Kapitel gilt als **beschlossen**, wenn wir es gemeinsam durchgesprochen habe
 | 2. Spielmodi | ✅ beschlossen (Grundzüge) |
 | 3. Welt und Maßstab | ✅ beschlossen (Grundzüge) |
 | 4. Kern-Spielschleife | ✅ beschlossen (Grundzüge) |
-| 5. Wirtschaft und Gebäude | ✅ beschlossen (Grundzüge), Grenzvölkchen fest; Kirmes-Warenlisten offen |
-| 6. Finden, Nachbarn, Ziele | ✅ beschlossen (Grundzüge) |
+| 5. Wirtschaft und Gebäude | ✅ beschlossen (Grundzüge), Grenzvölkchen und Kirmes-Warenlisten fest, Einzelwerte beim Spielen |
+| 6. Finden, Nachbarn, Ziele | ✅ beschlossen (Grundzüge), Eifel-Punkte verteilt |
 | 7. Stil und Figuren | ✅ beschlossen (Grundzüge) |
 | 8. Technik und Mehrspieler | ✅ beschlossen (Grundzüge) |
 
@@ -57,7 +57,7 @@ Ein Kapitel gilt als **beschlossen**, wenn wir es gemeinsam durchgesprochen habe
 
 | Völkchen | Figur | Charakter |
 |---|---|---|
-| **Monschauer & Venner** | **der Europa-Schützenkönig** | Hat einmal den europäischen Königsschuss geholt und erzählt das jedem. Wichtig, gönnerhaft, mit Königskette auch beim Holzhacken. Sagt in jedem Satz **„sag ich mal“**. Erfundene Figur, kein echter Schützenkönig. |
+| **Monschauer & Venner** | **Herr Leck, der Europa-Schützenkönig** | Hat einmal den europäischen Königsschuss geholt und erzählt das jedem. Wichtig, gönnerhaft, mit Königskette auch beim Holzhacken. Sagt in jedem Satz **„sag ich mal“**. Erfundene Figur, kein echter Schützenkönig. |
 | weitere Völkchen | Vorlagen, noch zu verteilen | **Oma Billa:** resolute Dorfälteste mit Kittelschürze und Gehstock, trocken, lobt nie zu viel. **Tante Fin:** Wirtin der Schänke, erzählt alles als Gerücht. **Pastor und Küsterin:** Er will das Gute, sie weiß, wie es wirklich läuft. |
 
 Die übrigen Figuren werden mit den Völkchen ausgearbeitet (ROADMAP M10/M11).
@@ -213,11 +213,13 @@ Eisen ist echt Eifel: Im Schleidener Tal und um Gemünd standen jahrhundertelang
 
 ### 5.2 Dorfstufen über die Kirmes
 
-| Stufe | Kirmes liefert (Startwerte) | Schaltet frei |
-|---|---|---|
-| Weiler → Dorf | Bratkartoffeln, Most, Käse | Reifekeller, Brauerei, Brennerei, Schänke, Schützenhaus |
-| Dorf → Kirchdorf | Bergkäse, Honig, Bier | Eisenkette und Werkzeug, **Spezialkette des Völkchens** |
-| Kirchdorf → Marktflecken | Spezialität + Mischkorb | Edle Spezialität, Handel mit Nachbarn |
+| Stufe | Kirmes liefert (beschlossene Startwerte) | Ziel in der Partie | Schaltet frei |
+|---|---|---|---|
+| Weiler → Dorf | 10 Bratkartoffeln, 10 Most, 6 Käse | nach ~30–45 min | Reifekeller, Brauerei, Brennerei, Schänke, Schützenhaus |
+| Dorf → Kirchdorf | 10 Bergkäse, 12 Honig, 15 Landbier, 5 Schnaps | nach ~75 min | Eisenkette und Werkzeug, **Spezialkette des Völkchens** |
+| Kirchdorf → Marktflecken | 10 Spezialität des Völkchens, 10 Werkzeug, Mischkorb aus 20 beliebigen veredelten Waren | nach ~110 min | Edle Spezialität, Handel mit Nachbarn |
+
+Die Mengen werden beim Spielen eingestellt, die Zeitziele bleiben.
 
 ### 5.3 Völkchen
 
@@ -268,7 +270,19 @@ Gebäude werden nie zerstört. Wechselt ein Hex mit Gebäude den Besitzer, steht
 
 ### 6.4 Siegbedingungen
 
-- **Standard: Eifel-Punkte.** Nach 2 Stunden gewinnt, wer die meisten Punkte hat. Punkte gibt es für Dorfstufe, gefeierte Feste, den Schützenkönig, Bewohner, Gebiet und große Funde. Zwischenstand jederzeit sichtbar.
+- **Standard: Eifel-Punkte.** Nach 2 Stunden gewinnt, wer die meisten Punkte hat. Zwischenstand jederzeit sichtbar. Verteilung (beschlossene Startwerte):
+
+  | Wofür | Punkte |
+  |---|---|
+  | Dorfstufe Dorf / Kirchdorf / Marktflecken | 100 / 250 / 450 (insgesamt, nicht zusätzlich) |
+  | jedes gefeierte Fest (Kirmes, Schützenfest) | 50 |
+  | Schützenkönig | 150 je Titel |
+  | Bewohner | 1 je Bewohner |
+  | Gebiet | 1 je 10 Hexe |
+  | große Funde | 30–100 je nach Fund |
+  | Teil des Großen Funds | 75 |
+
+  Kein Bereich allein reicht zum Sieg.
 - **Wählbar in der Lobby:**
   - **Wettlauf:** Wer zuerst Marktflecken wird.
   - **Der Große Fund:** Teile eines seltenen Schatzes bei verschiedenen Nachbarn finden und im Fundbüro zusammensetzen.
