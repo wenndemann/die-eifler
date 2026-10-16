@@ -1,5 +1,7 @@
 # ROADMAP – Die Eifeler
 
+> **Hinweis:** Ab M3 wird die Roadmap nach dem neuen [Drehbuch](DREHBUCH.md) überarbeitet. M1 und M2 (Karte, Regionen) bleiben gültig.
+
 Reihenfolge der Meilensteine. Jeder endet mit einem **lauffähigen, vorzeigbaren Stand** und einer Abnahme.
 Regeln und Zahlen stehen in [DESIGN.md](DESIGN.md).
 

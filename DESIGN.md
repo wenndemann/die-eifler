@@ -1,5 +1,7 @@
 # DESIGN – Die Eifeler
 
+> **Vorentwurf.** Dieses Dokument wird Kapitel für Kapitel durch das [Drehbuch](DREHBUCH.md) ersetzt. Wo sich beide widersprechen, gilt das Drehbuch.
+
 Aufbauspiel im Geist von *Die Siedler 2* auf der **echten Eifel**: echte Höhen, echte Täler, echte Orte.
 Ton: liebevoll, augenzwinkernd, regional. **Die Eifeler stehlen nie – sie „finden“ Dinge.**
 
