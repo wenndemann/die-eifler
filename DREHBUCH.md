@@ -7,7 +7,7 @@ Ein Kapitel gilt als **beschlossen**, wenn wir es gemeinsam durchgesprochen habe
 |---|---|
 | 1. Idee und Ton | ✅ beschlossen (Grundzüge) |
 | 2. Spielmodi | ✅ beschlossen (Grundzüge) |
-| 3. Welt und Maßstab | 🟡 teilweise beschlossen |
+| 3. Welt und Maßstab | ✅ beschlossen (Grundzüge) |
 | 4. Kern-Spielschleife | ✅ beschlossen (Grundzüge) |
 | 5. Wirtschaft und Gebäude | ⬜ offen |
 | 6. Finden, Nachbarn, Ziele | ⬜ offen |
@@ -93,7 +93,7 @@ Man wählt seinen **Kartenausschnitt selbst**, irgendwo in der Eifel (siehe 3.1)
 
 ---
 
-## 3. Welt und Maßstab (teilweise beschlossen)
+## 3. Welt und Maßstab
 
 Erste Festlegungen:
 
@@ -102,15 +102,12 @@ Erste Festlegungen:
 - **Gebäude etwa 3× echte Größe**, damit sie aus der Spielansicht gut lesbar sind (Maßstabs-Probe bei Einruhr).
 - **Bauplätze werden planiert**, damit Gebäude am Hang nicht im Boden versinken. An steilen Hängen nur kleine Gebäude.
 
-Offene Fragen:
+**Maßstab (beschlossen):**
 
-- Hex-Größe, Gebäudegröße und Kartengröße gemeinsam festlegen. Mit 90-m-Hexen ist Einruhr nach fünf Gebäuden voll. Kleinere Hexe verlangen kleinere Kartenausschnitte, sonst wird eine Partie endlos.
-- **Vorschlag Karten- und Hexgröße** (noch zu bestätigen):
-  - In einer 2-Stunden-Partie baut ein Spieler grob 60–120 Gebäude und braucht dafür samt Wegen etwa 1.000–2.500 Hexe.
-  - Für bis zu 4 Spieler ergibt das Karten von etwa **100–120 Hexen Kantenlänge**.
-  - **Hex-Umkreisradius 60 m** (ein Hex ist rund 104 m breit) statt bisher 90 m. Damit wird eine Karte **etwa 10–12 km** groß, zum Beispiel Einruhr bis Monschau oder Nideggen bis Heimbach.
-  - Gebäude in etwa 3× echter Größe passen dann gut ins Hex, Ortskerne wie Einruhr bekommen genug Platz drumherum.
-  - Die bisherigen Regionen (20–25 km) werden in mehrere Spielkarten geteilt oder dienen als Übersicht.
+- **Hex-Umkreisradius 60 m** statt bisher 90 m. Ein Hex ist rund 104 m breit.
+- Begründung: In einer 2-Stunden-Partie baut ein Spieler grob 60–120 Gebäude und braucht dafür samt Wegen etwa 1.000–2.500 Hexe. Mit 90-m-Hexen war Einruhr nach fünf Gebäuden voll.
+- Gebäude in etwa 3× echter Größe passen gut ins Hex, Ortskerne wie Einruhr bekommen genug Platz drumherum.
+- Spielkarten sind damit etwa 10–17 km groß (Größen siehe 3.1). Die bisherigen Regionen (20–25 km) werden zu Vorschlägen oder zur Übersicht.
 
 ### 3.1 Kartenwahl: den Ausschnitt selbst wählen
 
@@ -122,7 +119,7 @@ Im **freien Spiel und im Mehrspieler** gibt es keine festen Karten mehr. Man wä
    - Oder man **tippt einen Ort ein** („Gemünd“), der dann die Mitte wird. Gibt es den Namen mehrfach, kommt eine Auswahlliste („Welches Gemünd? Et jitt zwei.“).
 3. Die Übersicht zeigt im Hex schon die **Ortskerne als mögliche Startplätze**, Seen, Wald und Höhen. Reichen die Ortskerne nicht für alle Spieler (z. B. mitten im Hohen Venn), sagt das Spiel das gleich: „Hier wohnt keiner.“
 
-**Vorschlag Form und Größen** (Hex-Umkreisradius 60 m, Karte als großes Hex mit Norden oben):
+**Form und Größen (beschlossen):** Die Spielkarte ist ein **großes Hex** mit Norden oben.
 
 | Größe | Radius | Hexe | Breite | Fläche | Spieler |
 |---|---|---|---|---|---|
@@ -132,7 +129,7 @@ Im **freien Spiel und im Mehrspieler** gibt es keine festen Karten mehr. Man wä
 
 - Rechnung: je Spieler 1.000–2.500 Hexe für 2 Stunden, dazu rund ein Drittel unbebaubar (Wasser, steile Hänge, Moor).
 - Zum Vergleich: Das heutige Monschauer Land ist mit rund 440 km² mehr als doppelt so groß wie „groß“. Die Leistung ist damit schon erprobt.
-- Ein Hex als Form passt zum Spiel und verteilt die Startplätze gleichmäßiger als ein Rechteck. Alternative wäre ein Rechteck, das den Bildschirm besser füllt.
+- Das Hex als Form passt zum Spiel und verteilt die Startplätze gleichmäßiger als ein Rechteck.
 
 **Am Rand:** Außerhalb des Spiel-Hex geht die echte Landschaft noch etwa 2 km als **Kulisse** weiter (nicht bebaubar, leicht ausgegraut), dann verschwindet sie im Nebel. So gibt es keine harte Tischkante.
 
