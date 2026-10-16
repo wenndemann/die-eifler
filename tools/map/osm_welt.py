@@ -115,7 +115,7 @@ def lade_overpass(kacheln, arbeit, endpunkte=None):
             except (OSError, ValueError):
                 js = None
         if js is None:
-            js = _overpass_holen(b, endpunkte or ENDPOINTS, fp)
+            js = _overpass_block(b, endpunkte or ENDPOINTS, fp)
             atomar_schreiben(cache, gzip.compress(json.dumps(js).encode("utf-8"), mtime=0))
         for e in js["elements"]:
             elems[(e["type"], e["id"])] = e
@@ -123,10 +123,26 @@ def lade_overpass(kacheln, arbeit, endpunkte=None):
     return list(elems.values())
 
 
-def _overpass_holen(b, endpunkte, fp):
+def _overpass_block(b, endpunkte, fp, tiefe=0):
+    """Ein Block; scheitert er überall (Zeitüberschreitung bei dichten Gebieten), wird er geviertelt."""
+    try:
+        return _overpass_holen(b, endpunkte, fp, versuche=3 if tiefe < 2 else 6)
+    except SystemExit:
+        if tiefe >= 2:
+            raise
+        print("  Block zu groß für Overpass, teile ihn", flush=True)
+        mx, my = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
+        elems = {}
+        for sub in ((b[0], b[1], mx, my), (mx, b[1], b[2], my), (b[0], my, mx, b[3]), (mx, my, b[2], b[3])):
+            for e in _overpass_block(sub, endpunkte, fp, tiefe + 1)["elements"]:
+                elems[(e["type"], e["id"])] = e
+        return {"elements": list(elems.values())}
+
+
+def _overpass_holen(b, endpunkte, fp, versuche=6):
     data = urllib.parse.urlencode({"data": overpass_abfrage(b)}).encode()
     letzter = ""
-    for versuch in range(6):
+    for versuch in range(versuche):
         for ep in endpunkte:
             try:
                 req = urllib.request.Request(ep, data=data, headers={"User-Agent": "die-eifeler-mapbuild/1.0"})

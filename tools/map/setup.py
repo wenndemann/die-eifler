@@ -74,13 +74,17 @@ def main():
                 s.t = time.time()
                 print(f"\n-- {name}", flush=True)
 
-            def __exit__(s, *a):
+            def __exit__(s, typ, *a):
                 zeiten[name] = time.time() - s.t
+                if typ is None:   # Fortschritt für Menschen und zum Nachsehen nach Abbruch
+                    util.json_schreiben(os.path.join(arbeit, "status.json"),
+                                        {"version": version, "gebiet": args.gebiet, "fertig": False,
+                                         "letzte_stufe": name, "zeiten": zeiten}, indent=1)
         return _S()
 
     # Signatur der Version: ändert sich Gebiet oder Höhenquellen, sind abgeleitete Kachelstufen ungültig
     amtlich = [] if args.nur_copernicus else dem.amtliche_quellen()
-    sig = {"gebiet": args.gebiet, "kacheln": len(kach), "quellen": dem.quellen_codes(amtlich), "format": 1}
+    sig = {"gebiet": args.gebiet, "kacheln": [list(min(kach)), list(max(kach)), len(kach)], "quellen": dem.quellen_codes(amtlich), "format": 1}
     alt = util.json_lesen(os.path.join(arbeit_ver, "signatur.json"))
     if alt is not None and alt != sig:
         print("Einstellungen haben sich geändert: Kachelstufen dieser Version werden neu gerechnet")
@@ -92,7 +96,7 @@ def main():
     with stufe("WorldCover (Bedeckung, 10 m)"):
         worldcover.bauen(kach, arbeit)
     with stufe("Höhe (amtlich + Copernicus, 10 m)"):
-        fehler, codes = dem.bauen(kach, arbeit, worldcover.lader(arbeit), args.nur_copernicus, args.jobs)
+        fehler, codes = dem.bauen(kach, arbeit, lambda tx, tz: worldcover.mit_rand(arbeit, tx, tz), args.nur_copernicus, args.jobs)
     if fehler:
         sys.exit(f"{len(fehler)} Höhenkacheln unvollständig ({fehler[:5]} ...). Bitte erneut starten.")
 
@@ -223,7 +227,8 @@ def main():
     if util.Roh.archiv:
         print(f"Rohdaten archiviert unter {util.Roh.archiv}")
     util.json_schreiben(os.path.join(arbeit, "status.json"),
-                        {"version": version, "gebiet": args.gebiet, "fertig": manifest["erstellt"], "zeiten": zeiten})
+                        {"version": version, "gebiet": args.gebiet, "fertig": manifest["erstellt"], "zeiten": zeiten},
+                        indent=1)
     # Arbeitsordner aufräumen: leere Rohordner
     shutil.rmtree(os.path.join(arbeit, "roh"), ignore_errors=True) if not util.Roh.archiv else None
 

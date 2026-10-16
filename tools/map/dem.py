@@ -18,7 +18,6 @@ from rasterio.warp import Resampling, reproject
 from scipy import ndimage
 
 import welt
-from mosaik import Mosaik, nachbar_fuellen
 from util import Fortschritt, Roh, atomar_schreiben, json_lesen, json_schreiben
 
 CANOPY = 18.0        # mittlere Baumhöhe, wird aus dem DSM herausgerechnet (m)
@@ -150,7 +149,7 @@ def cop_boden(cop, wald):
     return ndimage.gaussian_filter(g, 2.4)
 
 
-def kachel_rechnen(tx, tz, amtlich, pfade_je_quelle, cop_pfade, wc_mosaik):
+def kachel_rechnen(tx, tz, amtlich, pfade_je_quelle, cop_pfade, wc_voll):
     i0, j0, n, tr = fenster_transform(tx, tz)
     off = np.full((n, n), np.nan, np.float32)
     code = np.zeros((n, n), np.uint8)
@@ -170,8 +169,7 @@ def kachel_rechnen(tx, tz, amtlich, pfade_je_quelle, cop_pfade, wc_mosaik):
         cop[m] = a[m]
     if np.isnan(cop).any():
         cop = np.where(np.isnan(cop), np.nanmean(cop) if (~np.isnan(cop)).any() else 0, cop)
-    wc, ok = wc_mosaik.fenster(i0, j0, n, n)
-    wc = nachbar_fuellen(wc, ok)
+    wc = np.pad(wc_voll(tx, tz), (n - welt.N10 - 40) // 2, mode="edge")
     g = cop_boden(cop, wc == welt.C["wald"])
     if gueltig.any():
         delta = np.where(gueltig, off - g, 0).astype(np.float32)
@@ -195,7 +193,7 @@ def npy_bytes(a):
     return b.getvalue()
 
 
-def bauen(kacheln, arbeit, wc_lader, nur_cop, jobs, neu=False):
+def bauen(kacheln, arbeit, wc_voll, nur_cop, jobs, neu=False):
     """Alle Höhenkacheln rechnen. Liefert (fehlerliste, quellen_codes)."""
     amtlich = [] if nur_cop else amtliche_quellen()
     cop = kopernikus()
@@ -227,7 +225,6 @@ def bauen(kacheln, arbeit, wc_lader, nur_cop, jobs, neu=False):
         bedarf[t] = [(qi, kid) for qi, q in enumerate(alle) for kid in q.kacheln(b)]
         for k in bedarf[t]:
             ql.refs[k] = ql.refs.get(k, 0) + 1
-    wc = Mosaik(wc_lader, np.uint8, 1, cache=20)
     fehler = []
     ncop = len(amtlich)
     try:
@@ -246,7 +243,7 @@ def bauen(kacheln, arbeit, wc_lader, nur_cop, jobs, neu=False):
                     print(f"  FEHLER Quelle {alle[k[0]].id} {k[1]}: {str(ex)[:150]}")
                     ok = False
             if ok:
-                h, q = kachel_rechnen(t[0], t[1], amtlich, je[:ncop], je[ncop], wc)
+                h, q = kachel_rechnen(t[0], t[1], amtlich, je[:ncop], je[ncop], wc_voll)
                 if np.isnan(h).any():
                     fehler.append(t)
                     print(f"  Kachel {t}: Lücken ohne Quelle")

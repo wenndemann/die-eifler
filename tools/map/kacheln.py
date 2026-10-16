@@ -27,7 +27,8 @@ from util import atomar_schreiben, gz_schreiben
 C = welt.C
 RAND = 30                    # Zellen (300 m)
 N = welt.N10 + 2 * RAND
-FELS_GRAD = 34.0             # Hangneigung (Grad) auf geglättetem 10-m-Gelände, ab der Fels beginnt
+FELS_GRAD = 30.0             # Hangneigung (Grad, auf mit σ = 10 m geglättetem 10-m-Gelände) ab der Offenland zu Fels wird
+FELS_GRAD_WALD = 40.0        # im Wald erst bei Felswand-Neigung (sonst wäre jeder steile Waldhang Fels)
 FELS_MIN = 8                 # kleinere Fels-Flecken (Zellen) entfallen
 # Flussbett je Linienart: Tiefe unter dem Spiegel (m), Uferneigung (m/m), Einflussradius (m).
 # Wie in build_map.py, nur mit kürzerer Reichweite und steilerem Ufer: bei 10 m Zellen und echten
@@ -280,7 +281,7 @@ class WeltKacheln:
         gs = ndimage.gaussian_filter(ground, 1.0)
         gzs, gxs = np.gradient(gs, 10.0)
         slope = np.degrees(np.arctan(np.hypot(gxs, gzs)))
-        rock = (slope > FELS_GRAD) & (cover != C["wasser"]) & (cover != C["wald"]) & ~riverside
+        rock = ((slope > FELS_GRAD) & (cover != C["wald"]) | (slope > FELS_GRAD_WALD)) & (cover != C["wasser"]) & ~riverside
         if rock.any():
             lab, nl = ndimage.label(rock)
             gr = ndimage.sum(rock, lab, range(1, nl + 1))

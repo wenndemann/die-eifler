@@ -1,7 +1,9 @@
 """Stufe 2: ESA WorldCover 2021 (v200, 10 m) auf das 10-m-UTM-Raster je Kachel (nearest).
 
-Pro Kachel `wc10/{tx}_{tz}.npy`: uint8[600,600], Index in welt.COVER. © ESA WorldCover, CC BY 4.0.
+Pro Kachel `wc10/{tx}_{tz}.npy`: uint8[640,640] (600 + je 20 Zellen Rand, damit das Ergebnis nicht von
+Nachbarkacheln abhängt), Index in welt.COVER. © ESA WorldCover, CC BY 4.0.
 """
+import io
 import math
 import os
 
@@ -13,6 +15,7 @@ from rasterio.warp import Resampling, reproject
 import welt
 from util import Fortschritt, atomar_schreiben
 
+RANDW = 20   # Zellen Rand je Seite
 URL = ("/vsicurl/https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/"
        "ESA_WorldCover_10m_2021_v200_{tile}_Map.tif")
 WORLDCOVER = {10: "wald", 20: "heide", 30: "wiese", 40: "acker", 50: "siedlung",
@@ -42,7 +45,13 @@ def pfad(arbeit, tx, tz):
 
 
 def bauen(kacheln, arbeit, neu=False):
-    todo = [k for k in kacheln if neu or not os.path.exists(pfad(arbeit, *k))]
+    voll = 128 + (welt.N10 + 2 * RANDW) ** 2   # Dateigröße einer vollständigen Kachel (npy-Kopf + Daten)
+
+    def fertig(k):
+        p = pfad(arbeit, *k)
+        return os.path.exists(p) and os.path.getsize(p) == voll
+
+    todo = [k for k in kacheln if neu or not fertig(k)]
     print(f"WorldCover: {len(kacheln) - len(todo)} fertig, {len(todo)} zu rechnen")
     if not todo:
         return
@@ -55,8 +64,8 @@ def bauen(kacheln, arbeit, neu=False):
     with rasterio.Env(**env):
         for tx, tz in todo:
             e0, n0, e1, n1 = welt.kachel_utm(tx, tz)
-            tr = from_origin(e0, n1, 10, 10)
-            ziel = np.zeros((welt.N10, welt.N10), np.uint8)
+            tr = from_origin(e0 - 10 * RANDW, n1 + 10 * RANDW, 10, 10)
+            ziel = np.zeros((welt.N10 + 2 * RANDW, welt.N10 + 2 * RANDW), np.uint8)
             for name in kacheln_fuer(tx, tz):
                 if name not in offen:
                     offen[name] = rasterio.open(URL.format(tile=name))
@@ -72,7 +81,6 @@ def bauen(kacheln, arbeit, neu=False):
                     raise SystemExit(f"WorldCover: Kachel {tx}_{tz} hat {fehl:.0f} % Lücken – Download gestört?")
             cover = tabelle[ziel]
             cover[ziel == 0] = welt.C["wiese"]
-            import io
             b = io.BytesIO()
             np.save(b, cover)
             atomar_schreiben(pfad(arbeit, tx, tz), b.getvalue())
@@ -82,7 +90,13 @@ def bauen(kacheln, arbeit, neu=False):
 
 
 def lader(arbeit):
+    """Mosaik-Lader: nur die 600×600 der Kachel selbst."""
     def f(tx, tz):
         p = pfad(arbeit, tx, tz)
-        return np.load(p) if os.path.exists(p) else None
+        return np.load(p)[RANDW:-RANDW, RANDW:-RANDW] if os.path.exists(p) else None
     return f
+
+
+def mit_rand(arbeit, tx, tz):
+    """Kachel samt 20 Zellen Rand (640×640)."""
+    return np.load(pfad(arbeit, tx, tz))
