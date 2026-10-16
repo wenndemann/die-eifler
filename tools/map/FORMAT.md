@@ -105,6 +105,8 @@ welt-daten/                       (lokal, nicht in Git; Vite liefert es unter /w
   "credits": ["..."] }
 ```
 
+- `files`: sha256 je Datei über den **entpackten** Inhalt (bei `.gz` also nach dem Entpacken), damit es
+  egal ist, ob ein Server gzip selbst auspackt.
 - Versionsname `eifel-JJJJ.MM`, bei Teilgebieten mit Zusatz (`eifel-2026.10-nideggen`).
 - Kacheln liegen unter dem Versionspfad und ändern sich nie. `kacheln` listet nur gebaute Kacheln
   (Teilgebiete). Der Client hält Auswahl-Hex samt Kulisse innerhalb der gebauten Kacheln.
