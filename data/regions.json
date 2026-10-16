@@ -1,0 +1,931 @@
+{
+ "version": 1,
+ "hinweis": "Startwerte, werden beim Spielen eingestellt (Drehbuch 5)",
+ "flachlaender": [
+  {
+   "platt": "Hinger däm Hüjel fängt de Eifel erst aan.",
+   "hoch": "Hinter dem Hügel fängt die Eifel erst an."
+  },
+  {
+   "platt": "Noch kein Eifel, nur Flachland.",
+   "hoch": "Noch keine Eifel, nur Flachland."
+  },
+  {
+   "platt": "Die könne sich nit mol e Hecke leiste.",
+   "hoch": "Die können sich nicht mal eine Hecke leisten."
+  },
+  {
+   "platt": "Flachländer sin die, wo de Berch fählt.",
+   "hoch": "Flachländer sind die, denen der Berg fehlt."
+  },
+  {
+   "platt": "Dat Nobardorf? Dat is jo nur Pampa.",
+   "hoch": "Das Nachbardorf? Das ist ja nur Pampa."
+  },
+  {
+   "platt": "Dä Stadtmensch kütt, un d'r Hond bellt.",
+   "hoch": "Der Städter kommt, und der Hund bellt."
+  },
+  {
+   "platt": "Hee fängt de richtije Eifel aan, nit eher.",
+   "hoch": "Hier fängt die richtige Eifel an, nicht eher."
+  }
+ ],
+ "voelkchen": [
+  {
+   "id": "monschau",
+   "name": "Monschauer & Venner",
+   "sprache": "ripuarisch",
+   "erzaehler": {
+    "name": "Herr Leck, der Europa-Schützenkönig",
+    "charakter": "Hat einmal den europäischen Königsschuss geholt und erzählt das jedem. Wichtig, gönnerhaft, Königskette auch beim Holzhacken. Erfundene Figur.",
+    "tick": "sag ich mal"
+   },
+   "bonus": {
+    "text": "Hecken wachsen 25 % schneller (Heckenland gegen den Venn-Wind).",
+    "effekt": {
+     "typ": "wachstum",
+     "ziel": "hecke",
+     "faktor": 1.25
+    }
+   },
+   "spezialkette": {
+    "text": "Schafwolle, Spinnerei, Tuchmacherei (Rotes Haus); Senfmühle.",
+    "gebaeude": [
+     "spinnerei",
+     "tuchmacherei",
+     "senfmuehle"
+    ],
+    "ab_stufe": 2
+   },
+   "schwaeche": {
+    "text": "Bauen ungern im Moor.",
+    "effekt": {
+     "typ": "bau",
+     "terrain": "moor",
+     "kosten_faktor": 1.5,
+     "dauer_faktor": 1.5
+    }
+   },
+   "startwaren": {
+    "bretter": 12,
+    "stein": 8,
+    "kartoffeln": 8
+   },
+   "bewohner": 10,
+   "farbe": "#B22A2A",
+   "baustoff": "Fachwerk mit Schieferdach, hohe Buchenhecken",
+   "kerngebiet": {
+    "beschreibung": "Hohes Venn, Heckenland und Tuchmacherstadt im äußersten Nordwesten, an der Grenze zu Belgien.",
+    "orte": [
+     "Monschau",
+     "Mützenich",
+     "Höfen",
+     "Kalterherberg",
+     "Imgenbroich",
+     "Konzen",
+     "Rohren",
+     "Roetgen"
+    ]
+   },
+   "sprueche": [
+    {
+     "platt": "Do bliev ich stäche, bei dem Moor.",
+     "hoch": "Da bleibe ich stecken, in dem Moor."
+    },
+    {
+     "platt": "Die Hecke hält de Wind, ich halt de Mul.",
+     "hoch": "Die Hecke hält den Wind ab, ich halte den Mund."
+    },
+    {
+     "platt": "Kaffee? Ich han nix jesinn, ich han nur jefunge.",
+     "hoch": "Kaffee? Ich habe nichts gesehen, ich habe nur gefunden."
+    },
+    {
+     "platt": "Janz Monschau is Eifel. Aachen? Flachland.",
+     "hoch": "Ganz Monschau ist Eifel. Aachen? Flachland."
+    },
+    {
+     "platt": "Dä Senf is jot, dä Rest is Wetter.",
+     "hoch": "Der Senf ist gut, der Rest ist Wetter."
+    },
+    {
+     "platt": "Mützenich liet an d'r Jrenz, un d'r Zoll is bliend.",
+     "hoch": "Mützenich liegt an der Grenze, und der Zoll ist blind."
+    },
+    {
+     "platt": "Et rähnt, ävver nur sidwärts.",
+     "hoch": "Es regnet, aber nur seitwärts."
+    },
+    {
+     "platt": "Mer sin stur, ävver höflich stur.",
+     "hoch": "Wir sind stur, aber höflich stur."
+    }
+   ]
+  },
+  {
+   "id": "rursee",
+   "name": "Rursee-Leute",
+   "sprache": "ripuarisch",
+   "erzaehler": {
+    "name": "Kapitän Kalle",
+    "charakter": "Bootsverleiher, dessen Verleih noch nie geöffnet hatte. Trägt Kapitänsmütze, war nie auf See.",
+    "tick": "Morje vielleicht."
+   },
+   "bonus": {
+    "text": "Fischerei an Talsperren ergiebiger.",
+    "effekt": {
+     "typ": "produktion",
+     "gebaeude": "fischerhuette",
+     "faktor": 1.25
+    }
+   },
+   "spezialkette": {
+    "text": "Fisch, Räucherei.",
+    "gebaeude": [
+     "fischerhuette",
+     "raeucherei"
+    ],
+    "ab_stufe": 2
+   },
+   "schwaeche": {
+    "text": "Bei Regen ruht der Bootsverleih.",
+    "effekt": {
+     "typ": "wetter",
+     "bei": "regen",
+     "gebaeude": "bootsverleih",
+     "faktor": 0.0
+    }
+   },
+   "startwaren": {
+    "bretter": 12,
+    "stein": 8,
+    "kartoffeln": 8
+   },
+   "bewohner": 10,
+   "farbe": "#2A7FA8",
+   "baustoff": "Fachwerk und Bruchstein, Bootsstege",
+   "kerngebiet": {
+    "beschreibung": "Der Stausee der Rur und die Dörfer rund um die Talsperren in der Nordeifel.",
+    "orte": [
+     "Einruhr",
+     "Rurberg",
+     "Woffelsberg",
+     "Schwammenauel",
+     "Simonskall",
+     "Gemünd",
+     "Schleiden"
+    ]
+   },
+   "sprueche": [
+    {
+     "platt": "Dat Boot is jetz zo, morje vielleicht.",
+     "hoch": "Das Boot ist jetzt zu, morgen vielleicht."
+    },
+    {
+     "platt": "Ich ben noch nie jefahre, ävver ich weiß wie.",
+     "hoch": "Ich bin noch nie gefahren, aber ich weiß wie."
+    },
+    {
+     "platt": "Dä Rursee is jroß, dä Ozean is och nur Wasser.",
+     "hoch": "Der Rursee ist groß, der Ozean ist auch nur Wasser."
+    },
+    {
+     "platt": "Fisch hammer, Kundschaft fählt.",
+     "hoch": "Fisch haben wir, Kundschaft fehlt."
+    },
+    {
+     "platt": "Ene Kapitän ohne Boot is immer noch ene Kapitän.",
+     "hoch": "Ein Kapitän ohne Boot ist immer noch ein Kapitän."
+    },
+    {
+     "platt": "Et reäne, also is zo.",
+     "hoch": "Es regnet, also ist zu."
+    },
+    {
+     "platt": "Wer Flachland will, soll no Düren.",
+     "hoch": "Wer Flachland will, soll nach Düren."
+    },
+    {
+     "platt": "Die Staumauer hält, un mir och.",
+     "hoch": "Die Staumauer hält, und wir auch."
+    }
+   ]
+  },
+  {
+   "id": "rureifel",
+   "name": "Rureifeler",
+   "sprache": "ripuarisch",
+   "erzaehler": {
+    "name": "Papiermüller Arnold",
+    "charakter": "Pedantischer Müller, schreibt alles auf eigenes Papier mit. Misst sich ständig an Düren.",
+    "tick": "In Düren hätten se dat schon."
+   },
+   "bonus": {
+    "text": "Steinbrüche im Buntsandstein ergiebiger (Nideggener Felsen).",
+    "effekt": {
+     "typ": "produktion",
+     "gebaeude": "steinbruch",
+     "faktor": 1.25
+    }
+   },
+   "spezialkette": {
+    "text": "Rotsandstein, Steinmetz; Papiermühle an der Rur.",
+    "gebaeude": [
+     "steinmetz",
+     "papiermuehle"
+    ],
+    "ab_stufe": 2
+   },
+   "schwaeche": {
+    "text": "Schielen ständig nach Düren.",
+    "effekt": {
+     "typ": "ablenkung",
+     "ziel": "duren",
+     "bauzeit_faktor": 1.1
+    }
+   },
+   "startwaren": {
+    "bretter": 12,
+    "stein": 8,
+    "kartoffeln": 8
+   },
+   "bewohner": 10,
+   "farbe": "#C0603A",
+   "baustoff": "Roter Buntsandstein und Bruchstein",
+   "kerngebiet": {
+    "beschreibung": "Das Rurtal zwischen Eifel und Dürener Land mit Buntsandsteinfelsen und Papiermühlen.",
+    "orte": [
+     "Nideggen",
+     "Heimbach",
+     "Abenden",
+     "Zerkall",
+     "Kreuzau",
+     "Obermaubach",
+     "Hürtgenwald"
+    ]
+   },
+   "sprueche": [
+    {
+     "platt": "Dat hammer opjeschrevve, also stimmt et.",
+     "hoch": "Das haben wir aufgeschrieben, also stimmt es."
+    },
+    {
+     "platt": "Roter Stein, jrauer Himmel, jode Laune.",
+     "hoch": "Roter Stein, grauer Himmel, gute Laune."
+    },
+    {
+     "platt": "Düren hät de Kirmes, mir hann de Aussich.",
+     "hoch": "Düren hat die Kirmes, wir haben die Aussicht."
+    },
+    {
+     "platt": "Papier jeduldig, Müller nit.",
+     "hoch": "Papier ist geduldig, der Müller nicht."
+    },
+    {
+     "platt": "Jede Zettel is e Beweis.",
+     "hoch": "Jeder Zettel ist ein Beweis."
+    },
+    {
+     "platt": "Dä Fels hält, dä Fels bliev.",
+     "hoch": "Der Fels hält, der Fels bleibt."
+    },
+    {
+     "platt": "Mer bauen nit schnell, mer bauen richtich.",
+     "hoch": "Wir bauen nicht schnell, wir bauen richtig."
+    },
+    {
+     "platt": "Nit jammere, Stein kloppe.",
+     "hoch": "Nicht jammern, Stein klopfen."
+    }
+   ]
+  },
+  {
+   "id": "vulkaneifel",
+   "name": "Vulkaneifeler",
+   "sprache": "moselfraenkisch",
+   "erzaehler": {
+    "name": "Maar-Mattes",
+    "charakter": "Wünschelrutengänger mit Gummistiefeln, hält alles für ein Zeichen aus der Tiefe.",
+    "tick": "Et blubbert!"
+   },
+   "bonus": {
+    "text": "Basaltbrüche ergiebiger.",
+    "effekt": {
+     "typ": "produktion",
+     "gebaeude": "basaltbruch",
+     "faktor": 1.25
+    }
+   },
+   "spezialkette": {
+    "text": "Sprudelquelle, Lavastein.",
+    "gebaeude": [
+     "sprudelquelle",
+     "lavasteinbruch"
+    ],
+    "ab_stufe": 2
+   },
+   "schwaeche": {
+    "text": "Maare sind heilig, dort wird nicht gebaut.",
+    "effekt": {
+     "typ": "bauverbot",
+     "terrain": "maar",
+     "radius_hex": 1
+    }
+   },
+   "startwaren": {
+    "bretter": 12,
+    "stein": 8,
+    "kartoffeln": 8
+   },
+   "bewohner": 10,
+   "farbe": "#4A4A55",
+   "baustoff": "dunkler Basalt und Lavastein",
+   "kerngebiet": {
+    "beschreibung": "Die Maare, Basaltkegel und Sprudelquellen rund um Daun, Gerolstein und Hillesheim.",
+    "orte": [
+     "Gerolstein",
+     "Daun",
+     "Hillesheim",
+     "Manderscheid",
+     "Ulmen",
+     "Gillenfeld",
+     "Strohn"
+    ]
+   },
+   "sprueche": [
+    {
+     "platt": "Et blubbert, et blubbert!",
+     "hoch": "Es blubbert, es blubbert!"
+    },
+    {
+     "platt": "Dat Maar bleiwt zou, do baut kenner.",
+     "hoch": "Das Maar bleibt zu, da baut keiner."
+    },
+    {
+     "platt": "Mäin Rutt zeigt no ënnen, also guud.",
+     "hoch": "Meine Rute zeigt nach unten, also gut."
+    },
+    {
+     "platt": "Wann et rullt, ass et net de Mo.",
+     "hoch": "Wenn es rollt, ist es nicht der Magen."
+    },
+    {
+     "platt": "Basalt hält, Wetter nit.",
+     "hoch": "Basalt hält, Wetter nicht."
+    },
+    {
+     "platt": "Dat ass e Zeechen aus der Déifung.",
+     "hoch": "Das ist ein Zeichen aus der Tiefe."
+    },
+    {
+     "platt": "Sprudel hammer, Bier hammer, wat wëllste méi.",
+     "hoch": "Sprudel haben wir, Bier haben wir, was willst du mehr."
+    },
+    {
+     "platt": "Jeede Gummistiwwel hat seng Zäit.",
+     "hoch": "Jeder Gummistiefel hat seine Zeit."
+    }
+   ]
+  },
+  {
+   "id": "ahr",
+   "name": "Ahrtaler",
+   "sprache": "ripuarisch",
+   "erzaehler": {
+    "name": "Winzerin Traudel",
+    "charakter": "Herzlich und laut, will jede Meldung erst bei einem Glas besprechen. Darum dauern ihre Feste länger.",
+    "tick": "Do drop e Schöppche."
+   },
+   "bonus": {
+    "text": "Wein auf Steilhängen (Hänge sind sonst schlecht).",
+    "effekt": {
+     "typ": "terrain",
+     "terrain": "steilhang",
+     "gebaeude": "weinberg",
+     "steigung_malus_faktor": 0.0
+    }
+   },
+   "spezialkette": {
+    "text": "Trauben, Kelter, Rotwein.",
+    "gebaeude": [
+     "weinberg",
+     "kelter",
+     "weinkeller"
+    ],
+    "ab_stufe": 2
+   },
+   "schwaeche": {
+    "text": "Feste dauern länger.",
+    "effekt": {
+     "typ": "fest",
+     "dauer_faktor": 1.3,
+     "arbeitspause_faktor": 1.5
+    }
+   },
+   "startwaren": {
+    "bretter": 12,
+    "stein": 8,
+    "kartoffeln": 8
+   },
+   "bewohner": 10,
+   "farbe": "#7A1F3D",
+   "baustoff": "Fachwerk, Schiefer, Weinbergmauern",
+   "kerngebiet": {
+    "beschreibung": "Das Weinland an der Ahr mit steilen Schieferhängen.",
+    "orte": [
+     "Altenahr",
+     "Mayschoß",
+     "Rech",
+     "Dernau",
+     "Ahrweiler",
+     "Bad Neuenahr",
+     "Adenau",
+     "Ahrbrück"
+    ]
+   },
+   "sprueche": [
+    {
+     "platt": "Do drop e Schöppche, dann sin mer fäädich.",
+     "hoch": "Da trinken wir ein Schöppchen, dann sind wir fertig."
+    },
+    {
+     "platt": "Wer Wing hät, hät Frönde.",
+     "hoch": "Wer Wein hat, hat Freunde."
+    },
+    {
+     "platt": "Dä Steilhang is mie Wohnzimmer.",
+     "hoch": "Der Steilhang ist mein Wohnzimmer."
+    },
+    {
+     "platt": "Et Fess dauert lang, ävver jemötlich.",
+     "hoch": "Das Fest dauert lange, aber gemütlich."
+    },
+    {
+     "platt": "Rotwein is och nur Traubesaff, nur reifer.",
+     "hoch": "Rotwein ist auch nur Traubensaft, nur reifer."
+    },
+    {
+     "platt": "Ming Hänge sin stell, ming Laune nit.",
+     "hoch": "Meine Hänge sind steil, meine Launen nicht."
+    },
+    {
+     "platt": "Wer nit feiert, hät et nit verdeent.",
+     "hoch": "Wer nicht feiert, hat es nicht verdient."
+    },
+    {
+     "platt": "Prost, un dann jeht et widder.",
+     "hoch": "Prost, und dann geht es wieder."
+    }
+   ]
+  },
+  {
+   "id": "laach",
+   "name": "Laacher & Mayener",
+   "sprache": "moselfraenkisch",
+   "erzaehler": {
+    "name": "Pater Benno und Küsterin Hedwig",
+    "charakter": "Er will das Gute, sie weiß, wie es wirklich läuft. Er beginnt feierlich, sie unterbricht.",
+    "tick": "Psst, nit esu laut!"
+   },
+   "bonus": {
+    "text": "Mühlsteine als wertvolle Handelsware.",
+    "effekt": {
+     "typ": "handelswert",
+     "ware": "muehlstein",
+     "faktor": 1.5
+    }
+   },
+   "spezialkette": {
+    "text": "Basalt, Mühlstein; Schiefer, Dächer.",
+    "gebaeude": [
+     "muehlsteinhauerei",
+     "schieferdecker"
+    ],
+    "ab_stufe": 2
+   },
+   "schwaeche": {
+    "text": "Kein Lärm nahe der Abtei.",
+    "effekt": {
+     "typ": "bauverbot",
+     "gebaeude_art": "laerm",
+     "ziel": "abtei",
+     "radius_hex": 4
+    }
+   },
+   "startwaren": {
+    "bretter": 12,
+    "stein": 8,
+    "kartoffeln": 8
+   },
+   "bewohner": 10,
+   "farbe": "#6E5A8C",
+   "baustoff": "Basalt und Schiefer, romanische Abteibauten",
+   "kerngebiet": {
+    "beschreibung": "Rund um den Laacher See, die Abtei und die Basaltgruben von Mayen.",
+    "orte": [
+     "Maria Laach",
+     "Mayen",
+     "Mendig",
+     "Kruft",
+     "Andernach",
+     "Nickenich",
+     "Ettringen"
+    ]
+   },
+   "sprueche": [
+    {
+     "platt": "Psst, nit esu laut, de Mönche bäte.",
+     "hoch": "Psst, nicht so laut, die Mönche beten."
+    },
+    {
+     "platt": "Dä Mühlstein rollt, und mir roll'n met.",
+     "hoch": "Der Mühlstein rollt, und wir rollen mit."
+    },
+    {
+     "platt": "Pater Benno predigt, ich putz.",
+     "hoch": "Pater Benno predigt, ich putze."
+    },
+    {
+     "platt": "Em Basalt steckt de Weisheit.",
+     "hoch": "Im Basalt steckt die Weisheit."
+    },
+    {
+     "platt": "Hämmern? Nit vür de Vesper.",
+     "hoch": "Hämmern? Nicht vor der Vesper."
+    },
+    {
+     "platt": "Dä Schiefer hält de Nässe fern, de Kirch dä Rest.",
+     "hoch": "Der Schiefer hält die Nässe fern, die Kirche den Rest."
+    },
+    {
+     "platt": "Wann et still is, hör ich dä See.",
+     "hoch": "Wenn es still ist, höre ich den See."
+    },
+    {
+     "platt": "Mer sin fromm, ävver nit blöd.",
+     "hoch": "Wir sind fromm, aber nicht blöd."
+    }
+   ]
+  },
+  {
+   "id": "suedeifel",
+   "name": "Südeifeler",
+   "sprache": "moselfraenkisch",
+   "erzaehler": {
+    "name": "Tante Fin",
+    "charakter": "Wirtin der Schänke, erzählt alles als Gerücht, auch das Wetter.",
+    "tick": "Hab ich von der Nachbarin."
+   },
+   "bonus": {
+    "text": "Bier besser und schneller.",
+    "effekt": {
+     "typ": "produktion",
+     "gebaeude": "brauerei",
+     "faktor": 1.25
+    }
+   },
+   "spezialkette": {
+    "text": "Hopfen, Edelbier; Römerstraße (schnelle Wege).",
+    "gebaeude": [
+     "hopfengarten",
+     "edelbrauerei",
+     "roemerstrasse"
+    ],
+    "ab_stufe": 2
+   },
+   "schwaeche": {
+    "text": "Finden dauernd alte Steine.",
+    "effekt": {
+     "typ": "ablenkung",
+     "ziel": "altstein",
+     "chance": 0.1,
+     "verzoegerung_s": 20
+    }
+   },
+   "startwaren": {
+    "bretter": 12,
+    "stein": 8,
+    "kartoffeln": 8
+   },
+   "bewohner": 10,
+   "farbe": "#D9A21B",
+   "baustoff": "Bruchstein, römische Mauerreste",
+   "kerngebiet": {
+    "beschreibung": "Die Bierlandschaft um Bitburg bis an die Sauer und Our, mit römischen Spuren.",
+    "orte": [
+     "Bitburg",
+     "Neuerburg",
+     "Irrel",
+     "Echternacherbrück",
+     "Kyllburg",
+     "Speicher"
+    ]
+   },
+   "sprueche": [
+    {
+     "platt": "Hab ich von der Nachbarin, die weiß et vom Pastor.",
+     "hoch": "Habe ich von der Nachbarin, die weiß es vom Pastor."
+    },
+    {
+     "platt": "Et Bier ass gutt, et Wieder ass Gerücht.",
+     "hoch": "Das Bier ist gut, das Wetter ist ein Gerücht."
+    },
+    {
+     "platt": "Schon widder en aale Steen jefonn.",
+     "hoch": "Schon wieder einen alten Stein gefunden."
+    },
+    {
+     "platt": "Die Römer woren hei, de Stroos ass geblieft.",
+     "hoch": "Die Römer waren hier, die Straße ist geblieben."
+    },
+    {
+     "platt": "Ee Gleesche geet nach.",
+     "hoch": "Ein Gläschen geht noch."
+    },
+    {
+     "platt": "Wat de Nopesch erzielt, stëmmt zur Hallschent.",
+     "hoch": "Was die Nachbarin erzählt, stimmt zur Hälfte."
+    },
+    {
+     "platt": "Lëtzebuerg ass nëmmen e Stéck wäit.",
+     "hoch": "Luxemburg ist nur ein Stück weit."
+    },
+    {
+     "platt": "Hopfen un Malz, Gott erhalt's.",
+     "hoch": "Hopfen und Malz, Gott erhalt's."
+    }
+   ]
+  },
+  {
+   "id": "schneifel",
+   "name": "Schneifeler",
+   "sprache": "moselfraenkisch",
+   "erzaehler": {
+    "name": "Oma Billa",
+    "charakter": "Resolute Dorfälteste mit Kittelschürze und Gehstock, hat schon jeden Winter überlebt und lobt nie zu viel.",
+    "tick": "Et hätt schlimmer kumme künne."
+   },
+   "bonus": {
+    "text": "Holz und Köhlerei ergiebiger.",
+    "effekt": {
+     "typ": "produktion",
+     "gebaeude": [
+      "hoelzfaeller",
+      "koehlerei"
+     ],
+     "faktor": 1.25
+    }
+   },
+   "spezialkette": {
+    "text": "Holzkohle im großen Stil, Harz.",
+    "gebaeude": [
+     "grossmeiler",
+     "harzer"
+    ],
+    "ab_stufe": 2
+   },
+   "schwaeche": {
+    "text": "Kurzer Sommer, Felder langsamer.",
+    "effekt": {
+     "typ": "produktion",
+     "gebaeude": [
+      "kartoffelfeld",
+      "gerstenfeld"
+     ],
+     "faktor": 0.8
+    }
+   },
+   "startwaren": {
+    "bretter": 12,
+    "stein": 8,
+    "kartoffeln": 8
+   },
+   "bewohner": 10,
+   "farbe": "#2F6B3C",
+   "baustoff": "Dunkles Holz, Schiefer, schlichte Höfe",
+   "kerngebiet": {
+    "beschreibung": "Der raue Höhenzug der Schneifel und das Prümer Land an der Grenze zu Belgien.",
+    "orte": [
+     "Prüm",
+     "Bleialf",
+     "Schönecken",
+     "Olzheim",
+     "Habscheid",
+     "Büdesheim",
+     "Auw"
+    ]
+   },
+   "sprueche": [
+    {
+     "platt": "Et hätt schlimmer kumme künne.",
+     "hoch": "Es hätte schlimmer kommen können."
+    },
+    {
+     "platt": "Dä Summer woar dies Joer en Dach.",
+     "hoch": "Der Sommer war dieses Jahr ein Tag."
+    },
+    {
+     "platt": "Wer friert, hät nit jenuch jehackt.",
+     "hoch": "Wer friert, hat nicht genug gehackt."
+    },
+    {
+     "platt": "Schnee? Dat nennt mer hei Herbst.",
+     "hoch": "Schnee? Das nennt man hier Herbst."
+    },
+    {
+     "platt": "Lob? Dat kost extra.",
+     "hoch": "Lob? Das kostet extra."
+    },
+    {
+     "platt": "Mir han jeden Winter üwwerlieft.",
+     "hoch": "Wir haben jeden Winter überlebt."
+    },
+    {
+     "platt": "De Kartoffeln kumme, wann se kumme.",
+     "hoch": "Die Kartoffeln kommen, wenn sie kommen."
+    },
+    {
+     "platt": "Holz ass Wärm, Wärm ass Läwen.",
+     "hoch": "Holz ist Wärme, Wärme ist Leben."
+    }
+   ]
+  },
+  {
+   "id": "ostbelgien",
+   "name": "Ostbelgier",
+   "sprache": "ostbelgisch",
+   "erzaehler": {
+    "name": "Zöllner a. D. Gerd",
+    "charakter": "Pensionierter Grenzbeamter, liebt Formulare in drei Sprachen und mischt sie alle. Merkt nie, was über die Grenze geschmuggelt wird.",
+    "tick": "Bon, also, dat jeht so nit."
+   },
+   "bonus": {
+    "text": "Torfstich im Venn als Brennstoff (statt Holzkohle).",
+    "effekt": {
+     "typ": "ersatz",
+     "ware": "torf",
+     "ersetzt": "holzkohle",
+     "faktor": 1.0
+    }
+   },
+   "spezialkette": {
+    "text": "Milch, Molkerei, Butter (Butterland Eupen); Vennbahn als schnelle Trasse.",
+    "gebaeude": [
+     "molkerei",
+     "vennbahn"
+    ],
+    "ab_stufe": 2
+   },
+   "schwaeche": {
+    "text": "Formulare in drei Sprachen: neue Gebäude starten etwas langsamer.",
+    "effekt": {
+     "typ": "bau",
+     "bauzeit_faktor": 1.15
+    }
+   },
+   "startwaren": {
+    "bretter": 12,
+    "stein": 8,
+    "kartoffeln": 8
+   },
+   "bewohner": 10,
+   "farbe": "#C8A02E",
+   "baustoff": "Fachwerk, grauer Bruchstein, Schiefer",
+   "kerngebiet": {
+    "beschreibung": "Die deutschsprachige Gemeinschaft in Belgien mit Venn, Eupener Land und St. Vith.",
+    "orte": [
+     "Eupen",
+     "St. Vith",
+     "Büllingen",
+     "Bütgenbach",
+     "Raeren",
+     "Kelmis",
+     "Weismes",
+     "Sourbrodt"
+    ]
+   },
+   "sprueche": [
+    {
+     "platt": "Bon, also, dat jeht so nit.",
+     "hoch": "Gut, also, das geht so nicht."
+    },
+    {
+     "platt": "Formulaar A, B, un c'est fini.",
+     "hoch": "Formular A, B, und fertig."
+    },
+    {
+     "platt": "Dä Butter kütt vun Eupen, d'r Zoll vun nirjendwo.",
+     "hoch": "Die Butter kommt aus Eupen, der Zoll von nirgendwo."
+    },
+    {
+     "platt": "Ich han nix jesehn, ich ben pensionnée.",
+     "hoch": "Ich habe nichts gesehen, ich bin pensioniert."
+    },
+    {
+     "platt": "An d'r Jrenz is alles anders, och dat Wetter.",
+     "hoch": "An der Grenze ist alles anders, auch das Wetter."
+    },
+    {
+     "platt": "Drei Sproche, ein Stempel.",
+     "hoch": "Drei Sprachen, ein Stempel."
+    },
+    {
+     "platt": "Torf brennt lang, Papier noch länger.",
+     "hoch": "Torf brennt lange, Papier noch länger."
+    },
+    {
+     "platt": "Mer sin Belge, ävver nit nur.",
+     "hoch": "Wir sind Belgier, aber nicht nur."
+    }
+   ]
+  },
+  {
+   "id": "oesling",
+   "name": "Öslinger",
+   "sprache": "oeslinger",
+   "erzaehler": {
+    "name": "Gerbermeister Jängi",
+    "charakter": "Stolz, gut angezogen, riecht leicht nach Lohe. Hält alle anderen für arm und bedauert sie freundlich.",
+    "tick": "Dir Aarm, gell?"
+   },
+   "bonus": {
+    "text": "Schiefer fürs Dach, Gebäude günstiger.",
+    "effekt": {
+     "typ": "baukosten",
+     "faktor": 0.9
+    }
+   },
+   "spezialkette": {
+    "text": "Lohhecke, Lohe, Gerberei (Wiltz), Leder; Éislécker Ham.",
+    "gebaeude": [
+     "lohhecke",
+     "gerberei",
+     "raeucherkammer"
+    ],
+    "ab_stufe": 2
+   },
+   "schwaeche": {
+    "text": "Halten alle anderen für arm und handeln teurer.",
+    "effekt": {
+     "typ": "handel",
+     "preis_faktor": 1.2
+    }
+   },
+   "startwaren": {
+    "bretter": 12,
+    "stein": 8,
+    "kartoffeln": 8
+   },
+   "bewohner": 10,
+   "farbe": "#1F4E79",
+   "baustoff": "Schiefer, Lohhecken, Bruchstein",
+   "kerngebiet": {
+    "beschreibung": "Der Norden Luxemburgs mit Wiltz, Clervaux und Vianden.",
+    "orte": [
+     "Wiltz",
+     "Clervaux",
+     "Vianden",
+     "Troisvierges",
+     "Hosingen",
+     "Bastendorf",
+     "Esch-sur-Sûre"
+    ]
+   },
+   "sprueche": [
+    {
+     "platt": "Dir Aarm, gell?",
+     "hoch": "Ihr Armen, nicht wahr?"
+    },
+    {
+     "platt": "Ons Leder ass feng, ären Zoll nët.",
+     "hoch": "Unser Leder ist fein, euer Zoll nicht."
+    },
+    {
+     "platt": "Mäi Schierer ass besser wéi däin.",
+     "hoch": "Mein Schiefer ist besser als deiner."
+    },
+    {
+     "platt": "Dee Schinken ass aus Ësleck, nët aus Deutschland.",
+     "hoch": "Der Schinken ist aus Ösling, nicht aus Deutschland."
+    },
+    {
+     "platt": "Ech rieche no Lou, an ech si stolz.",
+     "hoch": "Ich rieche nach Lohe, und ich bin stolz."
+    },
+    {
+     "platt": "Wann et reent, gi mir gutt gekleet.",
+     "hoch": "Wenn es regnet, gehen wir gut gekleidet."
+    },
+    {
+     "platt": "Dir hutt Eifel, mir hunn Ösling.",
+     "hoch": "Ihr habt Eifel, wir haben Ösling."
+    },
+    {
+     "platt": "E bësse méi deier ass och e bësse méi gutt.",
+     "hoch": "Etwas teurer ist auch etwas besser."
+    }
+   ]
+  }
+ ]
+}
