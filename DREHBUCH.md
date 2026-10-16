@@ -8,7 +8,7 @@ Ein Kapitel gilt als **beschlossen**, wenn wir es gemeinsam durchgesprochen habe
 | 1. Idee und Ton | ✅ beschlossen (Grundzüge) |
 | 2. Spielmodi | ✅ beschlossen (Grundzüge) |
 | 3. Welt und Maßstab | 🟡 teilweise beschlossen |
-| 4. Kern-Spielschleife | ⬜ offen |
+| 4. Kern-Spielschleife | ✅ beschlossen (Grundzüge) |
 | 5. Wirtschaft und Gebäude | ⬜ offen |
 | 6. Finden, Nachbarn, Ziele | ⬜ offen |
 | 7. Stil und Figuren | ⬜ offen |
@@ -104,11 +104,45 @@ Erste Festlegungen:
 Offene Fragen:
 
 - Hex-Größe, Gebäudegröße und Kartengröße gemeinsam festlegen. Mit 90-m-Hexen ist Einruhr nach fünf Gebäuden voll. Kleinere Hexe verlangen kleinere Kartenausschnitte, sonst wird eine Partie endlos.
-- Kartengröße für 2-Stunden-Partien: Vorschlag folgt, sobald die Spielschleife (Kapitel 4) steht.
+- **Vorschlag Karten- und Hexgröße** (noch zu bestätigen):
+  - In einer 2-Stunden-Partie baut ein Spieler grob 60–120 Gebäude und braucht dafür samt Wegen etwa 1.000–2.500 Hexe.
+  - Für bis zu 4 Spieler ergibt das Karten von etwa **100–120 Hexen Kantenlänge**.
+  - **Hex-Umkreisradius 60 m** (ein Hex ist rund 104 m breit) statt bisher 90 m. Damit wird eine Karte **etwa 10–12 km** groß, zum Beispiel Einruhr bis Monschau oder Nideggen bis Heimbach.
+  - Gebäude in etwa 3× echter Größe passen dann gut ins Hex, Ortskerne wie Einruhr bekommen genug Platz drumherum.
+  - Die bisherigen Regionen (20–25 km) werden in mehrere Spielkarten geteilt oder dienen als Übersicht.
 
-## 4. Kern-Spielschleife (offen)
+## 4. Kern-Spielschleife
 
-Wege, Träger, Waren, Wachstum. Was macht die ersten 30 Minuten spaßig?
+Die Spielschleife folgt bewusst **Siedler 2**: Das Wegenetz ist das Herz des Spiels. Die technischen Regeln dafür (Fahnen, Segmente, Routing ohne Verklemmung, Baustellen, Abriss) stehen ausgearbeitet im Vorentwurf [DESIGN.md §3–4](DESIGN.md) und werden übernommen.
+
+### 4.1 Wege und Träger
+
+- Jedes Gebäude steht auf einem Hex und hat eine **Fahne** vor dem Eingang. Fahnen sind die Knoten des Wegenetzes.
+- **Wege** führen von Fahne zu Fahne. Auf jedem Abschnitt pendelt genau **ein Träger** und trägt eine Ware nach der anderen.
+- Alle Waren sind sichtbar unterwegs: Man sieht Stämme, Steine und Kartoffeln über die Wege wandern und sich an Fahnen stapeln, wenn es hakt.
+- **Bergauf ist langsamer.** Die echten Täler und Hänge der Eifel spielen damit eine Rolle beim Wegebau.
+- Ein Gebäude ohne Wegverbindung zum Lager arbeitet nicht (⚠).
+
+### 4.2 Start
+
+- Man beginnt mit einem **Lager in einem echten Ortskern**, zum Beispiel Einruhr, mit ein paar Bewohnern und einem kleinen Vorrat an Brettern, Steinen und Essen.
+- Von dort baut man Wege ins Land, setzt Holzfäller und Steinbruch und wächst Schritt für Schritt.
+
+### 4.3 Wachstum
+
+- **Nahrung bringt neue Bewohner.** Wohnhäuser mit Essen im Vorrat bringen neue Eifeler hervor. Besseres Essen geht schneller (einfach: Kartoffeln, Äpfel, Milch; veredelt: Käse, Bratkartoffeln, Most, Honig; edel: regionale Spezialitäten).
+- **Feste sind die großen Zwischenziele:**
+  - **Kirmes:** Das Dorf steigt eine Stufe auf und schaltet neue Gebäude frei.
+  - **Schützenfest:** Kräftemessen mit den Nachbarn um den Königstitel (Kapitel 6).
+- **Notnagel:** Sind kaum noch freie Bewohner da und es gibt nichts zu essen, kommt ab und zu ein Zugezogener. Man kann sich nicht festfahren.
+
+### 4.4 Die ersten 30 Minuten (Zielbild)
+
+1. Lager steht im Ortskern, Kamera zeigt das Tal. Die Dorfälteste begrüßt mit einem Spruch.
+2. Holzfäller und Förster an den Waldrand, Weg dahin legen, die ersten Stämme laufen ins Lager.
+3. Sägewerk und Steinbruch: Bretter und Steine fließen, die ersten Baustellen wachsen sichtbar in drei Phasen.
+4. Kartoffelfeld und Wohnhaus: Die ersten neuen Bewohner kommen, das Netz wird dichter, an einer Fahne staut es sich, man baut einen zweiten Weg.
+5. Kirmesplatz steht, die Warenliste füllt sich. Ziel für die nächste halbe Stunde ist klar.
 
 ## 5. Wirtschaft und Gebäude (offen)
 
@@ -130,7 +164,7 @@ Beide Feste funktionieren ähnlich: Man baut einen Festplatz, liefert eine Waren
 | Lohn | Dorfstufe, Bewohner | Königstitel bis zum nächsten Schützenfest: mehr Einfluss auf Nachbar-Hexe, Bewohner wandern zu |
 | Haken | – | Der König muss die Runde zahlen (teure Warenlieferung) |
 
-Offen: ob der Vogelschuss Glück, Geschick (kleines Minispiel) oder Vorbereitung ist (Schießstand, Training, „gefundenes“ besseres Gewehr).
+**Vogelschuss:** vor allem **Vorbereitung** mit einem kleinen **Glücksanteil**. Wer einen Schießstand hat, seine Schützen trainiert und ein besseres Gewehr „gefunden“ hat, trifft öfter. Ganz sicher ist es nie.
 
 ## 7. Stil und Figuren (offen)
 
