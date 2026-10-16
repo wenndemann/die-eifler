@@ -11,7 +11,7 @@ Ein Kapitel gilt als **beschlossen**, wenn wir es gemeinsam durchgesprochen habe
 | 4. Kern-Spielschleife | ✅ beschlossen (Grundzüge) |
 | 5. Wirtschaft und Gebäude | ✅ beschlossen (Grundzüge), Einzelwerte offen |
 | 6. Finden, Nachbarn, Ziele | ✅ beschlossen (Grundzüge) |
-| 7. Stil und Figuren | 🟡 teilweise beschlossen |
+| 7. Stil und Figuren | ✅ beschlossen (Grundzüge) |
 | 8. Technik und Mehrspieler | 🟡 Vorschlag Weltdaten und Ausschnitte |
 
 ---
@@ -293,6 +293,27 @@ Lustiger Siedler-Look: übertriebene Proportionen, krummbeinige Figuren, Gebäud
 
 - **Hochdeutsch mit Platt-Prisen:** Meldungen und Menüs auf Hochdeutsch, damit alle mitkommen. Sprüche und Ausrufe auf Platt, je Völkchen gefärbt (Norden ripuarisch, Süden moselfränkisch, Ostbelgien und Ösling mit eigenem Einschlag). Ein Tooltip übersetzt für Flachländer.
 - **Gebrabbel statt Sprecher:** Die Figuren brabbeln ein kurzes Kauderwelsch mit Eifeler Klang (wie bei den Sims), der Spruch steht als Text dabei. Betrunkene brabbeln schleppender und singen.
+
+### 7.3 Gebäude
+
+- **Bunt und mit echten Baustoffen der Gegend:** Fachwerk mit Schieferdach im Norden und Monschauer Land, Bruchstein und roter Buntsandstein an der Rur, dunkler Basalt in der Vulkaneifel, Schiefer im Ösling.
+- Dazu bunte Fensterläden, schiefe Dächer, Blumenkästen und Kleinkram, der verrät, was drinnen passiert.
+- Baustellen wachsen sichtbar in drei Phasen (Kapitel 4).
+
+### 7.4 Jahreszeiten und Wetter
+
+- **Jahreszeiten mit Wirkung:** Eine Partie läuft durch etwa **2 Jahre**. Im Winter liegt Schnee, Felder und Obstwiesen ruhen, man lebt vom Vorrat. Im Frühjahr wird gesät, im Herbst geerntet, und dann ist Kirmeszeit.
+- **Starkes Wetter:** Regen, Talnebel, Venn-Wind, Schnee, Dürre, dazu Ereignisse wie **Missernte** oder **Hochwasser** an Bächen und Flüssen. Gebäude in der Aue können dann ein paar Minuten stillstehen und Waren am Ufer davonschwimmen.
+- **Fair bleibt es trotzdem:**
+  - Wetter kündigt sich an, als **Bauernregel** der Dorfältesten („Ist der Mai kühl und nass …“). Wer vorsorgt (Vorräte, nicht in die Aue bauen, Hecken), kommt glimpflich davon.
+  - Kein Wetter zerstört Gebäude oder Bewohner, und dank Notnagel fährt man sich nicht fest.
+  - Im Mehrspieler kommt das Wetter aus der gemeinsamen Zufallssaat und trifft alle im Ausschnitt gleich.
+- **Feingefühl:** Das Ahr-Hochwasser 2021 ist echt und schmerzhaft. Hochwasser kommt im Spiel vor, aber nie als Witz und nie mit Anspielung darauf.
+
+### 7.5 Musik und Klang
+
+- **Volksmusik-Anklang:** Akkordeon, Blasmusik und Fiedel, leicht schräg und verspielt. Auf Kirmes und Schützenfest gibt es richtig Tusch.
+- Räumliche Geräusche: Säge, Hämmern, Schafe, Bach, Wind über dem Venn, nachts spukende Grenzsteinversetzer.
 
 ## 8. Technik und Mehrspieler (offen)
 
