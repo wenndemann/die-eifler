@@ -12,7 +12,7 @@ Ein Kapitel gilt als **beschlossen**, wenn wir es gemeinsam durchgesprochen habe
 | 5. Wirtschaft und Gebäude | ✅ beschlossen (Grundzüge), Einzelwerte offen |
 | 6. Finden, Nachbarn, Ziele | ✅ beschlossen (Grundzüge) |
 | 7. Stil und Figuren | ✅ beschlossen (Grundzüge) |
-| 8. Technik und Mehrspieler | 🟡 Vorschlag Weltdaten und Ausschnitte |
+| 8. Technik und Mehrspieler | ✅ beschlossen (Grundzüge) |
 
 ---
 
@@ -315,9 +315,9 @@ Lustiger Siedler-Look: übertriebene Proportionen, krummbeinige Figuren, Gebäud
 - **Volksmusik-Anklang:** Akkordeon, Blasmusik und Fiedel, leicht schräg und verspielt. Auf Kirmes und Schützenfest gibt es richtig Tusch.
 - Räumliche Geräusche: Säge, Hämmern, Schafe, Bach, Wind über dem Venn, nachts spukende Grenzsteinversetzer.
 
-## 8. Technik und Mehrspieler (offen)
+## 8. Technik und Mehrspieler
 
-### 8.1 Weltdaten und Ausschnitte (Vorschlag)
+### 8.1 Weltdaten und Ausschnitte
 
 Damit man den Ausschnitt frei wählen kann (3.1), liegt die **ganze Eifel vorab fertig in Spielauflösung** vor. Der Server erzeugt nichts, der Client schneidet sich den Ausschnitt selbst aus.
 
@@ -360,11 +360,19 @@ Alle Quellen sind weltweit einheitlich, die Landesgrenzen machen technisch keine
 
 **Vorhandene Karten:** `monschau-rursee` und `rureifel` werden zu gespeicherten Ausschnitten (Vorschläge) aus der Welt.
 
-### 8.2 Simulation und Mehrspieler
+### 8.2 Plattform
 
-- Simulation von Anfang an **deterministisch und befehlsbasiert**, damit Mehrspieler im Gleichschritt (Lockstep) später möglich ist.
-- Lobby ohne Konto: ein kleiner Vermittlungs-Server (Lobby, Verbindungsaufbau), die Spiele laufen zwischen den Browsern.
-- Speichern, Laden und Wiederaufnahme von Mehrspielerpartien.
+- **Im Browser, PC zuerst.** Volle Bedienung mit Maus und Tastatur. Auf Tablet und Handy spielbar, aber dort nicht der Schwerpunkt.
+- Eine App für Desktop oder Store höchstens später (ROADMAP M10).
+
+### 8.3 Simulation und Mehrspieler
+
+- Simulation von Anfang an **deterministisch und befehlsbasiert**, Mehrspieler im **Gleichschritt (Lockstep)**: Alle rechnen dasselbe, verschickt werden nur Befehle. Zufall (auch Wetter) kommt aus der gemeinsamen Saat.
+- **Verbindung direkt zwischen den Browsern (WebRTC).** Ein kleiner Vermittlungs-Server macht nur Lobby und Verbindungsaufbau, ohne Konto. Klappt die direkte Verbindung nicht (Firmen- oder Handynetz), leitet ein **Notfall-Relais** (TURN) weiter.
+- **Rausgeflogen:** Das Spiel **pausiert**, der Spieler kommt über den Einladungslink zurück und holt sich den aktuellen Stand von einem Mitspieler. Ist er nach **5 Minuten** nicht zurück, übernimmt ein einfacher **Verwalter** sein Dorf (hält die Wirtschaft am Laufen, baut nichts Neues), bis er wiederkommt.
+- **Tempo:** Der Gastgeber stellt **1× bis 3×** ein. Pause darf jeder, aber begrenzt (z. B. dreimal je Partie).
+- Ständige **Abgleich-Prüfsummen** über den Spielstand. Laufen zwei Spieler auseinander, wird das gemeldet und der Stand vom Gastgeber neu verteilt.
+- Speichern, Laden und Wiederaufnahme von Mehrspielerpartien. Ein Spielstand merkt sich die Datenversion der Karte (8.1).
 
 ---
 
