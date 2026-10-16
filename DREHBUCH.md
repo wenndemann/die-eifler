@@ -5,7 +5,7 @@ Ein Kapitel gilt als **beschlossen**, wenn wir es gemeinsam durchgesprochen habe
 
 | Kapitel | Stand |
 |---|---|
-| 1. Idee und Ton | ✅ beschlossen (Grundzüge), Erzählfiguren je Völkchen, „Mer renne nit.“ |
+| 1. Idee und Ton | ✅ beschlossen (Grundzüge), Erzählfiguren für alle 10 Völkchen, „Mer renne nit.“ |
 | 2. Spielmodi | ✅ beschlossen (Grundzüge) |
 | 3. Welt und Maßstab | ✅ beschlossen (Grundzüge) |
 | 4. Kern-Spielschleife | ✅ beschlossen (Grundzüge) |
@@ -58,9 +58,17 @@ Ein Kapitel gilt als **beschlossen**, wenn wir es gemeinsam durchgesprochen habe
 | Völkchen | Figur | Charakter |
 |---|---|---|
 | **Monschauer & Venner** | **Herr Leck, der Europa-Schützenkönig** | Hat einmal den europäischen Königsschuss geholt und erzählt das jedem. Wichtig, gönnerhaft, mit Königskette auch beim Holzhacken. Sagt in jedem Satz **„sag ich mal“**. Erfundene Figur, kein echter Schützenkönig. |
-| weitere Völkchen | Vorlagen, noch zu verteilen | **Oma Billa:** resolute Dorfälteste mit Kittelschürze und Gehstock, trocken, lobt nie zu viel. **Tante Fin:** Wirtin der Schänke, erzählt alles als Gerücht. **Pastor und Küsterin:** Er will das Gute, sie weiß, wie es wirklich läuft. |
+| **Rursee-Leute** | **Kapitän Kalle** | Bootsverleiher, dessen Verleih noch nie geöffnet hatte. Trägt Kapitänsmütze, war nie auf See. Vertröstet jeden mit **„Morje vielleicht.“** |
+| **Rureifeler** | **Papiermüller Arnold** | Pedantischer Müller, schreibt alles auf eigenes Papier mit. Misst sich ständig an Düren: **„In Düren hätten se dat schon.“** |
+| **Vulkaneifeler** | **Maar-Mattes** | Wünschelrutengänger mit Gummistiefeln, hält alles für ein Zeichen aus der Tiefe. Wenn etwas klappt: **„Et blubbert!“** |
+| **Ahrtaler** | **Winzerin Traudel** | Herzlich und laut, will jede Meldung erst bei einem Glas besprechen: **„Do drop e Schöppche.“** Darum dauern ihre Feste länger. |
+| **Laacher & Mayener** | **Pater Benno und Küsterin Hedwig** | Er will das Gute, sie weiß, wie es wirklich läuft. Er beginnt feierlich, sie unterbricht mit **„Psst, nit esu laut!“** (wegen der Abtei). |
+| **Südeifeler** | **Tante Fin** | Wirtin der Schänke, erzählt alles als Gerücht, auch das Wetter: **„Hab ich von der Nachbarin.“** |
+| **Schneifeler** | **Oma Billa** | Resolute Dorfälteste mit Kittelschürze und Gehstock, hat schon jeden Winter überlebt und lobt nie zu viel: **„Et hätt schlimmer kumme künne.“** |
+| **Ostbelgier** | **Zöllner a. D. Gerd** | Pensionierter Grenzbeamter, liebt Formulare in drei Sprachen und mischt sie alle: **„Bon, also, dat jeht so nit.“** Merkt nie, was über die Grenze geschmuggelt wird. |
+| **Öslinger** | **Gerbermeister Jängi** | Stolz, gut angezogen, riecht leicht nach Lohe. Hält alle anderen für arm und bedauert sie freundlich: **„Dir Aarm, gell?“** |
 
-Die übrigen Figuren werden mit den Völkchen ausgearbeitet (ROADMAP M10/M11).
+Alle Figuren sind frei erfunden. Jede hat einen festen Sprachtick, damit man sie sofort erkennt, wie „sag ich mal“ bei Herrn Leck.
 
 ---
 
