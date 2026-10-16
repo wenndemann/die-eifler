@@ -162,6 +162,13 @@ def bauen(elems, proj, dem_mosaik, arbeit_ver):
 
     print("Wasser: Fließgewässer ...", flush=True)
     ketten = ow.waterways(elems, proj)
+    # Anschlüsse: Kettenenden, die an einem Punkt einer anderen Kette liegen (Mündungen, Gabelungen)
+    punkte = {}
+    for ci, ch in enumerate(ketten):
+        for q in ch["pts"]:
+            punkte.setdefault(ow._key(q), set()).add(ci)
+    for ci, ch in enumerate(ketten):
+        ch["verbunden"] = any(punkte.get(ow._key(q), {ci}) - {ci} for q in (ch["pts"][0], ch["pts"][-1]))
     talsohle = Talsohle(dem_mosaik)
     fluesse = []
     fp = Fortschritt("Flüsse", len(ketten))
@@ -210,7 +217,11 @@ def _lauf(ch, pts, lv0, tree, pegel, out):
             b += 1
         p, l = pts[a:b + 1], lv[a:b + 1]
         laenge = float(np.hypot(*np.diff(p, axis=0).T).sum()) if len(p) > 1 else 0.0
-        if laenge < (60 if ch["kind"] != "stream" else 150):
+        # Stücke, die an See, Fluss oder Welt-Rand anschließen, bleiben immer; nur isolierte Stückchen < 60 m entfallen
+        anschluss = ch.get("verbunden") or a != part[0] or b != part[-1] or len(idx) < n
+        if laenge < 60 and not anschluss:
+            continue
+        if len(p) < 2:
             continue
         out.append({"n": ch["name"], "k": ow.KIND_ID[ch["kind"]], "w": float(ch["width"]),
                     "p": np.column_stack([p, l]).astype(np.float32)})

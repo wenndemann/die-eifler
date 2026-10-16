@@ -427,19 +427,32 @@ def rasterize(polys, nx, nz, cell, ids=False):
     return sd.astype(np.float32), idc
 
 
-def waterways(elements, proj):
-    """Fluss-/Bach-/Kanal-Linien zu Ketten verbunden (Wegrichtung = Fließrichtung, Tunnel ausgelassen)."""
+TUNNEL_MAX = 80.0   # Durchlässe/Verrohrungen bis zu dieser Länge (m) bleiben Gewässer (im Spiel gibt es keine Straßen)
+
+
+def _laenge(g):
+    return sum(math.hypot(x1 - x0, z1 - z0) for (x0, z0), (x1, z1) in zip(g, g[1:]))
+
+
+def waterways(elements, proj, alt=False):
+    """Fluss-/Bach-/Kanal-Linien zu Ketten verbunden (Wegrichtung = Fließrichtung).
+
+    Verrohrungen/Tunnel bis 80 m werden als normales Gewässer weitergeführt, längere ausgelassen.
+    Ketten werden auch über fehlende oder wechselnde Namen verbunden, wenn es genau einen Nachfolger
+    gleicher Art gibt. alt=True: altes Verhalten (jeder Tunnel entfällt, nur gleiche Namen) für Vergleiche.
+    Liefert [{name, kind, width, pts:[(x,z),...], ids:[Weg-Ids]}]."""
     segs = []
     for e in elements:
         t = e.get("tags", {})
         ww = t.get("waterway")
         if e["type"] != "way" or ww not in DEFAULT_WIDTH:
             continue
-        if t.get("tunnel") in ("yes", "culvert") or t.get("location") == "underground":
-            continue
         g = proj.pts(e.get("geometry", []))
         if len(g) < 2:
             continue
+        if t.get("tunnel") in ("yes", "culvert") or t.get("location") == "underground":
+            if alt or _laenge(g) > TUNNEL_MAX:
+                continue
         name = t.get("name", "")
         w = RIVER_WIDTH.get(name, DEFAULT_WIDTH[ww]) if ww == "river" else DEFAULT_WIDTH[ww]
         try:
@@ -453,30 +466,38 @@ def waterways(elements, proj):
         ends.setdefault(_key(s["pts"][-1]), []).append(i)
     used = [False] * len(segs)
 
-    def nxt(i):
+    def vertraeglich(kind, name, j):
+        sj = segs[j]
+        if sj["kind"] != kind:
+            return False
+        return sj["name"] == name or (not alt and (not sj["name"] or not name))
+
+    def nxt(i, name):
         s = segs[i]
-        cand = [j for j in starts.get(_key(s["pts"][-1]), []) if not used[j]
-                and segs[j]["kind"] == s["kind"] and segs[j]["name"] == s["name"]]
+        cand = [j for j in starts.get(_key(s["pts"][-1]), []) if not used[j] and vertraeglich(s["kind"], name, j)]
+        if len(cand) > 1 and not alt:   # genau gleich benannte bevorzugen
+            gleich = [j for j in cand if segs[j]["name"] == name and name]
+            cand = gleich if len(gleich) == 1 else cand
         return cand[0] if len(cand) == 1 else None
 
     def has_prev(i):
         s = segs[i]
-        return any(segs[j]["kind"] == s["kind"] and segs[j]["name"] == s["name"]
-                   for j in ends.get(_key(s["pts"][0]), []) if j != i)
+        return any(vertraeglich(s["kind"], s["name"], j) for j in ends.get(_key(s["pts"][0]), []) if j != i)
 
     chains = []
-    for i in sorted(range(len(segs)), key=has_prev):
+    for i in sorted(range(len(segs)), key=has_prev):   # Kettenanfänge zuerst
         if used[i]:
             continue
         used[i] = True
         c = dict(segs[i])
         c["pts"] = list(c["pts"])
-        j = nxt(i)
+        j = nxt(i, c["name"])
         while j is not None:
             used[j] = True
             c["pts"] += segs[j]["pts"][1:]
             c["width"] = max(c["width"], segs[j]["width"])
-            j = nxt(j)
+            c["name"] = c["name"] or segs[j]["name"]
+            j = nxt(j, c["name"])
         chains.append(c)
     return chains
 

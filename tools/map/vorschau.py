@@ -31,6 +31,9 @@ def main():
     ap.add_argument("--daten", default=os.path.join(ROOT, "welt-daten"))
     ap.add_argument("--out", required=True)
     ap.add_argument("--schritt", type=int, default=1, help="jede n-te Zelle (Verkleinerung)")
+    ap.add_argument("--mitte", help="Ausschnitt um Weltmeter x,z (z. B. 57500,17000)")
+    ap.add_argument("--halb", type=float, default=2500, help="halbe Ausschnittsbreite in m (mit --mitte)")
+    ap.add_argument("--vec", action="store_true", help="Flüsse/Bäche (blau, Linien) und Bahn (rot) aus vec/ einzeichnen")
     a = ap.parse_args()
     basis = os.path.join(a.daten, a.version)
     man = json.load(open(os.path.join(basis, "manifest.json"), encoding="utf-8"))
@@ -54,6 +57,33 @@ def main():
     img = np.clip(pal[cov] * shade[..., None], 0, 255).astype(np.uint8)
     img[~ok] = 0
     st = a.schritt
+    ox, oz = tx0 * 6000, tz0 * 6000       # Weltmeter der linken oberen Ecke des Bildes
+    if a.mitte:
+        from PIL import ImageDraw
+        mx, mz = (float(v) for v in a.mitte.split(","))
+        x0, z0 = int((mx - a.halb - ox) / 10), int((mz - a.halb - oz) / 10)
+        n = int(2 * a.halb / 10)
+        im = Image.fromarray(img).crop((x0, z0, x0 + n, z0 + n))
+        zoom = max(1, 1000 // n)
+        im = im.resize((n * zoom, n * zoom), Image.NEAREST)
+        if a.vec:
+            dr = ImageDraw.Draw(im)
+            f = zoom / 10.0
+            for tx, tz in ks:
+                vj = json.loads(gzip.open(os.path.join(basis, "vec", f"{tx}_{tz}.json.gz")).read())
+                for r in vj["rivers"]:
+                    p = r["p"]
+                    xy = [((p[i] - ox) / 10 - x0) * zoom for i in range(0, len(p), 3)]
+                    zz = [((p[i + 1] - oz) / 10 - z0) * zoom for i in range(0, len(p), 3)]
+                    dr.line(list(zip(xy, zz)), fill=(40, 120, 255) if r["k"] == 0 else (0, 220, 255), width=3 if r["k"] == 0 else 2)
+                for r in vj.get("rails", []):
+                    p = r["p"]
+                    xy = [((p[i] - ox) / 10 - x0) * zoom for i in range(0, len(p), 3)]
+                    zz = [((p[i + 1] - oz) / 10 - z0) * zoom for i in range(0, len(p), 3)]
+                    dr.line(list(zip(xy, zz)), fill=(230, 40, 40), width=2)
+        im.save(a.out)
+        print(f"{a.out}: {im.size[0]}×{im.size[1]} px")
+        return
     Image.fromarray(img[::st, ::st]).save(a.out)
     print(f"{a.out}: {img[::st, ::st].shape[1]}×{img[::st, ::st].shape[0]} px")
 
