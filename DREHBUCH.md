@@ -39,6 +39,7 @@ Ein Kapitel gilt als **beschlossen**, wenn wir es gemeinsam durchgesprochen habe
 | **Das Wetter** | rau, nass, windig; das Hohe Venn | Regen ist ein Dauerzustand. Bauern-Sprüche zum Wetter, der Bootsverleih am Rursee hat nie geöffnet. |
 | **„Preußisch Sibirien“** | Ab 1815 galt die Eifel als Armenhaus Preußens. | Das Selbstmitleid der Eifeler als Gag: Meldungen bei Kälte und Missernte, ein Zuschuss-Gebäude („Eifelfonds“) für arme Dörfer. |
 | **Kirmes** | Die Dürener Annakirmes geht auf 1501 zurück. | Kirmes als großes Ziel jedes Dorfes. Die Annakirmes in Düren ist das Fest, auf das alle neidisch sind. |
+| **Schützenfest** | Schützenbruderschaften, Vogelschuss und Schützenkönig sind in den Dörfern fest verankert. | Zweites großes Fest neben der Kirmes, ähnlich behandelt (Vorschlag zur Abgrenzung in Kapitel 6). Der Vogelschuss auf den Holzvogel ist die einzige Schießerei im ganzen Spiel. Der Schützenkönig muss die Runde zahlen. |
 | **„Et jit net jerannt.“** | geflügeltes Wort (Kolumne „Eifel-Einsichten“) | Träger-Spruch, wenn man das Tempo hochdreht. Klären, ob wir das Zitat so verwenden. |
 | **„Von bei Aachen“** | Früher verschwiegen Eifeler im Urlaub ihre Herkunft. | Händler aus der Eifel stellen sich in der Stadt als „von bei Aachen“ oder „von bei Trier“ vor. |
 | **Grenzsteine** | Volkssage: Wer Grenzsteine versetzt, muss nach dem Tod als Geist umgehen. | Finder können Grenzsteine „finden“ und dabei ein Stück weiter tragen (siehe 2.3). Spukende Grenzsteinversetzer als Nachtgeräusch. |
@@ -116,6 +117,20 @@ Grundketten (Holz, Stein, Nahrung), regionale Spezialketten, Kirmes-Stufen.
 ## 6. Finden, Nachbarn, Ziele (offen)
 
 Finderei, Ausreden, Grenzsteine, Gebiet ohne Krieg, Siegbedingungen in Kampagne und Mehrspieler.
+
+### Feste: Kirmes und Schützenfest
+
+Beide Feste funktionieren ähnlich: Man baut einen Festplatz, liefert eine Warenliste, dann wird gefeiert. Vorschlag zur Abgrenzung:
+
+| | Kirmes | Schützenfest |
+|---|---|---|
+| Wofür | Wachstum des eigenen Dorfes: nächste Dorfstufe, neue Gebäude | Kräftemessen mit den Nachbarn: Schützenkönig der Region |
+| Wer feiert | jedes Dorf für sich | alle Dörfer der Region bzw. alle Spieler gemeinsam |
+| Ablauf | Warenliste erfüllen → Fest → Freischaltungen | Ausrichter liefert Bier, Schnaps, Essen; jedes Dorf schickt einen Schützen zum Vogelschuss |
+| Lohn | Dorfstufe, Bewohner | Königstitel bis zum nächsten Schützenfest: mehr Einfluss auf Nachbar-Hexe, Bewohner wandern zu |
+| Haken | – | Der König muss die Runde zahlen (teure Warenlieferung) |
+
+Offen: ob der Vogelschuss Glück, Geschick (kleines Minispiel) oder Vorbereitung ist (Schießstand, Training, „gefundenes“ besseres Gewehr).
 
 ## 7. Stil und Figuren (offen)
 
