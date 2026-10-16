@@ -9,7 +9,7 @@ Ein Kapitel gilt als **beschlossen**, wenn wir es gemeinsam durchgesprochen habe
 | 2. Spielmodi | ✅ beschlossen (Grundzüge) |
 | 3. Welt und Maßstab | ✅ beschlossen (Grundzüge) |
 | 4. Kern-Spielschleife | ✅ beschlossen (Grundzüge) |
-| 5. Wirtschaft und Gebäude | ⬜ offen |
+| 5. Wirtschaft und Gebäude | ✅ beschlossen (Grundzüge), Einzelwerte offen |
 | 6. Finden, Nachbarn, Ziele | ⬜ offen |
 | 7. Stil und Figuren | ⬜ offen |
 | 8. Technik und Mehrspieler | 🟡 Vorschlag Weltdaten und Ausschnitte |
@@ -173,9 +173,61 @@ Die Spielschleife folgt bewusst **Siedler 2**: Das Wegenetz ist das Herz des Spi
 4. Kartoffelfeld und Wohnhaus: Die ersten neuen Bewohner kommen, das Netz wird dichter, an einer Fahne staut es sich, man baut einen zweiten Weg.
 5. Kirmesplatz steht, die Warenliste füllt sich. Ziel für die nächste halbe Stunde ist klar.
 
-## 5. Wirtschaft und Gebäude (offen)
+## 5. Wirtschaft und Gebäude
 
-Grundketten (Holz, Stein, Nahrung), regionale Spezialketten, Kirmes-Stufen.
+Beschlossen:
+
+- **Umfang wie Siedler 2:** rund **25 Grundgebäude**, dazu **2–3 Spezialgebäude je Völkchen**.
+- **Das Völkchen ergibt sich aus dem Startort.** Wer in Gerolstein startet, spielt Vulkaneifeler. Liegt ein Ausschnitt über zwei Gegenden, haben die Spieler verschiedene Völkchen.
+- **Eisen und Werkzeug schlank, ab Dorfstufe 2.** Nicht jeder Beruf braucht Werkzeug, nur die Fachkräfte der besseren Gebäude.
+- **10 Völkchen:** die 8 aus dem Vorentwurf und zwei Grenzvölkchen, weil die Welt jetzt nach Belgien und Luxemburg reicht.
+
+Die Zahlen (Raten, Kosten, Puffer) aus [DESIGN.md §6](DESIGN.md) gelten als Startwerte und werden beim Spielen eingestellt.
+
+### 5.1 Grundketten (für alle)
+
+| Kette | Ablauf | ab |
+|---|---|---|
+| 🪵 Holz | Holzfäller → Stamm → Sägewerk → Bretter; Förster pflanzt nach | Start |
+| 🪨 Stein | Steinbruch an Felsen (endlich) → Stein | Start |
+| 🥔 Kartoffel | Kartoffelfeld → Kartoffeln → Küche → Bratkartoffeln | Start |
+| 🍏 Most | Obstwiese → Äpfel → Mostkeller → Most | Start |
+| 🧀 Käse | Schafstall → Milch → Käserei → Käse → Reifekeller → Bergkäse | Start / Stufe 1 |
+| 🍯 Honig | Bienenstock → Honig | Start |
+| 🍺 Bier | Gerstenfeld → Gerste → Brauerei → Landbier (für Feste) | Stufe 1 |
+| 🥃 Schnaps | Wacholderheide → Wacholder → Brennerei → Schnaps (Schänke, Boten, Feste) | Stufe 1 |
+| ⚒️ Eisen | Erzgrube + Köhlerei (Holz → Holzkohle) → Eisenhütte → Eisen → Schmiede → Werkzeug | Stufe 2 |
+
+Eisen ist echt Eifel: Im Schleidener Tal und um Gemünd standen jahrhundertelang Eisenhütten.
+
+**Grundgebäude (Vorschlag, rund 25):** Lager/Dorfkern, Wohnhaus, Holzfäller, Förster, Sägewerk, Steinbruch, Kartoffelfeld, Küche, Obstwiese, Mostkeller, Schafstall, Käserei, Reifekeller, Bienenstock, Gerstenfeld, Brauerei, Wacholderheide, Brennerei, Schänke, Erzgrube, Köhlerei, Eisenhütte, Schmiede, Kirmesplatz, Schützenhaus mit Schießstand. Dazu kommen Gebäude für Gebiet und Finderei aus Kapitel 6.
+
+### 5.2 Dorfstufen über die Kirmes
+
+| Stufe | Kirmes liefert (Startwerte) | Schaltet frei |
+|---|---|---|
+| Weiler → Dorf | Bratkartoffeln, Most, Käse | Reifekeller, Brauerei, Brennerei, Schänke, Schützenhaus |
+| Dorf → Kirchdorf | Bergkäse, Honig, Bier | Eisenkette und Werkzeug, **Spezialkette des Völkchens** |
+| Kirchdorf → Marktflecken | Spezialität + Mischkorb | Edle Spezialität, Handel mit Nachbarn |
+
+### 5.3 Völkchen
+
+Jedes Völkchen hat einen **Bonus**, eine **Spezialkette** (2–3 Gebäude, ab Stufe 2), eine **augenzwinkernde Schwäche** und eigene Sprüche (Platt nördlich ripuarisch, südlich moselfränkisch).
+
+| Völkchen | Bonus | Spezialkette | Schwäche |
+|---|---|---|---|
+| **Monschauer & Venner** | Hecken wachsen schneller | Schafwolle → Spinnerei → Tuchmacherei (Rotes Haus); Senfmühle | Bauen ungern im Moor |
+| **Rursee-Leute** | Fischerei an Talsperren | Fisch → Räucherei | Bei Regen ruht der Bootsverleih |
+| **Rureifeler** | Steinbrüche im Buntsandstein ergiebiger | Rotsandstein → Steinmetz; Papiermühle an der Rur | Schielen ständig nach Düren |
+| **Vulkaneifeler** | Basaltbrüche ergiebiger | Sprudelquelle, Lavastein | Maare sind heilig, dort wird nicht gebaut |
+| **Ahrtaler** | Wein auf Steilhängen | Trauben → Kelter → Rotwein | Feste dauern länger |
+| **Laacher & Mayener** | Mühlsteine als wertvolle Handelsware | Basalt → Mühlstein; Schiefer → Dächer | Kein Lärm nahe der Abtei |
+| **Südeifeler** | Bier besser und schneller | Hopfen → Edelbier; Römerstraße (schnelle Wege) | Finden dauernd „alte Steine“ |
+| **Schneifeler** | Holz und Köhlerei ergiebiger | Holzkohle im großen Stil, Harz | Kurzer Sommer, Felder langsamer |
+| **Ostbelgier** (Eupen, Venn, St. Vith) | Torf aus dem Venn als Brennstoff | Torfstich; Schinken-Räucherei | Zweisprachige Schilder, keiner versteht die Meldungen ganz |
+| **Öslinger** (Nord-Luxemburg) | Schiefer und Gerberei (Wiltz) | Leder; Quetsch-Schnaps | Halten alle anderen für arm |
+
+Die zwei Grenzvölkchen sind ein erster Vorschlag und werden noch recherchiert. Wo nicht klar ist, zu welchem Völkchen ein Startort gehört, entscheidet eine Gebietskarte im Konverter.
 
 ## 6. Finden, Nachbarn, Ziele (offen)
 
