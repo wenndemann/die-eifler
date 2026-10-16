@@ -20,7 +20,7 @@ export const TERRAIN = ['wasser', 'wiese', 'wald', 'heide', 'moor', 'stein', 'si
 export const LAND = ['', 'DE', 'BE', 'LU', 'NL'] as const;
 
 /** Bits im Hex-Feld flags. */
-export const FLAG = { ortskern: 1, fluss: 2, ufer: 4, grenze: 8, keineDaten: 16 } as const;
+export const FLAG = { ortskern: 1, fluss: 2, ufer: 4, grenze: 8, keineDaten: 16, bahn: 32 } as const;
 
 export interface Manifest {
   format: number;

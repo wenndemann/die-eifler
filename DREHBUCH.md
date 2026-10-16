@@ -117,6 +117,7 @@ Erste Festlegungen:
 - **Gelände von heute, Orte als Kerne:** Gelände, Flüsse, Seen und Talsperren sind die von heute. Die heutigen Häuser fallen weg. Echte Orte gibt es nur als kleine Kerne (Kirche, ein paar Höfe) an der richtigen Stelle, das Land drumherum ist frei. Dort kann man sein Dorf gründen und wachsen lassen.
 - **Eine Partie dauert etwa 2 Stunden** (Mehrspieler-Abend, freies Spiel).
 - **Gebäude etwa 3× echte Größe**, damit sie aus der Spielansicht gut lesbar sind (Maßstabs-Probe bei Einruhr).
+- **Bahnlinien ja, Straßen nein (beschlossen):** Die heutigen Bahnstrecken (z. B. Rurtalbahn Düren–Heimbach, Eifelstrecke, Ahrtalbahn) liegen als Gleisbett im Gelände und geben Orientierung. Auf einem Hex mit Gleis wird nicht gebaut, Wege dürfen es kreuzen (Bahnübergang). Stillgelegte Strecken wie die Vennbahn fehlen, die Vennbahn bleibt Spezialität der Ostbelgier (5.3). **Straßen gibt es nicht**, das Wegenetz baut der Spieler selbst (Kapitel 4).
 - **Bauplätze werden planiert**, damit Gebäude am Hang nicht im Boden versinken. An steilen Hängen nur kleine Gebäude.
 
 **Maßstab (beschlossen):**

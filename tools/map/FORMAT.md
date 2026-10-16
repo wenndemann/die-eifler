@@ -30,9 +30,13 @@ Verbindliche Vorgabe für Konverter (`tools/map/`) und Client (`src/`). Grundlag
 
 ```json
 { "rivers": [{ "n": "Rur", "k": 0, "w": 16, "p": [x, z, spiegel, ...] }],
-  "lakes":  [{ "n": "Rursee", "l": 281.5, "o": [x, z, ...], "h": [[x, z, ...]] }] }
+  "lakes":  [{ "n": "Rursee", "l": 281.5, "o": [x, z, ...], "h": [[x, z, ...]] }],
+  "rails":  [{ "n": "Rurtalbahn", "p": [x, z, y, ...] }] }
 ```
 
+- `rails`: Bahnstrecken in Betrieb aus OSM (`railway=rail|light_rail|narrow_gauge`, ohne `disused`/`abandoned`/
+  `razed`, ohne Tunnel; Brücken bleiben), `y` = Gleishöhe m ü. NN (Gelände, über Brücken/Dämme geglättet, kein
+  Gleisbett tiefer als Flussspiegel). Keine Straßen (Drehbuch 3).
 - `k`: 0 Fluss, 1 Bach, 2 Kanal; `w` Breite (m); Spiegel in m ü. NN.
 - Flüsse und Seen werden **für das ganze Gebiet am Stück** berechnet (Spiegel fällt stromab), dann an der
   Kachelkante geschnitten. Schnittpunkte auf der Kante werden interpoliert, damit Stücke nahtlos aneinanderpassen.
@@ -51,14 +55,14 @@ Verbindliche Vorgabe für Konverter (`tools/map/`) und Client (`src/`). Grundlag
 | `height` | uint16 | mittlere Geländehöhe des Hex in dm ü. NN |
 | `slope` | uint8 | mittlere Hangneigung in Grad (gerundet) |
 | `build` | uint8 | Bauplatz: 0 keiner, 1 klein, 2 mittel, 3 groß |
-| `flags` | uint8 | Bit 0 Ortskern, Bit 1 Fließgewässer im Hex, Bit 2 Ufer (Nachbar ist Wasser), Bit 3 Staatsgrenze im Hex, Bit 4 keine Weltdaten |
+| `flags` | uint8 | Bit 0 Ortskern, Bit 1 Fließgewässer im Hex, Bit 2 Ufer (Nachbar ist Wasser), Bit 3 Staatsgrenze im Hex, Bit 4 keine Weltdaten, Bit 5 Bahnstrecke im Hex |
 | `country` | uint8 | 0 unbekannt, 1 DE, 2 BE, 3 LU, 4 NL |
 | `place` | uint16 | Ortskern: Index+1 in `orte.json` (`orte`), sonst 0 |
 
 - **Alles Ganzzahl, fertig gerechnet.** Der Client rechnet an diesen Werten nichts mit Kommazahlen.
 - `siedlung` gibt es nur in Ortskern-Hexen (Drehbuch 3: heutige Häuser fallen weg). Bebaute Flächen
   außerhalb der Ortskerne zählen als `wiese`.
-- **Bauplatz:** `wasser`, `stein` → 0. Sonst nach Neigung (größter Höhenunterschied zu den 6 Nachbar-Mittelpunkten,
+- **Bauplatz:** `wasser`, `stein` und Hexe mit Bahnstrecke → 0. Sonst nach Neigung (größter Höhenunterschied zu den 6 Nachbar-Mittelpunkten,
   umgerechnet in Grad): ≤ 5° groß, ≤ 10° mittel, ≤ 18° klein, sonst 0. `moor` höchstens klein.
 
 ## Orte und Übersicht
