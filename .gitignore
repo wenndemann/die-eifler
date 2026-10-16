@@ -7,3 +7,4 @@ dist-share/
 welt-daten/
 tools/map/arbeit/
 test-results/
+.claude/worktrees/
