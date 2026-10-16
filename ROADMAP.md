@@ -1,6 +1,6 @@
 # ROADMAP – Die Eifeler
 
-> **Hinweis:** Ab M3 wird die Roadmap nach dem neuen [Drehbuch](DREHBUCH.md) überarbeitet. M1 und M2 (Karte, Regionen) bleiben gültig.
+> **Hinweis:** Ab M3 wird die Roadmap nach dem neuen [Drehbuch](DREHBUCH.md) überarbeitet. M1 bleibt gültig, M2 ist schon an die freie Kartenwahl (Drehbuch 3.1, 8.1) angepasst.
 
 Reihenfolge der Meilensteine. Jeder endet mit einem **lauffähigen, vorzeigbaren Stand** und einer Abnahme.
 Regeln und Zahlen stehen in [DESIGN.md](DESIGN.md).
@@ -36,20 +36,26 @@ Offen:
 
 ---
 
-## M2 – Eifel-Übersicht und Regionen
+## M2 – Eifel-Weltkarte und freie Kartenwahl
 
-**Ziel:** die ganze Eifel (Aachen – Trier – Maria Laach) als Weltkarte, von der aus man eine Region startet.
+**Ziel:** die ganze Eifel (Aachen – Trier – Maria Laach, mit Ostbelgien und Nord-Luxemburg) als Weltkarte. Man wählt Größe und Ort und spielt genau dort (Drehbuch 3.1 und 8.1).
 
 - [x] Karten als Konfiguration im Konverter (`MAPS` in `build_map.py`, `--map <id>`), Kartenwahl im Viewer (`#id`)
 - [x] Zweite Karte: **Rureifel & Dürener Land** (Heimbach – Nideggen – Kreuzau – Düren)
 - [x] Teilen-Version für Handy/Tablet (`npm run build:share`), Touch-Steuerung
-- [ ] Pipeline verallgemeinern: Hex-Größe und Völkchen je Region, mehrere DEM-Kacheln (N49/N50 × E006/E007)
-- [ ] Übersichtskarte mit ~100 m Raster, Regionen als markierte Flächen, Ortsnamen, Fortschritt der Kampagne
-- [ ] Weitere Regionen als Spielkarten, zuerst die Vulkaneifel
-- [ ] `data/regions.json`: Völkchen, Boni, Startwaren, Sprüche (DESIGN §2.2)
-- [ ] Übergang Übersicht → Region (Kamerafahrt)
+- [ ] Pipeline auf die ganze Welt: UTM 32N, 6 DEM-Kacheln (N49/N50 × E005–E007), WorldCover N48E003 + N48E006, OSM aus Geofabrik-Auszügen
+- [ ] Flüsse, Talsperren und Flussbetten für die ganze Welt am Stück, danach in Kacheln (~6 × 6 km) schneiden
+- [ ] Globales Hex-Raster (60 m), Simulationsdaten als Ganzzahl-Hex-Kacheln
+- [ ] Datenversion mit Manifest und Prüfsummen, versionierte Pfade, Auslieferung außerhalb von Git
+- [ ] Übersichtskarte (~200 m Raster, Relief, Orte, Staatsgrenzen) und Ortsverzeichnis
+- [ ] Kartenwahl: Größe klein/mittel/groß, Auswahl-Hex verschieben, Ortssuche, Startplätze anzeigen
+- [ ] Client schneidet den Ausschnitt aus den Kacheln, Kulisse am Rand, Browser-Cache
+- [ ] Prüfsumme über die Simulationsdaten des Ausschnitts
+- [ ] `monschau-rursee` und `rureifel` als gespeicherte Ausschnitte
+- [ ] `data/regions.json`: Völkchen, Boni, Startwaren, Sprüche (Drehbuch Kapitel 5)
+- [ ] Übergang Übersicht → Ausschnitt (Kamerafahrt)
 
-**Abnahme:** Auf der Übersicht eine Region wählen, die Region lädt, Ortsnamen und Völkchen werden angezeigt.
+**Abnahme:** Auf der Übersicht „mittel“ wählen, „Gemünd“ eintippen, der Ausschnitt lädt in unter 5 Sekunden. Zwei Browser bekommen für dieselben Parameter dieselbe Prüfsumme. Ein Ausschnitt über die belgische Grenze funktioniert.
 
 ---
 

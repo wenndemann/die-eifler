@@ -12,7 +12,7 @@ Ein Kapitel gilt als **beschlossen**, wenn wir es gemeinsam durchgesprochen habe
 | 5. Wirtschaft und Gebäude | ⬜ offen |
 | 6. Finden, Nachbarn, Ziele | ⬜ offen |
 | 7. Stil und Figuren | ⬜ offen |
-| 8. Technik und Mehrspieler | ⬜ offen |
+| 8. Technik und Mehrspieler | 🟡 Vorschlag Weltdaten und Ausschnitte |
 
 ---
 
@@ -73,18 +73,19 @@ Die Einzelkampagne folgt dem echten **Eifelsteig**: 15 Etappen, rund 313 km, von
 - Jede Etappe ist eine Mission mit eigenem Ziel (z. B. ein Dorf gründen, eine Kirmes ausrichten, eine Ware nach Gemünd schaffen).
 - **Weitere Wege** als Zusatzkampagnen. Die Rureifel mit Düren liegt nicht am Eifelsteig, sie wird ein eigener Weg entlang der Rur.
 - Zwischen den Etappen: Eifel-Übersichtskarte mit dem gewanderten Weg.
+- **Kampagnenkarten sind feste Ausschnitte** aus denselben Weltdaten wie das freie Spiel (3.1), mit fest eingestellter Datenversion und handgesetzten Extras für die Mission.
 
 ### 2.2 Freies Spiel
 
-Jede vorhandene Region mit frei wählbarem Startort, Nachbarn und Siegbedingung.
+Man wählt seinen **Kartenausschnitt selbst**, irgendwo in der Eifel (siehe 3.1), dazu Startort, Nachbarn und Siegbedingung. Die bisherigen Karten (Monschauer Land, Rureifel) werden zu fertigen Vorschlägen in dieser Auswahl.
 
 ### 2.3 Mehrspieler
 
 - **Klassisch wie früher:** Einer legt in einer Lobby ein Spiel an und lädt Freunde per Link ein. **Ohne Konto**, nur mit Spielername.
 - **Friedlich:** keine Armeen, keine Kämpfe. Man misst sich über Wirtschaft, Feste, Handel und das „Finden“.
 - **Zwei Varianten, beide erwünscht:**
-  1. **Gemeinsame Karte:** Jeder startet in einem anderen Dorf derselben Region.
-  2. **Verbundene Regionen:** Jeder spielt seine eigene Region (z. B. Rureifel gegen Monschauer Land) und schickt Händler und Finder zum anderen hinüber.
+  1. **Gemeinsame Karte:** Der Gastgeber wählt einen Ausschnitt (3.1), jeder startet in einem anderen Ortskern darin.
+  2. **Verbundene Regionen:** Jeder spielt seinen eigenen Ausschnitt (z. B. Rureifel gegen Monschauer Land) und schickt Händler und Finder zum anderen hinüber.
 - **Gebiet gewinnen ohne Krieg:** noch offen (Kapitel 6). Ideen:
   - **Grenzsteine versetzen:** Finder verschieben die Grenze Stück für Stück, mit Risiko, erwischt zu werden.
   - **Abwerben:** Die bessere Kirmes und das bessere Essen locken Bewohner der Nachbarn ins eigene Dorf.
@@ -92,7 +93,7 @@ Jede vorhandene Region mit frei wählbarem Startort, Nachbarn und Siegbedingung.
 
 ---
 
-## 3. Welt und Maßstab (offen)
+## 3. Welt und Maßstab (teilweise beschlossen)
 
 Erste Festlegungen:
 
@@ -110,6 +111,37 @@ Offene Fragen:
   - **Hex-Umkreisradius 60 m** (ein Hex ist rund 104 m breit) statt bisher 90 m. Damit wird eine Karte **etwa 10–12 km** groß, zum Beispiel Einruhr bis Monschau oder Nideggen bis Heimbach.
   - Gebäude in etwa 3× echter Größe passen dann gut ins Hex, Ortskerne wie Einruhr bekommen genug Platz drumherum.
   - Die bisherigen Regionen (20–25 km) werden in mehrere Spielkarten geteilt oder dienen als Übersicht.
+
+### 3.1 Kartenwahl: den Ausschnitt selbst wählen
+
+Im **freien Spiel und im Mehrspieler** gibt es keine festen Karten mehr. Man wählt selbst, wo man spielt:
+
+1. **Größe wählen:** klein, mittel oder groß.
+2. **Ort wählen**, auf einer von zwei Arten:
+   - Auf der **großen Übersichtskarte der ganzen Eifel** liegt ein **Auswahl-Hex**. Man schiebt es mit dem Finger oder der Maus frei dorthin, wo man spielen will. Es rastet immer auf dem Hex-Raster ein.
+   - Oder man **tippt einen Ort ein** („Gemünd“), der dann die Mitte wird. Gibt es den Namen mehrfach, kommt eine Auswahlliste („Welches Gemünd? Et jitt zwei.“).
+3. Die Übersicht zeigt im Hex schon die **Ortskerne als mögliche Startplätze**, Seen, Wald und Höhen. Reichen die Ortskerne nicht für alle Spieler (z. B. mitten im Hohen Venn), sagt das Spiel das gleich: „Hier wohnt keiner.“
+
+**Vorschlag Form und Größen** (Hex-Umkreisradius 60 m, Karte als großes Hex mit Norden oben):
+
+| Größe | Radius | Hexe | Breite | Fläche | Spieler |
+|---|---|---|---|---|---|
+| klein | 45 Hexe | ca. 6.200 | ca. 9,5 km | ca. 58 km² | 1–2 |
+| mittel | 60 Hexe | ca. 11.000 | ca. 12,6 km | ca. 103 km² | 2–4 |
+| groß | 80 Hexe | ca. 19.400 | ca. 16,7 km | ca. 182 km² | 4–6 |
+
+- Rechnung: je Spieler 1.000–2.500 Hexe für 2 Stunden, dazu rund ein Drittel unbebaubar (Wasser, steile Hänge, Moor).
+- Zum Vergleich: Das heutige Monschauer Land ist mit rund 440 km² mehr als doppelt so groß wie „groß“. Die Leistung ist damit schon erprobt.
+- Ein Hex als Form passt zum Spiel und verteilt die Startplätze gleichmäßiger als ein Rechteck. Alternative wäre ein Rechteck, das den Bildschirm besser füllt.
+
+**Am Rand:** Außerhalb des Spiel-Hex geht die echte Landschaft noch etwa 2 km als **Kulisse** weiter (nicht bebaubar, leicht ausgegraut), dann verschwindet sie im Nebel. So gibt es keine harte Tischkante.
+
+**Grenzen der Auswahl:**
+
+- **Weltrand:** Die Weltdaten reichen von Aachen bis Trier und von Luxemburg und Ostbelgien bis an den Rhein bei Maria Laach. Das Auswahl-Hex samt Kulisse bleibt immer innerhalb. Liegt ein eingetippter Ort zu nah am Rand, rückt das Hex nach innen und der Ort ist nicht ganz in der Mitte.
+- **Über Landesgrenzen hinweg** darf man spielen, zum Beispiel Monschau mit Kalterherberg und dem belgischen Venn, oder die Our an der luxemburgischen Grenze. Die Staatsgrenze ist als gestrichelte Linie zu sehen und bringt **Zöllner** ins Spiel, also Gelegenheit für den Kaffeeschmuggel. Eine harte Regel ist sie nicht.
+
+**Kampagne:** Kampagnenkarten bleiben **feste Ausschnitte**. Technisch sind sie nur gespeicherte Auswahlen (Mitte, Größe, Datenversion) plus die Missionsdaten.
 
 ## 4. Kern-Spielschleife
 
@@ -172,8 +204,50 @@ Lustiger Siedler-Look: übertriebene Proportionen, krummbeinige Figuren, Gebäud
 
 ## 8. Technik und Mehrspieler (offen)
 
-- **Karten sind fertige Dateien.** Der Konverter (`tools/map/`) erzeugt sie einmal auf dem Entwicklerrechner aus den Rohdaten. Die fertigen Karten (etwa 3 MB je Region, gepackt rund 1 MB) liegen im Repo unter `public/maps/` und werden wie Bilder einer Webseite ausgeliefert. Die Rohdaten (rund 40 MB) bleiben draußen und lassen sich jederzeit neu laden.
-- **Der Server rechnet keine Karten.** Jeder Spieler lädt die komplette Karte der Region. Im Mehrspieler prüfen alle per Prüfsumme, dass sie dieselbe Kartenversion haben, und tauschen danach nur noch Befehle aus.
+### 8.1 Weltdaten und Ausschnitte (Vorschlag)
+
+Damit man den Ausschnitt frei wählen kann (3.1), liegt die **ganze Eifel vorab fertig in Spielauflösung** vor. Der Server erzeugt nichts, der Client schneidet sich den Ausschnitt selbst aus.
+
+**Ein Raster für die ganze Welt**
+
+- Eine Projektion für alles: **ETRS89 / UTM Zone 32N** (in Metern, wenig Verzerrung über die ganze Eifel). Heute rechnet jede Karte mit eigenem Nullpunkt, das fällt weg.
+- Ein **globales Hex-Raster** mit festem Ursprung, Umkreisradius 60 m. Jedes Hex hat weltweit eindeutige Koordinaten (q, r). Ein Ausschnitt ist damit nur „Mittel-Hex + Größe“ und liegt immer auf dem Raster.
+- Das Höhen- und Bedeckungsraster (30 m) hängt am selben Ursprung.
+
+**Kacheln**
+
+- Der Konverter (`tools/map/`) rechnet die Welt einmal auf dem Entwicklerrechner durch und schneidet sie in **Kacheln von etwa 6 × 6 km**: Höhe, Bedeckung, Wasser, dazu Flüsse, Seeufer und Orte als Vektoren, beschnitten auf die Kachel.
+- Flüsse, Talsperren und gegrabene Flussbetten werden **für die ganze Welt am Stück** berechnet, dann erst zerschnitten. Sonst passen die Kanten nicht aneinander.
+- Alles, was die **Simulation** braucht (Hex-Gelände, Höhe und Steigung je Hex, Wasser, Bauplatzgröße, Ortskerne), steht fertig als **Ganzzahlen** in eigenen Hex-Kacheln. Der Client rechnet daran nichts mit Kommazahlen. So kommt in jedem Browser exakt dasselbe heraus.
+- Dazu eine **Übersichtskarte** der ganzen Welt (ca. 200 m Raster plus Reliefbild, rund 2 MB) und ein **Ortsverzeichnis** für die Suche (einige tausend Orte, rund 150 KB). Beides lädt zuerst, die Suche läuft ohne Server.
+- Die Kulisse am Rand kommt aus gröberen Daten, das spart Ladezeit.
+
+**Datenversion und Prüfsumme**
+
+- Jeder Durchlauf des Konverters ist eine **Datenversion** (z. B. `eifel-2026.11`) mit einem Verzeichnis (Manifest) aller Kacheln und ihrer Prüfsummen. Kacheln liegen unter versionierten Pfaden und ändern sich nie.
+- Ein Ausschnitt ist komplett beschrieben durch: **Datenversion, Mittel-Hex (q, r), Größe**, dazu Startplätze und Zufallssaat.
+- **Mehrspieler:** Der Gastgeber schickt diese Parameter. Jeder Client schneidet den Ausschnitt selbst und bildet eine **Prüfsumme über die Simulationsdaten**. Erst wenn alle gleich sind, startet die Partie. Danach gehen nur noch Befehle hin und her.
+- Alte Datenversionen bleiben abrufbar, solange Spielstände und Kampagnen sie brauchen.
+
+**Datenmenge und Ladezeit (Schätzung)**
+
+- Heute: Monschauer Land, rund 440 km², ist gepackt etwa 1 MB.
+- **Welt:** rund 16.000 km² (Rechteck um die Eifel), gepackt etwa **30–40 MB**. Das ist zu viel für das Git-Repo. Die Kacheln liegen deshalb als statische Dateien neben dem Spiel (z. B. Webspeicher oder CDN), nicht in der Git-Geschichte.
+- **Eine Partie:** Ausschnitt „groß“ mit Kulisse ist rund 400 km², also **etwa 1 MB**. Bei normalem Internet dauert der Download 1–2 Sekunden, dazu 1–2 Sekunden Aufbau des Geländes. Der Browser merkt sich geladene Kacheln, das nächste Spiel in der Gegend startet sofort.
+
+**Datenquellen für die ganze Welt**
+
+| Quelle | Heute | Für die ganze Eifel |
+|---|---|---|
+| Copernicus GLO-30 (Höhe) | Kachel N50E006 | 6 Kacheln: N49/N50 × E005/E006/E007 (Luxemburg und Ostbelgien in E005, Maria Laach und Rhein in E007, Trier in N49) |
+| ESA WorldCover (Bedeckung) | Ausschnitt aus N48E006 | dazu N48E003 für alles westlich von 6° O |
+| OpenStreetMap | Overpass je Karte | Abfragen dieser Größe überlasten Overpass. Besser die Länder-Auszüge von Geofabrik (NRW, Rheinland-Pfalz, Belgien, Luxemburg) laden und lokal ausschneiden. |
+
+Alle Quellen sind weltweit einheitlich, die Landesgrenzen machen technisch keine Probleme. Rohdaten insgesamt mehrere hundert MB, die bleiben wie bisher draußen.
+
+**Vorhandene Karten:** `monschau-rursee` und `rureifel` werden zu gespeicherten Ausschnitten (Vorschläge) aus der Welt.
+
+### 8.2 Simulation und Mehrspieler
 
 - Simulation von Anfang an **deterministisch und befehlsbasiert**, damit Mehrspieler im Gleichschritt (Lockstep) später möglich ist.
 - Lobby ohne Konto: ein kleiner Vermittlungs-Server (Lobby, Verbindungsaufbau), die Spiele laufen zwischen den Browsern.
