@@ -10,7 +10,7 @@ Ein Kapitel gilt als **beschlossen**, wenn wir es gemeinsam durchgesprochen habe
 | 3. Welt und Maßstab | ✅ beschlossen (Grundzüge) |
 | 4. Kern-Spielschleife | ✅ beschlossen (Grundzüge) |
 | 5. Wirtschaft und Gebäude | ✅ beschlossen (Grundzüge), Einzelwerte offen |
-| 6. Finden, Nachbarn, Ziele | ⬜ offen |
+| 6. Finden, Nachbarn, Ziele | ✅ beschlossen (Grundzüge), Hecke offen |
 | 7. Stil und Figuren | ⬜ offen |
 | 8. Technik und Mehrspieler | 🟡 Vorschlag Weltdaten und Ausschnitte |
 
@@ -86,7 +86,7 @@ Man wählt seinen **Kartenausschnitt selbst**, irgendwo in der Eifel (siehe 3.1)
 - **Zwei Varianten, beide erwünscht:**
   1. **Gemeinsame Karte:** Der Gastgeber wählt einen Ausschnitt (3.1), jeder startet in einem anderen Ortskern darin.
   2. **Verbundene Regionen:** Jeder spielt seinen eigenen Ausschnitt (z. B. Rureifel gegen Monschauer Land) und schickt Händler und Finder zum anderen hinüber.
-- **Gebiet gewinnen ohne Krieg:** noch offen (Kapitel 6). Ideen:
+- **Gebiet gewinnen ohne Krieg:** alle drei Wege kommen ins Spiel (siehe 6.1):
   - **Grenzsteine versetzen:** Finder verschieben die Grenze Stück für Stück, mit Risiko, erwischt zu werden.
   - **Abwerben:** Die bessere Kirmes und das bessere Essen locken Bewohner der Nachbarn ins eigene Dorf.
   - **Einfluss:** Gut versorgte Dörfer strahlen auf benachbarte Hexe aus, so wie in Siedler die Grenzen wachsen.
@@ -229,9 +229,41 @@ Jedes Völkchen hat einen **Bonus**, eine **Spezialkette** (2–3 Gebäude, ab S
 
 Die zwei Grenzvölkchen sind ein erster Vorschlag und werden noch recherchiert. Wo nicht klar ist, zu welchem Völkchen ein Startort gehört, entscheidet eine Gebietskarte im Konverter.
 
-## 6. Finden, Nachbarn, Ziele (offen)
+## 6. Finden, Nachbarn, Ziele
 
-Finderei, Ausreden, Grenzsteine, Gebiet ohne Krieg, Siegbedingungen in Kampagne und Mehrspieler.
+### 6.1 Gebiet ohne Krieg
+
+Alle drei Wege sind beschlossen und greifen ineinander:
+
+| Weg | Wie | Gegenmittel |
+|---|---|---|
+| **Einfluss** | Lager, Höfe, Kirche und Festplätze strahlen auf die Hexe drumherum aus, gut versorgt weiter als schlecht versorgt. So wächst die Grenze wie in Siedler. | selbst besser versorgen |
+| **Grenzsteine versetzen** | Ein Finder trägt nachts einen Grenzstein ein Stück weiter. Gelingt es, wechseln ein paar Hexe den Besitzer. | Wachhund, Dorfpolizist; Erwischte gehen in die Ausredenstube |
+| **Abwerben** | Wer die bessere Kirmes und das bessere Essen hat, lockt Bewohner vom Rand der Nachbarn herüber. Manchmal zieht ein ganzer Hof mit seinem Land um. | eigene Leute satt und bei Laune halten |
+
+Gebäude werden nie zerstört. Wechselt ein Hex mit Gebäude den Besitzer, steht das Gebäude still, bis man es zurückgewinnt oder freiwillig abreißt.
+
+**Hecken (Vorschlag, noch offen):** Die hohen Buchenhecken um die Höfe in Höfen und im Monschauer Land werden **Spezialität der Monschauer & Venner**, keine Regel für alle. Sie schützen vor dem Venn-Wind (Gebäude dahinter arbeiten im Winter schneller) und sind eine **lebende Grenze**: Grenzsteine hinter einer Hecke lassen sich kaum versetzen. Sie brauchen Setzlinge und Jahre zum Wachsen. In anderen Gegenden gibt es Hecken nur als Kulisse.
+
+### 6.2 Nachbarn
+
+- **Im freien Spiel ohne Mitspieler** sind **größere echte Orte im Ausschnitt Flachländer-Dörfer** (KI). Sie haben ein Lager, eine Wachsamkeit und Waren zum Handeln. Man findet bei ihnen und handelt mit ihnen, sie bauen aber nicht selbst. Beispiel: Düren mit vollem Lager und hoher Wachsamkeit.
+- Volle KI-Gegner, die selbst bauen, kommen höchstens später.
+- **Im Mehrspieler** sind die Mitspieler die Nachbarn. Flachländer-Dörfer gibt es zusätzlich.
+
+### 6.3 Finden
+
+- **Finderhütte** schickt Finder über das Wegenetz (beschwipst auch querfeldein) zu Nachbarn. Sie bringen Waren mit oder werden erwischt.
+- **Auch bei Mitspielern darf man finden, mit Gegenwehr:** Wachhund und Dorfpolizist schützen das eigene Dorf. Ein Ertappter landet in der **Ausredenstube**. Je besser die Ausrede, desto schneller ist er frei (Spruch-Gag).
+- **Fundbüro** wertet Funde auf. Gefundenes Werkzeug, ein besseres Gewehr für den Vogelschuss oder Kaffee über die Grenze sind die begehrten Funde.
+
+### 6.4 Siegbedingungen
+
+- **Standard: Eifel-Punkte.** Nach 2 Stunden gewinnt, wer die meisten Punkte hat. Punkte gibt es für Dorfstufe, gefeierte Feste, den Schützenkönig, Bewohner, Gebiet und große Funde. Zwischenstand jederzeit sichtbar.
+- **Wählbar in der Lobby:**
+  - **Wettlauf:** Wer zuerst Marktflecken wird.
+  - **Der Große Fund:** Teile eines seltenen Schatzes bei verschiedenen Nachbarn finden und im Fundbüro zusammensetzen.
+- **Kampagne:** Jede Etappe hat ihr eigenes Ziel (Kapitel 2.1).
 
 ### Feste: Kirmes und Schützenfest
 
