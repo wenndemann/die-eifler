@@ -1,11 +1,30 @@
 # ROADMAP – Die Eifeler
 
-> **Hinweis:** Ab M3 wird die Roadmap nach dem neuen [Drehbuch](DREHBUCH.md) überarbeitet. M1 bleibt gültig, M2 ist schon an die freie Kartenwahl (Drehbuch 3.1, 8.1) angepasst.
+> **Hinweis:** Die Roadmap folgt dem [Drehbuch](DREHBUCH.md). Was dort festgelegt ist, gilt. Der Vorentwurf [DESIGN.md](DESIGN.md) liefert nur noch technische Details und Startwerte, wo das Drehbuch auf ihn verweist (z. B. Routing §4, Zahlen §6) oder noch nichts festlegt.
 
 Reihenfolge der Meilensteine. Jeder endet mit einem **lauffähigen, vorzeigbaren Stand** und einer Abnahme.
-Regeln und Zahlen stehen in [DESIGN.md](DESIGN.md).
 
-Leitidee: **erst die Welt, dann die Wirtschaft.** Die echte Eifel ist das Fundament. Optik und Leistung werden von Anfang an mitgebaut und nicht am Ende nachgerüstet.
+Leitideen:
+
+- **Erst die Welt, dann die Wirtschaft.** Die echte Eifel ist das Fundament. Optik und Leistung werden von Anfang an mitgebaut.
+- **Deterministisch ab dem ersten Tick.** Die Simulation ist von M3 an befehlsbasiert, rechnet nur mit Ganzzahlen und hat eine Prüfsumme (Drehbuch 8.3). Mehrspieler kommt deshalb schon in M6, nicht am Ende.
+- **Früh eine echte Partie.** Ab M5 macht eine Stunde Spaß, ab **M9 läuft die erste volle 2-Stunden-Partie** mit Nachbarn, Finden und Eifel-Punkten, allein und zu mehreren.
+- **Freies Spiel und Mehrspieler vor der Kampagne.** Der Eifelsteig kommt zuletzt (Drehbuch 2.1).
+
+| | Meilenstein | Vorzeigbar am Ende |
+|---|---|---|
+| M1 | Die Karte | Eifel-Landschaft in 3D |
+| M2 | Weltkarte und Kartenwahl | Ausschnitt frei wählen, Prüfsumme gleich |
+| M3 | Simulationskern, Wege, Träger | Waren wandern über ein Wegenetz |
+| M4 | Bauen mit Holz und Stein | Dorf wächst aus eigenem Material |
+| M5 | Bewohner, Nahrung, erste Kirmes | erste spaßige Stunde allein |
+| M6 | Mehrspieler-Grundgerüst | zwei Browser bauen zusammen |
+| M7 | Bedienung und Speichern | spielbar ohne Erklärung |
+| M8 | Volle Grundwirtschaft und Jahreszeiten | 3 Dorfstufen, Winter, Schnaps |
+| M9 | Gebiet, Nachbarn, Finden, Ziele | **erste 2-Stunden-Partie** |
+| M10 | Die 10 Völkchen | jeder Startort spielt sich anders |
+| M11 | Figuren, Wetter, Klang, Erzählerin | Version 1.0 (freies Spiel + Mehrspieler) |
+| M12 | Kampagne „Der Eifelsteig“ | 15 Etappen von Aachen nach Trier |
 
 ---
 
@@ -59,112 +78,178 @@ Offen:
 
 ---
 
-## M3 – Wegenetz und Träger
+## M3 – Simulationskern, Wegenetz und Träger
 
-**Ziel:** das Herz von Siedler – Fahnen, Wege, Träger, sichtbare Waren – auf der echten Karte.
+**Ziel:** das Herz von Siedler – Fahnen, Wege, Träger, sichtbare Waren – auf der echten Karte, und zwar von Anfang an deterministisch (Drehbuch 4.1, 8.3).
 
-- [ ] `src/sim/` mit festem Tick (20/s), serialisierbarem State, deterministischem Zufall
-- [ ] Dorfkern (Lager) als Startgebäude, erste prozedurale Gebäudemodelle (Fachwerk, 3 Bauphasen)
-- [ ] Fahnen (Gebäude- und freie), Wegbau Fahne → Fahne mit Vorschau, Segmente, Teilung
-- [ ] Weg-Darstellung als Erdpfad, der sich ins Gelände schmiegt (Decal oder Band-Mesh)
-- [ ] Träger mit Laufanimation, sichtbarer Ware, Stapel an Fahnen
-- [ ] Routing nach DESIGN §4.4: Dijkstra mit Steigung, monoton, Tausch, Rückstau, Reservierungen, Neu-Routing
-- [ ] ⚠ bei getrennten Gebäuden
-- [ ] Unit-Tests der Logistik: Verklemmungs-Szenarien, Ringnetz, Abriss mitten im Transport
+- [ ] `src/sim/` getrennt von der Darstellung: fester Tick (20/s), nur Ganzzahlen, serialisierbarer Zustand, Zufall nur aus der Saat
+- [ ] **Befehle statt Direktzugriff:** Jede Spieleraktion ist ein Befehl mit Tick-Nummer. Die Oberfläche ruft nie die Simulation direkt.
+- [ ] Prüfsumme über den Zustand, Befehlsprotokoll zum Abspielen (Replay)
+- [ ] Simulation liest nur die Ganzzahl-Hex-Kacheln aus M2 (Höhe, Steigung, Bauplatzgröße)
+- [ ] Lager im echten Ortskern als Startgebäude (Drehbuch 4.2), Gebäude in etwa **3× echter Größe**, **planierte Bauplätze**, an steilen Hängen nur kleine Gebäude (Drehbuch 3)
+- [ ] Erste prozedurale Gebäudemodelle (Fachwerk, 3 Bauphasen)
+- [ ] Fahnen, Wegbau Fahne → Fahne mit Vorschau, Segmente, Teilung (DESIGN §4.1–4.3)
+- [ ] Weg-Darstellung als Erdpfad, der sich ins Gelände schmiegt
+- [ ] Träger als erste knubbelige Figur (Siedler + Comic, Drehbuch 7.1) mit Laufanimation, sichtbarer Ware, Stapel an Fahnen
+- [ ] Routing nach DESIGN §4.4: Steigung, monoton, Tausch, Rückstau, Reservierung, Neu-Routing; ⚠ bei getrennten Gebäuden
+- [ ] Tests: Verklemmungs-Szenarien, Ringnetz, Abriss mitten im Transport; **Determinismus-Test**: dasselbe Befehlsprotokoll ergibt in Node und im Browser dieselbe Prüfsumme
 
-**Abnahme:** Ein Netz mit 30 Segmenten läuft 10 Minuten ohne Verklemmung. Getrennte Gebäude zeigen ⚠.
-
----
-
-## M4 – Wirtschafts-Kern
-
-**Ziel:** Bauen kostet Material, die Holz- und die Steinkette tragen das Wachstum.
-
-- [ ] Baustellen: Bedarf statt Sofortkosten, Einzel-Lieferung, Bau-Aktion, Priorität
-- [ ] Holzkette (Holzfäller, Förster, Sägewerk), Bäume als Zustand (`state.trees`), aus dem Kartenwald übernommen
-- [ ] Steinkette mit endlichen Felsen (`state.rocks`)
-- [ ] Input-Puffer, Lager-Auslieferung (Pull)
-- [ ] Abriss nach DESIGN §4.7
-- [ ] Baumenü (erste Version) mit Geistermodell und Bauvorschau
-
-**Abnahme:** Aus 12 Brettern und 8 Steinen entsteht ohne Eingriff ins Lager eine laufende Holzwirtschaft. Holzfäller und Förster nebeneinander liefern nach 2 Minuten weiter Stämme.
+**Abnahme:** Ein Netz mit 30 Segmenten läuft 10 Minuten ohne Verklemmung. Das Replay davon ergibt in zwei Browsern dieselbe Prüfsumme.
 
 ---
 
-## M5 – Bevölkerung, Nahrung, Kirmes
+## M4 – Bauen mit Holz und Stein
 
-**Ziel:** Die erste **spaßige Spielschleife** – Nahrung lässt das Dorf wachsen, die Kirmes gibt ein Ziel.
+**Ziel:** Bauen kostet Material, Holz und Stein tragen das Wachstum (Drehbuch 4.2, 5.1).
 
-- [ ] Hütte mit Wohnraum, Einwohner aus Nahrung (3 Stufen), Notnagel
-- [ ] Ketten: Kartoffel, Käse, Most, Honig
-- [ ] Kirmesplatz und Kirmes-Stufe 1 mit Fest-Animation und Freischaltungen
-- [ ] Erste Meldungen (Toasts) und Zustand-Klartext über Gebäuden
+- [ ] Baustellen: Bedarf statt Sofortkosten, Einzel-Lieferung, Bau-Aktion, Priorität (DESIGN §4.6)
+- [ ] Holzkette: Holzfäller, Förster, Sägewerk; Bäume als Zustand, aus dem Kartenwald übernommen
+- [ ] Steinkette: Steinbruch an endlichen Felsen
+- [ ] Input-Puffer, Lager-Auslieferung (Pull), Abriss (DESIGN §4.5, §4.7)
+- [ ] Datengetrieben: `data/goods.json`, `data/buildings.json` (Startwerte aus DESIGN §6)
+- [ ] Erstes Baumenü mit Geistermodell, Bauplatz-Anzeige (klein/mittel/groß) und Bauvorschau
 
-**Abnahme:** Ein Testspieler erreicht in 30–45 Minuten die erste Kirmes, ohne die Regeln erklärt zu bekommen.
+**Abnahme:** Aus 12 Brettern und 8 Steinen entsteht ohne Eingriff eine laufende Holzwirtschaft. Holzfäller und Förster nebeneinander liefern nach 2 Minuten weiter Stämme.
 
 ---
 
-## M6 – Oberfläche und Spielsteuerung
+## M5 – Bewohner, Nahrung, erste Kirmes
 
-**Ziel:** AAA-Bedienung – alles sichtbar, alles erklärbar.
+**Ziel:** die erste **spaßige Spielschleife** – Nahrung lässt das Dorf wachsen, die Kirmes gibt ein Ziel (Drehbuch 4.3, 4.4, 5.2).
+
+- [ ] Wohnhaus mit Wohnraum, Bewohner aus Nahrung (3 Stufen), Notnagel (DESIGN §5)
+- [ ] Ketten der Stufe Weiler: Kartoffel → Küche → Bratkartoffeln, Obstwiese → Mostkeller → Most, Schafstall → Käserei → Käse, Bienenstock → Honig
+- [ ] Kirmesplatz, Warenliste, Fest mit Animation, Dorfstufe **Weiler → Dorf** und Freischaltungen
+- [ ] Meldungen und Zustand in Klartext über Gebäuden („Wartet auf Stämme“), erste Sprüche
+- [ ] Ablauf „Die ersten 30 Minuten“ aus Drehbuch 4.4 als Spieltest-Drehbuch
+
+**Abnahme:** Ein Testspieler erreicht in 30–45 Minuten die erste Kirmes, ohne die Regeln erklärt zu bekommen, und will danach weiterspielen.
+
+---
+
+## M6 – Mehrspieler-Grundgerüst
+
+**Ziel:** Zwei bis vier Spieler bauen in einem Ausschnitt nebeneinander. Ab jetzt wird jeder neue Inhalt automatisch auch im Mehrspieler getestet (Drehbuch 2.3, 8.3).
+
+- [ ] Vermittlungs-Server, klein und ohne Konto: Lobby, Einladungslink, Spielername, Verbindungsaufbau
+- [ ] Verbindung direkt zwischen den Browsern (**WebRTC**), Notfall-**Relais (TURN)** für Firmen- und Handynetze
+- [ ] **Gleichschritt (Lockstep):** Befehle mit Verzögerung um einige Ticks, alle rechnen dasselbe
+- [ ] Start erst, wenn die Prüfsumme der Kartendaten bei allen gleich ist (M2), danach laufend **Abgleich-Prüfsummen** über den Spielstand; bei Auseinanderlaufen Meldung und Neuverteilung vom Gastgeber
+- [ ] Lobby: Ausschnitt wählen (M2), Startplätze in verschiedenen Ortskernen, Tempo **1–3×**
+- [ ] Pause für jeden, begrenzt (z. B. dreimal je Partie)
+- [ ] **Speichern und Laden** (Zustand + Datenversion der Karte), auch für Mehrspieler
+- [ ] **Rausgeflogen:** Spiel pausiert, Wiederbeitritt über den Link mit Stand vom Mitspieler; nach **5 Minuten** übernimmt ein einfacher **Verwalter** das Dorf
+- [ ] Testaufbau: zwei Browser-Fenster auf einem Rechner, simuliertes schlechtes Netz
+
+**Abnahme:** Zwei Spieler an verschiedenen Orten bauen 30 Minuten lang jeder ein Dorf bis zur ersten Kirmes, ohne Auseinanderlaufen. Einer lädt die Seite neu und ist in unter 30 Sekunden wieder drin.
+
+---
+
+## M7 – Bedienung und Oberfläche
+
+**Ziel:** Alles sichtbar, alles erklärbar, mit Maus und Tastatur am PC zuerst (Drehbuch 8.2, DESIGN §9).
 
 - [ ] Fenster-System (verschiebbar, anpinnbar, Esc, Live-Daten)
-- [ ] Gebäude-, Fahnen-, Träger- und Lagerfenster (datengetrieben)
+- [ ] Gebäude-, Fahnen-, Träger- und Lagerfenster, datengetrieben
 - [ ] Baumenü mit Gruppen, Tooltips, Begründungen, Tastenkürzeln
-- [ ] Icons aus den 3D-Modellen rendern
-- [ ] Warenübersicht (W), Statistik (S), Ereignisprotokoll (L)
-- [ ] Einstellungen (Grafik, Oberfläche, Steuerung, Spiel), Spieltempo und Pause
-- [ ] **Speichern und Laden** (State als JSON mit Version) plus Autosave
+- [ ] Icons aus den 3D-Modellen
+- [ ] Warenübersicht (W), Statistik (S), Ereignisprotokoll (L), Meldungen mit Sprung zum Ort
+- [ ] Einstellungen (Grafik, Oberfläche, Steuerung, Spiel), Autosave
+- [ ] Tablet und Handy spielbar, aber nicht Schwerpunkt
 
-**Abnahme:** Jedes Gebäude hat ein funktionierendes Fenster ohne Sondercode. Ein Spielstand übersteht das Neuladen. Mit 5 offenen Fenstern bleibt das Leistungsbudget eingehalten.
-
----
-
-## M7 – Erkundung und Gebiet
-
-**Ziel:** Das Land erobern – Nebel, Hecke, mehrere Dörfer.
-
-- [ ] Nebel mit Kartenpapier-Optik, Sichtradien, dauerhafte Entdeckung
-- [ ] Gebiet und Buchenhecke (Wachstum, Gatter, Verdorren), Bauregeln „gesichert“
-- [ ] Heckenhof, Baumschule, Ausguck
-- [ ] Dorfgründung an echten Orten, mehrere Lager, Lager-Einstellungen pro Ware
-
-**Abnahme:** Von einem Dorf aus wird ein zweites Dorf gegründet und per Feldweg versorgt. Die Hecke wächst nur mit Setzlingen.
+**Abnahme:** Jedes Gebäude hat ein funktionierendes Fenster ohne Sondercode. Ein neuer Spieler findet sich ohne Hilfe zurecht. Mit 5 offenen Fenstern bleibt das Leistungsbudget eingehalten.
 
 ---
 
-## M8 – Regionale Wirtschaft
+## M8 – Volle Grundwirtschaft und Jahreszeiten
 
-**Ziel:** Jede Region spielt sich anders.
+**Ziel:** alle rund **25 Grundgebäude**, drei Dorfstufen und ein Jahreslauf (Drehbuch 5.1, 5.2, 7.4).
 
-- [ ] Spezialketten der Völkchen: Tuch und Senf (Monschau), Fisch (Rursee), Sprudel und Basalt (Vulkaneifel), Wein (Ahr), Mühlstein und Schiefer (Mayen), Bier (Südeifel)
-- [ ] Kirmes-Stufen 2 und 3
-- [ ] Schnaps-Kette (Wacholder, Torf, Brennerei) und Schänke
-- [ ] Weitere Regionen als Spielkarten
+- [ ] Reifekeller (Bergkäse), Bier (Gerstenfeld → Brauerei → Landbier), Schnaps (Wacholderheide → Brennerei), Schänke
+- [ ] Eisen schlank ab Stufe 2: Erzgrube, Köhlerei, Eisenhütte, Schmiede → Werkzeug nur für die Fachkräfte der besseren Gebäude
+- [ ] Kirmes-Stufen **Dorf → Kirchdorf** und **Kirchdorf → Marktflecken**
+- [ ] Beschwipste Boten: querfeldein, torkelnd, verlieren mal Waren (DESIGN §10.3); **Betrunkene sofort erkennbar** (rote Nase, Schlagseite, Hicksen, Drehbuch 7.1)
+- [ ] **Jahreszeiten mit Wirkung:** Partie ≈ 2 Jahre, Winter mit Schnee und Vorratswirtschaft, Saat im Frühjahr, Ernte und Kirmeszeit im Herbst
+- [ ] **Wetter stark, aber fair:** Regen, Talnebel, Wind, Dürre, Missernte, Hochwasser in der Aue; angekündigt als Bauernregel, nie zerstörerisch, aus der gemeinsamen Saat
+- [ ] Balancing der Startwerte über einen 2-Stunden-Lauf
 
----
-
-## M9 – Finderei, Nachbarn, Großer Fund
-
-- [ ] Flachländer-Dörfer an echten größeren Orten am Kartenrand
-- [ ] Finderhütte, Ausredenstube, Fundbüro, Schatzhöhle
-- [ ] Beschwipste Boten (eigene Einheit, querfeldein, Risiken)
-- [ ] Spielziel „Der Große Fund“ mit Abschluss-Bildschirm und Statistik
+**Abnahme:** Ein Dorf erreicht in einer Partie allein den Marktflecken. Der erste Winter ist spürbar, aber wer vorsorgt, kommt gut durch. Im Mehrspieler trifft das Wetter alle gleich.
 
 ---
 
-## M10 – Atmosphäre und Veröffentlichung
+## M9 – Gebiet, Nachbarn, Finden, Ziele → erste 2-Stunden-Partie
 
-- [ ] Tageszeiten, Wetter (Talnebel, Regen, Wolkenschatten), Jahreszeiten-Optik
-- [ ] Sound und Musik, räumliche Geräusche
-- [ ] Startmenü, Credits mit Quellenangaben, Kampagne über die Eifel-Übersicht
-- [ ] Leistungsdurchgang, Qualitätsstufen auf echter Hardware geprüft
-- [ ] Optional: Desktop-Paket (Tauri/Electron)
+**Ziel:** Man misst sich ohne Krieg. Danach ist **eine volle Partie von 2 Stunden** allein und zu mehreren spielbar (Drehbuch 6).
+
+- [ ] **Einfluss:** Lager, Höfe, Kirche und Festplätze strahlen aus, gut versorgt weiter; Grenzen wachsen wie in Siedler
+- [ ] Erkundung und Nebel in Kartenpapier-Optik (DESIGN §8, im Drehbuch noch nicht festgelegt)
+- [ ] **Grenzsteine versetzen** (nachts, mit Risiko) und **Abwerben** über Kirmes und Essen; Gebäude werden nie zerstört, sie stehen still
+- [ ] **Flachländer-Dörfer** (KI) an größeren echten Orten im Ausschnitt: Lager, Wachsamkeit, Handel, keine eigene Bauerei
+- [ ] Finderhütte, **Finden mit Gegenwehr** (Wachhund, Dorfpolizist), **Ausredenstube** mit Sprüchen, Fundbüro
+- [ ] Zöllner an der Staatsgrenze, Kaffeeschmuggel
+- [ ] **Schützenfest** mit Schützenhaus, Schießstand und **Vogelschuss** (Vorbereitung + etwas Glück), Schützenkönig zahlt die Runde
+- [ ] Siegbedingungen: **Eifel-Punkte** nach 2 Stunden (Standard, Zwischenstand jederzeit), wählbar **Wettlauf** zum Marktflecken und **Der Große Fund**
+- [ ] Abschluss-Bildschirm mit Statistik
+
+**Abnahme:** Vier Testspieler (oder zwei plus Flachländer) spielen eine 2-Stunden-Partie bis zum Ende ohne Abbruch. Danach sagen sie: „Noch eine.“
+
+---
+
+## M10 – Die 10 Völkchen
+
+**Ziel:** Jeder Startort spielt sich anders (Drehbuch 5.3).
+
+- [ ] Gebietskarte im Konverter: welcher Startort gehört zu welchem Völkchen
+- [ ] Je Völkchen Bonus, **Spezialkette (2–3 Gebäude, ab Stufe 2)**, augenzwinkernde Schwäche, edle Spezialität für Stufe 3
+- [ ] Monschauer & Venner, Rursee-Leute, Rureifeler, Vulkaneifeler, Ahrtaler, Laacher & Mayener, Südeifeler, Schneifeler, **Ostbelgier**, **Öslinger**
+- [ ] **Hecken als Monschauer Spezialität:** lebende Grenze, Windschutz, wachsen nur mit Setzlingen (Drehbuch 6.1); anderswo nur Kulisse
+- [ ] Tracht und Farbe je Völkchen, Gebäude mit regionalen Baustoffen (Schiefer, Buntsandstein, Basalt, Drehbuch 7.3)
+- [ ] Sprüche je Völkchen (ripuarisch, moselfränkisch, Ostbelgien, Ösling), Tooltip-Übersetzung für Flachländer
+- [ ] Balancing: kein Völkchen gewinnt in Testpartien deutlich öfter
+
+**Abnahme:** Ein Ausschnitt über die belgische Grenze bringt Monschauer gegen Ostbelgier. Beide spielen sich erkennbar anders und sind gleich stark.
+
+---
+
+## M11 – Figuren, Wetter, Klang → Version 1.0
+
+**Ziel:** Charme und Fertigstellung. Freies Spiel und Mehrspieler sind fertig (Drehbuch 1, 7).
+
+- [ ] Figuren fertig im Siedler-Comic-Stil: Mimik, übertriebene Gesten, alle Berufe
+- [ ] **Gebrabbel** mit Eifeler Klang statt Sprecher, Betrunkene singen (Drehbuch 7.2)
+- [ ] Wetter- und Jahreszeiten-Optik: Talnebel, Regen, Schnee, Wolkenschatten, Tageszeiten
+- [ ] **Volksmusik** (Akkordeon, Blasmusik, Fiedel), Tusch auf den Festen, räumliche Geräusche, spukende Grenzsteinversetzer
+- [ ] **Erzählfigur** (Dorfälteste, siehe Drehbuch 1.3) mit Bauernregeln und kurzer Einführung ins freie Spiel
+- [ ] Running Gags aus Drehbuch 1.2 durchgehend eingebaut
+- [ ] Startmenü, Credits mit Quellenangaben, Leistungsdurchgang auf echter Hardware
+
+**Abnahme:** Eine Gruppe Fremder spielt über den Link eine Partie ohne Hilfe von uns. Die Leistung hält 60 fps bei „Mittel“.
+
+---
+
+## M12 – Kampagne „Der Eifelsteig“
+
+**Ziel:** Mit dem eigenen Völkchen den Eifelsteig entlang wandern (Drehbuch 2.1).
+
+- [ ] Kampagnenkarten als feste Ausschnitte mit fester Datenversion und Missionsdaten
+- [ ] 15 Etappen in 4 Abschnitten (Nordeifel, Kalkeifel, Vulkaneifel, Südeifel), je eigenes Ziel
+- [ ] Eifel-Übersicht mit dem gewanderten Weg zwischen den Etappen, Erzählfigur führt durch
+- [ ] Danach Zusatzwege, z. B. entlang der Rur mit Düren
+
+---
+
+## Danach (offen)
+
+- **Verbundene Regionen** im Mehrspieler: jeder spielt seinen eigenen Ausschnitt und schickt Händler und Finder hinüber (Drehbuch 2.3)
+- Volle KI-Gegner, die selbst bauen (Drehbuch 6.2)
+- Desktop- oder Store-App (Drehbuch 8.2)
 
 ---
 
 ## Laufende Pflichten (jeder Meilenstein)
 
-- DESIGN.md wird mitgeführt, die JSON-Daten sind die Wahrheit
+- Das Drehbuch wird mitgeführt, die JSON-Daten sind die Wahrheit für Zahlen
+- **Determinismus-Test** (Replay → gleiche Prüfsumme) läuft ab M3 bei jeder Änderung an der Simulation
+- Ab M6 wird jedes neue Feature auch im Mehrspieler angespielt
 - Screenshot-Test (`tools/shot.mjs`) aus festen Kamerapositionen, damit die Optik nicht unbemerkt kaputtgeht
 - Leistungsanzeige (F3) im Blick: Draw-Calls, Dreiecke, CPU-Zeit
