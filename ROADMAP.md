@@ -43,13 +43,14 @@ Erledigt:
 - [x] Flüsse als eigene Wasserbänder mit Strömung und Stromschnellen, Bett ins Gelände gegraben (keine Raster-Treppen)
 - [x] Seen und Talsperren mit echter OSM-Uferlinie (Polygon statt Raster)
 
-Offen:
-- [ ] Maßstab: Häuser und Bäume im Spiel-Maßstab aufeinander abstimmen
-- [ ] Hecken im Monschauer Heckenland an Feldgrenzen (Kulisse)
-- [ ] Post-Processing: SSAO, dezentes Bloom, Farb-Grading, Qualitätsstufen
-- [ ] Talnebel (Höhennebel im Shader)
+Offen (wird zusammen mit M2 erledigt):
+- [ ] Maßstab: Häuser und Bäume im Spiel-Maßstab aufeinander abstimmen (Gebäude 3×, 60-m-Hex, Drehbuch 3)
 - [ ] Leistungsmessung auf echter Hardware: 60 fps bei „Mittel“ nachweisen
 - [ ] Playwright-Smoke-Test: Karte lädt, Screenshots aus 3 festen Kamerapositionen
+
+Verschoben:
+- Hecken im Monschauer Heckenland → M10 (Monschauer Spezialität)
+- Post-Processing (SSAO, Bloom, Farb-Grading, Qualitätsstufen) und Talnebel → M11
 
 **Abnahme:** Rursee, Obersee, Urftsee, Rur durch Monschau und Hohes Venn sind klar erkennbar. Mit F3 zeigt sich 60 fps bei „Mittel“. Die Screenshots sind auf der Projektseite vorzeigbar.
 
@@ -62,10 +63,15 @@ Offen:
 - [x] Karten als Konfiguration im Konverter (`MAPS` in `build_map.py`, `--map <id>`), Kartenwahl im Viewer (`#id`)
 - [x] Zweite Karte: **Rureifel & Dürener Land** (Heimbach – Nideggen – Kreuzau – Düren)
 - [x] Teilen-Version für Handy/Tablet (`npm run build:share`), Touch-Steuerung
-- [ ] Pipeline auf die ganze Welt: UTM 32N, 6 DEM-Kacheln (N49/N50 × E005–E007), WorldCover N48E003 + N48E006, OSM aus Geofabrik-Auszügen
+- [ ] Pipeline auf die ganze Welt: UTM 32N, WorldCover N48E003 + N48E006, OSM aus Geofabrik-Auszügen
+- [ ] **Genaues Höhenmodell:** amtliche Geländemodelle (ohne Bäume) statt Copernicus-Oberflächenmodell: NRW DGM1, RLP DGM1, Luxemburg LiDAR 50 cm, Wallonien LiDAR 1 m (Lizenzen RLP und Wallonien noch prüfen); Copernicus GLO-30 (6 Kacheln N49/N50 × E005–E007) nur als Lückenfüller
+- [ ] Darstellung mit **10-m-Höhenraster** (aus 1 m heruntergerechnet), damit Klippen wie um Nideggen sichtbar werden; Simulation bleibt beim 60-m-Hex, Kulisse gröber
 - [ ] Flüsse, Talsperren und Flussbetten für die ganze Welt am Stück, danach in Kacheln (~6 × 6 km) schneiden
 - [ ] Globales Hex-Raster (60 m), Simulationsdaten als Ganzzahl-Hex-Kacheln
 - [ ] Datenversion mit Manifest und Prüfsummen, versionierte Pfade, Auslieferung außerhalb von Git
+- [ ] **Setup-Skript** (ein Befehl): lädt die Rohdaten, rechnet eine neue Datenversion und legt sie ab. Läuft beim Entwickler oder auf dem Server, wenn man eine neue Version will, nie beim Spieler und nie bei jedem Start
+- [ ] Rohdaten einer Datenversion einmal archivieren (Lizenzen erlauben das), damit wir unabhängig sind, falls ein Dienst wegfällt
+- [ ] `public/maps` aus Git entfernen, Entwicklungsserver lädt die Kacheln aus dem lokalen Datenordner
 - [ ] Übersichtskarte (~200 m Raster, Relief, Orte, Staatsgrenzen) und Ortsverzeichnis
 - [ ] Kartenwahl: Größe klein/mittel/groß, Auswahl-Hex verschieben, Ortssuche, Startplätze anzeigen
 - [ ] Client schneidet den Ausschnitt aus den Kacheln, Kulisse am Rand, Browser-Cache
@@ -74,11 +80,13 @@ Offen:
 - [ ] `data/regions.json`: Völkchen, Boni, Startwaren, Sprüche (Drehbuch Kapitel 5)
 - [ ] Übergang Übersicht → Ausschnitt (Kamerafahrt)
 
-**Abnahme:** Auf der Übersicht „mittel“ wählen, „Gemünd“ eintippen, der Ausschnitt lädt in unter 5 Sekunden. Zwei Browser bekommen für dieselben Parameter dieselbe Prüfsumme. Ein Ausschnitt über die belgische Grenze funktioniert.
+**Abnahme:** Auf der Übersicht „mittel“ wählen, „Gemünd“ eintippen, der Ausschnitt lädt in unter 5 Sekunden. Zwei Browser bekommen für dieselben Parameter dieselbe Prüfsumme. Ein Ausschnitt über die belgische Grenze funktioniert. Die Felsen um Nideggen sind deutlich zu erkennen. **Der Nutzer checkt das Repo frisch aus und baut alles selbst nach der Anleitung** (Setup-Skript, dann `npm run dev`).
 
 ---
 
 ## M3 – Simulationskern, Wegenetz und Träger
+
+**Voraussetzung:** M2 ist abgenommen (die Simulation liest die Hex-Kacheln).
 
 **Ziel:** das Herz von Siedler – Fahnen, Wege, Träger, sichtbare Waren – auf der echten Karte, und zwar von Anfang an deterministisch (Drehbuch 4.1, 8.3).
 
@@ -202,7 +210,7 @@ Offen:
 - [ ] Gebietskarte im Konverter: welcher Startort gehört zu welchem Völkchen
 - [ ] Je Völkchen Bonus, **Spezialkette (2–3 Gebäude, ab Stufe 2)**, augenzwinkernde Schwäche, edle Spezialität für Stufe 3
 - [ ] Monschauer & Venner, Rursee-Leute, Rureifeler, Vulkaneifeler, Ahrtaler, Laacher & Mayener, Südeifeler, Schneifeler, **Ostbelgier**, **Öslinger**
-- [ ] **Hecken als Monschauer Spezialität:** lebende Grenze, Windschutz, wachsen nur mit Setzlingen (Drehbuch 6.1); anderswo nur Kulisse
+- [ ] **Hecken als Monschauer Spezialität:** lebende Grenze, Windschutz, wachsen nur mit Setzlingen (Drehbuch 6.1); anderswo nur Kulisse an Feldgrenzen (aus M1)
 - [ ] Tracht und Farbe je Völkchen, Gebäude mit regionalen Baustoffen (Schiefer, Buntsandstein, Basalt, Drehbuch 7.3)
 - [ ] Sprüche je Völkchen (ripuarisch, moselfränkisch, Ostbelgien, Ösling), Tooltip-Übersetzung für Flachländer
 - [ ] Balancing: kein Völkchen gewinnt in Testpartien deutlich öfter
@@ -217,7 +225,8 @@ Offen:
 
 - [ ] Figuren fertig im Siedler-Comic-Stil: Mimik, übertriebene Gesten, alle Berufe
 - [ ] **Gebrabbel** mit Eifeler Klang statt Sprecher, Betrunkene singen (Drehbuch 7.2)
-- [ ] Wetter- und Jahreszeiten-Optik: Talnebel, Regen, Schnee, Wolkenschatten, Tageszeiten
+- [ ] Wetter- und Jahreszeiten-Optik: Talnebel (Höhennebel im Shader), Regen, Schnee, Wolkenschatten, Tageszeiten
+- [ ] Post-Processing: SSAO, dezentes Bloom, Farb-Grading, Qualitätsstufen (aus M1)
 - [ ] **Volksmusik** (Akkordeon, Blasmusik, Fiedel), Tusch auf den Festen, räumliche Geräusche, spukende Grenzsteinversetzer
 - [ ] **Erzählfigur** (Dorfälteste, siehe Drehbuch 1.3) mit Bauernregeln und kurzer Einführung ins freie Spiel
 - [ ] Running Gags aus Drehbuch 1.2 durchgehend eingebaut
