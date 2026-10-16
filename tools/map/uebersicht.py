@@ -89,3 +89,10 @@ def orte_json(orte, orte_roh, labels, kacheln, ausgabe):
                  if (int(x // welt.KACHEL), int(z // welt.KACHEL)) in ks)
     json_schreiben(os.path.join(ausgabe, "orte.json"), {"kinds": KINDS, "orte": liste, "gewaesser": gew})
     return len(liste), len(gew)
+
+
+def wanderwege(routen, ausgabe):
+    """uebersicht/wanderwege.json: [{n, ref, netz, p: [[x, z, ...], ...]}]."""
+    liste = [{k: w[k] for k in ("n", "ref", "netz", "p")} for w in routen]
+    json_schreiben(os.path.join(ausgabe, "uebersicht", "wanderwege.json"), liste)
+    return len(liste)

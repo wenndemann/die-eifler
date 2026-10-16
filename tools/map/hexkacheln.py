@@ -151,7 +151,7 @@ def land_raster(kacheln, arbeit, codes, amtlich_land, grenzen, start_xz):
 
 
 # ----------------------------------------------------------------- Hauptablauf
-def bauen(kacheln, arbeit, arbeit_ver, ausgabe, fertig, codes, amtlich_land, orte_roh, grenzen, version):
+def bauen(kacheln, arbeit, arbeit_ver, ausgabe, fertig, codes, amtlich_land, orte_roh, grenzen, version, bahn_pts=None):
     """Rechnet alle Hex-Kacheln. Liefert (hexkacheln, orte_liste, statistik)."""
     mos = Mosaik(stack_lader(fertig), np.uint16, 0, cache=12, extra=(5,))
     HC, HR = welt.HEX_COLS, welt.HEX_ROWS
@@ -250,14 +250,22 @@ def bauen(kacheln, arbeit, arbeit_ver, ausgabe, fertig, codes, amtlich_land, ort
     build[(terrain == T_WASSER) | (terrain == T_STEIN)] = 0
     build[terrain == T_MOOR] = np.minimum(build[terrain == T_MOOR], 1)
     build[~gueltig] = 0
-    # 5. Flags
+    # 5. Flags (Bahnstrecken: Hexe, durch die ein Gleis läuft)
+    bahnflag = np.zeros((HR, HC), bool)
+    if bahn_pts is not None and len(bahn_pts):
+        bq, br_ = welt.xz_zu_hex(bahn_pts[:, 0], bahn_pts[:, 1])
+        bc = bq + (br_ - (br_ & 1)) // 2
+        m = (br_ >= 0) & (br_ < HR) & (bc >= 0) & (bc < HC)
+        bahnflag[br_[m], bc[m]] = True
+    bahnflag &= gueltig
+    build[bahnflag] = 0
     ufer = np.zeros((HR, HC), bool)
     for nc_, nr_ in welt.hex_nachbarn_cr(cols, rows):
         ok = (nr_ >= 0) & (nr_ < HR) & (nc_ >= 0) & (nc_ < HC)
         nci, nri = np.clip(nc_, 0, HC - 1), np.clip(nr_, 0, HR - 1)
         ufer |= ok & gueltig[nri, nci] & (terrain[nri, nci] == T_WASSER)
     flags = (ortskern.astype(np.uint8) | (fluss.astype(np.uint8) << 1) | (ufer.astype(np.uint8) << 2)
-             | (grenzflag.astype(np.uint8) << 3) | ((~gueltig).astype(np.uint8) << 4)).astype(np.uint8)
+             | (grenzflag.astype(np.uint8) << 3) | ((~gueltig).astype(np.uint8) << 4) | (bahnflag.astype(np.uint8) << 5)).astype(np.uint8)
     flags[~gueltig] = 16
     for a in (terrain, hoehe, steil, build, country, place):
         a[~gueltig] = 0
@@ -295,6 +303,7 @@ def bauen(kacheln, arbeit, arbeit_ver, ausgabe, fertig, codes, amtlich_land, ort
         "komponenten": ncomp,
         "grenz_hexe": int((grenzflag & gueltig).sum()),
         "fluss_hexe": int((fluss & gueltig).sum()),
+        "bahn_hexe": int(bahnflag.sum()),
     }
     return hexliste, orte, stat, dict(terrain=terrain, hoehe=hoehe, steil=steil, build=build, flags=flags,
                                       country=country, place=place, gueltig=gueltig)

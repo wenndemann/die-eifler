@@ -344,7 +344,7 @@ class WeltKacheln:
                     ring = lambda c: [round(v, 1) for xy in list(c.coords)[:-1] for v in xy]  # noqa: E731
                     lakes.append({"n": self.seen[i]["n"], "l": round(self.seen[i]["l"], 2),
                                   "o": ring(pg.exterior), "h": [ring(h) for h in pg.interiors]})
-        gz_schreiben_(self.pfade(tx, tz)[2], json.dumps({"rivers": rivers, "lakes": lakes}, ensure_ascii=False,
+        gz_schreiben_(self.pfade(tx, tz)[2], json.dumps({"rivers": rivers, "lakes": lakes, "rails": []}, ensure_ascii=False,
                                                          separators=(",", ":")).encode("utf-8"))
 
 

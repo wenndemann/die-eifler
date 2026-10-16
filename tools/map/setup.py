@@ -40,6 +40,7 @@ def main():
 
     util.umgebung_proxy()
     import dem
+    import bahn
     import hexkacheln
     import kacheln as kmod
     import osm_welt
@@ -104,7 +105,14 @@ def main():
     with stufe("OpenStreetMap"):
         elems = osm_welt.lade(kach, arbeit, args.osm)
         proj = welt.WeltProjektor()
+        wege_elems = None
+        if not any(e["type"] == "relation" and e.get("tags", {}).get("route") == "hiking" for e in elems):
+            # Overpass-Weg: Wanderrouten extra holen (Geofabrik-Auszug enthält sie schon)
+            wege_elems = osm_welt.lade_wege_overpass(kach, arbeit) if args.osm != "geofabrik" else []
         print(f"{len(elems)} OSM-Elemente")
+        from shapely.ops import unary_union
+        from shapely.geometry import box as _box
+        gebiet_box = unary_union([_box(*welt.kachel_grenzen(*k)) for k in kach])
 
     # 4. Wasser am Stück
     dem_mos = kmod.Mosaik(dem.lader(arbeit), np.float32, np.nan, cache=16)
@@ -129,6 +137,28 @@ def main():
             util.loeschen(stufen_marker)
     marker = util.json_lesen(stufen_marker, {})
 
+    # 5b. Bahnstrecken
+    with stufe("Bahnstrecken (rails in vec, Hex-Flag)"):
+        if "bahn" in marker and os.path.exists(os.path.join(arbeit_ver, "bahn.pkl")):
+            ketten = bahn.laden(arbeit_ver)
+            print("schon berechnet")
+        else:
+            bahn_elems = elems
+            if not any(e["type"] == "way" and e.get("tags", {}).get("railway") for e in elems):
+                bahn_elems = osm_welt.lade_bahn_overpass(kach, arbeit) if args.osm != "geofabrik" else elems
+            ketten = bahn.bauen(bahn_elems, proj, arbeit_ver, wd["fluesse"])
+            nr = bahn.vec_ergaenzen(ausgabe, kach, ketten)
+            marker["bahn"] = nr
+            marker.pop("hex", None)
+            marker.pop("uebersicht", None)
+            util.json_schreiben(stufen_marker, marker)
+        je = {}
+        for c in ketten:
+            je[c["n"] or "(ohne Name)"] = je.get(c["n"] or "(ohne Name)", 0.0) + c["laenge"]
+        print(f"{len(ketten)} Gleisketten, {sum(je.values()) / 1000:.1f} km")
+        for n_, l_ in sorted(je.items(), key=lambda t: -t[1])[:15]:
+            print(f"   {n_}  {l_ / 1000:.1f} km")
+
     # Quellen je Kachel
     quellen = {}
     ql = dem.quellen_lader(arbeit)
@@ -151,7 +181,7 @@ def main():
                 if l:
                     land[q.id] = l
             hexliste, orte, hstat, _ = hexkacheln.bauen(kach, arbeit, arbeit_ver, ausgabe, fertig, codes, land,
-                                                        orte_roh, grenzlinien, version)
+                                                        orte_roh, grenzlinien, version, bahn.hex_punkte(ketten))
             erg = {"hex": hexliste, "orte": orte, "stat": hstat}
             util.json_schreiben(os.path.join(arbeit_ver, "hex_ergebnis.json"), erg)
             marker["hex"] = True
@@ -163,17 +193,23 @@ def main():
 
     # 7. Übersicht und Orte
     with stufe("Übersicht und Orte"):
-        if "uebersicht" in marker and os.path.exists(os.path.join(ausgabe, "orte.json")):
+        if "uebersicht" in marker and os.path.exists(os.path.join(ausgabe, "uebersicht", "wanderwege.json")):
             print("schon berechnet")
             hr = marker["uebersicht"]
         else:
             lo, hi = uebersicht.hoehe_und_relief(kach, fertig, ausgabe)
             ng = uebersicht.grenzen(grenzlinien, ausgabe)
             no, ngw = uebersicht.orte_json(orte, orte_roh, wd["labels"], kach, ausgabe)
-            hr = [lo, hi, ng, no, ngw]
+            wege = osm_welt.wanderwege(wege_elems or elems, proj, gebiet_box)
+            nw = uebersicht.wanderwege(wege, ausgabe)
+            marker["wege"] = [[w["n"] or w["ref"], w["netz"], w["laenge"]] for w in wege]
+            hr = [lo, hi, ng, no, ngw, nw]
             marker["uebersicht"] = hr
             util.json_schreiben(stufen_marker, marker)
-        print(f"Höhe {hr[0]:.0f}–{hr[1]:.0f} m, {hr[2]} Grenzlinien, {hr[3]} Orte, {hr[4]} Gewässernamen")
+        print(f"Höhe {hr[0]:.0f}–{hr[1]:.0f} m, {hr[2]} Grenzlinien, {hr[3]} Orte, {hr[4]} Gewässernamen, "
+              f"{hr[5]} Wanderrouten")
+        for n_, netz_, l_ in marker.get("wege", [])[:40]:
+            print(f"   {netz_}  {n_}  {l_ / 1000:.1f} km im Gebiet")
 
     # 8. Manifest
     with stufe("Manifest"):

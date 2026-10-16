@@ -82,8 +82,9 @@ def monotone_fallend(y):
 class Talsohle:
     """Talsohle (Minimum über 5×5 Zellen) des Höhenrasters an beliebigen Punkten, kachelweise gepuffert."""
 
-    def __init__(self, mosaik):
+    def __init__(self, mosaik, groesse=5):
         self.m = mosaik
+        self.groesse = groesse
         self.cache = OrderedDict()
 
     def _fenster(self, tx, tz):
@@ -98,7 +99,7 @@ class Talsohle:
             r = None
         else:
             a = nachbar_fuellen(a, ok)
-            r = (ndimage.minimum_filter(a, size=5), i0, j0, ok[3:-3, 3:-3].all())
+            r = (ndimage.minimum_filter(a, size=self.groesse) if self.groesse > 1 else a, i0, j0, ok[3:-3, 3:-3].all())
         self.cache[k] = r
         if len(self.cache) > 24:
             self.cache.popitem(last=False)

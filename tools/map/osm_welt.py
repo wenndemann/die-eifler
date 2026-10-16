@@ -51,7 +51,18 @@ SS = 4
 
 
 # ============================================================ Laden: Overpass
-def overpass_abfrage(b):
+def bahn_abfrage(b):
+    s_, w, n, e = b[1], b[0], b[3], b[2]
+    return f"""[out:json][timeout:240];
+way["railway"~"^(rail|light_rail|narrow_gauge)$"]({s_:.5f},{w:.5f},{n:.5f},{e:.5f});
+out geom;"""
+
+
+def overpass_abfrage(b, art="welt"):
+    if art == "wege":
+        return wege_abfrage(b)
+    if art == "bahn":
+        return bahn_abfrage(b)
     s, w, n, e = b[1], b[0], b[3], b[2]
     bb = f"({s:.5f},{w:.5f},{n:.5f},{e:.5f})"
     return f"""[out:json][timeout:240];
@@ -70,6 +81,16 @@ def overpass_abfrage(b):
   node["place"~"^(city|town|village|hamlet)$"]["name"]{bb};
   way["boundary"="administrative"]["admin_level"="2"]{bb};
 );
+out geom;"""
+
+
+def wege_abfrage(b):
+    """Große Wanderrouten (iwn/nwn/rwn) samt übergeordneter Routen (Etappen -> Hauptroute)."""
+    s_, w, n, e = b[1], b[0], b[3], b[2]
+    bb = f"({s_:.5f},{w:.5f},{n:.5f},{e:.5f})"
+    return f"""[out:json][timeout:240];
+relation["route"="hiking"]["network"~"^(iwn|nwn|rwn)$"]{bb}->.r;
+(.r; rel(br.r)["route"="hiking"];);
 out geom;"""
 
 
@@ -98,15 +119,15 @@ def overpass_bloecke(kacheln):
     return out
 
 
-def lade_overpass(kacheln, arbeit, endpunkte=None):
+def lade_overpass(kacheln, arbeit, endpunkte=None, art="welt"):
     bloecke = overpass_bloecke(kacheln)
     odir = os.path.join(arbeit, "osm_roh")
     os.makedirs(odir, exist_ok=True)
     elems = {}
-    fp = Fortschritt("OSM Overpass", len(bloecke))
+    fp = Fortschritt({"welt": "OSM Overpass", "wege": "OSM Wanderwege", "bahn": "OSM Bahn"}[art], len(bloecke))
     for b in bloecke:
         h = hashlib.sha1(repr([round(v, 4) for v in b]).encode()).hexdigest()[:10]
-        cache = os.path.join(odir, f"overpass_{h}.json.gz")
+        cache = os.path.join(odir, f"overpass_{h}.json.gz" if art == "welt" else f"overpass_{art}_{h}.json.gz")
         js = None
         if os.path.exists(cache):
             try:
@@ -115,7 +136,7 @@ def lade_overpass(kacheln, arbeit, endpunkte=None):
             except (OSError, ValueError):
                 js = None
         if js is None:
-            js = _overpass_block(b, endpunkte or ENDPOINTS, fp)
+            js = _overpass_block(b, endpunkte or ENDPOINTS, fp, art=art)
             atomar_schreiben(cache, gzip.compress(json.dumps(js).encode("utf-8"), mtime=0))
         for e in js["elements"]:
             elems[(e["type"], e["id"])] = e
@@ -123,10 +144,10 @@ def lade_overpass(kacheln, arbeit, endpunkte=None):
     return list(elems.values())
 
 
-def _overpass_block(b, endpunkte, fp, tiefe=0):
+def _overpass_block(b, endpunkte, fp, tiefe=0, art="welt"):
     """Ein Block; scheitert er überall (Zeitüberschreitung bei dichten Gebieten), wird er geviertelt."""
     try:
-        return _overpass_holen(b, endpunkte, fp, versuche=3 if tiefe < 2 else 6)
+        return _overpass_holen(b, endpunkte, fp, versuche=3 if tiefe < 2 else 6, art=art)
     except SystemExit:
         if tiefe >= 2:
             raise
@@ -134,13 +155,13 @@ def _overpass_block(b, endpunkte, fp, tiefe=0):
         mx, my = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
         elems = {}
         for sub in ((b[0], b[1], mx, my), (mx, b[1], b[2], my), (b[0], my, mx, b[3]), (mx, my, b[2], b[3])):
-            for e in _overpass_block(sub, endpunkte, fp, tiefe + 1)["elements"]:
+            for e in _overpass_block(sub, endpunkte, fp, tiefe + 1, art)["elements"]:
                 elems[(e["type"], e["id"])] = e
         return {"elements": list(elems.values())}
 
 
-def _overpass_holen(b, endpunkte, fp, versuche=6):
-    data = urllib.parse.urlencode({"data": overpass_abfrage(b)}).encode()
+def _overpass_holen(b, endpunkte, fp, versuche=6, art="welt"):
+    data = urllib.parse.urlencode({"data": overpass_abfrage(b, art)}).encode()
     letzter = ""
     for versuch in range(versuche):
         for ep in endpunkte:
@@ -167,10 +188,13 @@ def passt(tags):
     return (g("natural") in ("water", "heath", "wetland", "bog", "moor")
             or g("waterway") in ("river", "stream", "canal", "dam", "weir")
             or g("landuse") in ("reservoir", "quarry")
+            or g("railway") in BAHN
             or (g("boundary") == "administrative" and g("admin_level") == "2"))
 
 
-REL_TAGS = [("natural", v) for v in ("water", "heath", "wetland", "bog", "moor")] + \
+WEGE_NETZE = ("iwn", "nwn", "rwn")
+BAHN = ("rail", "light_rail", "narrow_gauge")
+REL_TAGS = [("route", "hiking")] + [("natural", v) for v in ("water", "heath", "wetland", "bog", "moor")] + \
            [("landuse", "reservoir"), ("landuse", "quarry")]
 
 
@@ -186,10 +210,13 @@ def pbf_filtern(pbf, bbox):
     rels, need = {}, set()
     for r in osmium.FileProcessor(pbf, osmium.osm.RELATION).with_filter(osmium.filter.TagFilter(*REL_TAGS)):
         tags = {t.k: t.v for t in r.tags}
-        if tags.get("type") not in ("multipolygon", "boundary"):
+        wanderweg = tags.get("route") == "hiking" and (tags.get("network") in WEGE_NETZE or tags.get("type") == "superroute")
+        if not wanderweg and tags.get("type") not in ("multipolygon", "boundary"):
+            continue
+        if tags.get("route") == "hiking" and not wanderweg:
             continue
         mem = [(m.ref, m.role) for m in r.members if m.type == "w"]
-        rels[r.id] = (tags, mem)
+        rels[r.id] = (tags, mem, [(m.ref, m.role) for m in r.members if m.type == "r"] if wanderweg else [])
         need.update(ref for ref, _ in mem)
     # Durchgang 2: Wege mit Knotenpositionen
     ways, member_geom = [], {}
@@ -208,10 +235,11 @@ def pbf_filtern(pbf, bbox):
         if gewollt and innen(geom):
             ways.append({"type": "way", "id": w.id, "tags": tags, "geometry": geom})
     elems = list(ways)
-    for rid, (tags, mem) in rels.items():
+    for rid, (tags, mem, sub) in rels.items():
         ms = [{"type": "way", "ref": ref, "role": role, "geometry": member_geom[ref]}
               for ref, role in mem if ref in member_geom]
-        if ms and any(innen(m["geometry"]) for m in ms):
+        ms += [{"type": "relation", "ref": ref, "role": role} for ref, role in sub]
+        if (ms and any(innen(m["geometry"]) for m in ms if "geometry" in m)) or (sub and not mem):
             elems.append({"type": "relation", "id": rid, "tags": tags, "members": ms})
     # Durchgang 3: Orte
     ortetags = [("place", p) for p in PLACE_KIND]
@@ -294,6 +322,15 @@ def lade(kacheln, arbeit, modus="auto", endpunkte=None, fp=None):
         else:
             print("Geofabrik nicht erreichbar, nehme Overpass")
     return lade_overpass(kacheln, arbeit, endpunkte)
+
+
+def lade_wege_overpass(kacheln, arbeit, endpunkte=None):
+    """Nur für den Overpass-Weg nötig: Wanderrouten-Relationen (beim Geofabrik-Weg sind sie schon in lade())."""
+    return lade_overpass(kacheln, arbeit, endpunkte, art="wege")
+
+
+def lade_bahn_overpass(kacheln, arbeit, endpunkte=None):
+    return lade_overpass(kacheln, arbeit, endpunkte, art="bahn")
 
 
 # ============================================================ Auswertung (aus osm.py, Weltmeter)
@@ -485,4 +522,133 @@ def grenzlinien(elements, proj):
             g = proj.pts(e.get("geometry", []))
             if len(g) >= 2:
                 out.append(g)
+    return out
+
+
+def wanderwege(elements, proj, gebiet_box=None, mindestlaenge=1500.0, toleranz=10.0):
+    """Große Wanderrouten: Etappen-Unterrelationen zur Hauptroute zusammenfassen, Wege zu Linien verketten,
+    auf ~20 m vereinfachen (Toleranz 10 m), auf das Gebiet (shapely-Geometrie, Weltmeter) zuschneiden.
+    Liefert [{n, ref, netz, p:[[x,z,...],...]}]."""
+    from shapely.geometry import LineString
+    rels = {e["id"]: e for e in elements if e["type"] == "relation" and e.get("tags", {}).get("route") == "hiking"}
+    kinder = {m["ref"] for r in rels.values() for m in r.get("members", []) if m["type"] == "relation" and m["ref"] in rels}
+    out = []
+    for rid, r in rels.items():
+        if rid in kinder:
+            continue
+        # alle Wege der Hauptroute samt Etappen einsammeln
+        linien, gesehen, stack, netz = [], set(), [rid], r["tags"].get("network", "")
+        while stack:
+            cur = stack.pop()
+            if cur in gesehen or cur not in rels:
+                continue
+            gesehen.add(cur)
+            if not netz and rels[cur]["tags"].get("network") in WEGE_NETZE:
+                netz = rels[cur]["tags"]["network"]
+            for m in rels[cur].get("members", []):
+                if m["type"] == "relation":
+                    stack.append(m["ref"])
+                elif m["type"] == "way" and m.get("geometry"):
+                    g = proj.pts(m["geometry"])
+                    if len(g) >= 2:
+                        linien.append(g)
+        if netz not in WEGE_NETZE or not linien:
+            continue
+        verkettet = []
+        for l in _verketten(linien):
+            ls = LineString(l).simplify(toleranz)
+            if gebiet_box is not None:
+                ls = ls.intersection(gebiet_box)
+            verkettet += [g for g in getattr(ls, "geoms", [ls]) if g.geom_type == "LineString" and not g.is_empty]
+        laenge = sum(g.length for g in verkettet)
+        if laenge < mindestlaenge:
+            continue
+        t = r["tags"]
+        out.append({"n": t.get("name") or t.get("ref") or "", "ref": t.get("ref", ""), "netz": netz,
+                    "laenge": round(laenge), "p": [[int(round(v)) for xz in g.coords for v in xz[:2]] for g in verkettet]})
+    out.sort(key=lambda w: (WEGE_NETZE[::-1].index(w["netz"]), w["n"], w["ref"]))
+    return out
+
+
+def _verketten(linien):
+    """Linienstücke an gemeinsamen Endpunkten zu möglichst langen Linien verbinden (Richtung egal)."""
+    ends = {}
+    for i, l in enumerate(linien):
+        for k in (_key(l[0]), _key(l[-1])):
+            ends.setdefault(k, []).append(i)
+    benutzt = [False] * len(linien)
+
+    def weiter(cur, vorn):
+        k = _key(cur[-1]) if vorn else _key(cur[0])
+        for j in ends.get(k, []):
+            if benutzt[j]:
+                continue
+            benutzt[j] = True
+            l = linien[j]
+            if _key(l[0]) == k:
+                nxt = l[1:]
+            else:
+                nxt = l[::-1][1:]
+            return (cur + nxt) if vorn else (nxt[::-1] + cur)
+        return None
+
+    out = []
+    for i in range(len(linien)):
+        if benutzt[i]:
+            continue
+        benutzt[i] = True
+        cur = list(linien[i])
+        for vorn in (True, False):
+            while True:
+                n = weiter(cur, vorn)
+                if n is None:
+                    break
+                cur = n
+        out.append(cur)
+    return out
+
+
+def bahnketten(elements, proj, schritt=10.0):
+    """Bahnstrecken in Betrieb (rail, light_rail, narrow_gauge; ohne Tunnel) als Ketten gleichen Namens,
+    auf ~10 m verdichtet. Liefert [{n, p: N×2 (x, z), br: N bool (Brücke)}]."""
+    items = []
+    for e in elements:
+        t = e.get("tags", {})
+        if e["type"] != "way" or t.get("railway") not in BAHN:
+            continue
+        if t.get("tunnel") in ("yes", "culvert", "building_passage"):
+            continue
+        g = proj.pts(e.get("geometry", []))
+        if len(g) < 2:
+            continue
+        p = densify(g, schritt)
+        brueck = t.get("bridge", "no") not in ("no", "")
+        items.append((t.get("name", ""), p, np.full(len(p), brueck), _key(g[0]), _key(g[-1])))
+    ends = {}
+    for i, it in enumerate(items):
+        for k in (it[3], it[4]):
+            ends.setdefault((it[0], k), []).append(i)
+    benutzt = [False] * len(items)
+    out = []
+    for i, it in enumerate(items):
+        if benutzt[i]:
+            continue
+        benutzt[i] = True
+        name, p, br = it[0], it[1], it[2]
+        k0, k1 = it[3], it[4]
+        for vorn in (True, False):
+            while True:
+                k = k1 if vorn else k0
+                j = next((j for j in ends.get((name, k), []) if not benutzt[j]), None)
+                if j is None:
+                    break
+                benutzt[j] = True
+                _, q, qb, a, b = items[j]
+                if a != k:      # Richtung drehen
+                    q, qb, a, b = q[::-1], qb[::-1], b, a
+                if vorn:
+                    p, br, k1 = np.concatenate([p, q[1:]]), np.concatenate([br, qb[1:]]), b
+                else:
+                    p, br, k0 = np.concatenate([q[::-1][:-1], p]), np.concatenate([qb[::-1][:-1], br]), b
+        out.append({"n": name, "p": p, "br": br})
     return out
