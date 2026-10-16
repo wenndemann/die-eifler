@@ -75,6 +75,10 @@ Verbindliche Vorgabe für Konverter (`tools/map/`) und Client (`src/`). Grundlag
 - `uebersicht/relief.webp`: Reliefbild, 100 m je Pixel (1260 × 1380), Bedeckung + Schummerung + Wasser.
   Gebiete ohne Daten sind transparent.
 - `uebersicht/grenzen.json`: Staatsgrenzen als Linien `[[x, z, x, z, ...], ...]`.
+- `uebersicht/wanderwege.json`: große Wanderrouten aus OSM (`route=hiking`, `network` = `iwn`/`nwn`/`rwn`),
+  nur für die Übersicht und später die Kampagne (Drehbuch 2.1), nicht im 3D-Spiel:
+  `[{ "n": "Eifelsteig", "ref": "...", "netz": "rwn", "p": [[x, z, x, z, ...], ...] }]`, vereinfacht auf ~20 m,
+  auf das Gebiet zugeschnitten. Etappen (Unterrelationen) werden zu ihrer Hauptroute zusammengefasst.
 
 ## Datenversion und Manifest
 
@@ -84,7 +88,7 @@ welt-daten/                       (lokal, nicht in Git; Vite liefert es unter /w
   eifel-2026.10/
     manifest.json
     orte.json
-    uebersicht/ hoehe.bin.gz  relief.webp  grenzen.json
+    uebersicht/ hoehe.bin.gz  relief.webp  grenzen.json  wanderwege.json
     r10/  r40/  vec/  hex/
 ```
 
