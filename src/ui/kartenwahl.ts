@@ -8,7 +8,7 @@ import {
 import {
   bigHexBounds, bigHexOutline, hexCount, hexDistance, hexRound, hexTileIndex, hexToWorld, hexesInRadius, worldToHex,
 } from '../welt/hexwelt';
-import { holeBytes, holeJson, type Welt } from '../welt/laden';
+import { holeBildUrl, holeBytes, holeJson, type Welt } from '../welt/laden';
 import { VORSCHLAEGE } from '../map/presets';
 
 /* ------------------------------------------------------------------ Reine Logik (getestet) */
@@ -1081,7 +1081,7 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Ausschni
     /* --- Daten nachladen --- */
     const img = new Image();
     img.onload = () => { relief = img; zeichne(); };
-    img.src = welt.datei('uebersicht/relief.webp');
+    void holeBildUrl(welt.datei('uebersicht/relief.webp')).then((u) => { img.src = u; }).catch(() => undefined);
 
     const ladeAlles = Promise.all([
       holeJson<Wanderweg[]>(welt.datei('uebersicht/wanderwege.json')).then((ws) => {
