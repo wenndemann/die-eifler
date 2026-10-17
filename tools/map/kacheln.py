@@ -31,7 +31,7 @@ FELS_GRAD = 30.0             # Hangneigung (Grad, auf mit σ = 10 m geglättetem
 FELS_GRAD_WALD = 40.0        # im Wald erst bei Felswand-Neigung (sonst wäre jeder steile Waldhang Fels)
 FELS_MIN = 8                 # kleinere Fels-Flecken (Zellen) entfallen
 # Flussbett je Linienart: Tiefe unter dem Spiegel (m), Uferneigung (m/m), Einflussradius (m).
-# Wie in build_map.py, nur mit kürzerer Reichweite und steilerem Ufer: bei 10 m Zellen und echten
+# Wie im früheren Einzelkarten-Konverter, nur mit kürzerer Reichweite und steilerem Ufer: bei 10 m Zellen und echten
 # Geländemodellen soll nur das Bett selbst eingetieft werden, nicht das ganze Tal.
 CHANNEL = {0: (2.5, 0.35, 45.0), 2: (1.2, 0.35, 30.0), 1: (1.0, 0.30, 25.0)}   # Schlüssel: Art k
 BETT_MIN = 6.0               # Halbbreite des Bettbandes mindestens (m), damit es auf 10-m-Zellen lückenlos bleibt
@@ -68,7 +68,7 @@ def r40_aus_r10(h, cover, wasser):
 
 
 def smooth_shore(ground, water, level, sd):
-    """Uferzellen im Wasser so tief legen, dass die Wasserlinie auf der echten Uferkante liegt (wie build_map)."""
+    """Uferzellen im Wasser so tief legen, dass die Wasserlinie auf der echten Uferkante liegt (wie im früheren Konverter)."""
     req = np.zeros_like(ground)
     cnt = np.zeros_like(ground)
     for dj, di in ((0, 1), (0, -1), (1, 0), (-1, 0)):

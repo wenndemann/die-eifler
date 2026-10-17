@@ -63,7 +63,7 @@ def hex_werte(mosaik, col0, row0, ncol, nrow):
 
 
 def gelaende(anteil, steil):
-    """Terrain-Index je Hex (ohne Siedlung): Mehrheit im Kreis 0,85·R wie in build_map.py."""
+    """Terrain-Index je Hex (ohne Siedlung): Mehrheit im Kreis 0,85·R wie im früheren Konverter."""
     a = anteil.copy()
     t = np.zeros(a.shape[:-1], np.uint8)
     wasser = a[..., C["wasser"]] >= 0.5
