@@ -4,3 +4,7 @@ tools/map/raw/*.tif
 __pycache__/
 tools/map/raw/*.json
 dist-share/
+welt-daten/
+tools/map/arbeit/
+test-results/
+.claude/worktrees/

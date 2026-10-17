@@ -7,8 +7,10 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "map": "python3 tools/map/build_map.py",
-    "build:share": "tsc --noEmit && node tools/build_share.mjs"
+    "build:share": "tsc --noEmit && node tools/build_share.mjs",
+    "setup": "python3 tools/map/setup.py",
+    "test": "vitest run",
+    "test:smoke": "node tests/smoke.mjs"
   },
   "dependencies": {
     "three": "^0.169.0"
@@ -17,6 +19,7 @@
     "@types/three": "^0.169.0",
     "playwright": "^1.48.2",
     "typescript": "^5.6.3",
-    "vite": "^5.4.10"
+    "vite": "^5.4.10",
+    "vitest": "^2.1.9"
   }
 }

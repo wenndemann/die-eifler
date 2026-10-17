@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Kartenwahl (Entwicklerseite)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    html, body { margin: 0; height: 100%; background: #1a1c1e; color: #f3ead8; font-family: 'Alegreya Sans', sans-serif; }
+    #ergebnis { padding: 24px; white-space: pre-wrap; font: 15px monospace; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module">
+    import { ladeWelt } from '/src/welt/laden.ts';
+    import { zeigeKartenwahl } from '/src/ui/kartenwahl.ts';
+    const welt = await ladeWelt();
+    const wahl = await zeigeKartenwahl(document.getElementById('app'), welt);
+    const out = document.createElement('div');
+    out.id = 'ergebnis';
+    out.textContent = JSON.stringify(wahl, null, 2);
+    document.body.append(out);
+  </script>
+</body>
+</html>

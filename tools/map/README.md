@@ -1,52 +1,67 @@
-# Karten-Pipeline
+# Karten-Pipeline (Weltdaten)
 
-`build_map.py` erzeugt aus echten Geodaten eine Spielkarte unter `public/maps/<id>/`.
+`setup.py` lädt die Rohdaten, rechnet eine **Datenversion** der Eifel-Welt und legt sie unter
+`welt-daten/<version>/` ab (nicht in Git). Format: [FORMAT.md](FORMAT.md). Hintergrund: Drehbuch 3.1 und 8.1.
 
-## Rohdaten (nicht im Repo, nach `tools/map/raw/`)
-
-| Datei | Quelle |
-|---|---|
-| `cop_N50_E006.tif` | Copernicus GLO-30 DEM, Kachel N50 E006: `https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_N50_00_E006_00_DEM/Copernicus_DSM_COG_10_N50_00_E006_00_DEM.tif` |
-| `worldcover_<id>.tif` | Ausschnitt aus ESA WorldCover 2021 v200, Kachel N48E006 (per HTTP-Range mit rasterio gelesen, Bbox 6.15–6.55 °O, 50.50–50.69 °N) |
-| `osm_monschau-rursee.json` | OpenStreetMap per Overpass (`python3 tools/map/fetch_osm.py`), © OpenStreetMap-Mitwirkende, ODbL |
-
-WorldCover im Agent-Container: per rasterio `/vsicurl/` mit `CURL_CA_BUNDLE=/root/.ccr/ca-bundle.crt`
-und `GDAL_HTTP_PROXY=$HTTPS_PROXY` lesen.
-
-`fetch_osm.py` probiert mehrere Overpass-Instanzen nacheinander (overpass-api.de, maps.mail.ru, kumi)
-mit Wiederholungen; mit `--endpoint URL` lässt sich eine eigene angeben.
-Geholt werden Gewässer (Flächen, Flüsse, Bäche, Kanäle, Wehre, Dämme), Heide, Feuchtgebiete/Moor,
-Steinbrüche und benannte Orte (city/town/village/hamlet).
-
-Abhängigkeiten: `pip install numpy scipy rasterio pillow shapely`
-
-## Karten
-
-Karten stehen in `MAPS` in `build_map.py` (Name, Bbox, Startort). Vorhanden: `monschau-rursee`, `rureifel`.
-Rohdaten heißen je Karte `worldcover_<id>.tif` und `osm_<id>.json`; die DEM-Kachel teilen sich alle.
+Läuft beim Entwickler oder auf einem Server, wenn man eine neue Version will – nie beim Spieler.
 
 ## Aufruf
 
-    python3 tools/map/fetch_worldcover.py --map rureifel   # einmalig je Karte
-    python3 tools/map/fetch_osm.py --map rureifel          # einmalig bzw. zum Aktualisieren
-    python3 tools/map/build_map.py --map rureifel --preview vorschau.png
+    pip install -r tools/map/requirements.txt
+    python3 tools/map/setup.py --gebiet nideggen      # Testgebiet, 18 × 18 km, ~10 min
+    python3 tools/map/setup.py --gebiet nordeifel     # Monschau – Düren mit belgischem Venn, ~1 h
+    python3 tools/map/setup.py                        # ganze Welt, viele Stunden
 
-`build_map.py` schreibt außerdem `public/maps/index.json` (Kartenwahl im Viewer, `#<id>` in der URL).
+| Option | Bedeutung |
+|---|---|
+| `--gebiet welt\|nordeifel\|nideggen` | Umfang (Kacheln à 6 km). `welt` = 21 × 23 Kacheln, Aachen – Trier – Maria Laach |
+| `--version NAME` | Name der Datenversion (Standard `eifel-JJJJ.MM`, bei Teilgebieten mit Zusatz) |
+| `--daten DIR` | Ausgabe (Standard `welt-daten/`) |
+| `--arbeit DIR` | Arbeitsordner für Zwischenstände und Rohdaten (Standard `tools/map/arbeit/`) |
+| `--archiv DIR` | Rohdaten nach Gebrauch dorthin verschieben statt löschen (einmal archivieren, falls ein Dienst wegfällt) |
+| `--osm auto\|geofabrik\|overpass` | OSM-Quelle; `auto` versucht Geofabrik, sonst Overpass |
+| `--nur-copernicus` | amtliche Höhenmodelle auslassen (schnell, gröber) |
+| `--jobs N` | parallele Downloads |
+| `--neu` | alles neu rechnen (geladene OSM-Rohdaten bleiben) |
 
-## Teilen-Version
+**Unterbrochen?** Einfach noch einmal starten: fertige Stufen und Kacheln werden übersprungen.
+Amtliche Rohkacheln werden gelöscht, sobald keine offene Weltkachel sie mehr braucht – so reicht der Platz
+auch für die ganze Welt (Arbeitsordner bleibt bei einigen GB, Download insgesamt ~25 GB amtlich + Luxemburg-Ausschnitte).
 
-`npm run build:share` baut nach `dist-share/` eine eigenständige Fassung mit relativen Pfaden.
-Die Raster liegen dort als Base64-Text (`.bin.txt`), weil manche Hoster (z. B. Artifact-Seiten) keine Binärdateien ausliefern.
+Stufen: WorldCover → Höhe → OSM → Wasser (für das ganze Gebiet am Stück) → Kacheln (r10, r40, vec) →
+Bahnstrecken → Hex-Kacheln → Übersicht und Orte → Manifest (sha256) → `versions.json`.
 
-## Was aus OSM kommt
+Werkzeuge:
 
-- **Seen und Talsperren:** Uferlinie als Polygon (`lakes.json`, im Viewer trianguliert), Spiegel aus dem DSM.
-  Uferzellen werden so tief gelegt, dass die Wasserlinie auf der echten Kante liegt.
-- **Flüsse und Bäche:** Linien zu Ketten verbunden (Wegrichtung = Fließrichtung, Verrohrungen ausgelassen).
-  Spiegel je Punkt per isotoner Regression aus der Talsohle (fällt immer stromab, nie unter einen
-  durchflossenen See). Das Bett wird ins Höhenraster gegraben; Ausgabe als `rivers.json`.
-- **Heide, Moor, Steinbrüche:** gerastert, überschreiben die WorldCover-Klasse (Heide/Moor auch bei lockerem Wald).
-- **Orte:** echte Koordinaten; dazu Namen der großen Seen und Flüsse.
+    python3 tools/map/pruefsumme.py --ort Nideggen --size klein     # Prüfsumme eines Ausschnitts (Gegenprobe zum Browser)
+    python3 tools/map/vorschau.py --version V --out bild.png [--mitte x,z --halb m --vec]
 
-Ohne OSM-Datei fällt der Konverter auf WorldCover-Wasser, die Näherungs-Regionen im Skript und
-`places.json` zurück.
+## Höhenmodelle und Lizenzen
+
+Amtliche Geländemodelle (DGM, ohne Bäume und Häuser), auf 10 m gemittelt; Lücken füllt Copernicus GLO-30.
+Ausgeliefert werden nur abgeleitete Raster, keine Rohdaten.
+
+| Quelle | Auflösung, Kachelung, CRS | Lizenz | Quellenvermerk | Menge für die Welt |
+|---|---|---|---|---|
+| **NRW DGM1** (Geobasis NRW) | 1 m, 1-km-GeoTIFF, EPSG:25832 | [dl-de/zero-2.0](https://www.govdata.de/dl-de/zero-2-0) | nicht nötig; im Spiel „Geobasis NRW“ | ~4 700 km², ~11 GB |
+| **RLP DGM1** (GeoBasis-RLP) | 1 m, 1-km-GeoTIFF, EPSG:25832 + DHHN2016 | [dl-de/by-2.0](https://www.govdata.de/dl-de/by-2-0) | `© GeoBasis-DE / LVermGeoRP <Jahr>, dl-de/by-2-0, www.lvermgeo.rlp.de [Daten bearbeitet]` | ~8 300 km², ~13 GB |
+| **Luxemburg LiDAR-MNT 2024** (ACT) | 50 cm, ein COG (40 GB), EPSG:2169, gelesen per HTTP-Range | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | nicht nötig; im Spiel „ACT Luxemburg“ | ~2 100 km², ~30 GB gelesen |
+| **Wallonien MNT 2021–2022** (SPW) | 50 cm, nur Provinz-ZIPs (45 + 52 GB), EPSG:3812 | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | „Service public de Wallonie (SPW), Relief de la Wallonie – MNT 2021–2022; umgerechnet“ | ~3 000 km² |
+| **Copernicus GLO-30** | 30 m, 1°-Kacheln | Copernicus-Lizenz | „© DLR e.V. 2010–2014 und © Airbus Defence and Space GmbH 2014–2018, bereitgestellt unter COPERNICUS durch die EU und ESA“ | 6 Kacheln, ~150 MB |
+
+- **Wallonien ist standardmäßig Copernicus (30 m)** – beschlossen, weil es dort keinen kachelweisen Download gibt.
+  Wer es genauer will: GeoTIFFs (beliebiges CRS) nach `tools/map/arbeit/raw/wal/` legen
+  (Géoportail „Téléchargement personnalisé“ oder Provinz-ZIP), dann nimmt `setup.py` sie automatisch.
+- Weitere Quellen: **ESA WorldCover 2021** (10 m, CC BY 4.0) für die Bedeckung, **OpenStreetMap** (ODbL) für
+  Gewässer, Heide, Moor, Steinbrüche, Orte, Staatsgrenzen, Bahnstrecken und Wanderrouten. Straßen werden bewusst
+  nicht übernommen (Drehbuch 3).
+- Alle Quellen erlauben Archivieren und Weitergeben (dl-de/by und CC BY mit Namensnennung).
+- Die Credits im Spiel kommen aus `manifest.json` (je benutzte Quelle).
+
+## Netzwerk
+
+Gebraucht werden: `opengeodata.nrw.de`, `geobasis-rlp.de`, `data.public.lu`/`download.data.public.lu`,
+`copernicus-dem-30m.s3.amazonaws.com`, `esa-worldcover.s3.eu-central-1.amazonaws.com`, für OSM
+`download.geofabrik.de` oder ein Overpass-Server (`overpass-api.de`, `maps.mail.ru`, `overpass.kumi.systems`).
+In Claude-Cloud-Containern ist Geofabrik gesperrt; dann holt `auto` die OSM-Daten über Overpass (dauert länger).
+Hinter einem Proxy liest `setup.py` `HTTPS_PROXY` und ein CA-Bundle aus `SSL_CERT_FILE`/`CURL_CA_BUNDLE`.

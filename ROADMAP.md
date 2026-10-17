@@ -44,9 +44,9 @@ Erledigt:
 - [x] Seen und Talsperren mit echter OSM-Uferlinie (Polygon statt Raster)
 
 Offen (wird zusammen mit M2 erledigt):
-- [ ] Maßstab: Häuser und Bäume im Spiel-Maßstab aufeinander abstimmen (Gebäude 3×, 60-m-Hex, Drehbuch 3)
-- [ ] Leistungsmessung auf echter Hardware: 60 fps bei „Mittel“ nachweisen
-- [ ] Playwright-Smoke-Test: Karte lädt, Screenshots aus 3 festen Kamerapositionen
+- [x] Maßstab: Häuser (3×) und Bäume (1,6×) im Spiel-Maßstab aufeinander abgestimmt, Konstanten in `src/render/massstab.ts`
+- [ ] Leistungsmessung auf echter Hardware: 60 fps bei „Mittel“ nachweisen (Werkzeug fertig: `#…&bench=1` startet einen 30-s-Kameraflug mit Ergebnisfeld, Qualitätsstufen Niedrig/Mittel/Hoch)
+- [x] Playwright-Smoke-Test (`npm run test:smoke`): Kartenwahl → Ausschnitt lädt, Screenshots aus 3 festen Kamerapositionen, Prüfsumme Browser = Python
 
 Verschoben:
 - Hecken im Monschauer Heckenland → M10 (Monschauer Spezialität)
@@ -60,25 +60,25 @@ Verschoben:
 
 **Ziel:** die ganze Eifel (Aachen – Trier – Maria Laach, mit Ostbelgien und Nord-Luxemburg) als Weltkarte. Man wählt Größe und Ort und spielt genau dort (Drehbuch 3.1 und 8.1).
 
-- [x] Karten als Konfiguration im Konverter (`MAPS` in `build_map.py`, `--map <id>`), Kartenwahl im Viewer (`#id`)
+- [x] Karten als Konfiguration im Konverter, Kartenwahl im Viewer (abgelöst durch die Weltdaten)
 - [x] Zweite Karte: **Rureifel & Dürener Land** (Heimbach – Nideggen – Kreuzau – Düren)
-- [x] Teilen-Version für Handy/Tablet (`npm run build:share`), Touch-Steuerung
-- [ ] Pipeline auf die ganze Welt: UTM 32N, WorldCover N48E003 + N48E006, OSM aus Geofabrik-Auszügen
-- [ ] **Genaues Höhenmodell:** amtliche Geländemodelle (ohne Bäume) statt Copernicus-Oberflächenmodell: NRW DGM1, RLP DGM1, Luxemburg LiDAR 50 cm, Wallonien LiDAR 1 m (Lizenzen RLP und Wallonien noch prüfen); Copernicus GLO-30 (6 Kacheln N49/N50 × E005–E007) nur als Lückenfüller
-- [ ] Darstellung mit **10-m-Höhenraster** (aus 1 m heruntergerechnet), damit Klippen wie um Nideggen sichtbar werden; Simulation bleibt beim 60-m-Hex, Kulisse gröber
-- [ ] Flüsse, Talsperren und Flussbetten für die ganze Welt am Stück, danach in Kacheln (~6 × 6 km) schneiden
-- [ ] Globales Hex-Raster (60 m), Simulationsdaten als Ganzzahl-Hex-Kacheln
-- [ ] Datenversion mit Manifest und Prüfsummen, versionierte Pfade, Auslieferung außerhalb von Git
-- [ ] **Setup-Skript** (ein Befehl): lädt die Rohdaten, rechnet eine neue Datenversion und legt sie ab. Läuft beim Entwickler oder auf dem Server, wenn man eine neue Version will, nie beim Spieler und nie bei jedem Start
-- [ ] Rohdaten einer Datenversion einmal archivieren (Lizenzen erlauben das), damit wir unabhängig sind, falls ein Dienst wegfällt
-- [ ] `public/maps` aus Git entfernen, Entwicklungsserver lädt die Kacheln aus dem lokalen Datenordner
-- [ ] Übersichtskarte (~200 m Raster, Relief, Orte, Staatsgrenzen) und Ortsverzeichnis
-- [ ] Kartenwahl: Größe klein/mittel/groß, Auswahl-Hex verschieben, Ortssuche, Startplätze anzeigen
-- [ ] Client schneidet den Ausschnitt aus den Kacheln, Kulisse am Rand, Browser-Cache
-- [ ] Prüfsumme über die Simulationsdaten des Ausschnitts
-- [ ] `monschau-rursee` und `rureifel` als gespeicherte Ausschnitte
-- [ ] `data/regions.json`: Völkchen, Boni, Startwaren, Sprüche (Drehbuch Kapitel 5)
-- [ ] Übergang Übersicht → Ausschnitt (Kamerafahrt)
+- [x] Teilen-Version für Handy/Tablet (`npm run build:share`, jetzt mit Teil-Datenversion), Touch-Steuerung
+- [x] Pipeline auf die ganze Welt: UTM 32N, WorldCover N48E003 + N48E006, OSM aus Geofabrik-Auszügen (Rückfall Overpass), dazu Bahnstrecken und Wanderrouten; Straßen bewusst nicht
+- [x] **Genaues Höhenmodell:** NRW DGM1 (dl-de/zero), RLP DGM1 (dl-de/by), Luxemburg LiDAR 2024 (CC0); Wallonien (CC BY 4.0) nur als Provinz-ZIP verfügbar → beschlossen: dort Copernicus GLO-30 (30 m), eigene Dateien möglich; Copernicus als Lückenfüller
+- [x] Darstellung mit **10-m-Höhenraster** (aus 1 m heruntergerechnet), damit Klippen wie um Nideggen sichtbar werden; Simulation bleibt beim 60-m-Hex, Kulisse gröber
+- [x] Flüsse, Bäche (Durchlässe geschlossen), Talsperren und Flussbetten für das ganze Gebiet am Stück, danach in Kacheln (~6 × 6 km) schneiden
+- [x] Globales Hex-Raster (60 m), Simulationsdaten als Ganzzahl-Hex-Kacheln
+- [x] Datenversion mit Manifest und Prüfsummen, versionierte Pfade, Auslieferung außerhalb von Git
+- [x] **Setup-Skript** (`npm run setup`) (ein Befehl): lädt die Rohdaten, rechnet eine neue Datenversion und legt sie ab. Läuft beim Entwickler oder auf dem Server, wenn man eine neue Version will, nie beim Spieler und nie bei jedem Start
+- [x] Rohdaten archivieren: `setup.py --archiv DIR` (Lizenzen erlauben das)
+- [x] `public/maps` aus Git entfernen, Entwicklungsserver lädt die Kacheln aus dem lokalen Datenordner
+- [x] Übersichtskarte (~200 m Raster, Relief, Orte, Staatsgrenzen, Wanderwege) und Ortsverzeichnis
+- [x] Kartenwahl: Größe klein/mittel/groß, Auswahl-Hex verschieben, Ortssuche, Startplätze anzeigen
+- [x] Client schneidet den Ausschnitt aus den Kacheln, Kulisse am Rand, Browser-Cache
+- [x] Prüfsumme über die Simulationsdaten des Ausschnitts
+- [x] `monschau-rursee` und `rureifel` als gespeicherte Ausschnitte
+- [x] `data/regions.json`: Völkchen, Boni, Startwaren, Sprüche (Drehbuch Kapitel 5)
+- [x] Übergang Übersicht → Ausschnitt (Kamerafahrt)
 
 **Abnahme:** Auf der Übersicht „mittel“ wählen, „Gemünd“ eintippen, der Ausschnitt lädt in unter 5 Sekunden. Zwei Browser bekommen für dieselben Parameter dieselbe Prüfsumme. Ein Ausschnitt über die belgische Grenze funktioniert. Die Felsen um Nideggen sind deutlich zu erkennen. **Der Nutzer checkt das Repo frisch aus und baut alles selbst nach der Anleitung** (Setup-Skript, dann `npm run dev`).
 

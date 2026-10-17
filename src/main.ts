@@ -2,52 +2,139 @@ import * as THREE from 'three';
 import './style.css';
 import { MapData } from './map/mapdata';
 import { HexGrid } from './map/hex';
+import { VORSCHLAEGE } from './map/presets';
 import { Stage } from './render/scene';
 import { Terrain } from './render/terrain';
 import { Water } from './render/water';
 import { Rivers } from './render/rivers';
+import { Rails, Grenze } from './render/rails';
 import { Trees } from './render/trees';
 import { Houses } from './render/houses';
 import { RtsCamera } from './render/camera';
+import { setzeKulisse } from './render/kulisse';
 import { Hud } from './ui/hud';
+import { zeigeKartenwahl } from './ui/kartenwahl';
 import { buildMockup } from './render/mockup';
+import { gespeicherteQualitaet } from './render/qualitaet';
+import { Bench, zeigeErgebnis, type BenchErgebnis } from './bench';
+import { ladeWelt, type Welt } from './welt/laden';
+import { ladeAusschnitt } from './welt/ausschnitt';
+import { GROESSEN, type AusschnittParam, type Groesse } from './welt/format';
+import { hexToWorld } from './welt/hexwelt';
 
 const TERRAIN_NAMES: Record<string, string> = {
-  wasser: 'Wasser', wiese: 'Wiese', wald: 'Wald', heide: 'Heide', moor: 'Moor (Venn)', stein: 'Fels', siedlung: 'Ortschaft',
+  wasser: 'Wasser', wiese: 'Wiese', wald: 'Wald', heide: 'Heide', moor: 'Moor (Venn)', stein: 'Fels', siedlung: 'Ortskern',
 };
+const LAENDER: Record<string, string> = { DE: 'Deutschland', BE: 'Belgien', LU: 'Luxemburg', NL: 'Niederlande' };
+
+interface HashParam { version?: string; q?: number; r?: number; size?: Groesse; vorschlag?: string; bench?: boolean }
+
+/** URL-Hash: #v=<version>&q=..&r=..&g=klein|mittel|gross oder #<vorschlag-id>. */
+function leseHash(): HashParam {
+  const h = location.hash.slice(1);
+  if (!h) return {};
+  if (!h.includes('=')) return { vorschlag: decodeURIComponent(h) };
+  const sp = new URLSearchParams(h);
+  const g = sp.get('g') as Groesse | null;
+  const out: HashParam = { version: sp.get('v') ?? undefined, bench: sp.get('bench') === '1' };
+  if (sp.has('q') && sp.has('r') && g && g in GROESSEN) { out.q = Number(sp.get('q')); out.r = Number(sp.get('r')); out.size = g; }
+  return out;
+}
+
+function schreibeHash(p: AusschnittParam) {
+  history.replaceState(null, '', `${location.pathname}${location.search}#v=${p.version}&q=${p.q}&r=${p.r}&g=${p.size}`);
+}
+
+function ladeanzeige(loading: HTMLElement) {
+  loading.innerHTML = '<div class="ltext">Die Eifel wird geladen …</div><div class="bar"><i></i></div>';
+  const t = loading.querySelector('.ltext') as HTMLElement, bar = loading.querySelector('i') as HTMLElement;
+  return (text: string, anteil: number) => { t.textContent = `${text} …`; bar.style.width = `${Math.round(anteil * 100)}%`; };
+}
 
 async function main() {
   const app = document.getElementById('app')!;
   const loading = document.getElementById('loading')!;
-  const mapsBase = `${import.meta.env.BASE_URL}maps`;
-  const maps = (await (await fetch(`${mapsBase}/index.json`)).json()) as { id: string; name: string }[];
-  // Karte: #id (auch in veröffentlichten Seiten), ?map=id, zuletzt gewählte, sonst die erste
-  let remembered: string | null = null;
-  try { remembered = localStorage.getItem('eifeler.map'); } catch { /* egal */ }
-  const wanted = location.hash.slice(1) || new URLSearchParams(location.search).get('map') || remembered;
-  const mapId = maps.find((m) => m.id === wanted)?.id ?? maps[0]?.id ?? 'monschau-rursee';
-  const map = await MapData.load(`${mapsBase}/${mapId}`);
-  const grid = new HexGrid(map.info.hex.size, map.info.hex.cols, map.info.hex.rows);
-  const base = map.info.heightMin - 5;
+  const fortschritt = ladeanzeige(loading);
 
-  const stage = new Stage(app);
-  const hud = new Hud(app, map, maps);
+  // 1. Weltdaten (Manifest, Ortsverzeichnis)
+  const hp = leseHash();
+  const preset = hp.vorschlag ? VORSCHLAEGE.find((v) => v.id === hp.vorschlag) : undefined;
+  let welt: Welt;
+  try {
+    welt = await ladeWelt(hp.version);
+  } catch (e) {
+    throw new Error(`Weltdaten nicht erreichbar (${(e as Error).message}). Läuft der Server mit welt-daten/?`);
+  }
+
+  // 2. Ausschnitt-Parameter: aus der URL, aus einem Vorschlag oder per Kartenwahl
+  let param: AusschnittParam;
+  if (hp.q !== undefined && hp.size) param = { version: welt.version, q: hp.q, r: hp.r!, size: hp.size };
+  else if (preset) param = { version: welt.version, q: preset.q, r: preset.r, size: preset.size };
+  else {
+    loading.style.display = 'none';
+    param = await zeigeKartenwahl(document.body, welt);
+    loading.style.display = '';
+  }
+  const t0 = performance.now();
+  const ausschnitt = await ladeAusschnitt(welt, param, fortschritt);
+  schreibeHash(ausschnitt.param);
+  const ladezeit = performance.now() - t0;
+  fortschritt('Gelände wird aufgebaut', 1);
+  await new Promise((r) => setTimeout(r, 30));
+
+  // 3. Karte und Szene
+  const treffer = VORSCHLAEGE.find((v) => v.q === ausschnitt.param.q && v.r === ausschnitt.param.r && v.size === ausschnitt.param.size)
+    ?? (preset && preset.size === ausschnitt.param.size ? preset : undefined);
+  const mitte = hexToWorld(ausschnitt.param.q, ausschnitt.param.r);
+  const cx = mitte.x - ausschnitt.originX, cz = mitte.z - ausschnitt.originZ;
+  let name = treffer?.name ?? '';
+  if (!name) {
+    const nah = ausschnitt.orte.filter((o) => o.kind !== 'gewaesser' && o.kind !== 'weiler')
+      .sort((a, b) => Math.hypot(a.x - cx, a.z - cz) - Math.hypot(b.x - cx, b.z - cz))[0];
+    name = nah ? `Ausschnitt bei ${nah.name}` : 'Eigener Ausschnitt';
+  }
+  const map = MapData.fromAusschnitt(ausschnitt, name, treffer?.id ?? 'ausschnitt', welt.manifest.credits);
+  const grid = new HexGrid(ausschnitt.originX, ausschnitt.originZ, ausschnitt.hex);
+  const base = map.info.heightMin - 5;
+  setzeKulisse(ausschnitt.originX, ausschnitt.originZ, ausschnitt.param.q, ausschnitt.param.r, ausschnitt.radius);
+
+  const stage = new Stage(app, gespeicherteQualitaet());
+  const hud = new Hud(app, map, {
+    name, param: ausschnitt.param, pruefsumme: ausschnitt.pruefsumme, geklemmt: ausschnitt.geklemmt,
+    onAndere: () => { history.replaceState(null, '', location.pathname + location.search); location.reload(); },
+  });
   let ex = hud.settings.exaggeration;
 
   const terrain = new Terrain(map, base, new THREE.Vector2(grid.ox, grid.oz));
   const water = new Water(map, base);
   const rivers = new Rivers(map, base);
-  terrain.group.add(water.mesh, rivers.mesh);
-  const trees = new Trees(map, base, ex);
+  const rails = new Rails(map, base);
+  const grenze = new Grenze(map, base);
+  terrain.group.add(water.mesh, rivers.mesh, rails.mesh, grenze.mesh);
+  // Häuser zuerst: sie planieren das Gelände (map.ground) und sperren Zellen für den Wald
   const houses = new Houses(map, base, ex);
+  const trees = new Trees(map, base, ex, houses.maske);
   stage.scene.add(terrain.group, trees.group, houses.group);
 
   const yAt = (x: number, z: number) => (map.surfaceAt(x, z) - base) * ex;
-  const cam = new RtsCamera(stage.renderer.domElement, { groundY: yAt, bounds: { x: map.sizeX, z: map.sizeZ } });
-  const start = map.info.places.find((p) => p.name === map.info.start) ?? { x: map.sizeX / 2, z: map.sizeZ / 2 };
-  cam.lookAt(start.x, start.z + 600, true);
-  cam.setDistance(3800);
 
+  // Kamera bleibt auf Spielfeld + etwas Rand (fraktionaler Hex-Abstand zur Mitte)
+  const R = map.info.hex.size, rad = ausschnitt.radius;
+  const rand = rad + 5;
+  const clamp = (x: number, z: number): [number, number] => {
+    const dx = x - cx, dz = z - cz;
+    const fq = ((Math.sqrt(3) / 3) * dx - dz / 3) / R, fr = ((2 / 3) * dz) / R;
+    const d = (Math.abs(fq) + Math.abs(fr) + Math.abs(fq + fr)) / 2;
+    if (d <= rand) return [x, z];
+    const k = rand / d;
+    return [cx + dx * k, cz + dz * k];
+  };
+  const cam = new RtsCamera(stage.renderer.domElement, { groundY: yAt, bounds: { x: map.sizeX, z: map.sizeZ }, clamp });
+  const breite = rad * 2 * 104;
+  cam.maxDistance = Math.max(16000, breite * 1.4);
+  const start = map.info.places.find((p) => p.name === map.info.start) ?? { x: cx, z: cz };
+
+  let qualitaet = gespeicherteQualitaet();
   const apply = () => {
     ex = hud.settings.exaggeration;
     terrain.setExaggeration(ex);
@@ -59,9 +146,19 @@ async function main() {
     terrain.uniforms.uGrid.value = hud.settings.grid ? 1 : 0;
     stage.setShadows(hud.settings.shadows);
     trees.setVisible(hud.settings.trees);
+    if (qualitaet !== hud.settings.quality) {
+      qualitaet = hud.settings.quality;
+      stage.setQuality(qualitaet);
+      terrain.setQuality(qualitaet);
+      trees.setQuality(qualitaet);
+    }
   };
   hud.onSettings = apply;
-  hud.onMinimap = (x, z) => cam.lookAt(x, z);
+  stage.setQuality(hud.settings.quality);
+  terrain.setQuality(hud.settings.quality);
+  trees.setQuality(hud.settings.quality);
+  qualitaet = hud.settings.quality;
+  hud.onMinimap = (x, z) => { intro = null; cam.lookAt(...clamp(x, z)); };
   apply();
 
   // Picking: Strahl über dem Höhenfeld abtasten, dann verfeinern
@@ -112,14 +209,52 @@ async function main() {
   addEventListener('resize', resize);
   resize();
 
+  // Kamerafahrt: von hoch über dem Spielfeld hinunter zum Startort
+  const nahDist = 3800;
+  const hochDist = Math.min(cam.maxDistance, breite * 1.25);
+  let intro: { t: number } | null = { t: 0 };
+  const INTRO_S = 6;
+  const api: Record<string, unknown> = {};
+  cam.onInput(() => { if (intro) { intro = null; api.ready = true; } });
+  const introPose = (t: number) => {
+    const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    const dist = Math.exp(Math.log(hochDist) * (1 - e) + Math.log(nahDist) * e);
+    const gx = cx + (start.x - cx) * e, gz = cz + (start.z + 600 - cz) * e;
+    cam.jumpTo(gx, gz, dist, 0.5 * (1 - e));
+  };
+  introPose(0);
+  cam.update(0.016);
+  terrain.update(cam.camera.position, 1e9);
+
+  // Leistungsmessung (#…&bench=1): fester Kameraflug, Ergebnis in window.eifeler.bench
+  const bench = new Bench({
+    cam, stage, map, mitte: { x: cx, z: cz }, start: { x: start.x, z: start.z }, hochDist,
+    qualitaet: () => hud.settings.quality,
+    daten: `${ausschnitt.param.version} · Hex ${ausschnitt.param.q}, ${ausschnitt.param.r} · ${ausschnitt.param.size} · Prüfsumme ${ausschnitt.pruefsumme.slice(0, 8)}`,
+    settle: () => { cam.update(0.016); terrain.update(cam.camera.position, 1e9); trees.update(cam.camera.position); },
+    onFertig: (e: BenchErgebnis) => { api.bench = e; zeigeErgebnis(document.body, e); },
+  });
+  const startBench = () => {
+    intro = null; api.ready = true;
+    api.bench = { fertig: false };
+    bench.start(performance.now());
+  };
+
   const clock = new THREE.Clock();
   let frames = 0, acc = 0, fps = 0, frameMs = 0;
   let infoTimer = 0;
   stage.renderer.info.autoReset = false;
 
   const frame = () => {
-    const dt = Math.min(clock.getDelta(), 0.1);
-    const t0 = performance.now();
+    const rohDt = clock.getDelta();                 // echte Frame-Zeit (fps-Anzeige), für die Bewegung auf 0,1 s begrenzt
+    const dt = Math.min(rohDt, 0.1);
+    const t0f = performance.now();
+    bench.vorFrame(t0f);
+    if (bench.aktiv) intro = null;
+    if (intro) {
+      intro.t += dt / INTRO_S;
+      if (intro.t >= 1) { intro = null; api.ready = true; } else introPose(intro.t);
+    }
     cam.update(dt);
     stage.follow(cam.target, cam.distance);
     terrain.update(cam.camera.position);
@@ -128,27 +263,25 @@ async function main() {
     rivers.uniforms.uTime.value += dt;
     trees.uniforms.uTime.value += dt;
 
-    // Hover-Kachel (gedrosselt)
+    // Hover-Hex (gedrosselt), Raster und Hover nur im Spielfeld
     infoTimer -= dt;
     if (infoTimer <= 0) {
       infoTimer = 0.05;
       const p = mouse.x < 2 ? pick(mouse) : null;
       if (p) {
         const h = grid.fromWorld(p.x, p.z);
-        const i = grid.index(h);
+        const info = map.hexInfo(h.q, h.r);
         terrain.uniforms.uHover.value.set(h.q, h.r);
-        terrain.uniforms.uHoverOn.value = i >= 0 ? 1 : 0;
-        if (i >= 0) {
-          const t = map.info.hex.terrain[map.hexTerrain[i]];
-          let near = '', best = Infinity;
-          for (const pl of map.info.places) {
-            if (pl.kind === 'gewaesser') continue;
-            const d = Math.hypot(pl.x - p.x, pl.z - p.z);
-            if (d < best) { best = d; near = pl.name; }
-          }
-          hud.setInfo(`<b>${TERRAIN_NAMES[t] ?? t}</b><span>Hex ${h.q}, ${h.r}</span>` +
-            `<span>${Math.round(map.heightAt(p.x, p.z))} m ü. NN</span>` +
-            `<span>${best < 700 ? 'in' : (best / 1000).toFixed(1) + ' km bei'} ${near}</span>`);
+        terrain.uniforms.uHoverOn.value = info.imSpielfeld ? 1 : 0;
+        if (info.imSpielfeld) {
+          const zeilen = [`<b>${TERRAIN_NAMES[info.terrain!] ?? info.terrain}</b>`,
+            `<span>Hex ${h.q}, ${h.r}${info.land ? ' · ' + (LAENDER[info.land] ?? info.land) : ''}</span>`,
+            `<span>${Math.round(info.hoehe!)} m ü. NN · Bauplatz ${info.bauplatz}</span>`];
+          if (info.ort) zeilen.push(`<span>Ortskern ${info.ort}</span>`);
+          if (info.bahn) zeilen.push('<span>Bahnstrecke</span>');
+          hud.setInfo(zeilen.join(''));
+        } else {
+          hud.setInfo(`<b>Kulisse</b><span>Hex ${h.q}, ${h.r}</span><span>${Math.round(map.heightAt(p.x, p.z))} m ü. NN · nicht bespielbar</span>`);
         }
       } else {
         terrain.uniforms.uHoverOn.value = 0;
@@ -158,23 +291,26 @@ async function main() {
 
     stage.renderer.info.reset();
     stage.renderer.render(stage.scene, cam.camera);
+    if (bench.aktiv) bench.nachFrame(stage.renderer.info.render.calls, stage.renderer.info.render.triangles);
     hud.updateLabels(cam.camera, yAt, cam.distance);
     hud.updateMinimap(corners());
 
-    frameMs = frameMs * 0.9 + (performance.now() - t0) * 0.1;
-    frames++; acc += dt;
+    frameMs = frameMs * 0.9 + (performance.now() - t0f) * 0.1;
+    frames++; acc += rohDt;
     if (acc >= 0.5) {
       fps = frames / acc; frames = 0; acc = 0;
       const r = stage.renderer.info.render;
       const ts = terrain.stats();
       hud.setPerf(`${fps.toFixed(0)} fps · CPU ${frameMs.toFixed(1)} ms\n` +
         `Draw-Calls ${r.calls} · Dreiecke ${(r.triangles / 1e6).toFixed(2)} M\n` +
-        `Chunks ${ts.chunks} · LOD ${ts.lod.join('/')}\n` +
-        `Bäume ${(trees.count / 1000).toFixed(0)}k · nah ${(trees.visibleNear / 1000).toFixed(1)}k · Häuser ${houses.count}`);
+        `Gelände-Knoten ${ts.chunks} · Stufen ${ts.lod.join('/')}\n` +
+        `Bäume ${(trees.count / 1000).toFixed(0)}k · nah ${(trees.visibleNear / 1000).toFixed(1)}k · Häuser ${houses.count}\n` +
+        `Gitter ${map.info.width}×${map.info.height} · Ladezeit ${(ladezeit / 1000).toFixed(1)} s`);
     }
     requestAnimationFrame(frame);
   };
   loading.remove();
+
   // Entwicklungswerkzeug: Maßstabs-Probe (Musterdorf) ein- und ausblenden
   let mock: THREE.Group | null = null;
   const mockup = (scale: number, place = 'Einruhr') => {
@@ -186,11 +322,20 @@ async function main() {
     stage.scene.add(mock);
     return r.center;
   };
-  (window as unknown as { eifeler: unknown }).eifeler = { map, cam, stage, terrain, trees, hud, mockup };
+  Object.assign(api, {
+    map, cam, stage, terrain, trees, hud, mockup, ausschnitt, grid, rails, rivers, ladezeit,
+    skipIntro: () => { intro = null; api.ready = true; },
+    startBench, bench: null,
+    /** alle fehlenden Gelände-Netze sofort bauen (Screenshots) */
+    settle: () => { cam.update(0.016); terrain.update(cam.camera.position, 1e9); },
+  });
+  (window as unknown as { eifeler: unknown }).eifeler = api;
   frame();
+  if (hp.bench) setTimeout(startBench, 1500);
 }
 
 main().catch((e) => {
-  document.getElementById('loading')!.textContent = `Fehler beim Laden: ${e.message}`;
+  const l = document.getElementById('loading');
+  if (l) l.textContent = `Fehler beim Laden: ${e.message}`;
   console.error(e);
 });

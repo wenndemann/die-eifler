@@ -1,71 +1,105 @@
-// Geladene Spielkarte (aus tools/map/build_map.py) + Abfragen auf dem Höhenraster.
+// Spielkarte im Client: ein Ausschnitt aus den Weltdaten (src/welt/ausschnitt.ts) mit Abfragen
+// auf dem 10-m-Höhenraster und über das globale Hex-Raster.
+import type { Ausschnitt, Bahn, Fluss, See } from '../welt/ausschnitt';
+import { FLAG, LAND, TERRAIN, COVER } from '../welt/format';
 
-export interface Place { name: string; kind: 'stadt' | 'dorf' | 'weiler' | 'gewaesser'; x: number; z: number }
+export interface Place { name: string; kind: 'stadt' | 'dorf' | 'weiler' | 'gewaesser'; x: number; z: number; imSpielfeld: boolean }
 
-/** Fließgewässer aus OSM: k 0 = Fluss, 1 = Bach, 2 = Kanal; w Breite (m); p = [x, z, Spiegel m ü. NN, ...]. */
-export interface River { n: string; k: number; w: number; p: number[] }
-
-/** See/Talsperre aus OSM: Spiegel l (m ü. NN), Außenring o und Löcher h als [x, z, ...]. */
-export interface Lake { n: string; l: number; o: number[]; h: number[][] }
+export type { Fluss as River, See as Lake, Bahn };
 
 export interface MapInfo {
   id: string;
   name: string;
-  bbox: [number, number, number, number];
   cell: number;
   width: number;
   height: number;
   heightMin: number;
   heightMax: number;
   exaggeration: number;
-  /** Ort, auf den die Kamera beim Start schaut. */
   start?: string;
   cover: string[];
-  hex: { size: number; cols: number; rows: number; layout: string; terrain: string[] };
+  hex: { size: number; radius: number; terrain: string[] };
   places: Place[];
   credits: string[];
 }
 
+export interface HexInfo {
+  q: number; r: number;
+  imSpielfeld: boolean;
+  terrain?: string;
+  hoehe?: number;
+  bauplatz?: 'klein' | 'mittel' | 'groß' | '–';
+  ort?: string;
+  land?: string;
+  bahn?: boolean;
+}
+
+const BAUPLATZ = ['–', 'klein', 'mittel', 'groß'] as const;
+
 export class MapData {
   /** Geländehöhe in Metern ü. NN, Zeile 0 = Norden. */
   readonly ground: Float32Array;
-  /** Wasserspiegel in Metern ü. NN (0 = kein Wasser). */
   readonly water: Float32Array;
   readonly cover: Uint8Array;
+  /** Hex-Gelände des Spielfelds (Index nach HexGrid.index). */
   readonly hexTerrain: Uint8Array;
-  rivers: River[] = [];
-  lakes: Lake[] = [];
+  readonly rivers: Fluss[];
+  readonly lakes: See[];
+  readonly rails: Bahn[];
+  readonly grenze: number[][];
   readonly sizeX: number;
   readonly sizeZ: number;
+  readonly originX: number;
+  readonly originZ: number;
+  /** Zellen in Bahnnähe (für Bäume u. Ä.). */
+  readonly railMask: Uint8Array;
 
-  constructor(readonly info: MapInfo, height: Uint16Array, water: Uint16Array, cover: Uint8Array, hex: Uint8Array) {
-    this.ground = Float32Array.from(height, (v) => v / 10);
-    this.water = Float32Array.from(water, (v) => v / 10);
-    this.cover = cover;
-    this.hexTerrain = hex;
+  constructor(readonly info: MapInfo, readonly ausschnitt: Ausschnitt) {
+    this.ground = ausschnitt.ground;
+    this.water = ausschnitt.water;
+    this.cover = ausschnitt.cover;
+    this.hexTerrain = ausschnitt.hex.terrain;
+    this.rivers = ausschnitt.rivers;
+    this.lakes = ausschnitt.lakes;
+    this.rails = ausschnitt.rails;
+    this.grenze = ausschnitt.grenze;
     this.sizeX = info.width * info.cell;
     this.sizeZ = info.height * info.cell;
+    this.originX = ausschnitt.originX;
+    this.originZ = ausschnitt.originZ;
+    this.railMask = new Uint8Array(info.width * info.height);
+    const c = info.cell;
+    for (const b of this.rails) {
+      for (let i = 0; i + 4 < b.p.length; i += 3) {
+        const len = Math.hypot(b.p[i + 3] - b.p[i], b.p[i + 4] - b.p[i + 1]);
+        const steps = Math.max(1, Math.ceil(len / 4));
+        for (let s = 0; s <= steps; s++) {
+          const x = b.p[i] + ((b.p[i + 3] - b.p[i]) * s) / steps, z = b.p[i + 1] + ((b.p[i + 4] - b.p[i + 1]) * s) / steps;
+          const ci = Math.floor(x / c), cj = Math.floor(z / c);
+          for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+            const a = ci + di, b2 = cj + dj;
+            if (a >= 0 && b2 >= 0 && a < info.width && b2 < info.height) this.railMask[b2 * info.width + a] = 1;
+          }
+        }
+      }
+    }
   }
 
-  static async load(base: string): Promise<MapData> {
-    // Teilen-Version (npm run build:share): Raster als Base64-Text, weil dort nur Text ausgeliefert wird
-    const b64 = import.meta.env.VITE_MAP_B64 === '1';
-    const get = async (f: string) => {
-      const res = await fetch(`${base}/${f}${b64 ? '.txt' : ''}`);
-      if (!res.ok) throw new Error(`${f}: ${res.status}`);
-      if (!b64) return res.arrayBuffer();
-      const bin = atob((await res.text()).trim());
-      const out = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-      return out.buffer;
+  static fromAusschnitt(a: Ausschnitt, name: string, id: string, credits: string[]): MapData {
+    const places: Place[] = a.orte.map((o) => ({ name: o.name, kind: o.kind, x: o.x, z: o.z, imSpielfeld: o.imSpielfeld }));
+    const rang = { stadt: 0, dorf: 1, weiler: 2, gewaesser: 9 } as const;
+    const cx = (a.spielfeld.x0 + a.spielfeld.x1) / 2, cz = (a.spielfeld.z0 + a.spielfeld.z1) / 2;
+    const d = (p: Place) => Math.hypot(p.x - cx, p.z - cz);
+    const kandidaten = places.filter((p) => p.imSpielfeld && p.kind !== 'gewaesser');
+    // Startort: größter Ortskern nahe der Mitte (Stadt vor Dorf vor Weiler im inneren Drittel), sonst nächster Ort
+    const nah = kandidaten.filter((p) => d(p) < (a.spielfeld.x1 - a.spielfeld.x0) / 3)
+      .sort((p, q) => rang[p.kind] - rang[q.kind] || d(p) - d(q));
+    const start = (nah[0] ?? kandidaten.sort((p, q) => d(p) - d(q))[0])?.name;
+    const info: MapInfo = {
+      id, name, cell: a.cell, width: a.breite, height: a.hoehe, heightMin: a.heightMin, heightMax: a.heightMax,
+      exaggeration: 2, start, cover: COVER.slice(), hex: { size: 60, radius: a.radius, terrain: TERRAIN.slice() }, places, credits,
     };
-    const info = (await (await fetch(`${base}/map.json`)).json()) as MapInfo;
-    const [h, w, c, x] = await Promise.all([get('height.bin'), get('water.bin'), get('cover.bin'), get('hex.bin')]);
-    const map = new MapData(info, new Uint16Array(h), new Uint16Array(w), new Uint8Array(c), new Uint8Array(x));
-    const [rv, lk] = await Promise.all([fetch(`${base}/rivers.json`), fetch(`${base}/lakes.json`)]);
-    if (rv.ok) map.rivers = (await rv.json()) as River[];
-    if (lk.ok) map.lakes = (await lk.json()) as Lake[];
-    return map;
+    return new MapData(info, a);
   }
 
   /** Rasterindex, geklemmt. */
@@ -76,7 +110,7 @@ export class MapData {
     return j * width + i;
   }
 
-  /** Bilineare Geländehöhe (m ü. NN) an Weltposition x/z (Meter). */
+  /** Bilineare Geländehöhe (m ü. NN) an Position x/z (Ausschnitt-Meter). */
   heightAt(x: number, z: number): number {
     const c = this.info.cell;
     const fx = x / c - 0.5, fz = z / c - 0.5;
@@ -102,5 +136,17 @@ export class MapData {
 
   inside(x: number, z: number): boolean {
     return x >= 0 && z >= 0 && x < this.sizeX && z < this.sizeZ;
+  }
+
+  /** Hex-Info für das Überfahren; außerhalb des Spielfelds nur imSpielfeld = false (Kulisse). */
+  hexInfo(q: number, r: number): HexInfo {
+    const f = this.ausschnitt.hex;
+    const i = f.index(q, r);
+    if (i < 0) return { q, r, imSpielfeld: false };
+    const kern = f.flags[i] & FLAG.ortskern ? this.ausschnitt.kerne.find((k) => k.q === q && k.r === r) : undefined;
+    return {
+      q, r, imSpielfeld: true, terrain: TERRAIN[f.terrain[i]], hoehe: f.height[i] / 10, bauplatz: BAUPLATZ[f.build[i]],
+      ort: kern?.name || undefined, land: LAND[f.country[i]] || undefined, bahn: !!(f.flags[i] & FLAG.bahn),
+    };
   }
 }

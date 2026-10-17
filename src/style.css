@@ -15,7 +15,7 @@
 html, body { margin: 0; height: 100%; overflow: hidden; background: #1a1c1e; color: var(--ink); }
 #app > canvas { display: block; position: fixed; inset: 0; }
 #loading {
-  position: fixed; inset: 0; display: grid; place-items: center;
+  position: fixed; inset: 0; display: flex; flex-direction: column; gap: 18px; align-items: center; justify-content: center; z-index: 5;
   font: 700 28px 'Alegreya SC', serif; color: var(--gold); background: #1a1c1e; letter-spacing: 0.04em;
 }
 
@@ -100,3 +100,36 @@ kbd {
   .label.gewaesser { font-size: 13px; }
   .credits { font-size: 8px; left: 8px; right: 150px; transform: none; bottom: 2px; }
 }
+
+#loading .bar { width: min(360px, 70vw); height: 6px; border-radius: 3px; background: rgba(255,255,255,0.12); overflow: hidden; }
+#loading .bar i { display: block; height: 100%; width: 0; background: var(--gold); transition: width 0.2s; }
+
+.topbar .andere {
+  pointer-events: auto; margin-left: 6px; padding: 5px 12px; border-radius: 999px; cursor: pointer; font: 600 13px 'Alegreya Sans', sans-serif;
+  color: var(--ink); background: rgba(255,255,255,0.08); border: 1px solid rgba(231,194,122,0.4);
+}
+.topbar .andere:hover { background: rgba(231,194,122,0.22); }
+.title .sum { font-style: normal; font-family: ui-monospace, monospace; font-size: 11px; color: var(--gold-dim); pointer-events: auto; cursor: help; }
+
+.kartenwahl {
+  position: fixed; inset: 0; z-index: 4; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  background: #1a1c1e; padding: 20px;
+}
+.kartenwahl h2 { margin: 0; font: 700 28px 'Alegreya SC', serif; color: var(--gold); }
+.kartenwahl .sub { margin: 0; color: var(--ink-dim); font-size: 13px; }
+.kartenwahl .groessen { display: flex; gap: 16px; }
+.kartenwahl .liste { display: flex; flex-direction: column; gap: 10px; width: min(520px, 100%); }
+.kartenwahl button {
+  text-align: left; padding: 12px 16px; border-radius: 10px; cursor: pointer; color: var(--ink); font: inherit;
+  background: linear-gradient(180deg, var(--wood-hi), var(--wood)); border: 1px solid rgba(231,194,122,0.35);
+}
+.kartenwahl button b { display: block; font: 700 18px 'Alegreya SC', serif; color: var(--gold); }
+.kartenwahl button span { color: var(--ink-dim); font-size: 14px; }
+
+/* Leistungsmessung (bench=1): Ergebnisfeld */
+.benchbox { left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 14px 18px; max-width: min(92vw, 640px); z-index: 20; }
+.benchbox h3 { margin: 0 0 8px; font: 700 18px 'Alegreya SC', serif; color: var(--gold); }
+.benchbox pre { margin: 0 0 10px; white-space: pre-wrap; font: 12.5px/1.5 ui-monospace, monospace; color: #e8e2d0; user-select: all; }
+.benchbtn { display: flex; gap: 8px; }
+.benchbtn button { padding: 5px 14px; border-radius: 8px; font: inherit; cursor: pointer; color: var(--ink); background: rgba(0,0,0,0.3); border: 1px solid rgba(231,194,122,0.5); }
+.benchbtn button:hover { background: rgba(231,194,122,0.2); }
