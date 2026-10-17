@@ -6,12 +6,12 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import type { MapData } from '../map/mapdata';
 import type { HexGrid } from '../map/hex';
 
-const C = {
+export const C = {
   wand: '#efe9dc', balken: '#3a2c22', sockel: '#8a8378', dach: '#3a3f47', fenster: '#2e3a44',
   tuer: '#5a3b26', holz: '#7a5636', stamm: '#8a6a48', stein: '#a39d92', blatt: '#2f5d32', fahne: '#c8402e',
 };
 
-function paint(g: THREE.BufferGeometry, color: string) {
+export function paint(g: THREE.BufferGeometry, color: string) {
   const geo = g.index ? g.toNonIndexed() : g;
   const c = new THREE.Color(color);
   const a = new Float32Array(geo.attributes.position.count * 3);
@@ -39,7 +39,7 @@ function roof(w: number, d: number, h: number, y: number, color = C.dach) {
 }
 
 /** Fachwerkhaus: Bruchsteinsockel, weiße Gefache, dunkle Balken, Fenster, Schieferdach. Front = +z. */
-function fachwerk(w: number, d: number, floors: number, wall = C.wand): THREE.BufferGeometry[] {
+export function fachwerk(w: number, d: number, floors: number, wall = C.wand): THREE.BufferGeometry[] {
   const fh = 3, H = floors * fh, y0 = 1;
   const parts = [box(w + 0.4, 5, d + 0.4, 0, y0 - 2.5, 0, C.sockel), box(w, H, d, 0, y0 + H / 2, 0, wall)];
   for (const side of [1, -1]) {

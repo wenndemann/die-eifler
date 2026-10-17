@@ -44,8 +44,8 @@ Erledigt:
 - [x] Seen und Talsperren mit echter OSM-Uferlinie (Polygon statt Raster)
 
 Offen (wird zusammen mit M2 erledigt):
-- [ ] Maßstab: Häuser und Bäume im Spiel-Maßstab aufeinander abstimmen (Gebäude 3×, 60-m-Hex, Drehbuch 3)
-- [ ] Leistungsmessung auf echter Hardware: 60 fps bei „Mittel“ nachweisen
+- [x] Maßstab: Häuser (3×) und Bäume (1,6×) im Spiel-Maßstab aufeinander abgestimmt, Konstanten in `src/render/massstab.ts`
+- [ ] Leistungsmessung auf echter Hardware: 60 fps bei „Mittel“ nachweisen (Werkzeug fertig: `#…&bench=1` startet einen 30-s-Kameraflug mit Ergebnisfeld, Qualitätsstufen Niedrig/Mittel/Hoch)
 - [ ] Playwright-Smoke-Test: Karte lädt, Screenshots aus 3 festen Kamerapositionen
 
 Verschoben:

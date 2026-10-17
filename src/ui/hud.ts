@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import type { MapData } from '../map/mapdata';
 import { bigHexOutline } from '../welt/hexwelt';
 import { GROESSE_NAME, type AusschnittParam } from '../welt/format';
+import { QUALITAETEN, QUALITAET_NAME, SETTINGS_KEY, istHandy, standardQualitaet, type Qualitaet } from '../render/qualitaet';
 
 const COVER_MINI = ['#3f6f8c', '#86ad4d', '#c2ae63', '#2f5228', '#8d6b80', '#958a5c', '#8e8a82', '#c9bba3'];
 
@@ -12,6 +13,7 @@ export interface Settings {
   shadows: boolean;
   trees: boolean;
   perf: boolean;
+  quality: Qualitaet;
 }
 
 export interface KopfInfo {
@@ -77,6 +79,7 @@ export class Hud {
     if (touch || innerWidth < 700) set.classList.add('collapsed');
     set.innerHTML = `
       <h3>Ansicht</h3>
+      <label>Qualität <select data-k="quality">${QUALITAETEN.map((q) => `<option value="${q}">${QUALITAET_NAME[q]}</option>`).join('')}</select></label>
       <label>Überhöhung <output></output><input type="range" min="1" max="5" step="0.25" data-k="exaggeration"></label>
       <label><input type="checkbox" data-k="grid"> Hex-Raster <kbd>G</kbd></label>
       <label><input type="checkbox" data-k="shadows"> Schatten</label>
@@ -99,6 +102,7 @@ export class Hud {
         if (i.type === 'checkbox') i.checked = this.settings[k] as boolean;
         else i.value = String(this.settings[k]);
       });
+      set.querySelector<HTMLSelectElement>('select')!.value = this.settings.quality;
       out.textContent = `${this.settings.exaggeration.toFixed(2)}×`;
       this.perf.style.display = this.settings.perf ? '' : 'none';
     };
@@ -110,6 +114,10 @@ export class Hud {
       });
       if (i.type === 'range') i.addEventListener('input', () => { out.textContent = `${Number(i.value).toFixed(2)}×`; });
     });
+    set.querySelector('select')!.addEventListener('change', (e) => {
+      this.settings.quality = (e.target as HTMLSelectElement).value as Qualitaet;
+      this.changed(sync);
+    });
     addEventListener('keydown', (e) => {
       if (e.code === 'KeyG') { this.settings.grid = !this.settings.grid; this.changed(sync); }
       if (e.code === 'F3') { e.preventDefault(); this.settings.perf = !this.settings.perf; this.changed(sync); }
@@ -119,7 +127,7 @@ export class Hud {
 
   private changed(sync: () => void) {
     sync();
-    try { localStorage.setItem('eifeler.view', JSON.stringify(this.settings)); } catch { /* egal */ }
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(this.settings)); } catch { /* egal */ }
     this.onSettings(this.settings);
   }
 
@@ -216,9 +224,11 @@ function el(tag: string, cls: string) {
 }
 
 function loadSettings(ex: number): Settings {
-  const def: Settings = { exaggeration: ex, grid: false, shadows: !matchMedia('(pointer: coarse)').matches, trees: true, perf: false };
+  const def: Settings = { exaggeration: ex, grid: false, shadows: !istHandy(), trees: true, perf: false, quality: standardQualitaet() };
   try {
-    return { ...def, ...JSON.parse(localStorage.getItem('eifeler.view') ?? '{}') };
+    const s = { ...def, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}') };
+    if (!QUALITAETEN.includes(s.quality)) s.quality = def.quality;
+    return s;
   } catch {
     return def;
   }

@@ -125,3 +125,11 @@ kbd {
 }
 .kartenwahl button b { display: block; font: 700 18px 'Alegreya SC', serif; color: var(--gold); }
 .kartenwahl button span { color: var(--ink-dim); font-size: 14px; }
+
+/* Leistungsmessung (bench=1): Ergebnisfeld */
+.benchbox { left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 14px 18px; max-width: min(92vw, 640px); z-index: 20; }
+.benchbox h3 { margin: 0 0 8px; font: 700 18px 'Alegreya SC', serif; color: var(--gold); }
+.benchbox pre { margin: 0 0 10px; white-space: pre-wrap; font: 12.5px/1.5 ui-monospace, monospace; color: #e8e2d0; user-select: all; }
+.benchbtn { display: flex; gap: 8px; }
+.benchbtn button { padding: 5px 14px; border-radius: 8px; font: inherit; cursor: pointer; color: var(--ink); background: rgba(0,0,0,0.3); border: 1px solid rgba(231,194,122,0.5); }
+.benchbtn button:hover { background: rgba(231,194,122,0.2); }
