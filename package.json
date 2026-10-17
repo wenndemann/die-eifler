@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "build:share": "tsc --noEmit && node tools/build_share.mjs"
+    "build:share": "tsc --noEmit && node tools/build_share.mjs",
+    "setup": "python3 tools/map/setup.py",
+    "test": "vitest run"
   },
   "dependencies": {
     "three": "^0.169.0"
