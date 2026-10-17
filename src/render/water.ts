@@ -3,6 +3,7 @@
 // Tiefe für Farbe und Uferschaum kommt aus einer kleinen Textur (Spiegel - Grund je Rasterzelle).
 import * as THREE from 'three';
 import type { MapData } from '../map/mapdata';
+import { KULISSE_GLSL, KULISSE_FOG, kulisseUniforms } from './kulisse';
 
 const DEPTH_MAX = 20; // m, Skala der Tiefen-Textur
 
@@ -47,23 +48,29 @@ export class Water {
       side: THREE.DoubleSide,
     });
     mat.onBeforeCompile = (shader) => {
-      Object.assign(shader.uniforms, this.uniforms);
+      Object.assign(shader.uniforms, this.uniforms, kulisseUniforms);
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;')
         .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;');
       shader.fragmentShader = shader.fragmentShader
         .replace('#include <common>', `#include <common>
-varying vec3 vWPos; uniform float uTime; uniform sampler2D uDepth; uniform vec2 uSize;`)
+varying vec3 vWPos; uniform float uTime; uniform sampler2D uDepth; uniform vec2 uSize;
+float vKFade;
+${KULISSE_GLSL}`)
         .replace('#include <color_fragment>', `#include <color_fragment>
 {
   float dpt = texture2D(uDepth, vWPos.xz / uSize).r * ${DEPTH_MAX.toFixed(1)};
   vec3 shallow = vec3(0.16, 0.42, 0.42), deep = vec3(0.04, 0.16, 0.26);
   diffuseColor.rgb = mix(shallow, deep, smoothstep(0.0, 14.0, dpt));
-  float foam = 1.0 - smoothstep(0.2, 1.6, dpt);
+  float fdist = length(vWPos - cameraPosition);
+  float foam = (1.0 - smoothstep(0.2, 1.6, dpt)) * (1.0 - smoothstep(1200.0, 4000.0, fdist));
   float ripple = 0.5 + 0.5 * sin(vWPos.x * 0.21 + vWPos.z * 0.17 + uTime * 1.6);
   diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.85, 0.9, 0.88), foam * (0.35 + 0.4 * ripple));
   diffuseColor.a = mix(0.6, 0.92, smoothstep(0.0, 6.0, dpt));
+  diffuseColor.rgb = kGrau(diffuseColor.rgb, kOut(vWPos.xz));
+  vKFade = kFade(vWPos.xz);
 }`)
+        .replace('#include <fog_fragment>', KULISSE_FOG)
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
 {
   vec2 w = vWPos.xz;
