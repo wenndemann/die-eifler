@@ -77,7 +77,7 @@ varying float vSide; varying float vFlow; varying float vDist; varying vec3 vWPo
 
 export class Rails {
   readonly mesh: THREE.Mesh;
-  static readonly HALF = 2.6;
+  static readonly HALF = 3.6;  // Schotterbett ~7 m breit (Spiel-Maßstab, breiter als echt: bleibt lesbar)
 
   constructor(map: MapData, base: number) {
     const s: Streifen = { pos: [], side: [], flow: [], nrm: [], idx: [] };
@@ -99,7 +99,7 @@ vSide = aSide; vFlow = aFlow;
 vWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;
 vDist = length(vWPos - cameraPosition);
 // in der Ferne etwas breiter (bleibt sichtbar) und gegen grobe Gelände-Stufen angehoben
-transformed.xz += aNrm * aSide * clamp(vDist * 0.0009, 0.0, 5.0);
+transformed.xz += aNrm * aSide * clamp(vDist * 0.0018, 0.0, 11.0);
 transformed.y += clamp((vDist - 900.0) * 0.003, 0.0, 25.0) / modelMatrix[1][1];`);
       shader.fragmentShader = shader.fragmentShader
         .replace('#include <common>', `#include <common>
@@ -112,13 +112,16 @@ float rh(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }`
   float m = vSide * ${Rails.HALF.toFixed(2)};
   float am = abs(m);
   float near = 1.0 - smoothstep(250.0, 900.0, vDist);
-  vec3 gravel = vec3(0.50, 0.45, 0.38) * (0.88 + 0.22 * rh(floor(vec2(m * 3.0, vFlow * 3.0))));
-  float sleeper = step(0.55, fract(vFlow / 0.65)) * (1.0 - smoothstep(1.5, 1.9, am));
+  vec3 gravel = vec3(0.66, 0.59, 0.47) * (0.9 + 0.2 * rh(floor(vec2(m * 3.0, vFlow * 3.0))));
+  float sleeper = step(0.55, fract(vFlow / 0.65)) * (1.0 - smoothstep(2.1, 2.6, am));
   gravel = mix(gravel, vec3(0.30, 0.23, 0.17), sleeper * 0.7 * near);
   float rail = (1.0 - smoothstep(0.07, 0.16, abs(am - 0.72))) ;
   vec3 steel = vec3(0.11, 0.11, 0.12);
   float railK = rail * mix(0.45, 1.0, near);
   diffuseColor.rgb = mix(gravel, steel, railK);
+  // Aus der Ferne: dunkle Mittellinie (Gleise) zwischen hellem Schotter, damit die Linie lesbar bleibt
+  float mid = (1.0 - near) * (1.0 - smoothstep(0.0, 0.32, abs(vSide)));
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.20, 0.18, 0.17), mid * 0.7);
   diffuseColor.a = 1.0 - smoothstep(0.82, 1.0, abs(vSide));
   diffuseColor.rgb = kGrau(diffuseColor.rgb, kOut(vWPos.xz));
   vKFade = kFade(vWPos.xz);

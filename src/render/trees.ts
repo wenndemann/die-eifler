@@ -1,25 +1,46 @@
-// Wald: Fichten und Buchen als Instanzen je Gelände-Chunk, zwei Detailstufen
-// (nah: Low-Poly mit Schatten, fern: einfache Silhouette). Leichter Wind im Vertex-Shader.
+// Wald: Fichten und Buchen als Instanzen. Je Gelände-Chunk eine nahe Stufe (Low-Poly mit Schatten) und eine ferne
+// Silhouette; mehrere Chunks sind zu einem Fern-Verbund gebündelt (ein Draw-Call je Art, solange alle Chunks
+// darin fern sind). Instanzen sind gemischt, damit die Qualitätsstufe die Dichte per Anzahl regeln kann.
+// Leichter Wind im Vertex-Shader.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { MapData } from '../map/mapdata';
 import { hash } from './terrain';
 import { HexGrid } from '../map/hex';
+import { BAUM_SKALE, BAUM_DICHTE } from './massstab';
+import { QUALI, type Qualitaet } from './qualitaet';
 import { KULISSE_GLSL, KULISSE_FOG, kulisseUniforms } from './kulisse';
 
-const NEAR = 2800; // m: bis hier detaillierte Bäume
 const TCHUNK = 192; // Zellen (1920 m) je Baum-Chunk
-// Dichte wie bisher je m²: früher 0,88 je 900-m²-Zelle, jetzt je 100-m²-Zelle
-const P_WALD = 0.88 * 100 / 900;
-const P_STREU = 0.012 * 100 / 900;
+const VERBUND = 3;  // Chunks je Kante eines Fern-Verbunds
+// Dichte je 100-m²-Zelle. Früher (echte Baumgröße) 0,88 je 900-m²-Zelle; mit BAUM_SKALE sinkt sie (massstab.ts).
+const P_WALD = 0.88 * 100 / 900 * BAUM_DICHTE;
+const P_STREU = 0.012 * 100 / 900 * BAUM_DICHTE;
+const STEIL = 42; // Grad: steiler ist Fels (im 10-m-Raster sehr selten), keine Bäume
 
 type Species = 'fichte' | 'buche';
+const ARTEN: Species[] = ['fichte', 'buche'];
 
 interface TreeChunk {
   center: THREE.Vector3;
-  near: THREE.InstancedMesh[];
-  far: THREE.InstancedMesh[];
-  base: Map<Species, Float32Array>; // x, groundRel, z, scale, rot
+  near: Map<Species, THREE.InstancedMesh>;
+  far: Map<Species, THREE.InstancedMesh>;
+  data: Map<Species, Float32Array>; // x, Höhe rel. Basis, z, Maßstab, Drehung
+  verbund: Verbund | null;
+  istNah: boolean;
+}
+interface Verbund { far: Map<Species, THREE.InstancedMesh>; data: Map<Species, Float32Array>; chunks: TreeChunk[] }
+
+/** Reihenfolge der Instanzen deterministisch mischen: ein Anfangsstück ist dann eine gleichmäßige Stichprobe. */
+function mische(a: Float32Array, seed: number) {
+  const n = a.length / 5, t = new Float32Array(5);
+  for (let i = n - 1; i > 0; i--) {
+    const j = Math.floor(hash(i, seed) * (i + 1));
+    if (j === i) continue;
+    t.set(a.subarray(i * 5, i * 5 + 5));
+    a.copyWithin(i * 5, j * 5, j * 5 + 5);
+    a.set(t, j * 5);
+  }
 }
 
 function colored(geo: THREE.BufferGeometry, color: string): THREE.BufferGeometry {
@@ -37,6 +58,16 @@ function cone(r: number, h: number, y: number, seg: number, color: string) {
   return colored(new THREE.ConeGeometry(r, h, seg, 1, true).translate(0, y + h / 2, 0), color);
 }
 
+function tint(mesh: THREE.InstancedMesh, n: number, seed: number) {
+  const col = new THREE.Color();
+  for (let t = 0; t < n; t++) {
+    const v = 0.82 + hash(t, seed) * 0.3;
+    col.setRGB(v, v * (0.95 + hash(t + 3, seed + 1) * 0.1), v * 0.92);
+    mesh.setColorAt(t, col);
+  }
+}
+
+/** Geometrie in echten Metern (Fichte rund 31 m); BAUM_SKALE kommt je Instanz dazu. */
 function buildGeometries() {
   const trunk = '#5a4030';
   const fichteNear = mergeGeometries([
@@ -62,11 +93,15 @@ export class Trees {
   readonly group = new THREE.Group();
   readonly uniforms = { uTime: { value: 0 } };
   private chunks: TreeChunk[] = [];
+  private verbuende: Verbund[] = [];
   private material: THREE.MeshStandardMaterial;
+  private qualitaet: Qualitaet = 'mittel';
   count = 0;
   visibleNear = 0;
+  private nahDist: number = QUALI.mittel.baumNah;
 
-  constructor(map: MapData, base: number, ex: number) {
+  /** maske: Rasterzellen, die frei bleiben (Häuser). */
+  constructor(map: MapData, base: number, ex: number, maske?: Uint8Array) {
     this.material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: true });
     this.material.onBeforeCompile = (shader) => {
       Object.assign(shader.uniforms, this.uniforms, kulisseUniforms);
@@ -95,7 +130,11 @@ diffuseColor.rgb = kGrau(diffuseColor.rgb, vKOut * 0.85);`)
     const geos = buildGeometries();
     const { width, height, cell } = map.info;
     const grid = new HexGrid(map.originX, map.originZ, map.ausschnitt.hex);
+    const g = map.ground;
     const CHUNK = TCHUNK;
+    const neigung = (i: number, j: number) => Math.atan(Math.hypot(
+      g[map.idx(i + 1, j)] - g[map.idx(i - 1, j)], g[map.idx(i, j + 1)] - g[map.idx(i, j - 1)]) / (2 * cell)) * 57.2958;
+    const chunkAt = new Map<string, TreeChunk>();
     for (let j0 = 0; j0 < height - 1; j0 += CHUNK) {
       for (let i0 = 0; i0 < width - 1; i0 += CHUNK) {
         const lists: Record<Species, number[]> = { fichte: [], buche: [] };
@@ -107,71 +146,118 @@ diffuseColor.rgb = kGrau(diffuseColor.rgb, vKOut * 0.85);`)
             const forest = cv === 3;
             // Wald dicht, auf Wiesen/Mooren vereinzelte Bäume (Hecken-Landschaft)
             if (!(forest ? r < P_WALD : (cv === 1 || cv === 5) && r < P_STREU)) continue;
-            if (map.railMask[k]) continue;
+            if (map.railMask[k] || (maske && maske[k])) continue;
             const x = (i + 0.5 + (hash(i, j + 99) - 0.5) * 0.98) * cell;
             const z = (j + 0.5 + (hash(i + 77, j) - 0.5) * 0.98) * cell;
             // Ortskern-Hexe bleiben frei (dort stehen die Häuser)
             const hi = grid.index(grid.fromWorld(x, z));
             if (hi >= 0 && map.hexTerrain[hi] === 6) continue;
+            if (map.water[k] > 0 || neigung(i, j) > STEIL) continue;
             const gy = map.heightAt(x, z);
-            if (map.water[k] > 0) continue;
             const pFichte = Math.min(0.85, Math.max(0.15, (gy - 380) / 250));
             const sp: Species = hash(i + 5, j + 3) < pFichte ? 'fichte' : 'buche';
-            lists[sp].push(x, gy - base, z, 0.8 + hash(i + 1, j + 9) * 0.45, hash(i + 4, j + 2) * Math.PI * 2);
+            lists[sp].push(x, gy - base, z, (0.8 + hash(i + 1, j + 9) * 0.45) * BAUM_SKALE, hash(i + 4, j + 2) * Math.PI * 2);
           }
         }
         const ch: TreeChunk = {
           center: new THREE.Vector3((i0 + CHUNK / 2) * cell, 0, (j0 + CHUNK / 2) * cell),
-          near: [], far: [], base: new Map(),
+          near: new Map(), far: new Map(), data: new Map(), verbund: null, istNah: false,
         };
-        for (const sp of ['fichte', 'buche'] as Species[]) {
+        for (const sp of ARTEN) {
           const data = new Float32Array(lists[sp]);
           const n = data.length / 5;
           if (!n) continue;
-          ch.base.set(sp, data);
+          mische(data, i0 * 31 + j0 * 17 + (sp === 'fichte' ? 1 : 2));
+          ch.data.set(sp, data);
           const near = new THREE.InstancedMesh(geos[sp][0], this.material, n);
           const far = new THREE.InstancedMesh(geos[sp][1], this.material, n);
           far.instanceMatrix = near.instanceMatrix;
-          const col = new THREE.Color();
-          for (let t = 0; t < n; t++) {
-            const v = 0.82 + hash(t, i0 + j0 * 7) * 0.3;
-            col.setRGB(v, v * (0.95 + hash(t + 3, j0) * 0.1), v * 0.92);
-            near.setColorAt(t, col);
-          }
+          tint(near, n, i0 + j0 * 7);
           far.instanceColor = near.instanceColor;
           near.castShadow = true;
           near.receiveShadow = true;
-          ch.near.push(near); ch.far.push(far);
+          near.visible = far.visible = false;
+          ch.near.set(sp, near); ch.far.set(sp, far);
           this.group.add(near, far);
-          this.count += n;
         }
         this.chunks.push(ch);
+        chunkAt.set(`${Math.floor(i0 / CHUNK)},${Math.floor(j0 / CHUNK)}`, ch);
+      }
+    }
+    // Fern-Verbünde: VERBUND x VERBUND Chunks, ein Netz je Art
+    for (let vj = 0; vj * VERBUND * CHUNK < height - 1; vj++) {
+      for (let vi = 0; vi * VERBUND * CHUNK < width - 1; vi++) {
+        const members: TreeChunk[] = [];
+        for (let b = 0; b < VERBUND; b++) for (let a = 0; a < VERBUND; a++) {
+          const c = chunkAt.get(`${vi * VERBUND + a},${vj * VERBUND + b}`);
+          if (c) members.push(c);
+        }
+        if (!members.length) continue;
+        const v: Verbund = { far: new Map(), data: new Map(), chunks: members };
+        for (const sp of ARTEN) {
+          const parts = members.map((c) => c.data.get(sp)).filter((d): d is Float32Array => !!d);
+          const total = parts.reduce((s, d) => s + d.length, 0);
+          if (!total) continue;
+          const all = new Float32Array(total);
+          let o = 0;
+          for (const d of parts) { all.set(d, o); o += d.length; }
+          mische(all, vi * 131 + vj * 71 + 5);
+          v.data.set(sp, all);
+          const far = new THREE.InstancedMesh(geos[sp][1], this.material, total / 5);
+          tint(far, total / 5, vi * 5 + vj * 3 + 1);
+          far.visible = false;
+          v.far.set(sp, far);
+          this.group.add(far);
+        }
+        for (const c of members) c.verbund = v;
+        this.verbuende.push(v);
       }
     }
     this.setExaggeration(ex);
   }
 
-  setExaggeration(ex: number) {
+  private fill(mesh: THREE.InstancedMesh, data: Float32Array, ex: number) {
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3();
     const up = new THREE.Vector3(0, 1, 0);
+    const n = data.length / 5;
+    mesh.count = n;
+    for (let t = 0; t < n; t++) {
+      p.set(data[t * 5], data[t * 5 + 1] * ex, data[t * 5 + 2]);
+      q.setFromAxisAngle(up, data[t * 5 + 4]);
+      s.setScalar(data[t * 5 + 3]);
+      mesh.setMatrixAt(t, m.compose(p, q, s));
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.computeBoundingSphere();
+  }
+
+  setExaggeration(ex: number) {
     for (const ch of this.chunks) {
-      let sum = 0, cnt = 0, mi = 0;
-      for (const [, data] of ch.base) {
-        const mesh = ch.near[mi++];
-        for (let t = 0; t < data.length / 5; t++) {
-          const y = data[t * 5 + 1] * ex;
-          p.set(data[t * 5], y, data[t * 5 + 2]);
-          q.setFromAxisAngle(up, data[t * 5 + 4]);
-          s.setScalar(data[t * 5 + 3]);
-          mesh.setMatrixAt(t, m.compose(p, q, s));
-          sum += y; cnt++;
-        }
-        mesh.instanceMatrix.needsUpdate = true;
-        mesh.computeBoundingSphere();
+      let sum = 0, cnt = 0;
+      for (const [sp, data] of ch.data) {
+        this.fill(ch.near.get(sp)!, data, ex);
+        ch.far.get(sp)!.boundingSphere = ch.near.get(sp)!.boundingSphere;
+        for (let t = 0; t < data.length / 5; t++) { sum += data[t * 5 + 1] * ex; cnt++; }
       }
-      ch.far.forEach((f, k) => { f.boundingSphere = ch.near[k].boundingSphere; });
       ch.center.y = cnt ? sum / cnt : 0;
     }
+    for (const v of this.verbuende) for (const [sp, data] of v.data) this.fill(v.far.get(sp)!, data, ex);
+    this.setQuality(this.qualitaet);
+  }
+
+  /** Nah-Abstand und Baumdichte nach Qualitätsstufe (Anteil der gemischten Instanzen). */
+  setQuality(q: Qualitaet) {
+    this.qualitaet = q;
+    const p = QUALI[q];
+    this.nahDist = p.baumNah;
+    this.count = 0;
+    for (const ch of this.chunks) for (const [sp, data] of ch.data) {
+      const n = data.length / 5;
+      ch.near.get(sp)!.count = Math.ceil(n * p.baumDichteNah);
+      ch.far.get(sp)!.count = Math.ceil(n * p.baumDichteFern);
+      this.count += n;
+    }
+    for (const v of this.verbuende) for (const [sp, data] of v.data) v.far.get(sp)!.count = Math.ceil((data.length / 5) * p.baumDichteFern);
   }
 
   setVisible(v: boolean) { this.group.visible = v; }
@@ -179,9 +265,13 @@ diffuseColor.rgb = kGrau(diffuseColor.rgb, vKOut * 0.85);`)
   update(camPos: THREE.Vector3) {
     this.visibleNear = 0;
     for (const ch of this.chunks) {
-      const near = ch.center.distanceTo(camPos) < NEAR;
-      ch.near.forEach((m) => { m.visible = near; if (near) this.visibleNear += m.count; });
-      ch.far.forEach((m) => { m.visible = !near; });
+      ch.istNah = ch.center.distanceTo(camPos) < this.nahDist;
+      for (const m of ch.near.values()) { m.visible = ch.istNah; if (ch.istNah) this.visibleNear += m.count; }
+    }
+    for (const v of this.verbuende) {
+      const alleFern = v.chunks.every((c) => !c.istNah);
+      for (const m of v.far.values()) m.visible = alleFern;
+      for (const c of v.chunks) for (const m of c.far.values()) m.visible = !c.istNah && !alleFern;
     }
   }
 }

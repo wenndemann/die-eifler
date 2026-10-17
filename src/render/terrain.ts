@@ -1,18 +1,22 @@
-// Gelände: 10-m-Höhenraster in Chunks mit LOD-Stufen + Schürzen gegen Risse.
-// Farben und Normalen werden je Chunk beim Bauen berechnet (kein riesiges Vorab-Array).
-// Optik: Farben je Bedeckung, Hang -> Fels (um Nideggen rötlicher Buntsandstein), Feinrauschen,
-// Hex-Raster nur im Spielfeld, Kulisse ausgegraut.
+// Gelände: 10-m-Höhenraster als Quadtree aus Netz-Knoten. Jeder Knoten hat gleich viele Quads (CHUNK x CHUNK)
+// und deckt je Stufe doppelt so viel Fläche ab (Stufe 0 = 10 m Raster, Stufe 4 = 160 m). So gibt es wenige,
+// gleich große Netze (wenige Draw-Calls), nahe Knoten sind fein, ferne grob. Schürzen gegen Risse.
+// Farben und Normalen werden je Knoten beim Bauen berechnet (kein riesiges Vorab-Array).
+// Optik: Farben je Bedeckung, Fels nur aus Hangneigung und Bedeckung „fels“ (keine Orts-Sonderfälle),
+// Feinrauschen, Hex-Raster nur im Spielfeld, Kulisse ausgegraut.
 import * as THREE from 'three';
 import type { MapData } from '../map/mapdata';
 import { HexGrid } from '../map/hex';
 import { KULISSE_GLSL, KULISSE_FOG, kulisseUniforms } from './kulisse';
+import { QUALI, type Qualitaet } from './qualitaet';
 
-export const CHUNK = 128;                // Rasterzellen pro Chunk-Kante (1280 m)
-const LOD_STEPS = [1, 2, 4, 8, 16];
-const LOD_DIST = [1700, 3400, 6500, 12000]; // Chunk-Mitte-Kamera-Abstand je Stufe (m)
+export const CHUNK = 64;                 // Quads je Knoten-Kante (in jeder Stufe gleich)
+const MAX_LEVEL = 4;                     // gröbste Stufe: 16 Zellen (160 m) je Quad, Knoten 10,2 km
+/** Ein Knoten der Stufe k >= 1 wird als Blatt gezeichnet, wenn er mindestens LOD_BASIS * 2^k Meter entfernt ist. */
+const LOD_BASIS = 700;
 const SKIRT = 25;                        // Schürzen-Tiefe (m, unskaliert)
 const RIVER_BED = 2.5;                   // Flussbett liegt so tief unter dem Spiegel (wie im Konverter)
-const UNUSED_MS = 8000;                  // ungenutzte LOD-Netze nach dieser Zeit freigeben
+const UNUSED_MS = 8000;                  // ungenutzte Netze nach dieser Zeit freigeben
 
 // Farben je Bedeckung (sRGB), Reihenfolge wie MapInfo.cover
 const COVER_COLORS = [
@@ -26,8 +30,14 @@ const COVER_COLORS = [
   '#7c9c46', // siedlung außerhalb der Kerne: wie Wiese
 ];
 const KERN_COLOR = '#8f9a5e';            // Ortskern-Hex: Gärten, Höfe
-const ROCK_GRAY = new THREE.Color('#857f74');
-const ROCK_RED = new THREE.Color('#9a7967');   // Buntsandstein: rötlich-grau
+/** Einheitliche Felsfarbe: grau mit leichtem Rotstich (Buntsandstein der Rureifel, ohne Geologie-Daten überall gleich). */
+const ROCK = new THREE.Color('#867465');
+
+/** Ab dieser Hangneigung (Grad, 10-m-Raster, über zwei Maßstäbe gemittelt) beginnt Fels, ab ROCK_VOLL ist es reiner Fels.
+ *  Im 10-m-Raster sind Felswände selten steiler als 45 Grad (nur 1 % der Waldzellen bei Nideggen über 35, 0,2 % über 40).
+ *  Böschungen und Wegeinschnitte (20 bis 30 Grad) bleiben grün. */
+const ROCK_AB = 27, ROCK_VOLL = 40;
+const ROCK_WALD = 0.8;                   // unter Wald etwas weniger Fels (Bäume stehen auch an Felsköpfen)
 
 export interface TerrainUniforms {
   uHexSize: { value: number };
@@ -38,25 +48,32 @@ export interface TerrainUniforms {
   uHoverOn: { value: number };
 }
 
-interface Chunk {
+interface Node {
+  level: number;
   i0: number; j0: number;
-  center: THREE.Vector3;   // unskaliert (y = mittlere Höhe relativ zur Basis)
-  meshes: (THREE.Mesh | null)[];
-  freed: number[];         // Zeitpunkt, seit dem die Stufe ungenutzt ist (0 = in Gebrauch)
-  lod: number;
+  parent: Node | null;
+  children: Node[];
+  /** Begrenzungsquader, unskaliert (y relativ zur Basis). */
+  min: THREE.Vector3; max: THREE.Vector3;
+  mesh: THREE.Mesh | null;
+  /** Zeitpunkt, seit dem das Netz nicht mehr gezeichnet wird (0 = in Gebrauch). */
+  unused: number;
+  shown: boolean;
 }
 
 export class Terrain {
   readonly group = new THREE.Group();
   readonly material: THREE.MeshStandardMaterial;
   readonly uniforms: TerrainUniforms;
-  private chunks: Chunk[] = [];
-  private indices: THREE.BufferAttribute[] = [];
+  private nodes: Node[] = [];
+  private roots: Node[] = [];
+  private shown = new Set<Node>();
+  private index: THREE.BufferAttribute;
   private grid: HexGrid;
   private pal = COVER_COLORS.map((h) => new THREE.Color(h));
   private kern = new THREE.Color(KERN_COLOR);
-  private rotAnker: { x: number; z: number; r: number }[] = [];
   private lastSweep = 0;
+  private lodFaktor = 1;
 
   constructor(private map: MapData, readonly base: number, hexOrigin: THREE.Vector2) {
     this.uniforms = {
@@ -68,91 +85,118 @@ export class Terrain {
       uHoverOn: { value: 0 },
     };
     this.grid = new HexGrid(map.originX, map.originZ, map.ausschnitt.hex);
-    // Buntsandstein-Gebiete (Nideggen, Rurtal bis Gemünd): Anker mit Radius
-    const radien: Record<string, number> = { Nideggen: 6500, Heimbach: 5000, Gemünd: 4500, Schleiden: 3500, Abenden: 3000, Zerkall: 3000, Hürtgenwald: 2500 };
-    for (const p of map.info.places) if (radien[p.name] && p.kind !== 'gewaesser') this.rotAnker.push({ x: p.x, z: p.z, r: radien[p.name] });
     this.material = this.createMaterial();
-    for (const st of LOD_STEPS) this.indices.push(this.buildIndex(CHUNK / st));
+    this.index = this.buildIndex(CHUNK);
 
     const { width, height } = map.info;
-    for (let j0 = 0; j0 < height - 1; j0 += CHUNK) {
-      for (let i0 = 0; i0 < width - 1; i0 += CHUNK) {
-        const c = map.info.cell;
-        const ci = Math.min(i0 + CHUNK / 2, width - 1), cj = Math.min(j0 + CHUNK / 2, height - 1);
-        const center = new THREE.Vector3((ci + 0.5) * c, map.ground[cj * width + ci] - base, (cj + 0.5) * c);
-        this.chunks.push({ i0, j0, center, meshes: LOD_STEPS.map(() => null), freed: LOD_STEPS.map(() => 0), lod: -1 });
+    const top = CHUNK << MAX_LEVEL;
+    for (let j0 = 0; j0 < height - 1; j0 += top) {
+      for (let i0 = 0; i0 < width - 1; i0 += top) this.roots.push(this.makeNode(MAX_LEVEL, i0, j0, null));
+    }
+  }
+
+  private makeNode(level: number, i0: number, j0: number, parent: Node | null): Node {
+    const { width, height, cell } = this.map.info;
+    const size = CHUNK << level;
+    const i1 = Math.min(i0 + size, width - 1), j1 = Math.min(j0 + size, height - 1);
+    // Höhenbereich aus Stichproben (Abstand ca. 1/32 der Kante)
+    const st = Math.max(1, size >> 5);
+    let lo = Infinity, hi = -Infinity;
+    for (let j = j0; j <= j1; j += st) for (let i = i0; i <= i1; i += st) {
+      const h = this.map.ground[j * width + i];
+      if (h < lo) lo = h;
+      if (h > hi) hi = h;
+    }
+    const n: Node = {
+      level, i0, j0, parent, children: [], mesh: null, unused: 0, shown: false,
+      min: new THREE.Vector3(i0 * cell, lo - this.base - SKIRT, j0 * cell),
+      max: new THREE.Vector3(i1 * cell + cell, hi - this.base + 10, j1 * cell + cell),
+    };
+    this.nodes.push(n);
+    if (level > 0) {
+      const h = size >> 1;
+      for (const [di, dj] of [[0, 0], [h, 0], [0, h], [h, h]]) {
+        if (i0 + di < width - 1 && j0 + dj < height - 1) n.children.push(this.makeNode(level - 1, i0 + di, j0 + dj, n));
       }
     }
+    return n;
   }
 
   setExaggeration(ex: number) {
     this.group.scale.y = ex;
   }
 
-  /** LOD je Chunk nach Kameraabstand wählen; neue Netze höchstens budgetMs lang bauen. */
-  update(camPos: THREE.Vector3, budgetMs = 6) {
-    const ex = this.group.scale.y;
-    const p = new THREE.Vector3();
-    const pending: { ch: Chunk; lod: number; d: number }[] = [];
-    for (const ch of this.chunks) {
-      p.set(ch.center.x, ch.center.y * ex, ch.center.z);
-      const d = p.distanceTo(camPos);
-      let lod = LOD_STEPS.length - 1;
-      for (let k = 0; k < LOD_DIST.length; k++) if (d < LOD_DIST[k]) { lod = k; break; }
-      if (lod === ch.lod) continue;
-      if (ch.meshes[lod]) this.show(ch, lod);
-      else pending.push({ ch, lod, d });
-    }
-    if (pending.length) {
-      pending.sort((a, b) => a.d - b.d);
-      const t0 = performance.now();
-      for (const { ch, lod } of pending) {
-        if (performance.now() - t0 > budgetMs) break;
-        const m = new THREE.Mesh(this.buildGeometry(ch.i0, ch.j0, lod), this.material);
-        m.receiveShadow = true;
-        m.castShadow = true;
-        m.visible = false;
-        ch.meshes[lod] = m;
-        this.group.add(m);
-        this.show(ch, lod);
-      }
-    }
-    const now = performance.now();
-    if (now - this.lastSweep > 2000) {
-      this.lastSweep = now;
-      for (const ch of this.chunks) {
-        ch.meshes.forEach((m, k) => {
-          if (!m || k === ch.lod || !ch.freed[k] || now - ch.freed[k] < UNUSED_MS) return;
-          this.group.remove(m);
-          m.geometry.dispose();
-          ch.meshes[k] = null;
-          ch.freed[k] = 0;
-        });
-      }
-    }
+  setQuality(q: Qualitaet) {
+    this.lodFaktor = QUALI[q].lod;
   }
 
-  private show(ch: Chunk, lod: number) {
-    if (ch.lod >= 0) { ch.meshes[ch.lod]!.visible = false; ch.freed[ch.lod] = performance.now(); }
-    ch.meshes[lod]!.visible = true;
-    ch.freed[lod] = 0;
-    ch.lod = lod;
+  /** Abstand Kamera – Begrenzungsquader (y mit Überhöhung). */
+  private dist(n: Node, p: THREE.Vector3, ex: number): number {
+    const dx = Math.max(n.min.x - p.x, 0, p.x - n.max.x);
+    const dy = Math.max(n.min.y * ex - p.y, 0, p.y - n.max.y * ex);
+    const dz = Math.max(n.min.z - p.z, 0, p.z - n.max.z);
+    return Math.hypot(dx, dy, dz);
+  }
+
+  /** Knoten nach Kameraabstand wählen (Quadtree); fehlende Netze höchstens budgetMs lang bauen.
+   *  Solange ein Netz fehlt, bleibt das nächste gröbere (fertige) sichtbar – keine Löcher. */
+  update(camPos: THREE.Vector3, budgetMs = 6) {
+    const ex = this.group.scale.y;
+    const leaves: { n: Node; d: number }[] = [];
+    const rec = (n: Node) => {
+      const d = this.dist(n, camPos, ex);
+      if (n.level === 0 || d >= LOD_BASIS * (1 << n.level) * this.lodFaktor) leaves.push({ n, d });
+      else for (const c of n.children) rec(c);
+    };
+    for (const r of this.roots) rec(r);
+
+    const pending = leaves.filter((l) => !l.n.mesh).sort((a, b) => a.d - b.d);
+    const t0 = performance.now();
+    for (const { n } of pending) {
+      if (performance.now() - t0 > budgetMs) break;
+      const m = new THREE.Mesh(this.buildGeometry(n), this.material);
+      m.receiveShadow = true;
+      m.castShadow = true;
+      m.visible = false;
+      n.mesh = m;
+      this.group.add(m);
+    }
+    // Fehlt noch ein Netz: nächsten fertigen Vorfahren zeigen (und alles darunter weglassen)
+    const forced = new Set<Node>();
+    for (const { n } of leaves) {
+      if (n.mesh) continue;
+      let a = n.parent;
+      while (a && !a.mesh) a = a.parent;
+      if (a) forced.add(a);
+    }
+    const next = new Set<Node>(forced);
+    for (const { n } of leaves) {
+      if (!n.mesh) continue;
+      let a = n.parent, hidden = false;
+      while (a) { if (forced.has(a)) { hidden = true; break; } a = a.parent; }
+      if (!hidden) next.add(n);
+    }
+    const now = performance.now();
+    for (const n of this.shown) if (!next.has(n)) { n.mesh!.visible = false; n.unused = now; n.shown = false; }
+    for (const n of next) if (!n.shown) { n.mesh!.visible = true; n.unused = 0; n.shown = true; }
+    this.shown = next;
+
+    if (now - this.lastSweep > 2000) {
+      this.lastSweep = now;
+      for (const n of this.nodes) {
+        if (!n.mesh || n.shown || n.level >= MAX_LEVEL || !n.unused || now - n.unused < UNUSED_MS) continue;
+        this.group.remove(n.mesh);
+        n.mesh.geometry.dispose();
+        n.mesh = null;
+        n.unused = 0;
+      }
+    }
   }
 
   stats() {
-    const counts = LOD_STEPS.map(() => 0);
-    for (const ch of this.chunks) if (ch.lod >= 0) counts[ch.lod]++;
-    return { chunks: this.chunks.length, lod: counts };
-  }
-
-  /** Rötlicher Buntsandstein: 0 .. 1 je Ort. */
-  private rot(x: number, z: number): number {
-    let m = 0;
-    for (const a of this.rotAnker) {
-      const t = 1 - Math.hypot(x - a.x, z - a.z) / a.r;
-      if (t > m) m = t;
-    }
-    return Math.min(1, m * 1.6);
+    const counts: number[] = Array.from({ length: MAX_LEVEL + 1 }, () => 0);
+    for (const n of this.shown) counts[n.level]++;
+    return { chunks: this.shown.size, lod: counts };
   }
 
   /** Farbe einer Rasterzelle (linear RGB) in out. */
@@ -161,8 +205,6 @@ export class Terrain {
     const { cell, heightMin, heightMax } = map.info;
     const g = map.ground;
     const k = map.idx(i, j);
-    const dx = (g[map.idx(i + 1, j)] - g[map.idx(i - 1, j)]) / (2 * cell);
-    const dz = (g[map.idx(i, j + 1)] - g[map.idx(i, j - 1)]) / (2 * cell);
     const cv = map.cover[k];
     if (cv === 7) {
       // Siedlung nur im Ortskern-Hex als Garten/Hofland, sonst Wiese
@@ -178,15 +220,15 @@ export class Terrain {
     // Höhenstufe: oben kühler/gelblicher, unten satter
     const t = (g[k] - heightMin) / Math.max(1, heightMax - heightMin);
     out.offsetHSL(-0.015 * t, -0.08 * t, 0.03 * t);
-    // Hang -> Fels (nicht unter Wasser); um Nideggen rötlicher Buntsandstein
-    const slope = Math.atan(Math.hypot(dx, dz)) * 57.3;
+    // Fels nur aus Hangneigung (nicht unter Wasser) und Bedeckung „fels“
     if (cv !== 0) {
-      let a = Math.min(1, Math.max(0, (slope - 22) / 16)) * (cv === 3 ? 0.5 : 0.85);
+      const slope = this.slopeDeg(i, j);
+      let a = smooth(ROCK_AB, ROCK_VOLL, slope) * (cv === 3 ? ROCK_WALD : 1);
       if (cv === 6) a = Math.max(a, 0.7);
-      if (a > 0) {
-        const red = this.rotAnker.length ? this.rot((i + 0.5) * cell, (j + 0.5) * cell) : 0;
-        const rock = ROCK_GRAY.clone().lerp(ROCK_RED, red * Math.min(1, 0.55 + slope / 60));
-        out.lerp(rock, a);
+      if (a > 0.01) {
+        // waagerechte Schichtung: leichte Helligkeitsbänder über die Höhe
+        const schicht = 0.95 + 0.1 * Math.sin(g[k] * 0.85 + hash(i >> 3, j >> 3) * 2);
+        out.lerp(tmpRock.copy(ROCK).multiplyScalar(schicht), a);
       }
     }
     // Umgebungsverdeckung: Mulden/Täler dunkler, Kuppen heller (Krümmung über ~150 m)
@@ -195,6 +237,14 @@ export class Terrain {
     out.multiplyScalar(Math.min(1.1, Math.max(0.72, 1 - lap * 0.018)));
     // Feinvariation
     out.multiplyScalar(1 + (hash(i, j) - 0.5) * 0.07);
+  }
+
+  /** Hangneigung in Grad, Mittel aus 10-m- und 20-m-Maßstab (glättet Rasterrauschen, hält steile Wände). */
+  slopeDeg(i: number, j: number): number {
+    const map = this.map, g = map.ground, c = map.info.cell;
+    const s1 = Math.hypot(g[map.idx(i + 1, j)] - g[map.idx(i - 1, j)], g[map.idx(i, j + 1)] - g[map.idx(i, j - 1)]) / (2 * c);
+    const s2 = Math.hypot(g[map.idx(i + 2, j)] - g[map.idx(i - 2, j)], g[map.idx(i, j + 2)] - g[map.idx(i, j - 2)]) / (4 * c);
+    return Math.atan((s1 + s2) / 2) * 57.2958;
   }
 
   private buildIndex(n: number): THREE.BufferAttribute {
@@ -230,10 +280,11 @@ export class Terrain {
     return border;
   }
 
-  private buildGeometry(i0: number, j0: number, lod: number): THREE.BufferGeometry {
-    const step = LOD_STEPS[lod];
+  private buildGeometry(node: Node): THREE.BufferGeometry {
+    const step = 1 << node.level;
+    const { i0, j0 } = node;
     const { width, height, cell } = this.map.info;
-    const n = CHUNK / step;
+    const n = CHUNK;
     const side = n + 1;
     const ring = 4 * n;
     const vcount = side * side + ring;
@@ -242,7 +293,7 @@ export class Terrain {
     const colr = new Float32Array(vcount * 3);
     const g = this.map.ground;
     const map = this.map;
-    // Grobe LODs: liegt ein Flussbett im ausgelassenen Bereich, Punkt auf dessen Höhe absenken,
+    // Grobe Stufen: liegt ein Flussbett im ausgelassenen Bereich, Punkt auf dessen Höhe absenken,
     // sonst verschwindet das schmale eingegrabene Tal zwischen den Gitterpunkten
     const rr = step >> 1;
     const heightOf = (i: number, j: number, k: number) => {
@@ -255,8 +306,8 @@ export class Terrain {
       return h;
     };
     const col = new THREE.Color(), acc = new THREE.Color();
-    // Farbe: Mittel über einen Block (bei großen Stufen 2×2 Stichproben je Block, spart Zeit)
-    const sub = step >= 4 ? 2 : step;
+    // Farbe: Mittel über einen Block (bei großen Stufen nur wenige Stichproben je Block, spart Zeit)
+    const sub = step >= 8 ? 3 : step >= 4 ? 2 : step;
     const sstep = step / sub;
     const put = (v: number, i: number, j: number, drop: number) => {
       i = Math.min(i, width - 1); j = Math.min(j, height - 1);
@@ -272,7 +323,7 @@ export class Terrain {
       if (step === 1) this.cellColor(i, j, acc);
       else {
         acc.setRGB(0, 0, 0);
-        const o0 = -step / 2;
+        const o0 = -step / 2 + sstep / 2;
         for (let b = 0; b < sub; b++) for (let a = 0; a < sub; a++) {
           this.cellColor(i + Math.round(o0 + a * sstep), j + Math.round(o0 + b * sstep), col);
           acc.r += col.r; acc.g += col.g; acc.b += col.b;
@@ -293,7 +344,7 @@ export class Terrain {
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(colr, 3));
-    geo.setIndex(this.indices[lod]);
+    geo.setIndex(this.index);
     geo.computeBoundingSphere();
     geo.computeBoundingBox();
     return geo;
@@ -356,4 +407,10 @@ export function hash(i: number, j: number): number {
   let h = (i * 374761393 + j * 668265263) | 0;
   h = Math.imul(h ^ (h >>> 13), 1274126177);
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+const tmpRock = new THREE.Color();
+function smooth(a: number, b: number, x: number): number {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
 }

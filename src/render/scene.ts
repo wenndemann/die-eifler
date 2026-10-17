@@ -1,6 +1,7 @@
 // Renderer, Licht, Dunst und Umgebung.
 import * as THREE from 'three';
 import { Sky } from 'three/examples/jsm/objects/Sky.js';
+import { QUALI, type Qualitaet } from './qualitaet';
 
 export class Stage {
   readonly renderer: THREE.WebGLRenderer;
@@ -9,10 +10,15 @@ export class Stage {
   readonly sunDir = new THREE.Vector3();
   private fogColor = new THREE.Color('#b9c8cf');
 
-  constructor(container: HTMLElement) {
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    const touch = matchMedia('(pointer: coarse)').matches;
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, touch ? 1.5 : 2));
+  private quali = QUALI.mittel;
+  private breite = 0;
+  private hoehe = 0;
+
+  constructor(container: HTMLElement, q: Qualitaet = 'mittel') {
+    // Kantenglättung lässt sich nach dem Start nicht mehr ändern: auf „Niedrig“ gleich aus
+    this.renderer = new THREE.WebGLRenderer({ antialias: q !== 'niedrig', powerPreference: 'high-performance' });
+    this.quali = QUALI[q];
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, this.quali.pixel));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
     this.renderer.shadowMap.enabled = true;
@@ -27,7 +33,7 @@ export class Stage {
     this.sunDir.set(Math.cos(elev) * Math.sin(azim), Math.sin(elev), -Math.cos(elev) * Math.cos(azim)).normalize();
     this.sun = new THREE.DirectionalLight('#ffeccc', 3.2);
     this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(touch ? 2048 : 4096, touch ? 2048 : 4096);
+    this.sun.shadow.mapSize.set(this.quali.schattenKarte, this.quali.schattenKarte);
     this.sun.shadow.bias = -0.0004;
     this.sun.shadow.normalBias = 1.5;
     this.scene.add(this.sun, this.sun.target);
@@ -49,7 +55,7 @@ export class Stage {
 
   /** Schatten-Ausschnitt und Dunst folgen der Kamera. */
   follow(target: THREE.Vector3, distance: number) {
-    const span = Math.min(distance * 1.4, 9000);
+    const span = Math.min(distance * 1.4, this.quali.schattenReichweite);
     const cam = this.sun.shadow.camera;
     cam.left = -span; cam.right = span; cam.top = span; cam.bottom = -span;
     cam.near = 10; cam.far = span * 4 + 4000;
@@ -65,7 +71,22 @@ export class Stage {
     this.sun.castShadow = on;
   }
 
+  /** Qualitätsstufe: Pixelverhältnis, Schattenkarte und -reichweite. */
+  setQuality(q: Qualitaet) {
+    const p = QUALI[q];
+    const neueKarte = p.schattenKarte !== this.sun.shadow.mapSize.x;
+    this.quali = p;
+    if (neueKarte) {
+      this.sun.shadow.mapSize.set(p.schattenKarte, p.schattenKarte);
+      this.sun.shadow.map?.dispose();
+      this.sun.shadow.map = null;
+    }
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, p.pixel));
+    if (this.breite) this.renderer.setSize(this.breite, this.hoehe);
+  }
+
   resize(w: number, h: number) {
+    this.breite = w; this.hoehe = h;
     this.renderer.setSize(w, h);
   }
 }
