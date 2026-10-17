@@ -1,9 +1,9 @@
-// Bestehende Ortschaften: kleine Eifel-Häuser (helle Wände, Schieferdach) als Instanzen je Chunk.
-// Reine Kulisse – die Spiel-Dörfer kommen später als eigene Gebäude.
+// Ortskerne (Drehbuch 3: die heutigen Häuser fallen weg): ein paar kleine Eifel-Häuser dicht um jeden
+// Ortskern-Hex (Stadt 12-20, Dorf 4-8, Weiler 2-3). Reine Kulisse – die Spiel-Dörfer kommen später.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { MapData } from '../map/mapdata';
-import { CHUNK, hash } from './terrain';
+import { hash } from './terrain';
 
 function paint(g: THREE.BufferGeometry, color: string) {
   const geo = g.index ? g.toNonIndexed() : g;
@@ -48,6 +48,8 @@ function houseGeometry(wall: string) {
   return g;
 }
 
+const ANZAHL: Record<string, [number, number]> = { stadt: [12, 20], dorf: [4, 8], weiler: [2, 3] };
+
 export class Houses {
   readonly group = new THREE.Group();
   private items: { mesh: THREE.InstancedMesh; data: Float32Array }[] = [];
@@ -56,37 +58,39 @@ export class Houses {
   constructor(map: MapData, base: number, ex: number) {
     const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, flatShading: true, side: THREE.DoubleSide });
     const kinds = [houseGeometry('#ece4d2'), houseGeometry('#d9cdb4'), houseGeometry('#c9c0b2')];
-    const { width, height, cell } = map.info;
-    for (let j0 = 0; j0 < height; j0 += CHUNK) {
-      for (let i0 = 0; i0 < width; i0 += CHUNK) {
-        const lists: number[][] = kinds.map(() => []);
-        for (let j = j0; j < Math.min(j0 + CHUNK, height); j++) {
-          for (let i = i0; i < Math.min(i0 + CHUNK, width); i++) {
-            const k = j * width + i;
-            if (map.cover[k] !== 7 || map.water[k] > 0) continue;
-            if (hash(i * 5 + 1, j * 3 + 2) > 0.5) continue;
-            const x = (i + 0.5 + (hash(i + 8, j) - 0.5) * 0.5) * cell;
-            const z = (j + 0.5 + (hash(i, j + 8) - 0.5) * 0.5) * cell;
-            // Straßenzug-Ausrichtung je 4×4-Block, leicht variiert
-            const rot = Math.floor(hash(i >> 2, j >> 2) * 4) * (Math.PI / 2) + (hash(i, j) - 0.5) * 0.25;
-            const kind = Math.floor(hash(i + 3, j + 5) * kinds.length);
-            // Auf den tiefsten Punkt der Grundfläche setzen (Hang -> Sockel)
-            const gy = Math.min(map.heightAt(x - 7, z - 5), map.heightAt(x + 7, z + 5), map.heightAt(x - 7, z + 5), map.heightAt(x + 7, z - 5));
-            lists[kind].push(x, gy - base, z, rot, 0.9 + hash(i + 2, j + 7) * 0.35);
-          }
-        }
-        kinds.forEach((geo, n) => {
-          if (!lists[n].length) return;
-          const data = new Float32Array(lists[n]);
-          const mesh = new THREE.InstancedMesh(geo, mat, data.length / 5);
-          mesh.castShadow = true;
-          mesh.receiveShadow = true;
-          this.items.push({ mesh, data });
-          this.group.add(mesh);
-          this.count += data.length / 5;
-        });
+    const lists: number[][] = kinds.map(() => []);
+    const R = map.info.hex.size;
+    for (const kern of map.ausschnitt.kerne) {
+      const [lo, hi] = ANZAHL[kern.kind] ?? ANZAHL.dorf;
+      const seed = kern.q * 7919 + kern.r * 104729;
+      const want = lo + Math.floor(hash(seed, 3) * (hi - lo + 1));
+      // Straßenzug-Richtung je Kern, Häuser dicht um die Mitte, mit Mindestabstand
+      const base0 = hash(seed, 5) * Math.PI;
+      const placed: { x: number; z: number }[] = [];
+      for (let t = 0; t < want * 40 && placed.length < want; t++) {
+        const a = hash(seed + t, 11) * Math.PI * 2;
+        const rad = Math.sqrt(hash(seed + t, 13)) * R * (kern.kind === 'stadt' ? 0.95 : 0.8);
+        const x = kern.x + Math.cos(a) * rad, z = kern.z + Math.sin(a) * rad;
+        if (placed.some((p) => Math.hypot(p.x - x, p.z - z) < 19)) continue;
+        if (map.surfaceAt(x, z) > map.heightAt(x, z) + 0.05 || map.cover[map.idx(Math.floor(x / 10), Math.floor(z / 10))] === 0) continue;
+        const hs = [map.heightAt(x - 7, z - 5), map.heightAt(x + 7, z + 5), map.heightAt(x - 7, z + 5), map.heightAt(x + 7, z - 5)];
+        if (Math.max(...hs) - Math.min(...hs) > 5) continue;
+        placed.push({ x, z });
+        const rot = base0 + (placed.length % 3 === 0 ? Math.PI / 2 : 0) + (hash(seed + t, 17) - 0.5) * 0.3;
+        const kind = Math.floor(hash(seed + t, 19) * kinds.length);
+        lists[kind].push(x, Math.min(...hs) - base, z, rot, 0.9 + hash(seed + t, 23) * 0.35);
       }
     }
+    kinds.forEach((geo, n) => {
+      if (!lists[n].length) return;
+      const data = new Float32Array(lists[n]);
+      const mesh = new THREE.InstancedMesh(geo, mat, data.length / 5);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      this.items.push({ mesh, data });
+      this.group.add(mesh);
+      this.count += data.length / 5;
+    });
     this.setExaggeration(ex);
   }
 

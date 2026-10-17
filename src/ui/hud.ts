@@ -1,6 +1,8 @@
 // HTML-Oberfläche über dem Canvas: Ortsnamen, Minimap, Kachel-Info, Einstellungen, Leistungsanzeige.
 import * as THREE from 'three';
 import type { MapData } from '../map/mapdata';
+import { bigHexOutline } from '../welt/hexwelt';
+import { GROESSE_NAME, type AusschnittParam } from '../welt/format';
 
 const COVER_MINI = ['#3f6f8c', '#86ad4d', '#c2ae63', '#2f5228', '#8d6b80', '#958a5c', '#8e8a82', '#c9bba3'];
 
@@ -10,6 +12,14 @@ export interface Settings {
   shadows: boolean;
   trees: boolean;
   perf: boolean;
+}
+
+export interface KopfInfo {
+  name: string;
+  param: AusschnittParam;
+  pruefsumme: string;
+  geklemmt: boolean;
+  onAndere: () => void;
 }
 
 export class Hud {
@@ -24,16 +34,22 @@ export class Hud {
   onSettings: (s: Settings) => void = () => {};
   onMinimap: (x: number, z: number) => void = () => {};
 
-  constructor(root: HTMLElement, private map: MapData, maps: { id: string; name: string }[] = []) {
+  constructor(root: HTMLElement, private map: MapData, kopf: KopfInfo) {
     this.settings = loadSettings(map.info.exaggeration);
 
     // Kopfleiste
     const top = el('div', 'topbar');
-    top.innerHTML = `<div class="crest">E</div><div class="title"><b>Die Eifeler</b><span>${map.info.name}</span></div>`;
+    const kurz = kopf.pruefsumme.slice(0, 8);
+    top.innerHTML = `<div class="crest">E</div><div class="title"><b>Die Eifeler</b>` +
+      `<span>${kopf.name} · ${GROESSE_NAME[kopf.param.size]}${kopf.geklemmt ? ' · an den Rand gerückt' : ''} · ` +
+      `<i class="sum" title="Prüfsumme ${kopf.pruefsumme}\n${kopf.param.version} · Hex ${kopf.param.q}, ${kopf.param.r}">${kurz}</i></span></div>` +
+      `<button class="andere" type="button">Andere Karte</button>`;
+    top.querySelector('button')!.addEventListener('click', kopf.onAndere);
     root.append(this.labelLayer, top, this.info, this.perf);
 
     // Ortsnamen
     for (const p of map.info.places) {
+      if (!p.imSpielfeld && p.kind !== 'stadt' && p.kind !== 'dorf') continue;
       const d = el('div', `label ${p.kind}`);
       d.textContent = p.name;
       this.labelLayer.append(d);
@@ -42,7 +58,7 @@ export class Hud {
 
     // Minimap
     const box = el('div', 'panel minimap');
-    this.miniScale = 280 / Math.max(map.info.width, map.info.height * 0.8);
+    this.miniScale = 280 / Math.max(map.sizeX, map.sizeZ * 0.8); // Pixel je Meter
     this.miniBg = this.renderMinimap();
     this.mini = document.createElement('canvas');
     this.mini.width = this.miniBg.width; this.mini.height = this.miniBg.height;
@@ -50,8 +66,7 @@ export class Hud {
     root.append(box);
     const jump = (e: PointerEvent) => {
       const r = this.mini.getBoundingClientRect();
-      const c = map.info.cell / this.miniScale;
-      this.onMinimap(((e.clientX - r.left) / r.width) * this.mini.width * c, ((e.clientY - r.top) / r.height) * this.mini.height * c);
+      this.onMinimap(((e.clientX - r.left) / r.width) * this.mini.width / this.miniScale, ((e.clientY - r.top) / r.height) * this.mini.height / this.miniScale);
     };
     this.mini.addEventListener('pointerdown', (e) => { jump(e); this.mini.setPointerCapture(e.pointerId); });
     this.mini.addEventListener('pointermove', (e) => { if (e.buttons & 1) jump(e); });
@@ -60,10 +75,8 @@ export class Hud {
     const set = el('div', 'panel settings');
     const touch = matchMedia('(pointer: coarse)').matches;
     if (touch || innerWidth < 700) set.classList.add('collapsed');
-    const options = maps.map((m) => `<option value="${m.id}"${m.id === map.info.id ? ' selected' : ''}>${m.name}</option>`).join('');
     set.innerHTML = `
       <h3>Ansicht</h3>
-      ${maps.length > 1 ? `<label class="mapsel">Karte <select>${options}</select></label>` : ''}
       <label>Überhöhung <output></output><input type="range" min="1" max="5" step="0.25" data-k="exaggeration"></label>
       <label><input type="checkbox" data-k="grid"> Hex-Raster <kbd>G</kbd></label>
       <label><input type="checkbox" data-k="shadows"> Schatten</label>
@@ -74,12 +87,6 @@ export class Hud {
         : '<kbd>WASD</kbd> bewegen · <kbd>Q</kbd><kbd>E</kbd> drehen · Rad zoomen · rechte Maustaste ziehen'}</p>`;
     root.append(set);
     set.querySelector('h3')!.addEventListener('click', () => set.classList.toggle('collapsed'));
-    set.querySelector('select')?.addEventListener('change', (e) => {
-      const id = (e.target as HTMLSelectElement).value;
-      try { localStorage.setItem('eifeler.map', id); } catch { /* egal */ }
-      location.hash = id;
-      location.reload();
-    });
     const credits = el('div', 'credits');
     credits.textContent = map.info.credits.map((c) => c.split(',')[0]).join(' · ');
     credits.title = map.info.credits.join('\n');
@@ -143,7 +150,7 @@ export class Hud {
   updateMinimap(corners: THREE.Vector3[]) {
     const ctx = this.mini.getContext('2d')!;
     ctx.drawImage(this.miniBg, 0, 0);
-    const s = this.miniScale / this.map.info.cell;
+    const s = this.miniScale;
     ctx.beginPath();
     corners.forEach((c, i) => (i ? ctx.lineTo(c.x * s, c.z * s) : ctx.moveTo(c.x * s, c.z * s)));
     ctx.closePath();
@@ -155,33 +162,49 @@ export class Hud {
   }
 
   private renderMinimap(): HTMLCanvasElement {
-    const { width, height, cell } = this.map.info;
-    const src = document.createElement('canvas');
-    src.width = width; src.height = height;
-    const ctx = src.getContext('2d')!;
-    const img = ctx.createImageData(width, height);
+    const { cell } = this.map.info;
+    const sc = this.miniScale;
+    const w = Math.round(this.map.sizeX * sc), h = Math.round(this.map.sizeZ * sc);
+    const out = document.createElement('canvas');
+    out.width = w; out.height = h;
+    const ctx = out.getContext('2d')!;
+    const img = ctx.createImageData(w, h);
     const pal = COVER_MINI.map((c) => [1, 3, 5].map((o) => parseInt(c.slice(o, o + 2), 16)));
     const g = this.map.ground;
-    for (let j = 0; j < height; j++) {
-      for (let i = 0; i < width; i++) {
-        const k = j * width + i;
-        const dx = (g[this.map.idx(i + 1, j)] - g[this.map.idx(i - 1, j)]) / (2 * cell) * 3;
-        const dz = (g[this.map.idx(i, j + 1)] - g[this.map.idx(i, j - 1)]) / (2 * cell) * 3;
+    const A = this.map.ausschnitt;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = Math.min(this.map.info.width - 1, Math.floor(x / sc / cell)), j = Math.min(this.map.info.height - 1, Math.floor(y / sc / cell));
+        const k = j * this.map.info.width + i;
+        const r4 = Math.max(1, Math.round(1 / (sc * cell)));
+        const dx = (g[this.map.idx(i + r4, j)] - g[this.map.idx(i - r4, j)]) / (2 * r4 * cell) * 3;
+        const dz = (g[this.map.idx(i, j + r4)] - g[this.map.idx(i, j - r4)]) / (2 * r4 * cell) * 3;
         const shade = Math.min(1.35, Math.max(0.45, 0.85 + (-dx - dz) * 0.45 / Math.hypot(1, dx, dz)));
-        const c = pal[this.map.water[k] > 0 ? 0 : this.map.cover[k]];
-        img.data[k * 4] = Math.min(255, c[0] * shade);
-        img.data[k * 4 + 1] = Math.min(255, c[1] * shade);
-        img.data[k * 4 + 2] = Math.min(255, c[2] * shade);
-        img.data[k * 4 + 3] = 255;
+        const c = pal[this.map.water[k] > 0 ? 0 : this.map.cover[k] === 7 ? 1 : this.map.cover[k]];
+        const o = (y * w + x) * 4;
+        img.data[o] = Math.min(255, c[0] * shade);
+        img.data[o + 1] = Math.min(255, c[1] * shade);
+        img.data[o + 2] = Math.min(255, c[2] * shade);
+        img.data[o + 3] = 255;
       }
     }
     ctx.putImageData(img, 0, 0);
-    const out = document.createElement('canvas');
-    out.width = Math.round(width * this.miniScale);
-    out.height = Math.round(height * this.miniScale);
-    const o = out.getContext('2d')!;
-    o.imageSmoothingQuality = 'high';
-    o.drawImage(src, 0, 0, out.width, out.height);
+    // Kulisse abdunkeln: alles außerhalb des Spielfeld-Hex
+    const ring = bigHexOutline(A.param.q, A.param.r, A.radius).map((p) => ({ x: (p.x - A.originX) * sc, z: (p.z - A.originZ) * sc }));
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, w, h);
+    ring.forEach((p, i) => (i ? ctx.lineTo(p.x, p.z) : ctx.moveTo(p.x, p.z)));
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(70,78,86,0.55)';
+    ctx.fill('evenodd');
+    ctx.restore();
+    ctx.beginPath();
+    ring.forEach((p, i) => (i ? ctx.lineTo(p.x, p.z) : ctx.moveTo(p.x, p.z)));
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(243,190,80,0.9)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
     return out;
   }
 }

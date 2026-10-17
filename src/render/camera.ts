@@ -7,6 +7,8 @@ import * as THREE from 'three';
 export interface CameraHost {
   groundY(x: number, z: number): number;
   bounds: { x: number; z: number };
+  /** Optional: Zielpunkt in erlaubtes Gebiet schieben (z. B. Spielfeld + Rand). */
+  clamp?(x: number, z: number): [number, number];
 }
 
 export class RtsCamera {
@@ -22,7 +24,7 @@ export class RtsCamera {
   minDistance = 180;
   maxDistance = 16000;
 
-  constructor(dom: HTMLElement, private host: CameraHost) {
+  constructor(private dom: HTMLElement, private host: CameraHost) {
     this.camera = new THREE.PerspectiveCamera(40, 1, 5, 80000);
     addEventListener('keydown', (e) => { if (!(e.target instanceof HTMLInputElement)) this.keys.add(e.code); });
     addEventListener('keyup', (e) => this.keys.delete(e.code));
@@ -99,6 +101,19 @@ export class RtsCamera {
 
   setDistance(d: number) { this.goal.distance = d; }
 
+  /** Kamera sofort an Ziel, Abstand und Drehung setzen (Kamerafahrt, Screenshots). */
+  jumpTo(x: number, z: number, distance: number, yaw = this.goal.yaw) {
+    this.goal.x = x; this.goal.z = z; this.goal.distance = distance; this.goal.yaw = yaw;
+    this.target.x = x; this.target.z = z; this.distance = distance; this.yaw = yaw;
+  }
+
+  /** Eingabe (Maus, Rad, Tasten, Touch) – für das Abbrechen der Kamerafahrt. */
+  onInput(fn: () => void) {
+    const dom = this.dom;
+    for (const t of ['pointerdown', 'wheel'] as const) dom.addEventListener(t, fn, { passive: true });
+    addEventListener('keydown', fn);
+  }
+
   private snap() { this.target.x = this.goal.x; this.target.z = this.goal.z; }
 
   /** Verschieben in Bildschirm-Richtungen: right = nach rechts, back = zur Kamera hin (nach unten im Bild). */
@@ -109,10 +124,15 @@ export class RtsCamera {
     this.goal.z += -right * s + back * c;
     this.goal.x = THREE.MathUtils.clamp(this.goal.x, 0, this.host.bounds.x);
     this.goal.z = THREE.MathUtils.clamp(this.goal.z, 0, this.host.bounds.z);
+    if (this.host.clamp) [this.goal.x, this.goal.z] = this.host.clamp(this.goal.x, this.goal.z);
   }
 
   /** Neigung aus dem Zoom: nah 26°, fern 56° über dem Horizont. */
+  /** Entwicklungswerkzeug: feste Neigung in Grad (Screenshots), sonst aus dem Zoom. */
+  pitchOverride: number | null = null;
+
   get pitch() {
+    if (this.pitchOverride !== null) return THREE.MathUtils.degToRad(this.pitchOverride);
     const t = Math.log(this.distance / this.minDistance) / Math.log(this.maxDistance / this.minDistance);
     return THREE.MathUtils.degToRad(26 + 30 * Math.pow(t, 1.1));
   }

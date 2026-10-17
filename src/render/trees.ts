@@ -3,9 +3,15 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { MapData } from '../map/mapdata';
-import { CHUNK, hash } from './terrain';
+import { hash } from './terrain';
+import { HexGrid } from '../map/hex';
+import { KULISSE_GLSL, KULISSE_FOG, kulisseUniforms } from './kulisse';
 
-const NEAR = 3200; // m: bis hier detaillierte Bäume
+const NEAR = 2800; // m: bis hier detaillierte Bäume
+const TCHUNK = 192; // Zellen (1920 m) je Baum-Chunk
+// Dichte wie bisher je m²: früher 0,88 je 900-m²-Zelle, jetzt je 100-m²-Zelle
+const P_WALD = 0.88 * 100 / 900;
+const P_STREU = 0.012 * 100 / 900;
 
 type Species = 'fichte' | 'buche';
 
@@ -63,20 +69,33 @@ export class Trees {
   constructor(map: MapData, base: number, ex: number) {
     this.material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: true });
     this.material.onBeforeCompile = (shader) => {
-      Object.assign(shader.uniforms, this.uniforms);
+      Object.assign(shader.uniforms, this.uniforms, kulisseUniforms);
       shader.vertexShader = shader.vertexShader
-        .replace('#include <common>', '#include <common>\nuniform float uTime;')
+        .replace('#include <common>', `#include <common>
+uniform float uTime; varying float vKFade; varying float vKOut;
+${KULISSE_GLSL}`)
         .replace('#include <begin_vertex>', `#include <begin_vertex>
 #ifdef USE_INSTANCING
 {
   vec3 ip = instanceMatrix[3].xyz;
   float sway = sin(uTime * 1.6 + ip.x * 0.043 + ip.z * 0.061) * 0.018 * max(position.y - 6.0, 0.0);
   transformed.x += sway; transformed.z += sway * 0.6;
+  vec2 wxz = (modelMatrix * vec4(ip, 1.0)).xz;
+  vKFade = kFade(wxz); vKOut = kOut(wxz);
 }
 #endif`);
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', `#include <common>
+varying float vKFade; varying float vKOut;
+${KULISSE_GLSL}`)
+        .replace('#include <color_fragment>', `#include <color_fragment>
+diffuseColor.rgb = kGrau(diffuseColor.rgb, vKOut * 0.85);`)
+        .replace('#include <fog_fragment>', KULISSE_FOG);
     };
     const geos = buildGeometries();
     const { width, height, cell } = map.info;
+    const grid = new HexGrid(map.originX, map.originZ, map.ausschnitt.hex);
+    const CHUNK = TCHUNK;
     for (let j0 = 0; j0 < height - 1; j0 += CHUNK) {
       for (let i0 = 0; i0 < width - 1; i0 += CHUNK) {
         const lists: Record<Species, number[]> = { fichte: [], buche: [] };
@@ -87,9 +106,13 @@ export class Trees {
             const r = hash(i * 3 + 11, j * 7 + 5);
             const forest = cv === 3;
             // Wald dicht, auf Wiesen/Mooren vereinzelte Bäume (Hecken-Landschaft)
-            if (!(forest ? r < 0.88 : (cv === 1 || cv === 5) && r < 0.012)) continue;
-            const x = (i + 0.5 + (hash(i, j + 99) - 0.5) * 0.8) * cell;
-            const z = (j + 0.5 + (hash(i + 77, j) - 0.5) * 0.8) * cell;
+            if (!(forest ? r < P_WALD : (cv === 1 || cv === 5) && r < P_STREU)) continue;
+            if (map.railMask[k]) continue;
+            const x = (i + 0.5 + (hash(i, j + 99) - 0.5) * 0.98) * cell;
+            const z = (j + 0.5 + (hash(i + 77, j) - 0.5) * 0.98) * cell;
+            // Ortskern-Hexe bleiben frei (dort stehen die Häuser)
+            const hi = grid.index(grid.fromWorld(x, z));
+            if (hi >= 0 && map.hexTerrain[hi] === 6) continue;
             const gy = map.heightAt(x, z);
             if (map.water[k] > 0) continue;
             const pFichte = Math.min(0.85, Math.max(0.15, (gy - 380) / 250));
