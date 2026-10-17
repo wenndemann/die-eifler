@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "build:share": "tsc --noEmit && node tools/build_share.mjs"
+    "build:share": "tsc --noEmit && node tools/build_share.mjs",
+    "test:smoke": "node tests/smoke.mjs"
   },
   "dependencies": {
     "three": "^0.169.0"

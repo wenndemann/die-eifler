@@ -6,7 +6,19 @@ import type { Manifest, Orte, Versionen } from './format';
 export const WELT_URL: string = (import.meta.env.VITE_WELT_URL as string | undefined)
   ?? `${import.meta.env.BASE_URL}welt`;
 
+/** Teilen-Version (VITE_WELT_B64=1): Binärdateien (.gz, .webp) liegen als Base64-Text mit Endung .txt vor. */
+export const WELT_B64: boolean = (import.meta.env.VITE_WELT_B64 as string | undefined) === '1';
+
 const CACHE = 'eifeler-welt-1';
+
+const istBinaer = (url: string) => /\.(gz|webp)$/.test(url.split('?')[0]);
+
+function base64ZuBytes(text: string): Uint8Array {
+  const bin = atob(text.replace(/\s+/g, ''));
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
 
 async function cached(url: string): Promise<Response> {
   let cache: Cache | null = null;
@@ -23,12 +35,22 @@ async function cached(url: string): Promise<Response> {
 
 /** Bytes einer Datei; gzip wird erkannt (Magic 1f 8b) und entpackt, auch wenn der Server es schon getan hat. */
 export async function holeBytes(url: string, immutable = true): Promise<Uint8Array> {
-  const res = immutable ? await cached(url) : await fetch(url);
-  if (!res.ok) throw new Error(`${url}: ${res.status}`);
-  const buf = new Uint8Array(await res.arrayBuffer());
+  const b64 = WELT_B64 && istBinaer(url);
+  const echt = b64 ? `${url}.txt` : url;
+  const res = immutable ? await cached(echt) : await fetch(echt);
+  if (!res.ok) throw new Error(`${echt}: ${res.status}`);
+  const buf = b64 ? base64ZuBytes(await res.text()) : new Uint8Array(await res.arrayBuffer());
   if (buf.length < 2 || buf[0] !== 0x1f || buf[1] !== 0x8b) return buf;
   const ds = new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'));
   return new Uint8Array(await new Response(ds).arrayBuffer());
+}
+
+/** URL, unter der ein Bild (z. B. relief.webp) einem <img> übergeben werden kann; in der Teilen-Version eine Data-URL. */
+export async function holeBildUrl(url: string): Promise<string> {
+  if (!WELT_B64) return url;
+  const res = await cached(`${url}.txt`);
+  const typ = url.endsWith('.webp') ? 'image/webp' : 'application/octet-stream';
+  return `data:${typ};base64,${(await res.text()).replace(/\s+/g, '')}`;
 }
 
 export async function holeJson<T>(url: string, immutable = true): Promise<T> {
