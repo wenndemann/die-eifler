@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig, type Plugin } from 'vite';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { join, normalize, resolve } from 'node:path';
@@ -24,4 +25,5 @@ function weltDaten(): Plugin {
 
 export default defineConfig({
   plugins: [weltDaten()],
+  test: { exclude: ['**/node_modules/**', '.claude/**', 'dist/**'] },
 });
