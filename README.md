@@ -1,5 +1,7 @@
 # Die Eifeler
 
+Für de Lück von he: [Lies mich op Platt](README-platt.md)
+
 Ein Aufbauspiel im Geist von Siedler 2 auf der echten Eifel von heute. Man spielt ein kleines, krummbeiniges,
 schlitzohriges Bergvolk, das niemals stiehlt – es **findet** Dinge.
 
