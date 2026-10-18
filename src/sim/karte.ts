@@ -21,6 +21,10 @@ export class SimKarte {
   /** Bauplatz 0 keiner … 3 groß; Wasser, Fels und Bahn-Hexe sind 0. */
   readonly bebaubar: Uint8Array;
   readonly hoehe: Uint16Array;
+  /** Kopien der Kartenfelder, die Bäume, Felsen und Arbeit brauchen. */
+  readonly terrain: Uint8Array;
+  readonly neigung: Uint8Array;
+  readonly flags: Uint8Array;
   private readonly start: Int32Array;
 
   constructor(d: KarteDaten) {
@@ -42,6 +46,9 @@ export class SimKarte {
     this.begehbar = new Uint8Array(this.count);
     this.bebaubar = new Uint8Array(this.count);
     this.hoehe = Uint16Array.from(d.height);
+    this.terrain = Uint8Array.from(d.terrain);
+    this.neigung = Uint8Array.from(d.slope);
+    this.flags = Uint8Array.from(d.flags);
     for (let i = 0; i < this.count; i++) {
       const t = d.terrain[i];
       this.begehbar[i] = t === 0 ? 0 : 1;
