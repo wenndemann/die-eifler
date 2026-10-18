@@ -1,19 +1,23 @@
-// Spielgebäude (Drehbuch 3, 7.3; M3): lager, holzfaeller, steinbruch, saegewerk, wohnhaus als erste prozedurale
+// Spielgebäude (Drehbuch 3, 7.3; M3, M4): lager, holzfaeller, foerster, steinbruch, saegewerk, huette, wohnhaus als prozedurale
 // Fachwerk-Modelle (fachwerk() aus mockup.ts) in HAUS_SKALE-facher Größe auf dem Gebäude-Hex. Der Eingang schaut nach
 // Süden (+z), die Fahne steht davor in der Hex-Mitte (fahnen.ts). Drei Bauphasen aus `bau` (Phasenformel in
 // src/sim/typen.ts): 1 abgesteckter Grund mit Fundament und Pflöcken, 2 Fachwerkgerüst, 3 fertig mit Dach.
 // Beim ersten Erscheinen wird das Gelände unter dem Grundriss planiert (map.ground, wie houses.ts), weich
 // übergeblendet, erdig gefärbt und neu aufgebaut; Kulissenhäuser auf dem Hex verschwinden.
-// ⚠ über Gebäuden ohne Wegverbindung (getrennt). Reiner Leser der SimSicht, ohne Simulation nutzbar.
+// ⚠ über Gebäuden ohne Wegverbindung (getrennt), kleine Symbole bei Stillstand (kein Baum/Fels/Platz/Arbeiter, Lager voll).
+// An Baustellen liegt der offene Bedarf als kleiner Waren-Stapel samt Bauschild. Reiner Leser der SimSicht, ohne Simulation nutzbar.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { MapData } from '../map/mapdata';
 import type { HexGrid } from '../map/hex';
-import { PROMILLE, type Id, type SimSicht } from '../sim/typen';
+import { PROMILLE, type GebaeudeZustand, type Id, type SimSicht } from '../sim/typen';
 import { box, roof, fachwerk, logPile, paint, C } from './mockup';
 import { Instanzen } from './instanzen';
+import { WAREN_ANZAHL, WARE_HOEHE, warenGeometrie } from './waren';
+import { WARE_M } from './massstab';
 import { HAUS_SKALE } from './massstab';
 import { hash } from './terrain';
+import type { Trees } from './trees';
 
 /** Boden liegt im Modell bei y = G (wie bei den Kulissenhäusern: Sockel ragt 0,5 m heraus). */
 const G = 0.5;
@@ -25,7 +29,7 @@ const RAND = 2.5;
 export interface GebaeudeHaken {
   terrain?: { erneuere(x0: number, z0: number, x1: number, z1: number): void; setzeErde(i: number, j: number, anteil: number): void };
   houses?: { verstecke(x: number, z: number, radius: number): number };
-  trees?: { lichte(x: number, z: number, radius: number): number; lichtePunkte(p: { x: number; z: number }[], radius: number): number };
+  trees?: Trees;
 }
 
 // ---------------------------------------------------------------- Bausteine
@@ -169,6 +173,50 @@ const TYPEN: Record<string, Typ> = {
         ...logPile(-2, 8, 6).map((g) => g.translate(0, G, 0)), ...stapelBretter(sx - 1.5, 6.8, 4.5, 1.6, 2.4), ...stapelBretter(sx + 3.5, 6.8, 3.4, 1.6, 1.4)];
     },
   },
+  foerster: {
+    w: 7, d: 6, floors: 1, wand: '#e6ecd2', dach: '#55793c', laden: '#2f7a55', skala: 1, hoehe: 9,
+    grund: [-6, 15, -4.5, 9],
+    fertig() {
+      const t = TYPEN.foerster;
+      const out: THREE.BufferGeometry[] = [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach), ...laeden(t.w, t.d, t.floors, t.laden)];
+      // Setzlingsbeet rechts: Erdbeet in Reihen, junge Fichten und Buchen, niedriger Zaun
+      const bx = 11, bz = 1.5;
+      out.push(boxR(8, 0.5, 6.4, bx, G + 0.2, bz, '#5e402a'));
+      for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) {
+        const px = bx - 2.7 + i * 1.8, pz = bz - 2 + j * 2, sz = 0.75 + hash(i * 3 + j, 4) * 0.35;
+        if ((i + j) % 2) out.push(walze(0.1, 1.1 * sz, px, G + 0.9, pz, HOLZ, 0, 0, 4), paint(new THREE.SphereGeometry(0.62 * sz, 5, 4).translate(px, G + 1.6 * sz + 0.2, pz), '#5aa044'));
+        else out.push(walze(0.1, 0.8 * sz, px, G + 0.75, pz, HOLZ, 0, 0, 4), paint(new THREE.ConeGeometry(0.62 * sz, 1.9 * sz, 6).translate(px, G + 1.7 * sz + 0.2, pz), '#2f7a3c'));
+      }
+      for (const [fx, fz] of [[-4.4, -3.4], [4.4, -3.4], [4.4, 3.4], [-4.4, 3.4], [0, 3.4], [0, -3.4]]) out.push(boxR(0.3, 1.5, 0.3, bx + fx, G + 0.75, bz + fz, HOLZ));
+      out.push(boxR(8.8, 0.2, 0.18, bx, G + 1.2, bz + 3.4, HOLZ), boxR(8.8, 0.2, 0.18, bx, G + 1.2, bz - 3.4, HOLZ), boxR(0.18, 0.2, 6.8, bx + 4.4, G + 1.2, bz, HOLZ), boxR(0.18, 0.2, 6.8, bx - 4.4, G + 1.2, bz, HOLZ));
+      // Schubkarre mit Setzlingen, Gießkanne, Holzschild mit Fichte
+      out.push(boxR(1.8, 0.6, 1.1, -7.5, G + 1.0, 6.4, '#8a6a48', 0, 0.2), walze(0.55, 0.16, -7.5, G + 0.55, 7.3, DUNKEL, Math.PI / 2, 0, 8));
+      for (let i = 0; i < 3; i++) out.push(paint(new THREE.ConeGeometry(0.5, 1.5, 6).translate(-8 + i * 0.55, G + 2.0, 6.4), '#2f7a3c'));
+      out.push(walze(0.42, 0.7, -3.8, G + 0.35, 7.6, '#5a8fb5', 0, 0, 7), boxR(0.9, 0.12, 0.12, -3.2, G + 0.9, 7.6, '#5a8fb5', 0, 0, 0.5));
+      out.push(boxR(0.22, 3.4, 0.22, 3.6, G + 1.7, 7.2, HOLZ), boxR(2.2, 1.6, 0.18, 3.6, G + 3.4, 7.2, '#e0c690'), paint(new THREE.ConeGeometry(0.6, 1.2, 6).translate(3.6, G + 3.4, 7.35), '#2f7a3c'));
+      // zwei ältere Bäumchen neben der Hütte
+      out.push(...baum(-8.5, -2.5, 1.0), ...baum(-6.5, -5.5, 0.7));
+      return out;
+    },
+  },
+  huette: {
+    w: 6, d: 5.2, floors: 1, wand: '#f3ead4', dach: '#4f5964', laden: '#3a6ea5', skala: 1, hoehe: 8,
+    grund: [-6.5, 7.5, -4, 8],
+    fertig() {
+      const t = TYPEN.huette;
+      const out: THREE.BufferGeometry[] = [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach), ...laeden(t.w, t.d, t.floors, t.laden), ...blumenkasten(t.w, t.d, t.floors)];
+      // Brennholz an der Seitenwand, Regentonne an der Ecke, Bank an der Tür
+      out.push(...logPile(-4.6, -0.5, 6).map((g) => g.translate(0, G, 0)).map((g) => g.rotateY(0)), ...fass(3.9, 2.9), boxR(1.9, 0.18, 0.6, -1.9, G + 0.8, 3.6, HOLZ), boxR(0.18, 0.8, 0.5, -2.7, G + 0.4, 3.6, HOLZ), boxR(0.18, 0.8, 0.5, -1.1, G + 0.4, 3.6, HOLZ));
+      // Gemüsebeet vor der Hütte (Kartoffelreihen), Steinrand
+      out.push(boxR(5.6, 0.35, 2.8, 2.4, G + 0.15, 6.2, '#654630'));
+      for (let r = 0; r < 3; r++) for (let k = 0; k < 4; k++) out.push(paint(new THREE.SphereGeometry(0.42, 5, 4).scale(1, 0.8, 1).translate(0.2 + k * 1.4, G + 0.75, 5.4 + r * 0.8), (k + r) % 2 ? '#4f9a3a' : '#5eaa44'));
+      out.push(...steinHaufen(-5.6, 6.2, 5, 1.2, 0.4));
+      // Hühnerstange? – ein Besen und ein Blumentopf neben der Tür
+      out.push(boxR(0.1, 2.2, 0.1, 1.8, G + 1.1, t.d / 2 + 0.5, HOLZ, 0, 0, 0.12), walze(0.35, 0.5, 2.6, G + 0.25, t.d / 2 + 0.6, '#b0603a', 0, 0, 7), paint(new THREE.SphereGeometry(0.3, 5, 4).translate(2.6, G + 0.75, t.d / 2 + 0.6), '#e0392b'));
+      out.push(...baum(6.2, 2.0, 0.7));
+      return out;
+    },
+  },
   wohnhaus: {
     w: 10, d: 7, floors: 2, wand: '#f4e2c2', dach: '#b8503a', laden: '#2f8f8f', skala: 0.95, hoehe: 12,
     grund: [-7, 8, -4.5, 6],
@@ -259,10 +307,9 @@ function phase2(t: Typ): THREE.BufferGeometry[] {
   return out;
 }
 
-/** Gebäude ohne eigenes Modell (M4: Förster, Hütte) zeigen ein vorhandenes. */
-const MODELL_ERSATZ: Record<string, string> = { foerster: 'holzfaeller', huette: 'wohnhaus' };
+/** Unbekannte Typen zeigen das Wohnhaus. */
 function modellTyp(typ: string): string {
-  return typ in TYPEN ? typ : (MODELL_ERSATZ[typ] ?? 'wohnhaus');
+  return typ in TYPEN ? typ : 'wohnhaus';
 }
 
 const modellCache = new Map<string, THREE.BufferGeometry>();
@@ -301,6 +348,58 @@ function warnTextur(): THREE.CanvasTexture {
   return t;
 }
 
+/** Symbole für Stillstand: Abzeichen mit gezeichnetem Bild (ohne Schriftzeichen, damit es überall gleich aussieht). */
+type Symbol = 'kein_baum' | 'kein_fels' | 'kein_platz' | 'kein_arbeiter' | 'voll';
+const SYMBOL_ZUSTAENDE: Partial<Record<GebaeudeZustand, Symbol>> = {
+  kein_baum: 'kein_baum', kein_fels: 'kein_fels', kein_platz: 'kein_platz', kein_arbeiter: 'kein_arbeiter', voll: 'voll',
+};
+function symbolTextur(art: Symbol): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d')!;
+  g.lineJoin = 'round'; g.lineCap = 'round';
+  g.beginPath(); g.arc(64, 64, 56, 0, Math.PI * 2);
+  g.fillStyle = art === 'voll' ? '#f0a43a' : '#f4f0e4'; g.fill();
+  g.lineWidth = 8; g.strokeStyle = '#3a2a10'; g.stroke();
+  g.fillStyle = '#3a2a10'; g.strokeStyle = '#3a2a10';
+  if (art === 'kein_baum' || art === 'kein_platz') {
+    g.fillStyle = '#2f7a3c';
+    g.beginPath(); g.moveTo(64, 20); g.lineTo(90, 62); g.lineTo(38, 62); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(64, 42); g.lineTo(96, 88); g.lineTo(32, 88); g.closePath(); g.fill();
+    g.fillStyle = '#6b4a2e'; g.fillRect(58, 88, 12, 16);
+  } else if (art === 'kein_fels') {
+    g.fillStyle = '#8f8a80'; g.strokeStyle = '#3a2a10'; g.lineWidth = 5;
+    g.beginPath(); g.moveTo(26, 90); g.lineTo(40, 50); g.lineTo(64, 36); g.lineTo(92, 52); g.lineTo(104, 90); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#c0bbb0'; g.beginPath(); g.moveTo(40, 50); g.lineTo(64, 36); g.lineTo(70, 58); g.lineTo(48, 66); g.closePath(); g.fill();
+  } else if (art === 'kein_arbeiter') {
+    g.fillStyle = '#e98a73'; g.beginPath(); g.arc(64, 46, 17, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#c0392b'; g.beginPath(); g.arc(64, 42, 18, Math.PI, Math.PI * 2); g.fill();
+    g.fillStyle = '#3f6fb5'; g.beginPath(); g.ellipse(64, 96, 28, 24, 0, Math.PI, Math.PI * 2); g.fill();
+  } else {
+    // Lager voll: Kiste
+    g.fillStyle = '#b98b55'; g.fillRect(30, 44, 68, 50); g.lineWidth = 5; g.strokeRect(30, 44, 68, 50);
+    g.fillStyle = '#3a2a10'; g.fillRect(30, 62, 68, 6); g.fillRect(61, 44, 6, 50);
+  }
+  if (art !== 'voll') {
+    // roter Querstrich: „kein …“
+    g.lineWidth = 12; g.strokeStyle = '#d4291f';
+    g.beginPath(); g.moveTo(26, 26); g.lineTo(102, 102); g.stroke();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/** Bauschild: Pfosten mit rot-weißem Brett (steht an Baustellen neben dem Material). */
+function bauschild(): THREE.BufferGeometry {
+  return mergeGeometries([
+    boxR(0.35, 4.2, 0.35, 0, G + 2.1, 0, HOLZ),
+    boxR(3.4, 1.7, 0.22, 0, G + 4.2, 0, '#f1e9d4'),
+    boxR(3.4, 0.4, 0.26, 0, G + 4.7, 0, '#c8402e'), boxR(3.4, 0.4, 0.26, 0, G + 3.7, 0, '#c8402e'),
+    boxR(0.5, 0.5, 0.28, 0, G + 4.2, 0, '#3a2a10', 0, 0, 0.78),
+  ])!;
+}
+
 interface Platz { x: number; z: number; y: number; hex: string }
 
 export class Gebaeude {
@@ -310,8 +409,10 @@ export class Gebaeude {
   private saetze = new Map<string, Instanzen>();
   private mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, flatShading: true, side: THREE.DoubleSide });
   private plaetze = new Map<Id, Platz>();
-  private warn = new Map<Id, THREE.Sprite>();
-  private warnMat: THREE.SpriteMaterial;
+  private warn = new Map<Id, { sp: THREE.Sprite; art: string }>();
+  private symbolMat = new Map<string, THREE.SpriteMaterial>();
+  private bauWaren: Instanzen[] = [];
+  private bauSchild: Instanzen | null = null;
   private zeit = 0;
   private ex: number;
   private m = new THREE.Matrix4();
@@ -322,7 +423,16 @@ export class Gebaeude {
 
   constructor(private map: MapData, private grid: HexGrid, private base: number, ex: number, private haken: GebaeudeHaken = {}) {
     this.ex = ex;
-    this.warnMat = new THREE.SpriteMaterial({ map: warnTextur(), transparent: true, depthWrite: false, fog: false });
+    this.symbolMat.set('warn', new THREE.SpriteMaterial({ map: warnTextur(), transparent: true, depthWrite: false, fog: false }));
+    const matte = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: true });
+    for (let a = 0; a < WAREN_ANZAHL; a++) this.bauWaren.push(new Instanzen(this.group, warenGeometrie(a), matte, false, true, [], 16));
+    this.bauSchild = new Instanzen(this.group, bauschild(), this.mat, false, true, [], 8);
+  }
+
+  private symbol(art: string): THREE.SpriteMaterial {
+    let m = this.symbolMat.get(art);
+    if (!m) { m = new THREE.SpriteMaterial({ map: symbolTextur(art as Symbol), transparent: true, depthWrite: false, fog: false }); this.symbolMat.set(art, m); }
+    return m;
   }
 
   setExaggeration(ex: number) {
@@ -380,6 +490,8 @@ export class Gebaeude {
     this.zeit += dt;
     for (const g of sicht.gebaeude) if (!this.plaetze.has(g.id)) this.plaetze.set(g.id, this.planiere(g.typ, g.q, g.r));
     for (const s of this.saetze.values()) s.beginne();
+    for (const w of this.bauWaren) w.beginne();
+    this.bauSchild!.beginne();
     const { base, ex, m, q, p, s, farbe } = this;
     const sichtbar = new Set<Id>();
     for (const g of sicht.gebaeude) {
@@ -400,18 +512,52 @@ export class Gebaeude {
       m.compose(p.set(pl.x, y, pl.z), q, s.set(sk, sk, sk));
       const v = 0.94 + hash(g.id * 7, 3) * 0.12;
       satz.fuege(m, farbe.setRGB(v, v * (0.97 + hash(g.id, 5) * 0.05), v * (0.94 + hash(g.id, 9) * 0.08)));
-      if (g.getrennt) {
+      // Zeichen über dem Gebäude: ⚠ bei getrennt, sonst ein Symbol bei Stillstand fertiger Gebäude
+      const art = g.getrennt ? 'warn' : g.bau >= PROMILLE ? SYMBOL_ZUSTAENDE[g.zustand] ?? null : null;
+      if (art) {
         sichtbar.add(g.id);
-        let sp = this.warn.get(g.id);
-        if (!sp) { sp = new THREE.Sprite(this.warnMat); sp.renderOrder = 10; this.group.add(sp); this.warn.set(g.id, sp); }
+        let w = this.warn.get(g.id);
+        if (!w) { w = { sp: new THREE.Sprite(this.symbol(art)), art }; w.sp.renderOrder = 10; this.group.add(w.sp); this.warn.set(g.id, w); }
+        else if (w.art !== art) { w.sp.material = this.symbol(art); w.art = art; }
         const dist = this.kamera ? this.kamera.position.distanceTo(p.set(pl.x, y, pl.z)) : 800;
-        const gr = Math.min(120, Math.max(26, dist * 0.045));
-        sp.scale.set(gr, gr, 1);
-        sp.position.set(pl.x, y + (t.hoehe * sk) + gr * 0.7 + Math.sin(this.zeit * 3 + g.id) * gr * 0.1, pl.z);
+        const gr = Math.min(120, Math.max(26, dist * 0.045)) * (art === 'warn' ? 1 : 0.8);
+        w.sp.scale.set(gr, gr, 1);
+        w.sp.position.set(pl.x, y + (t.hoehe * sk) + gr * 0.7 + Math.sin(this.zeit * 3 + g.id) * gr * 0.1, pl.z);
       }
+      // Baustelle: offener Bedarf als kleiner Stapel vor dem Grundstück, dazu ein Bauschild
+      if (g.bau < PROMILLE && g.bedarf) this.bauBedarf(g);
     }
-    for (const [id, sp] of this.warn) if (!sichtbar.has(id)) { this.group.remove(sp); this.warn.delete(id); }
+    for (const [id, w] of this.warn) if (!sichtbar.has(id)) { this.group.remove(w.sp); this.warn.delete(id); }
+    for (const w of this.bauWaren) w.fertig();
+    this.bauSchild!.fertig();
     for (const sa of this.saetze.values()) sa.fertig();
+  }
+
+  /** Offener Bedarf einer Baustelle als Warenstapel links vor dem Hex-Mittelpunkt (an der Fahne), mit Bauschild. */
+  private bauBedarf(g: { id: Id; q: number; r: number; bedarf?: number[] }) {
+    const { m, q, p, s, ex, base } = this;
+    const w = this.grid.toWorld({ q: g.q, r: g.r });
+    const k = this.kamera ? Math.max(1, Math.min(1.6, this.kamera.position.distanceTo(p.set(w.x, 0, w.z)) / 900)) : 1;
+    let slot = 0;
+    q.identity();
+    for (let a = 0; a < WAREN_ANZAHL; a++) {
+      const n = Math.min(8, g.bedarf![a] ?? 0);
+      if (n <= 0) continue;
+      const bx = w.x - 17 - slot * 11 * k, bz = w.z + 8;
+      for (let j = 0; j < n; j++) {
+        const x = bx + (j % 2) * WARE_M * 1.0, lv = Math.floor(j / 2), z = bz + (lv % 2) * 0.8;
+        s.setScalar(k);
+        m.compose(p.set(x, (this.map.heightAt(x, z) - base) * ex + lv * WARE_HOEHE[a] * k, z), q, s);
+        this.bauWaren[a].fuege(m);
+      }
+      slot++;
+    }
+    if (slot) {
+      const x = w.x - 17 - slot * 11 * k - 1, z = w.z + 8;
+      s.setScalar(1.4 * k);
+      m.compose(p.set(x, (this.map.heightAt(x, z) - base) * ex - G * 1.4 * k, z), q, s);
+      this.bauSchild!.fuege(m);
+    }
   }
 
   /** Mitte (Ausschnitt-Meter) eines Gebäudes, sobald es einmal in der Sicht war. */
