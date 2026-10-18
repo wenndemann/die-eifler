@@ -53,6 +53,8 @@ export class MapData {
   readonly originZ: number;
   /** Zellen in Bahnnähe (für Bäume u. Ä.). */
   readonly railMask: Uint8Array;
+  /** Zählt Änderungen an `ground` (planierte Bauplätze): Linien und Figuren, die am Gelände kleben, bauen sich neu. */
+  groundRev = 0;
 
   constructor(readonly info: MapInfo, readonly ausschnitt: Ausschnitt) {
     this.ground = ausschnitt.ground;
