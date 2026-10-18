@@ -98,6 +98,7 @@ export class Trees {
   private qualitaet: Qualitaet = 'mittel';
   count = 0;
   visibleNear = 0;
+  private ex = 1;
   private nahDist: number = QUALI.mittel.baumNah;
 
   /** maske: Rasterzellen, die frei bleiben (Häuser). */
@@ -231,7 +232,49 @@ diffuseColor.rgb = kGrau(diffuseColor.rgb, vKOut * 0.85);`)
     mesh.computeBoundingSphere();
   }
 
+  /** Bäume im Umkreis (Ausschnitt-Meter) entfernen, z. B. wo ein Spielgebäude entsteht. Liefert die Zahl betroffener Netze. */
+  lichte(x: number, z: number, radius: number): number {
+    return this.lichtePunkte([{ x, z }], radius);
+  }
+
+  /** Bäume im Umkreis mehrerer Punkte entfernen (z. B. entlang eines Wegs); Gitter-Suche, daher auch für viele Punkte schnell. */
+  lichtePunkte(punkte: { x: number; z: number }[], radius: number): number {
+    if (!punkte.length) return 0;
+    const r2 = radius * radius, zelle = radius * 2;
+    const gitter = new Map<string, { x: number; z: number }[]>();
+    for (const p of punkte) {
+      const k = `${Math.floor(p.x / zelle)},${Math.floor(p.z / zelle)}`;
+      const l = gitter.get(k);
+      if (l) l.push(p); else gitter.set(k, [p]);
+    }
+    const raus = (data: Float32Array) => {
+      let n = 0;
+      for (let t = 0; t < data.length / 5; t++) {
+        if (data[t * 5 + 3] <= 0) continue;
+        const x = data[t * 5], z = data[t * 5 + 2];
+        const ci = Math.floor(x / zelle), cj = Math.floor(z / zelle);
+        let treffer = false;
+        for (let dj = -1; dj <= 1 && !treffer; dj++) for (let di = -1; di <= 1 && !treffer; di++) {
+          const l = gitter.get(`${ci + di},${cj + dj}`);
+          if (l) for (const p of l) if ((p.x - x) * (p.x - x) + (p.z - z) * (p.z - z) < r2) { treffer = true; break; }
+        }
+        if (treffer) { data[t * 5 + 3] = 0; n++; }
+      }
+      return n;
+    };
+    let gesamt = 0;
+    for (const ch of this.chunks) for (const [sp, data] of ch.data) {
+      if (!raus(data)) continue;
+      gesamt++;
+      this.fill(ch.near.get(sp)!, data, this.ex);
+      ch.far.get(sp)!.boundingSphere = ch.near.get(sp)!.boundingSphere;
+    }
+    for (const v of this.verbuende) for (const [sp, data] of v.data) if (raus(data)) this.fill(v.far.get(sp)!, data, this.ex);
+    return gesamt;
+  }
+
   setExaggeration(ex: number) {
+    this.ex = ex;
     for (const ch of this.chunks) {
       let sum = 0, cnt = 0;
       for (const [sp, data] of ch.data) {

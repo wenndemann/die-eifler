@@ -1,5 +1,12 @@
 // Baut eine eigenständige Teilen-Version nach dist-share/ (z. B. als Artifact-Seite fürs Handy):
 //   npm run build:share -- [--version V] [--vorschlaege monschau-rursee,rureifel] [--ausschnitt q,r,groesse]...
+//                          [--gebiet nordeifel|nideggen|alle|tx0-tx1,tz0-tz1]... [--trotzdem]
+// - --gebiet nimmt ZUSÄTZLICH alle Kacheln eines Gebiets auf (Raster r10, r40, vec und die Hex-Kacheln dazu),
+//   nur solche, die im Manifest der Quell-Datenversion stehen. Namen wie in tools/map/setup.py (src/welt/gebiet.ts).
+// - Kacheln liegen in wenigen Bündel-Dateien (buendel/<art>-<n>.txt, je Zeile „pfad<TAB>base64“, Index buendel.json),
+//   damit auch ein ganzes Gebiet unter 250 Dateien bleibt; der Client lädt ein Bündel erst, wenn er daraus etwas braucht.
+// - Grenzen (Seite <= 16 MB, Datei <= 15 MB, Summe <= 60 MB, <= 250 Dateien): bei Überschreitung Abbruch mit Exit-Code 1,
+//   außer mit --trotzdem.
 // - Spiel mit relativen Pfaden (vite build --base ./), VITE_WELT_B64=1, VITE_WELT_URL=./welt
 // - Teil-Datenversion unter dist-share/welt/<version>/: nur die Kacheln, die die gewählten Vorschläge/Ausschnitte
 //   samt Kulisse brauchen; Binärdateien (.gz, .webp) als Base64-Text mit Endung .txt
@@ -19,6 +26,8 @@ const DATEN = resolve(process.env.WELT_DATEN ?? join(WURZEL, 'welt-daten'));
 const args = process.argv.slice(2);
 const opt = (name) => args.flatMap((a, i) => (a === `--${name}` ? [args[i + 1]] : a.startsWith(`--${name}=`) ? [a.slice(name.length + 3)] : []));
 let version = opt('version')[0];
+const trotzdem = args.includes('--trotzdem');
+const BUENDEL_MAX = 8 * 2 ** 20; // Zeichen je Bündel (Grenze je Datei ist 15 MB)
 const vorschlagIds = opt('vorschlaege').flatMap((s) => s.split(',')).map((s) => s.trim()).filter(Boolean);
 const ausschnitte = opt('ausschnitt').map((s) => {
   const [q, r, size] = s.split(',').map((x) => x.trim());
@@ -38,7 +47,9 @@ const bundle = await build({
     contents: `export { klemmeAusschnitt, datenRechteck } from './src/welt/ausschnitt.ts';
 export { toOffset } from './src/welt/hexwelt.ts';
 export { GROESSEN, HEX, KACHEL } from './src/welt/format.ts';
-export { VORSCHLAEGE } from './src/map/presets.ts';`,
+export { VORSCHLAEGE } from './src/map/presets.ts';
+export { parseGebiet, gebietsKacheln } from './src/welt/gebiet.ts';
+export { packeBuendel, BUENDEL_ART } from './src/welt/buendel.ts';`,
     resolveDir: WURZEL, loader: 'ts',
   },
   bundle: true, format: 'esm', platform: 'node', write: false, define: { 'import.meta.env': '{}' }, logLevel: 'error',
@@ -46,6 +57,7 @@ export { VORSCHLAEGE } from './src/map/presets.ts';`,
 const L = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
 
 const manifest = lesJson(join(quelle, 'manifest.json'));
+const gebiete = opt('gebiet').map((s) => ({ name: s.trim(), bereich: L.parseGebiet(s) }));
 const auswahl = [];
 for (const id of vorschlagIds) {
   const v = L.VORSCHLAEGE.find((x) => x.id === id);
@@ -53,7 +65,7 @@ for (const id of vorschlagIds) {
   auswahl.push({ name: id, q: v.q, r: v.r, size: v.size });
 }
 for (const a of ausschnitte) auswahl.push({ name: `ausschnitt ${a.q},${a.r},${a.size}`, ...a });
-if (!auswahl.length) {
+if (!auswahl.length && !gebiete.length) {
   for (const v of L.VORSCHLAEGE) auswahl.push({ name: v.id, q: v.q, r: v.r, size: v.size });
   console.log('Hinweis: weder --vorschlaege noch --ausschnitt angegeben, nehme alle Vorschläge, die in die Daten passen.');
 }
@@ -84,7 +96,18 @@ for (const a of auswahl) {
     for (let hx = Math.floor(c0 / L.HEX.tile); hx <= Math.floor(c1 / L.HEX.tile); hx++) if (manifestH.has(`${hx}_${hz}`)) hexKacheln.add(`${hx}_${hz}`);
   }
 }
-if (!genommen) throw new Error('Kein Vorschlag/Ausschnitt passt in die Daten dieser Version – nichts zu bauen.');
+for (const g of gebiete) {
+  const k = L.gebietsKacheln(manifest, g.bereich);
+  if (!k.raster.size) {
+    console.warn(`Übersprungen: Gebiet ${g.name} – keine Kachel davon im Manifest von ${version}`);
+    continue;
+  }
+  console.log(`Gebiet ${g.name}: ${k.raster.size} Raster-Kacheln, ${k.hex.size} Hex-Kacheln`);
+  for (const x of k.raster) rKacheln.add(x);
+  for (const x of k.hex) hexKacheln.add(x);
+  genommen++;
+}
+if (!genommen) throw new Error('Kein Vorschlag/Ausschnitt/Gebiet passt in die Daten dieser Version – nichts zu bauen.');
 
 // ---------------------------------------------------------------- Spiel bauen
 rmSync(OUT, { recursive: true, force: true });
@@ -100,18 +123,27 @@ const schreibe = (rel, inhalt) => {
   writeFileSync(f, inhalt);
 };
 const behalten = new Set(['orte.json']);
+const paket = []; // Kacheln für die Bündel: [pfad, base64]
 const kopiere = (rel) => {
   if (!existsSync(join(quelle, rel))) return false;
   const bytes = readFileSync(join(quelle, rel));
-  if (/\.(gz|webp)$/.test(rel)) schreibe(`${rel}.txt`, bytes.toString('base64')); else schreibe(rel, bytes);
+  if (L.BUENDEL_ART.test(rel)) paket.push([rel, bytes.toString('base64')]);
+  else if (/\.(gz|webp)$/.test(rel)) schreibe(`${rel}.txt`, bytes.toString('base64'));
+  else schreibe(rel, bytes);
   behalten.add(rel);
   return true;
 };
+// benachbarte Kacheln zusammen: nach Zeile, dann Spalte sortiert
+const nachZeile = (a, b) => { const [ax, az] = a.split('_').map(Number), [bx, bz] = b.split('_').map(Number); return az - bz || ax - bx; };
+const rSortiert = [...rKacheln].sort(nachZeile), hSortiert = [...hexKacheln].sort(nachZeile);
 kopiere('orte.json');
 if (existsSync(join(quelle, 'uebersicht'))) for (const f of readdirSync(join(quelle, 'uebersicht'))) kopiere(`uebersicht/${f}`);
-for (const k of rKacheln) for (const art of ['r10', 'r40']) kopiere(`${art}/${k}.bin.gz`);
-for (const k of rKacheln) kopiere(`vec/${k}.json.gz`); // nicht jede Kachel hat Vektoren
-for (const k of hexKacheln) kopiere(`hex/${k}.bin.gz`);
+for (const art of ['r10', 'r40']) for (const k of rSortiert) kopiere(`${art}/${k}.bin.gz`);
+for (const k of rSortiert) kopiere(`vec/${k}.json.gz`); // nicht jede Kachel hat Vektoren
+for (const k of hSortiert) kopiere(`hex/${k}.bin.gz`);
+const gepackt = L.packeBuendel(paket, BUENDEL_MAX);
+for (const [name, text] of gepackt.buendel) schreibe(name, text);
+schreibe('buendel.json', JSON.stringify(gepackt.index));
 
 const teil = (liste, set) => liste.filter(([x, z]) => set.has(`${x}_${z}`));
 const files = Object.fromEntries(Object.entries(manifest.files).filter(([k]) => behalten.has(k)));
@@ -146,9 +178,14 @@ const summe = dateien.reduce((s, d) => s + d.n, 0);
 console.log(`${kb(summe)}  Summe, ${dateien.length} Dateien   -> ${OUT}`);
 const seite = dateien.filter((d) => /^(index\.html|assets\/.*\.js)$/.test(d.f)).reduce((s, d) => s + d.n, 0);
 const warn = [];
+const gebauteGebiete = gebiete.length ? ` (Gebiet ${gebiete.map((g) => g.name).join(', ')})` : '';
 if (seite > 16 * 2 ** 20) warn.push(`Seite (index.html + JS) ist ${(seite / 2 ** 20).toFixed(1)} MB (> 16 MB)`);
 for (const d of dateien) if (d.n > 15 * 2 ** 20) warn.push(`Datei ${d.f} ist ${(d.n / 2 ** 20).toFixed(1)} MB (> 15 MB)`);
 if (dateien.length > 250) warn.push(`${dateien.length} Dateien (> 250)`);
 if (summe > 60 * 2 ** 20) warn.push(`Summe ${(summe / 2 ** 20).toFixed(1)} MB (> 60 MB)`);
 for (const w of warn) console.warn(`WARNUNG: ${w}`);
-if (!warn.length) console.log('Grenzen eingehalten (Seite <= 16 MB, Datei <= 15 MB, <= 250 Dateien, Summe <= 60 MB).');
+if (!warn.length) console.log(`Grenzen eingehalten (Seite <= 16 MB, Datei <= 15 MB, <= 250 Dateien, Summe <= 60 MB)${gebauteGebiete}.`);
+else if (!trotzdem) {
+  console.error('\nABBRUCH: Grenzen für Artifact-Seiten überschritten. Kleineres Gebiet/weniger Vorschläge wählen oder mit --trotzdem trotzdem behalten.');
+  process.exit(1);
+}

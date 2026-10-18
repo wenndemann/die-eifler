@@ -86,8 +86,9 @@ export class Hud {
       <label><input type="checkbox" data-k="trees"> Wald</label>
       <label><input type="checkbox" data-k="perf"> Leistung <kbd>F3</kbd></label>
       <p class="help">${touch
-        ? 'Ein Finger: verschieben · zwei Finger: zoomen und drehen'
-        : '<kbd>WASD</kbd> bewegen · <kbd>Q</kbd><kbd>E</kbd> drehen · Rad zoomen · rechte Maustaste ziehen'}</p>`;
+        ? 'Ein Finger: verschieben · zwei Finger: zoomen und drehen · Antippen: wählen und bauen'
+        : '<kbd>WASD</kbd> bewegen · <kbd>Q</kbd><kbd>E</kbd> drehen · Rad zoomen · rechte Maustaste ziehen<br>' +
+          '<kbd>1</kbd>–<kbd>6</kbd> bauen · <kbd>X</kbd> Abriss · <kbd>Esc</kbd> abbrechen · <kbd>Leertaste</kbd> Pause · <kbd>+</kbd><kbd>−</kbd> Tempo'}</p>`;
     root.append(set);
     set.querySelector('h3')!.addEventListener('click', () => set.classList.toggle('collapsed'));
     const credits = el('div', 'credits');

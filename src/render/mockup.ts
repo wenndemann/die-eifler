@@ -21,11 +21,11 @@ export function paint(g: THREE.BufferGeometry, color: string) {
   geo.deleteAttribute('normal');
   return geo;
 }
-const box = (w: number, h: number, d: number, x: number, y: number, z: number, color: string, ry = 0, rz = 0) =>
+export const box = (w: number, h: number, d: number, x: number, y: number, z: number, color: string, ry = 0, rz = 0) =>
   paint(new THREE.BoxGeometry(w, h, d).rotateZ(rz).rotateY(ry).translate(x, y, z), color);
 
 /** Satteldach (Prisma), First entlang x, Traufe auf Höhe y. */
-function roof(w: number, d: number, h: number, y: number, color = C.dach) {
+export function roof(w: number, d: number, h: number, y: number, color = C.dach, giebel = C.wand) {
   const x = w / 2 + 0.6, z = d / 2 + 0.7;
   const p = [-x, y, z, x, y, z, x, y + h, 0, -x, y, z, x, y + h, 0, -x, y + h, 0,
     x, y, -z, -x, y, -z, -x, y + h, 0, x, y, -z, -x, y + h, 0, x, y + h, 0];
@@ -35,11 +35,11 @@ function roof(w: number, d: number, h: number, y: number, color = C.dach) {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute([gx, y, d / 2, gx, y, -d / 2, gx, y + h, 0,
     -gx, y, -d / 2, -gx, y, d / 2, -gx, y + h, 0], 3));
-  return [paint(r, color), paint(g, C.wand)];
+  return [paint(r, color), paint(g, giebel)];
 }
 
 /** Fachwerkhaus: Bruchsteinsockel, weiße Gefache, dunkle Balken, Fenster, Schieferdach. Front = +z. */
-export function fachwerk(w: number, d: number, floors: number, wall = C.wand): THREE.BufferGeometry[] {
+export function fachwerk(w: number, d: number, floors: number, wall = C.wand, dach = C.dach): THREE.BufferGeometry[] {
   const fh = 3, H = floors * fh, y0 = 1;
   const parts = [box(w + 0.4, 5, d + 0.4, 0, y0 - 2.5, 0, C.sockel), box(w, H, d, 0, y0 + H / 2, 0, wall)];
   for (const side of [1, -1]) {
@@ -64,12 +64,12 @@ export function fachwerk(w: number, d: number, floors: number, wall = C.wand): T
     for (let f = 0; f <= floors; f++) parts.push(box(0.14, 0.28, d, x, y0 + f * fh, 0, C.balken));
   }
   parts.push(box(1.4, 2.3, 0.2, 0, y0 + 1.15, d / 2 + 0.12, C.tuer));
-  parts.push(...roof(w, d, d * 0.75, y0 + H));
+  parts.push(...roof(w, d, d * 0.75, y0 + H, dach, wall));
   parts.push(box(1.2, 3, 1.2, w * 0.28, y0 + H + d * 0.45, 0, '#6d625a'));
   return parts;
 }
 
-function logPile(x: number, z: number, n = 6): THREE.BufferGeometry[] {
+export function logPile(x: number, z: number, n = 6): THREE.BufferGeometry[] {
   const out: THREE.BufferGeometry[] = [];
   for (let i = 0; i < n; i++) {
     const row = i < 3 ? 0 : i < 5 ? 1 : 2, k = i < 3 ? i : i < 5 ? i - 3 : 0;

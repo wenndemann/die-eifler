@@ -40,6 +40,16 @@ nach Gebrauch wieder. Unterbrochen? Einfach neu starten, es setzt fort. Details 
   die Simulationsdaten (Kopfleiste). Gleiche Adresse = gleiche Prüfsumme, in jedem Browser.
 - Steuerung: <kbd>WASD</kbd> bewegen, <kbd>Q</kbd>/<kbd>E</kbd> drehen, Rad zoomen, rechte Maustaste ziehen;
   <kbd>G</kbd> Hex-Raster, <kbd>F3</kbd> Leistungsanzeige. Touch: ein Finger verschieben, zwei zoomen/drehen.
+- **Wege und Träger (M3):** Das Lager steht im Ortskern des Startorts. Bauleiste unten: <kbd>1</kbd> Weg
+  (Fahne antippen, Ziel zeigen – die Vorschau sucht den Pfad –, zweiter Klick baut; Wege lassen sich verketten),
+  <kbd>2</kbd> Fahne (auf einem Weg teilt sie ihn), <kbd>3</kbd>–<kbd>6</kbd> Holzfäller, Steinbruch, Sägewerk,
+  Wohnhaus, <kbd>X</kbd> Abriss, <kbd>Esc</kbd>/Rechtsklick abbrechen, <kbd>Leertaste</kbd> Pause,
+  <kbd>+</kbd>/<kbd>−</kbd> Tempo 1–3×. Auf jedem Weg pendelt ein Träger und trägt sichtbar eine Ware;
+  ⚠ heißt: keine Wegverbindung zum Lager. Am Handy geht alles per Tippen (Tippen, dann „Bauen“).
+  Bauen kostet in M3 noch nichts, Holzfäller und Steinbruch sind Platzhalter (echte Bäume und Felsen kommen in M4).
+- **Simulation** (`src/sim/`): fester Tick (20/s), nur Ganzzahlen, jede Aktion ist ein Befehl mit Tick-Nummer,
+  Prüfsumme über den Zustand (Statusleiste „Sim“), Befehlsprotokoll zum Abspielen (`spieleAb`). Der Smoke-Test
+  prüft, dass Node und Browser dieselbe Prüfsumme bekommen und ein Replay im zweiten Browser-Fenster gleich ausgeht.
 
 ## Befehle
 
@@ -51,6 +61,9 @@ nach Gebrauch wieder. Unterbrochen? Einfach neu starten, es setzt fort. Details 
 | `npm run test:smoke` | Browser-Test: Kartenwahl → Ausschnitt laden → Screenshots, Prüfsumme |
 | `npm run setup -- [Optionen]` | Weltdaten rechnen (siehe oben) |
 | `npm run build:share` | eigenständige Teilen-Version mit einem Teil der Weltdaten (z. B. als Artifact-Seite fürs Handy) |
+| `npm run build:share -- --gebiet nordeifel` | Teilen-Version zusätzlich mit allen Kacheln eines Gebiets (`nordeifel`, `nideggen`, `alle` oder `tx0-tx1,tz0-tz1`); Kacheln liegen in wenigen Bündel-Dateien. Bei Überschreiten der Artifact-Grenzen (Seite 16 MB, Datei 15 MB, Summe 60 MB, 250 Dateien) Abbruch, außer mit `--trotzdem`. Auch kombinierbar: `-- --gebiet nordeifel --vorschlaege monschau-rursee,rureifel` |
+
+In der Teilen-Version sagt die Kartenwahl, wenn das Hex am Ende der vorhandenen Kacheln klemmt („Hier enden die Kacheln dieser Version – <Ort> liegt deshalb nicht in der Mitte.“), und schraffiert Bereiche ohne Kacheln.
 
 Weltdaten liegen für eine Veröffentlichung als statische Dateien neben dem Spiel (`VITE_WELT_URL`).
 
