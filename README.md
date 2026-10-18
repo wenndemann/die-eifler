@@ -38,6 +38,16 @@ nach Gebrauch wieder. Unterbrochen? Einfach neu starten, es setzt fort. Details 
   die Simulationsdaten (Kopfleiste). Gleiche Adresse = gleiche Prüfsumme, in jedem Browser.
 - Steuerung: <kbd>WASD</kbd> bewegen, <kbd>Q</kbd>/<kbd>E</kbd> drehen, Rad zoomen, rechte Maustaste ziehen;
   <kbd>G</kbd> Hex-Raster, <kbd>F3</kbd> Leistungsanzeige. Touch: ein Finger verschieben, zwei zoomen/drehen.
+- **Wege und Träger (M3):** Das Lager steht im Ortskern des Startorts. Bauleiste unten: <kbd>1</kbd> Weg
+  (Fahne antippen, Ziel zeigen – die Vorschau sucht den Pfad –, zweiter Klick baut; Wege lassen sich verketten),
+  <kbd>2</kbd> Fahne (auf einem Weg teilt sie ihn), <kbd>3</kbd>–<kbd>6</kbd> Holzfäller, Steinbruch, Sägewerk,
+  Wohnhaus, <kbd>X</kbd> Abriss, <kbd>Esc</kbd>/Rechtsklick abbrechen, <kbd>Leertaste</kbd> Pause,
+  <kbd>+</kbd>/<kbd>−</kbd> Tempo 1–3×. Auf jedem Weg pendelt ein Träger und trägt sichtbar eine Ware;
+  ⚠ heißt: keine Wegverbindung zum Lager. Am Handy geht alles per Tippen (Tippen, dann „Bauen“).
+  Bauen kostet in M3 noch nichts, Holzfäller und Steinbruch sind Platzhalter (echte Bäume und Felsen kommen in M4).
+- **Simulation** (`src/sim/`): fester Tick (20/s), nur Ganzzahlen, jede Aktion ist ein Befehl mit Tick-Nummer,
+  Prüfsumme über den Zustand (Statusleiste „Sim“), Befehlsprotokoll zum Abspielen (`spieleAb`). Der Smoke-Test
+  prüft, dass Node und Browser dieselbe Prüfsumme bekommen und ein Replay im zweiten Browser-Fenster gleich ausgeht.
 
 ## Befehle
 

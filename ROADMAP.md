@@ -84,23 +84,23 @@ Verschoben:
 
 ---
 
-## M3 – Simulationskern, Wegenetz und Träger
+## M3 – Simulationskern, Wegenetz und Träger ✅ (erster Stand)
 
 **Voraussetzung:** M2 ist abgenommen (die Simulation liest die Hex-Kacheln).
 
 **Ziel:** das Herz von Siedler – Fahnen, Wege, Träger, sichtbare Waren – auf der echten Karte, und zwar von Anfang an deterministisch (Drehbuch 4.1, 8.3).
 
-- [ ] `src/sim/` getrennt von der Darstellung: fester Tick (20/s), nur Ganzzahlen, serialisierbarer Zustand, Zufall nur aus der Saat
-- [ ] **Befehle statt Direktzugriff:** Jede Spieleraktion ist ein Befehl mit Tick-Nummer. Die Oberfläche ruft nie die Simulation direkt.
-- [ ] Prüfsumme über den Zustand, Befehlsprotokoll zum Abspielen (Replay)
-- [ ] Simulation liest nur die Ganzzahl-Hex-Kacheln aus M2 (Höhe, Steigung, Bauplatzgröße)
-- [ ] Lager im echten Ortskern als Startgebäude (Drehbuch 4.2), Gebäude in etwa **3× echter Größe**, **planierte Bauplätze**, an steilen Hängen nur kleine Gebäude (Drehbuch 3)
-- [ ] Erste prozedurale Gebäudemodelle (Fachwerk, 3 Bauphasen)
-- [ ] Fahnen, Wegbau Fahne → Fahne mit Vorschau, Segmente, Teilung (DESIGN §4.1–4.3)
-- [ ] Weg-Darstellung als Erdpfad, der sich ins Gelände schmiegt
-- [ ] Träger als erste knubbelige Figur (Siedler + Comic, Drehbuch 7.1) mit Laufanimation, sichtbarer Ware, Stapel an Fahnen
-- [ ] Routing nach DESIGN §4.4: Steigung, monoton, Tausch, Rückstau, Reservierung, Neu-Routing; ⚠ bei getrennten Gebäuden
-- [ ] Tests: Verklemmungs-Szenarien, Ringnetz, Abriss mitten im Transport; **Determinismus-Test**: dasselbe Befehlsprotokoll ergibt in Node und im Browser dieselbe Prüfsumme
+- [x] `src/sim/` getrennt von der Darstellung: fester Tick (20/s), nur Ganzzahlen, serialisierbarer Zustand, Zufall nur aus der Saat
+- [x] **Befehle statt Direktzugriff:** Jede Spieleraktion ist ein Befehl mit Tick-Nummer. Die Oberfläche ruft nie die Simulation direkt.
+- [x] Prüfsumme über den Zustand, Befehlsprotokoll zum Abspielen (Replay)
+- [x] Simulation liest nur die Ganzzahl-Hex-Kacheln aus M2 (Höhe, Steigung, Bauplatzgröße)
+- [x] Lager im echten Ortskern als Startgebäude (Drehbuch 4.2), Gebäude in etwa **3× echter Größe**, **planierte Bauplätze**, an steilen Hängen nur kleine Gebäude (Drehbuch 3)
+- [x] Erste prozedurale Gebäudemodelle (Fachwerk, 3 Bauphasen)
+- [x] Fahnen, Wegbau Fahne → Fahne mit Vorschau, Segmente, Teilung (DESIGN §4.1–4.3)
+- [x] Weg-Darstellung als Erdpfad, der sich ins Gelände schmiegt
+- [x] Träger als erste knubbelige Figur (Siedler + Comic, Drehbuch 7.1) mit Laufanimation, sichtbarer Ware, Stapel an Fahnen
+- [x] Routing nach DESIGN §4.4: Steigung, monoton, Tausch, Rückstau, Reservierung, Neu-Routing; ⚠ bei getrennten Gebäuden
+- [x] Tests: Verklemmungs-Szenarien, Ringnetz, Abriss mitten im Transport; **Determinismus-Test**: dasselbe Befehlsprotokoll ergibt in Node und im Browser dieselbe Prüfsumme
 
 **Abnahme:** Ein Netz mit 30 Segmenten läuft 10 Minuten ohne Verklemmung. Das Replay davon ergibt in zwei Browsern dieselbe Prüfsumme.
 
