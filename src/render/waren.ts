@@ -4,10 +4,10 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { paint } from './mockup';
 import { WARE_M } from './massstab';
+import { WAREN } from '../sim/daten';
 
-/** Warenarten in der Reihenfolge der Sicht (Index = Warenart). */
-export const WAREN_NAMEN = ['stamm', 'brett', 'stein', 'essen'] as const;
-export const WAREN_ANZAHL = WAREN_NAMEN.length;
+/** Warenarten wie in der Simulation (data/goods.json); bis es eigene Modelle gibt, sehen alle Nahrungswaren wie der Laib aus. */
+export const WAREN_ANZAHL = WAREN.length;
 
 const W = WARE_M;
 
@@ -54,7 +54,7 @@ const BAU = [stamm, brett, stein, essen];
 
 /** Geometrie einer Ware (Farben als Vertexfarben). */
 export function warenGeometrie(art: number): THREE.BufferGeometry {
-  const g = mergeGeometries((BAU[art] ?? stein)())!;
+  const g = mergeGeometries((BAU[art] ?? essen)())!;
   g.computeVertexNormals();
   return g;
 }

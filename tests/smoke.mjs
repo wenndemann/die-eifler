@@ -1,7 +1,8 @@
 // Rauchtest im echten Browser: Kartenwahl -> Vorschlag -> „Hier siedeln!“ -> Ausschnitt lädt, keine Seitenfehler,
 // Screenshots aus drei festen Kamerapositionen, Prüfsumme nach Neuladen gleich, Gegenprobe mit tools/map/pruefsumme.py.
-// Dazu (M3): Determinismus Node = Browser (30-Segment-Szenario), Spiel auf der echten Karte (Aufbau per Befehle,
-// 3 Spielminuten, Screenshot nah am Lager) und Replay des Protokolls in einem zweiten Browser-Kontext.
+// Dazu (M3/M4): Determinismus Node = Browser (30-Segment-Szenario und Holzwirtschaft M4), Spiel auf der echten Karte
+// (Aufbau per Befehle mit Holz und Stein, 5 Spielminuten, Screenshot nah am Lager) und Replay des Protokolls in einem
+// zweiten Browser-Kontext.
 //
 // Aufruf:  WELT_DATEN=/pfad/zu/daten npm run test:smoke
 //   WELT_DATEN   Weltdaten (Standard welt-daten/), werden auch vom selbst gestarteten Vite-Server ausgeliefert
@@ -46,12 +47,12 @@ export { VORSCHLAEGE } from './src/map/presets.ts';`,
 }
 
 // Szenario-Replay als Bündel: einmal für Node (ESM), einmal für den Browser (IIFE, window.szenario.pruefsumme()).
-async function szenarioBuendel(format, plattform) {
+async function szenarioBuendel(format, plattform, name = 'baueSzenario30') {
   const b = await build({
     stdin: {
-      contents: `import { baueSzenario30 } from './tests/sim-szenario.ts';
+      contents: `import { ${name} } from './tests/sim-szenario.ts';
 import { spieleAb } from './src/sim/replay.ts';
-export function pruefsumme() { const { karte, protokoll } = baueSzenario30(); return spieleAb(karte, protokoll).pruefsumme(); }`,
+export function pruefsumme() { const { karte, protokoll } = ${name}(); return spieleAb(karte, protokoll).pruefsumme(); }`,
       resolveDir: WURZEL, loader: 'ts',
     },
     bundle: true, format, globalName: format === 'iife' ? 'szenario' : undefined, platform: plattform, write: false, logLevel: 'error',
@@ -183,24 +184,24 @@ try {
     }
   } else info('Gegenprobe Python übersprungen (Skript oder Daten fehlen)');
 
-  // ---- M3 a) Determinismus Node = Browser: das 30-Segment-Szenario (12000 Ticks) in beiden Umgebungen abspielen
-  {
-    const nodeCode = await szenarioBuendel('esm', 'node');
+  // ---- M3 a) Determinismus Node = Browser: das 30-Segment-Szenario und die Holzwirtschaft M4 (je 12000 Ticks) in beiden Umgebungen
+  for (const name of ['baueSzenario30', 'baueSzenarioM4']) {
+    const nodeCode = await szenarioBuendel('esm', 'node', name);
     const nodeMod = await import(`data:text/javascript;base64,${Buffer.from(nodeCode).toString('base64')}`);
     const t1 = Date.now();
     const sumNode = nodeMod.pruefsumme();
     const msNode = Date.now() - t1;
     const leer = await browser.newPage();
-    await leer.addScriptTag({ content: await szenarioBuendel('iife', 'browser') });
+    await leer.addScriptTag({ content: await szenarioBuendel('iife', 'browser', name) });
     const t2 = Date.now();
     const sumBrowser = await leer.evaluate(() => window.szenario.pruefsumme());
     const msBrowser = Date.now() - t2;
     await leer.close();
-    info(`Determinismus 30-Segment-Szenario: Node ${sumNode} (${msNode} ms), Browser ${sumBrowser} (${msBrowser} ms)`);
-    if (sumNode !== sumBrowser) fail(`Determinismus: Prüfsumme Node ${sumNode} ungleich Browser ${sumBrowser}`);
+    info(`Determinismus ${name}: Node ${sumNode} (${msNode} ms), Browser ${sumBrowser} (${msBrowser} ms)`);
+    if (sumNode !== sumBrowser) fail(`Determinismus ${name}: Prüfsumme Node ${sumNode} ungleich Browser ${sumBrowser}`);
   }
 
-  // ---- M3 b) Spiel auf der echten Karte: kleiner Aufbau per Befehle, 3 Spielminuten, Screenshot, Replay in zweitem Kontext
+  // ---- M3 b) Spiel auf der echten Karte: Aufbau mit Holz und Stein per Befehle, 5 Spielminuten, Screenshot, Replay in zweitem Kontext
   const url = `${basis}#v=${a1.param.version}&q=${a1.param.q}&r=${a1.param.r}&g=${a1.param.size}`;
   await page.goto('about:blank');
   await page.goto(url);
@@ -228,49 +229,79 @@ try {
       const m = erster.pfad[Math.floor(erster.pfad.length / 2)];
       if (sp.sim.kannFahne(m.q, m.r)) sp.befehl({ art: 'fahne', q: m.q, r: m.r });
     }
-    // 3) Gebäude an passenden Plätzen (kannBauen), jeweils mit Weg zur nächsten Fahne (wegVorschau vorher prüfen)
+    // 3) Gebäude an passenden Plätzen (kannBauen), jeweils mit Weg zur nächsten Fahne (wegVorschau vorher prüfen).
+    //    Holzfäller dort, wo es die meisten Bäume im Radius gibt (arbeitsHexe); Förster daneben; Steinbruch nur bei Felsen in Reichweite.
     const kandidaten = [];
-    for (let dq = -8; dq <= 8; dq++) for (let dr = -8; dr <= 8; dr++) {
+    for (let dq = -12; dq <= 12; dq++) for (let dr = -12; dr <= 12; dr++) {
       const c = { q: L.q + dq, r: L.r + dr };
       const dd = dist(c, L);
-      if (dd >= 2 && dd <= 7) kandidaten.push({ ...c, dd });
+      if (dd >= 2 && dd <= 12) kandidaten.push({ ...c, dd });
     }
     kandidaten.sort((a, b) => a.dd - b.dd || a.r - b.r || a.q - b.q);
-    for (const typ of ['holzfaeller', 'holzfaeller', 'steinbruch', 'saegewerk', 'wohnhaus']) {
+    const nutzen = (typ, c) => {
+      const fs = sp.sicht.fahnen.slice().sort((a, b) => dist(a, c) - dist(b, c) || a.id - b.id).slice(0, 6);
+      const von = fs.find((f) => sp.sim.wegVorschau(f, c));
+      if (!von) return false;
+      sp.befehl({ art: 'gebaeude', typ, q: c.q, r: c.r });
+      const p = sp.sim.wegVorschau(von, c);
+      if (p) sp.befehl({ art: 'weg', pfad: p });
+      gebaut.push({ typ, q: c.q, r: c.r });
+      return true;
+    };
+    const beste = (typ, nahBei, wert) => {
+      let best = null, bw = 0;
       for (const c of kandidaten) {
+        if (nahBei && dist(c, nahBei) > 2) continue;
+        if (c.dd > 8 && typ !== 'holzfaeller' && typ !== 'steinbruch') continue;
         if (!sp.sim.kannBauen(typ, c.q, c.r)) continue;
-        const fs = sp.sicht.fahnen.slice().sort((a, b) => dist(a, c) - dist(b, c) || a.id - b.id).slice(0, 6);
-        const von = fs.find((f) => sp.sim.wegVorschau(f, c));
-        if (!von) continue;
-        sp.befehl({ art: 'gebaeude', typ, q: c.q, r: c.r });
-        const p = sp.sim.wegVorschau(von, c);
-        if (p) sp.befehl({ art: 'weg', pfad: p });
-        gebaut.push({ typ, q: c.q, r: c.r });
-        break;
+        const w = wert ? wert(c) : 1;
+        if (w > bw) { bw = w; best = c; }
       }
+      return best;
+    };
+    const baeume = (c) => sp.sim.arbeitsHexe('holzfaeller', c.q, c.r).summe;
+    const felsen = (c) => sp.sim.arbeitsHexe('steinbruch', c.q, c.r).summe;
+    const hf = beste('holzfaeller', null, baeume);
+    if (hf && baeume(hf) > 0 && nutzen('holzfaeller', hf)) {
+      sp.schritte(2);
+      const fo = beste('foerster', hf, () => 1);
+      if (fo) nutzen('foerster', fo);
     }
-    // 4) drei Spielminuten rechnen, dabei Träger mit Ware zählen
+    for (const [typ, wert] of [['saegewerk', null], ['steinbruch', felsen], ['huette', null]]) {
+      sp.schritte(2);
+      const c = beste(typ, null, wert);
+      if (c && (typ !== 'steinbruch' || felsen(c) > 0)) nutzen(typ, c);
+    }
+    const holzfaeller = gebaut.find((g) => g.typ === 'holzfaeller');
+    const baumVorher = holzfaeller ? baeume(holzfaeller) : 0;
+    // 4) fünf Spielminuten rechnen, dabei Träger mit Ware zählen
     let maxUnterwegs = 0, maxMitWare = 0;
-    for (let i = 0; i < 36; i++) {
+    for (let i = 0; i < 60; i++) {
       sp.schritte(100);
       const t = sp.sicht.traeger;
       maxUnterwegs = Math.max(maxUnterwegs, t.length);
       maxMitWare = Math.max(maxMitWare, t.filter((x) => x.ware >= 0).length);
     }
+    const fertig = sp.sicht.gebaeude.filter((g) => g.typ !== 'lager' && g.bau === 1000).map((g) => g.typ);
     return {
-      lager: L, gebaut, wegeGesetzt: wege, segmente: sp.sicht.segmente.length, fahnen: sp.sicht.fahnen.length, tick: sp.sim.tick,
+      lager: L, gebaut, fertig, baumVorher, wegeGesetzt: wege, segmente: sp.sicht.segmente.length, fahnen: sp.sicht.fahnen.length, tick: sp.sim.tick,
       maxUnterwegs, maxMitWare, statistik: sp.sim.statistik(), innen: sp.sim.pruefeInnenzustand(), pruefsumme: sp.pruefsumme(),
       protokoll: JSON.parse(JSON.stringify(sp.protokoll())), eigenReplay: sp.nachspielen(sp.protokoll()),
       getrennt: sp.sicht.gebaeude.filter((g) => g.getrennt).length,
     };
   });
-  info(`Spiel: Lager ${aufbau.lager.q},${aufbau.lager.r}; gebaut ${aufbau.gebaut.map((g) => g.typ).join(', ')}; ${aufbau.segmente} Segmente, ${aufbau.fahnen} Fahnen; ` +
+  info(`Spiel: Lager ${aufbau.lager.q},${aufbau.lager.r}; gebaut ${aufbau.gebaut.map((g) => g.typ).join(', ')}; fertig ${aufbau.fertig.join(', ') || '-'}; ` +
+    `Bäume im Holzfäller-Radius beim Bau ${aufbau.baumVorher}; ${aufbau.segmente} Segmente, ${aufbau.fahnen} Fahnen; ` +
     `Tick ${aufbau.tick}; Träger unterwegs max ${aufbau.maxUnterwegs}, mit Ware max ${aufbau.maxMitWare}; Statistik ${JSON.stringify(aufbau.statistik)}`);
   info(`Spiel: Sim-Prüfsumme Kontext 1: ${aufbau.pruefsumme}; Replay im selben Kontext: ${aufbau.eigenReplay}`);
   if (aufbau.gebaut.length < 3) fail(`Spiel: nur ${aufbau.gebaut.length} Gebäude ließen sich bauen (erwartet mindestens 3)`);
   if (aufbau.segmente < 3) fail(`Spiel: nur ${aufbau.segmente} Segmente`);
   if (aufbau.maxUnterwegs < 1) fail('Spiel: kein Träger unterwegs');
   if (aufbau.maxMitWare < 1) fail('Spiel: nie ein Träger mit Ware');
+  if (aufbau.fertig.length < 1) fail(`Spiel: nach 5 Spielminuten ist keine Baustelle fertig (gebaut: ${aufbau.gebaut.map((g) => g.typ).join(', ')})`);
+  if (aufbau.gebaut.some((g) => g.typ === 'holzfaeller') && aufbau.fertig.includes('holzfaeller') && !(aufbau.statistik.erzeugtJe[0] > 0)) {
+    fail(`Spiel: Holzfäller fertig, aber nach 5 Spielminuten kein Stamm erzeugt (${JSON.stringify(aufbau.statistik)})`);
+  }
   if (!(aufbau.statistik.angekommen > 0)) fail(`Spiel: keine Ware angekommen (${JSON.stringify(aufbau.statistik)})`);
   if (aufbau.innen.length) fail(`Spiel: Innenzustand widersprüchlich: ${aufbau.innen.join('; ')}`);
   if (aufbau.getrennt) fail(`Spiel: ${aufbau.getrennt} Gebäude ohne Verbindung zum Lager`);

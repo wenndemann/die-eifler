@@ -110,11 +110,11 @@ Verschoben:
 
 **Ziel:** Bauen kostet Material, Holz und Stein tragen das Wachstum (Drehbuch 4.2, 5.1).
 
-- [ ] Baustellen: Bedarf statt Sofortkosten, Einzel-Lieferung, Bau-Aktion, Priorität (DESIGN §4.6)
-- [ ] Holzkette: Holzfäller, Förster, Sägewerk; Bäume als Zustand, aus dem Kartenwald übernommen
-- [ ] Steinkette: Steinbruch an endlichen Felsen
-- [ ] Input-Puffer, Lager-Auslieferung (Pull), Abriss (DESIGN §4.5, §4.7)
-- [ ] Datengetrieben: `data/goods.json`, `data/buildings.json` (Startwerte aus DESIGN §6)
+- [x] Baustellen: Bedarf statt Sofortkosten, Einzel-Lieferung, Bau-Aktion, Priorität (DESIGN §4.6) (Simulation; Darstellung folgt)
+- [x] Holzkette: Holzfäller, Förster, Sägewerk; Bäume als Zustand, aus dem Kartenwald übernommen
+- [x] Steinkette: Steinbruch an endlichen Felsen
+- [x] Input-Puffer, Lager-Auslieferung (Pull), Abriss (DESIGN §4.5, §4.7)
+- [x] Datengetrieben: `data/goods.json`, `data/buildings.json` (Startwerte aus DESIGN §6)
 - [ ] Erstes Baumenü mit Geistermodell, Bauplatz-Anzeige (klein/mittel/groß) und Bauvorschau
 
 **Abnahme:** Aus 12 Brettern und 8 Steinen entsteht ohne Eingriff eine laufende Holzwirtschaft. Holzfäller und Förster nebeneinander liefern nach 2 Minuten weiter Stämme.

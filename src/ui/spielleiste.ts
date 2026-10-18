@@ -1,28 +1,27 @@
-// Bauleiste unten (Weg, Fahne, vier Gebäude, Abriss) mit Hinweiszeile und Knöpfen „Bauen“/„Abbrechen“,
+// Bauleiste unten (Weg, Fahne, fünf Gebäude, Abriss) mit Hinweiszeile und Knöpfen „Bauen“/„Abbrechen“,
 // dazu die schmale Statusleiste oben links (Tempo, Spielzeit, Träger, Lagervorrat, Prüfsumme).
 // Reine HTML-Oberfläche: kennt weder Simulation noch Szene, meldet nur Bedienung zurück.
 
 import './spielleiste.css';
-export type Werkzeug = 'keins' | 'weg' | 'fahne' | 'holzfaeller' | 'steinbruch' | 'saegewerk' | 'wohnhaus' | 'abriss';
+export type Werkzeug = 'keins' | 'weg' | 'fahne' | 'holzfaeller' | 'foerster' | 'saegewerk' | 'steinbruch' | 'huette' | 'abriss';
 
 export interface WerkzeugInfo { id: Werkzeug; taste: string; label: string; icon: string; titel: string }
-
-const AUF_PUMP = 'Material kommt in M4 – bis dahin baut der Eifeler auf Pump.';
 
 export const WERKZEUGE: readonly WerkzeugInfo[] = [
   { id: 'weg', taste: '1', label: 'Weg', icon: '🛤️', titel: 'Weg bauen: Fahne als Start wählen, dann Hex für Hex oder über Zwischenpunkte führen; Fahne oder Weg anklicken baut. Rücktaste nimmt den letzten Punkt zurück.' },
   { id: 'fahne', taste: '2', label: 'Fahne', icon: '🚩', titel: 'Freie Fahne setzen (auch mitten auf einen Weg, das teilt ihn)' },
-  { id: 'holzfaeller', taste: '3', label: 'Holzfäller', icon: '🪓', titel: `Holzfäller (Platzhalter ohne Bäume: erzeugt einfach Stämme). ${AUF_PUMP}` },
-  { id: 'steinbruch', taste: '4', label: 'Steinbruch', icon: '⛏️', titel: `Steinbruch (Platzhalter ohne Felsen: erzeugt einfach Steine). ${AUF_PUMP}` },
-  { id: 'saegewerk', taste: '5', label: 'Sägewerk', icon: '🪚', titel: `Sägewerk, macht aus Stämmen Bretter (mittlerer Bauplatz). ${AUF_PUMP}` },
-  { id: 'wohnhaus', taste: '6', label: 'Wohnhaus', icon: '🏠', titel: `Wohnhaus, verbraucht Bretter, Steine und Essen. ${AUF_PUMP}` },
+  { id: 'holzfaeller', taste: '3', label: 'Holzfäller', icon: '🪓', titel: 'Holzfäller: fällt Bäume im Umkreis von 2 Hexen (2 Bretter)' },
+  { id: 'foerster', taste: '4', label: 'Förster', icon: '🌱', titel: 'Förster: pflanzt Bäume im Umkreis von 2 Hexen (1 Brett)' },
+  { id: 'saegewerk', taste: '5', label: 'Sägewerk', icon: '🪚', titel: 'Sägewerk: macht aus Stämmen Bretter, mittlerer Bauplatz (2 Bretter, 1 Stein)' },
+  { id: 'steinbruch', taste: '6', label: 'Steinbruch', icon: '⛏️', titel: 'Steinbruch: haut Felsen im Umkreis von 2 Hexen ab (2 Bretter)' },
+  { id: 'huette', taste: '7', label: 'Hütte', icon: '🏠', titel: 'Eifeler Hütte: Wohnraum für 8 (3 Bretter, 2 Steine)' },
   { id: 'abriss', taste: 'X', label: 'Abriss', icon: '🔨', titel: 'Abriss: Gebäude, Fahne oder Weg anklicken (Entf oder X). Das Lager bleibt stehen.' },
 ];
 
 export interface StatusDaten {
   tick: number;
   freieTraeger: number;
-  /** Vorrat im Lager je Warenart (stamm, brett, stein, essen). */
+  /** Vorrat im Lager je Warenart (Index = Warenart, siehe WAREN in src/sim/daten.ts). */
   vorrat: number[];
   pruefsumme: string;
 }
@@ -135,12 +134,13 @@ export class Spielleiste {
   }
 
   setStatus(s: StatusDaten) {
-    const [stamm, brett, stein, essen] = s.vorrat;
+    const [stamm, brett, stein] = s.vorrat;
+    const kartoffeln = s.vorrat[6] ?? 0;
     const sig = `${s.tick >> 4}|${s.freieTraeger}|${s.vorrat.join(',')}|${s.pruefsumme}`;
     this.zeit.textContent = `${zeitText(s.tick)} · Tick ${s.tick}`;
     if (sig === this.letzteStatus) return;
     this.letzteStatus = sig;
-    this.zeile2.innerHTML = `Träger frei <b>${s.freieTraeger}</b> · Lager: Stamm <b>${stamm}</b> · Brett <b>${brett}</b> · Stein <b>${stein}</b> · Essen <b>${essen}</b>` +
+    this.zeile2.innerHTML = `Träger frei <b>${s.freieTraeger}</b> · Lager: Stamm <b>${stamm}</b> · Brett <b>${brett}</b> · Stein <b>${stein}</b> · Kartoffeln <b>${kartoffeln}</b>` +
       ` · Sim <i class="simsumme" title="Prüfsumme des Spielzustands">${s.pruefsumme.slice(0, 8)}</i>`;
   }
 
