@@ -194,6 +194,30 @@ export class Simulation {
     return p ? p.map((h) => ({ q: k.qs[h], r: k.rs[h] })) : null;
   }
 
+  /**
+   * Teilstück eines selbst geführten Wegs: Pfad von `von` (muss keine Fahne tragen) nach `nach` (Fahne, Weg-Hex oder freier Hex,
+   * der eine Fahne tragen kann). Zwischen den Enden nur freie Hexe, Hexe aus `belegt` (schon benutzte Hexe des offenen Wegs)
+   * sind gesperrt, das Ziel darf nicht darunter sein. Höchstens `maxSchritte` Schritte; null, wenn es keinen gibt.
+   */
+  wegAbschnitt(von: { q: number; r: number }, nach: { q: number; r: number }, belegt: { q: number; r: number }[], maxSchritte: number): { q: number; r: number }[] | null {
+    const k = this.karte;
+    const a = k.index(von.q, von.r), z = k.index(nach.q, nach.r);
+    if (a < 0 || z < 0 || a === z || !k.begehbar[a] || !k.begehbar[z] || maxSchritte < 1) return null;
+    const gesperrt = new Set<number>();
+    for (const b of belegt) { const i = k.index(b.q, b.r); if (i >= 0) gesperrt.add(i); }
+    gesperrt.delete(a);
+    if (gesperrt.has(z)) return null;
+    const fa = this.fahnen.get(this.hexFahne[a]);
+    if (fa && fa.segmente.length >= FAHNE_MAX_SEGMENTE) return null;
+    if (this.hexFahne[z]) { if (this.fahnen.get(this.hexFahne[z])!.segmente.length >= FAHNE_MAX_SEGMENTE) return null; }
+    else if (!this.hexKannFahne(z)) return null;
+    const p = sucheWeg(k, a, z, (h, istZiel) => {
+      if (istZiel) return true;
+      return !this.hexFahne[h] && !this.hexGeb[h] && !this.hexWeg[h] && !gesperrt.has(h);
+    }, Math.min(maxSchritte, WEG_MAX_SCHRITTE));
+    return p ? p.map((h) => ({ q: k.qs[h], r: k.rs[h] })) : null;
+  }
+
   sicht(): SimSicht {
     const k = this.karte;
     const hx = (h: number) => ({ q: k.qs[h], r: k.rs[h] });

@@ -146,8 +146,8 @@ function erdMaterial(): THREE.MeshStandardMaterial {
 }
 
 /** Material der Vorschau-Linie: gestrichelt, hell oder rot. */
-function vorschauMaterial(): { mat: THREE.MeshBasicMaterial; farbe: { value: THREE.Color }; zeit: { value: number } } {
-  const farbe = { value: new THREE.Color('#fff2c4') };
+function vorschauMaterial(massiv = false): { mat: THREE.MeshBasicMaterial; farbe: { value: THREE.Color }; zeit: { value: number } } {
+  const farbe = { value: new THREE.Color(massiv ? '#ffcf5a' : '#fff2c4') };
   const zeit = { value: 0 };
   const mat = new THREE.MeshBasicMaterial({
     color: '#ffffff', transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: true,
@@ -164,12 +164,12 @@ float vKFade;
 ${KULISSE_GLSL}`)
       .replace('#include <color_fragment>', `#include <color_fragment>
 {
-  // Strich 16 m, Lücke 10 m, wandert langsam in Wegrichtung
-  float dash = step(fract((vFlow - uVZeit * 12.0) / 26.0), 16.0 / 26.0);
+  // Strich 16 m, Lücke 10 m, wandert langsam in Wegrichtung (das feste Stück ist durchgezogen)
+  float dash = ${massiv ? '1.0' : 'step(fract((vFlow - uVZeit * 12.0) / 26.0), 16.0 / 26.0)'};
   float a = dash * (1.0 - smoothstep(0.55, 1.0, abs(vSide)));
   float kern = 1.0 - smoothstep(0.0, 0.5, abs(vSide));
   diffuseColor.rgb = uVFarbe * (0.82 + 0.35 * kern);
-  diffuseColor.a = a * 0.95;
+  diffuseColor.a = a * ${massiv ? '1.0' : '0.95'};
   vKFade = kFade(vWPos.xz);
 }`)
       .replace('#include <fog_fragment>', KULISSE_FOG);
@@ -185,8 +185,11 @@ export class Wege {
   private wege: THREE.Mesh;
   private vorschau: THREE.Mesh;
   private vor = vorschauMaterial();
+  private fest: THREE.Mesh;
+  private festMat = vorschauMaterial(true);
   private sig = '';
   private vorSig = '';
+  private festSig = '';
 
   constructor(private map: MapData, private grid: HexGrid, private base: number, ex: number) {
     this.wege = new THREE.Mesh(new THREE.BufferGeometry(), erdMaterial());
@@ -197,7 +200,11 @@ export class Wege {
     this.vorschau.renderOrder = 4;
     this.vorschau.visible = false;
     this.vorschau.frustumCulled = false;
-    this.group.add(this.wege, this.vorschau);
+    this.fest = new THREE.Mesh(new THREE.BufferGeometry(), this.festMat.mat);
+    this.fest.renderOrder = 5;
+    this.fest.visible = false;
+    this.fest.frustumCulled = false;
+    this.group.add(this.wege, this.vorschau, this.fest);
     this.setExaggeration(ex);
   }
 
@@ -246,21 +253,31 @@ export class Wege {
     this.wege.visible = b.idx.length > 0;
   }
 
-  /** Vorschau beim Wegbau: Pfad (benachbarte Hexe) oder null zum Ausblenden. Rot, wenn ungültig. */
-  zeigeVorschau(pfad: { q: number; r: number }[] | null, gueltig: boolean) {
+  /**
+   * Vorschau beim Wegbau: `pfad` ist das vorläufige Stück (gestrichelt, rot wenn ungültig), `fest` das schon gelegte Stück
+   * des offenen Wegs (durchgezogen, kräftiger). Je null (oder unter 2 Hexen) blendet aus.
+   */
+  zeigeVorschau(pfad: { q: number; r: number }[] | null, gueltig: boolean, fest: { q: number; r: number }[] | null = null) {
+    this.zeichne(this.fest, this.festMat, fest, true, 'festSig', 4.6, 1.1);
+    this.zeichne(this.vorschau, this.vor, pfad, gueltig, 'vorSig', 4.2, 0.9);
+  }
+
+  private zeichne(mesh: THREE.Mesh, m: { farbe: { value: THREE.Color } }, pfad: { q: number; r: number }[] | null, gueltig: boolean,
+    sigName: 'vorSig' | 'festSig', halb: number, lift: number) {
     if (!pfad || pfad.length < 2) {
-      this.vorschau.visible = false;
-      this.vorSig = '';
+      mesh.visible = false;
+      this[sigName] = '';
       return;
     }
-    this.vor.farbe.value.set(gueltig ? '#fff2c4' : '#e0392b');
+    if (!gueltig) m.farbe.value.set('#e0392b');
+    else m.farbe.value.set(mesh === this.fest ? '#ffcf5a' : '#fff2c4');
     const sig = pfad.map((h) => `${h.q},${h.r}`).join(';') + (gueltig ? '+' : '-') + this.map.groundRev;
-    this.vorschau.visible = true;
-    if (sig === this.vorSig) return;
-    this.vorSig = sig;
+    mesh.visible = true;
+    if (sig === this[sigName]) return;
+    this[sigName] = sig;
     const b = neuerPuffer();
-    band(b, mittellinie(this.punkte(pfad)), 4.2, (x, z) => this.map.heightAt(x, z) - this.base + 0.9);
-    this.vorschau.geometry.dispose();
-    this.vorschau.geometry = geometrie(b);
+    band(b, mittellinie(this.punkte(pfad)), halb, (x, z) => this.map.heightAt(x, z) - this.base + lift);
+    mesh.geometry.dispose();
+    mesh.geometry = geometrie(b);
   }
 }

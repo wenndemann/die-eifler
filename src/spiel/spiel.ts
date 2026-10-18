@@ -19,7 +19,7 @@ import { Gebaeude, type GebaeudeHaken } from '../render/gebaeude';
 import { Markierung, type RingArt } from '../render/markierung';
 import { Spielleiste, WERKZEUGE, type Werkzeug } from '../ui/spielleiste';
 import {
-  KlickErkenner, TEMPI, TickTakt, hexLinie, saatAusPruefsumme, waehleLagerHex, type Hx,
+  KlickErkenner, OffenerWeg, TEMPI, TickTakt, hexLinie, naechsteSchritte, saatAusPruefsumme, waehleLagerHex, type Hx,
 } from './logik';
 
 export interface SpielKontext {
@@ -79,7 +79,8 @@ export class Spiel {
   werkzeug: Werkzeug = 'keins';
   /** Hex unter Maus bzw. zuletzt angetippt (für Info und Markierung). */
   fokus: Hx | null = null;
-  private wegStart: Hx | null = null;
+  /** Offener Weg beim Wegbau von Hand: Start (Fahne) und feste Zwischenpunkte. */
+  private weg = new OffenerWeg();
   /** Touch: angetippter Hex, der noch bestätigt werden muss. */
   private offen: Hx | null = null;
   private zeiger: 'mouse' | 'touch';
@@ -89,6 +90,8 @@ export class Spiel {
   private meldung: { text: string; warn: boolean; bis: number } | null = null;
   private vorschauSig = '';
   private vorschauPfad: Hx[] | null = null;
+  private schrittSig = '';
+  private schrittHexe: Hx[] = [];
 
   constructor(private ctx: SpielKontext) {
     const { ausschnitt, map, grid, base, ex } = ctx;
@@ -112,6 +115,7 @@ export class Spiel {
       onWerkzeug: (w) => this.waehleWerkzeug(w === this.werkzeug ? 'keins' : w),
       onBestaetigen: () => this.bestaetigen(),
       onAbbrechen: () => this.abbrechen(),
+      onZurueck: () => this.zurueck(),
       onTempo: (t) => (t === 0 ? this.pause(!this.pausiert) : this.setzeTempo(t)),
     });
     this._sicht = this._sim.sicht();
@@ -265,6 +269,7 @@ export class Spiel {
     switch (e.code) {
       case 'Delete': case 'KeyX': this.waehleWerkzeug('abriss'); return;
       case 'Escape': this.abbrechen(); return;
+      case 'Backspace': if (this.werkzeug === 'weg') { e.preventDefault(); this.zurueck(); } return;
       case 'Space': e.preventDefault(); this.pause(!this.pausiert); return;
       case 'Enter': case 'NumpadEnter': this.bestaetigen(); return;
       case 'NumpadAdd': this.setzeTempo(this.tempo + 1); return;
@@ -304,12 +309,12 @@ export class Spiel {
     const w = this.werkzeug;
     if (w === 'keins') return;
     if (w === 'fahne') { this.aktion(h); return; }
-    if (w === 'weg' && !this.wegStart) {
-      if (this.fahneAt.has(key(h))) { this.wegStart = h; this.offen = null; this.hinweisSetzen(); }
+    if (w === 'weg' && !this.weg.aktiv) {
+      if (this.fahneAt.has(key(h))) { this.weg.beginne(h); this.offen = null; this.hinweisSetzen(); }
       else this.melde('Ein Weg beginnt an einer Fahne – erst eine Fahne wählen.', true);
       return;
     }
-    if (w === 'weg' && gleich(h, this.wegStart)) { this.wegStart = null; this.offen = null; this.hinweisSetzen(); return; }
+    if (w === 'weg') { this.wegKlick(h, touch); return; }
     if (!touch) { this.aktion(h); return; }
     // Touch: erster Tipp zeigt, zweiter Tipp auf dasselbe Ziel (oder „Bauen“) führt aus
     if (gleich(this.offen, h)) { this.offen = null; this.aktion(h); return; }
@@ -317,18 +322,82 @@ export class Spiel {
     this.hinweisSetzen();
   }
 
+  /** Ist der Hex ein Endziel des Wegs (Fahne oder Weg-Hex), das den Weg sofort baut? */
+  private istEndziel(h: Hx): boolean {
+    return this.fahneAt.has(key(h)) || this.segAt.has(key(h));
+  }
+
+  /** Klick auf einen Hex bei laufendem Wegbau. */
+  private wegKlick(h: Hx, touch: boolean): void {
+    const l = this.weg.letzter!;
+    if (gleich(h, l)) {
+      // nochmal auf den letzten Punkt: bis dorthin bauen; auf dem Start ohne Zwischenpunkte: Start verwerfen
+      if (this.weg.zwischenpunkte.length) this.wegBauen();
+      else { this.weg.leeren(); this.offen = null; this.hinweisSetzen(); }
+      return;
+    }
+    if (this.istEndziel(h)) {
+      // Touch: erst zeigen, zweiter Tipp (oder „Weg bauen“) baut
+      if (touch && !gleich(this.offen, h)) { this.offen = h; this.hinweisSetzen(); return; }
+      this.offen = null;
+      this.wegZu(h, true);
+      return;
+    }
+    this.offen = null;
+    this.wegZu(h, false);
+  }
+
+  /** Teilstück vom letzten Punkt nach `h` anhängen; bei `bauen` den ganzen Weg bauen, sonst `h` als Zwischenpunkt behalten. */
+  private wegZu(h: Hx, bauen: boolean): void {
+    const stueck = this._sim.wegAbschnitt(this.weg.letzter!, h, this.weg.pfad, this.weg.rest);
+    if (!stueck) { this.melde(this.weg.rest < 1 ? 'Der Weg ist am Limit (60 Schritte) – bauen oder zurück.' : 'Dorthin führt kein Weg (Hindernis, zu weit oder Fahne voll).', true); return; }
+    if (!this.weg.haengeAn(stueck)) { this.melde('Dorthin führt kein Weg.', true); return; }
+    if (bauen) this.wegBauen();
+    else { this.meldung = null; this.hinweisSetzen(); }
+  }
+
+  /** Den offenen Weg bis zum letzten Punkt bauen. Bei freiem Ende entsteht dort eine Fahne und der Weg geht von dort weiter. */
+  private wegBauen(): void {
+    const pfad = this.weg.pfad;
+    if (pfad.length < 2) return;
+    const ende = pfad[pfad.length - 1];
+    const hatFahne = this.fahneAt.has(key(ende));
+    this.befehl({ art: 'weg', pfad });
+    this.offen = null;
+    this.weg.leeren();
+    if (!hatFahne) this.weg.beginne(ende);
+    this.meldung = null;
+    this.hinweisSetzen();
+  }
+
+  /** Letzten Zwischenpunkt entfernen (Rücktaste, „Zurück“). */
+  zurueck(): void {
+    if (this.werkzeug !== 'weg' || !this.weg.zurueck()) return;
+    this.offen = null;
+    this.meldung = null;
+    this.hinweisSetzen();
+  }
+
   private bestaetigen(): void {
+    if (this.werkzeug === 'keins') return;
+    if (this.werkzeug === 'weg') {
+      if (!this.weg.aktiv) return;
+      if (this.offen) { const h = this.offen; this.offen = null; this.wegZu(h, true); return; }
+      if (this.weg.zwischenpunkte.length) { this.wegBauen(); return; }
+      // ohne Zwischenpunkte: wie ein Klick auf den Hex unter der Maus
+      if (this.zeiger === 'mouse' && this.fokus && !gleich(this.fokus, this.weg.start)) this.wegKlick(this.fokus, false);
+      return;
+    }
     const h = this.offen ?? (this.zeiger === 'mouse' ? this.fokus : null);
-    if (!h || this.werkzeug === 'keins') return;
-    if (this.werkzeug === 'weg' && !this.wegStart) return;
+    if (!h) return;
     this.offen = null;
     this.aktion(h);
   }
 
-  /** Esc, Rechtsklick, „Abbrechen“: erst das offene Ziel, dann den Wegstart, dann das Werkzeug. */
+  /** Esc, Rechtsklick, „Abbrechen“: erst das offene Ziel, dann den offenen Weg, dann das Werkzeug. */
   abbrechen(): void {
     if (this.offen) this.offen = null;
-    else if (this.wegStart) this.wegStart = null;
+    else if (this.weg.aktiv) this.weg.leeren();
     else if (this.werkzeug !== 'keins') this.waehleWerkzeug('keins');
     this.meldung = null;
     this.hinweisSetzen();
@@ -336,7 +405,7 @@ export class Spiel {
 
   waehleWerkzeug(w: Werkzeug): void {
     this.werkzeug = w;
-    this.wegStart = null;
+    this.weg.leeren();
     this.offen = null;
     this.meldung = null;
     this.vorschauSig = '';
@@ -362,15 +431,6 @@ export class Spiel {
       if (b === 'lager') this.melde('Das Lager bleibt stehen – ohne Lager geht es nicht.', true);
       else if (b) { this.befehl(b); this.melde('Abgerissen.', false); }
       else this.melde('Hier ist nichts zum Abreißen.', true);
-    } else if (w === 'weg' && this.wegStart) {
-      const pfad = this._sim.wegVorschau(this.wegStart, h);
-      if (!pfad) { this.melde('Dorthin führt kein Weg (Hindernis, zu weit oder Fahne voll).', true); return; }
-      const hatFahne = this.fahneAt.has(key(h));
-      this.befehl({ art: 'weg', pfad });
-      this.offen = null;
-      // Wege verketten: bei freiem Ziel wird dort eine Fahne gesetzt und ist der neue Start
-      this.wegStart = hatFahne ? null : { q: h.q, r: h.r };
-      this.hinweisSetzen();
     }
   }
 
@@ -416,37 +476,58 @@ export class Spiel {
     const abst = this.ctx.abstand();
     let art: RingArt | null = null;
     let pfad: Hx[] | null = null;
+    let fest: Hx[] | null = null;
     let pfadOk = false;
+    const wegAktiv = w === 'weg' && this.weg.aktiv;
+    if (wegAktiv) fest = this.weg.pfad;
     if (ziel) {
       if (w === 'weg') {
-        if (this.wegStart) {
-          if (!gleich(ziel, this.wegStart)) {
-            const sig = `${key(this.wegStart)}>${key(ziel)}|${this.netzSig}`;
+        if (wegAktiv) {
+          const l = this.weg.letzter!;
+          if (!gleich(ziel, l)) {
+            const sig = `${this.weg.sig}>${key(ziel)}|${this.netzSig}`;
             if (sig !== this.vorschauSig) {
               this.vorschauSig = sig;
-              this.vorschauPfad = this._sim.wegVorschau(this.wegStart, ziel);
+              this.vorschauPfad = this._sim.wegAbschnitt(l, ziel, this.weg.pfad, this.weg.rest);
             }
             pfadOk = !!this.vorschauPfad;
-            pfad = this.vorschauPfad ?? hexLinie(this.wegStart, ziel);
+            pfad = this.vorschauPfad ?? hexLinie(l, ziel, Math.max(1, this.weg.rest));
             art = pfadOk ? 'gut' : 'schlecht';
-          }
+          } else art = 'neutral';
         } else art = this.fahneAt.has(key(ziel)) ? 'gut' : 'neutral';
       } else if (w === 'fahne') art = this._sim.kannFahne(ziel.q, ziel.r) ? 'gut' : 'schlecht';
       else if (GEBAEUDE_WERKZEUGE.includes(w)) art = this._sim.kannBauen(w, ziel.q, ziel.r) ? 'gut' : 'schlecht';
       else if (w === 'abriss') art = this.abrissBefehl(ziel) ? 'schlecht' : 'neutral';
       else if (this.zeiger === 'touch') art = 'neutral';
     }
-    if (w !== 'weg' || !this.wegStart) this.vorschauSig = '';
-    this.wege.zeigeVorschau(pfad, pfadOk);
+    if (!wegAktiv) this.vorschauSig = '';
+    this.wege.zeigeVorschau(pfad, pfadOk, fest);
     this.markierung.setze(0, ziel && art ? ziel : null, art ?? 'neutral', abst);
-    this.markierung.setze(1, this.wegStart, 'gewaehlt', abst);
-    // Knöpfe: „Bauen“ nur, wenn ein Tipp aussteht
+    this.markierung.setze(1, this.weg.start, 'gewaehlt', abst);
+    // Zwischenpunkte und die möglichen nächsten Schritte (Hex für Hex)
+    this.markierung.setzeListe('punkte', wegAktiv ? this.weg.zwischenpunkte : [], 'gewaehlt', abst, 0.6);
+    this.markierung.setzeListe('nachbarn', wegAktiv ? this.naechste() : [], 'gut', abst, 0.35);
+    // Knöpfe: „Bauen“ nur, wenn ein Tipp aussteht (beim Wegführen auch mit Zwischenpunkten)
+    const punkte = wegAktiv ? this.weg.zwischenpunkte.length : 0;
     if (this.offen && w !== 'keins') {
       const ok = w === 'weg' ? pfadOk : art === 'gut' || (w === 'abriss' && art === 'schlecht');
-      this.leiste.setAktionen(w === 'abriss' ? 'Abreißen' : w === 'weg' ? 'Weg bauen' : 'Bauen', true, !ok);
+      this.leiste.setAktionen(w === 'abriss' ? 'Abreißen' : w === 'weg' ? 'Weg bauen' : 'Bauen', true, !ok, punkte > 0);
+    } else if (punkte > 0) {
+      this.leiste.setAktionen('Weg bauen', true, false, true);
     } else {
       this.leiste.setAktionen(null, w !== 'keins');
     }
+  }
+
+  /** Nachbarn des letzten Punkts, die als nächster Schritt gelten (zwischengespeichert, solange sich Weg und Netz nicht ändern). */
+  private naechste(): Hx[] {
+    const sig = `${this.weg.sig}|${this.netzSig}`;
+    if (sig !== this.schrittSig) {
+      this.schrittSig = sig;
+      const belegt = this.weg.pfad;
+      this.schrittHexe = naechsteSchritte(this.weg, (von, nach) => this._sim.wegAbschnitt(von, nach, belegt, 1));
+    }
+    return this.schrittHexe;
   }
 
   // ------------------------------------------------------------------ Hinweise, Info, Status
@@ -463,8 +544,15 @@ export class Spiel {
     const tippe = touch ? 'antippen' : 'anklicken';
     let t: string | null = null;
     if (w === 'weg') {
-      t = !this.wegStart ? `Weg: eine Fahne als Start ${tippe}.`
-        : touch ? 'Ziel antippen, dann nochmal tippen oder „Weg bauen“.' : 'Ziel anklicken – baut den Weg. Esc beendet.';
+      const n = this.weg.schritte;
+      if (!this.weg.aktiv) t = `Weg: eine Fahne als Start ${tippe}.`;
+      else if (touch) {
+        t = n === 0 ? 'Weg: Hex antippen = Zwischenpunkt, Fahne antippen und nochmal = bauen.'
+          : `Weg: ${n} Schritte – Hex = Zwischenpunkt, Fahne zweimal tippen oder „Weg bauen“ baut, „Zurück“ nimmt den letzten Punkt weg.`;
+      } else {
+        t = n === 0 ? 'Weg: Hex für Hex anklicken (Zwischenpunkte) oder gleich eine Fahne – die baut. Esc bricht ab.'
+          : `Weg: ${n} Schritte – Ziel anklicken (Fahne baut, freier Hex = Zwischenpunkt), letzten Punkt nochmal oder Enter baut, Rücktaste zurück.`;
+      }
     } else if (w === 'fahne') t = `Fahne: Hex ${tippe}. Auf einem Weg teilt sie ihn.`;
     else if (GEBAEUDE_WERKZEUGE.includes(w)) {
       t = `${NAMEN[w]} (Bauplatz ${BAUPLATZ_NAME[GEBAEUDE[w].groesse]}): Platz ${tippe}. ${AUF_PUMP}`;
