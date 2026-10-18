@@ -259,12 +259,18 @@ function phase2(t: Typ): THREE.BufferGeometry[] {
   return out;
 }
 
+/** Gebäude ohne eigenes Modell (M4: Förster, Hütte) zeigen ein vorhandenes. */
+const MODELL_ERSATZ: Record<string, string> = { foerster: 'holzfaeller', huette: 'wohnhaus' };
+function modellTyp(typ: string): string {
+  return typ in TYPEN ? typ : (MODELL_ERSATZ[typ] ?? 'wohnhaus');
+}
+
 const modellCache = new Map<string, THREE.BufferGeometry>();
 function modell(typ: string, phase: number): THREE.BufferGeometry {
   const key = `${typ}:${phase}`;
   let g = modellCache.get(key);
   if (!g) {
-    const t = TYPEN[typ] ?? TYPEN.wohnhaus;
+    const t = TYPEN[modellTyp(typ)];
     g = mergeGeometries(phase <= 1 ? phase1(t) : phase === 2 ? phase2(t) : t.fertig())!;
     g.computeVertexNormals();
     modellCache.set(key, g);
@@ -325,7 +331,7 @@ export class Gebaeude {
 
   /** Mitte des Modells (Ausschnitt-Meter) und Skala für ein Gebäude auf Hex (q, r). */
   private lage(typ: string, q: number, r: number) {
-    const t = TYPEN[typ] ?? TYPEN.wohnhaus;
+    const t = TYPEN[modellTyp(typ)];
     const s = HAUS_SKALE * t.skala;
     const w = this.grid.toWorld({ q, r });
     // Vorderkante des Platzbedarfs liegt 4 m vor der Fahne (Hex-Mitte)
@@ -378,12 +384,12 @@ export class Gebaeude {
     const sichtbar = new Set<Id>();
     for (const g of sicht.gebaeude) {
       const pl = this.plaetze.get(g.id)!;
-      const t = TYPEN[g.typ] ?? TYPEN.wohnhaus;
+      const t = TYPEN[modellTyp(g.typ)];
       const phase = bauPhase(g.bau);
-      const key = `${g.typ in TYPEN ? g.typ : 'wohnhaus'}:${phase}`;
+      const key = `${modellTyp(g.typ)}:${phase}`;
       let satz = this.saetze.get(key);
       if (!satz) {
-        satz = new Instanzen(this.group, modell(g.typ in TYPEN ? g.typ : 'wohnhaus', phase), this.mat, true, true);
+        satz = new Instanzen(this.group, modell(modellTyp(g.typ), phase), this.mat, true, true);
         satz.beginne();
         this.saetze.set(key, satz);
       }

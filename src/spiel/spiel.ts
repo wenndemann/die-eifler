@@ -9,7 +9,7 @@ import type { Ausschnitt } from '../welt/ausschnitt';
 import { FLAG, HEX } from '../welt/format';
 import { Simulation } from '../sim/sim';
 import { spieleAb } from '../sim/replay';
-import { FLAG_CAP, GEBAEUDE } from '../sim/daten';
+import { FLAG_CAP, GEBAEUDE, WAREN, WAREN_NAMEN } from '../sim/daten';
 import { PROMILLE, TICK_HZ } from '../sim/typen';
 import type { Befehl, Protokoll, SichtFahne, SichtGebaeude, SichtSegment, SimSicht } from '../sim/typen';
 import { Wege } from '../render/wege';
@@ -41,13 +41,17 @@ export interface SpielKontext {
   yAt: (x: number, z: number) => number;
 }
 
-const NAMEN: Record<string, string> = {
-  lager: 'Lager', holzfaeller: 'Holzfäller', steinbruch: 'Steinbruch', saegewerk: 'Sägewerk', wohnhaus: 'Wohnhaus',
+/** Anzeigenamen der Gebäude aus data/buildings.json. */
+const NAMEN: Record<string, string> = Object.fromEntries(Object.values(GEBAEUDE).map((t) => [t.id, t.name]));
+/** Kurznamen der Waren (letztes Wort des Anzeigenamens, z. B. „Baumstamm“). */
+const WARE_NAME: string[] = WAREN_NAMEN.map((n) => n.split(' ').slice(1).join(' ') || n);
+/** Zustand fertiger Gebäude in Klartext (die große Oberfläche folgt später). */
+const ZUSTAND_TEXT: Record<string, string> = {
+  getrennt: 'fertig – ohne Verbindung', kein_arbeiter: 'wartet auf einen Bewohner', kein_baum: 'findet keinen Baum', kein_fels: 'findet keinen Fels mehr',
+  kein_platz: 'findet keinen Pflanzplatz', voll: 'Lager voll – wartet auf Abtransport', arbeitet: 'arbeitet', wartet_material: 'wartet auf Material', bereit: 'fertig',
 };
-const WARE_NAME = ['Stamm', 'Brett', 'Stein', 'Essen'];
 const BAUPLATZ_NAME = ['kein', 'klein', 'mittel', 'groß'];
-const AUF_PUMP = 'Material kommt in M4 – bis dahin baut der Eifeler auf Pump.';
-const GEBAEUDE_WERKZEUGE = ['holzfaeller', 'steinbruch', 'saegewerk', 'wohnhaus'];
+const GEBAEUDE_WERKZEUGE = ['holzfaeller', 'foerster', 'saegewerk', 'steinbruch', 'huette'];
 
 const key = (h: Hx) => `${h.q},${h.r}`;
 const gleich = (a: Hx | null, b: Hx | null) => !!a && !!b && a.q === b.q && a.r === b.r;
@@ -260,7 +264,7 @@ export class Spiel {
     const t = e.target;
     if (t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
-    const ziffer = /^(?:Digit|Numpad)([1-6])$/.exec(e.code);
+    const ziffer = /^(?:Digit|Numpad)([1-7])$/.exec(e.code);
     if (ziffer) { this.waehleWerkzeug(WERKZEUGE[Number(ziffer[1]) - 1].id); return; }
     switch (e.code) {
       case 'Delete': case 'KeyX': this.waehleWerkzeug('abriss'); return;
@@ -355,7 +359,7 @@ export class Spiel {
     } else if (GEBAEUDE_WERKZEUGE.includes(w)) {
       if (this._sim.kannBauen(w, h.q, h.r)) {
         this.befehl({ art: 'gebaeude', typ: w, q: h.q, r: h.r });
-        this.melde(`${NAMEN[w]} wird gebaut. ${AUF_PUMP}`, false);
+        this.melde(`${NAMEN[w]} wird gebaut – Material kommt aus dem Lager (${this.kostenText(w)}).`, false);
       } else this.melde(`${NAMEN[w]} geht hier nicht: ${this.grundBauen(w, h)}.`, true);
     } else if (w === 'abriss') {
       const b = this.abrissBefehl(h);
@@ -467,15 +471,15 @@ export class Spiel {
         : touch ? 'Ziel antippen, dann nochmal tippen oder „Weg bauen“.' : 'Ziel anklicken – baut den Weg. Esc beendet.';
     } else if (w === 'fahne') t = `Fahne: Hex ${tippe}. Auf einem Weg teilt sie ihn.`;
     else if (GEBAEUDE_WERKZEUGE.includes(w)) {
-      t = `${NAMEN[w]} (Bauplatz ${BAUPLATZ_NAME[GEBAEUDE[w].groesse]}): Platz ${tippe}. ${AUF_PUMP}`;
+      t = `${NAMEN[w]} (Bauplatz ${BAUPLATZ_NAME[GEBAEUDE[w].groesse]}): Platz ${tippe}. Kosten: ${this.kostenText(w)}.`;
     } else if (w === 'abriss') t = `Abriss: Gebäude, Fahne oder Weg ${tippe}.`;
     this.leiste.setHinweis(t);
   }
 
   private statusSetzen(): void {
     const s = this._sicht;
-    const vorrat = [0, 0, 0, 0];
-    for (const g of s.gebaeude) if (g.vorrat) for (let i = 0; i < 4; i++) vorrat[i] += g.vorrat[i] ?? 0;
+    const vorrat = new Array<number>(WAREN.length).fill(0);
+    for (const g of s.gebaeude) if (g.vorrat) for (let i = 0; i < vorrat.length; i++) vorrat[i] += g.vorrat[i] ?? 0;
     this.leiste.setStatus({ tick: s.tick, freieTraeger: s.freieTraeger, vorrat, pruefsumme: this._sim.pruefsumme() });
   }
 
@@ -488,7 +492,7 @@ export class Spiel {
     const w = this.werkzeug;
     if (g) {
       const name = NAMEN[g.typ] ?? g.typ;
-      const phase = g.bau >= PROMILLE ? 'fertig' : `Baustelle ${Math.floor(g.bau / 10)} % (Phase ${1 + Math.floor((3 * g.bau) / 1001)} von 3)`;
+      const phase = g.bau >= PROMILLE ? ZUSTAND_TEXT[g.zustand] ?? 'fertig' : `Baustelle ${Math.floor(g.bau / 10)} % (Phase ${1 + Math.floor((3 * g.bau) / 1001)} von 3)`;
       z.push(`<b class="sim">${name}</b><span>${phase}</span>`);
       if (g.getrennt) z.push('<span class="warn">⚠ keine Verbindung zum Lager</span>');
       if (g.vorrat) z.push(`<span>Vorrat: ${g.vorrat.map((n, i) => `${WARE_NAME[i]} ${n}`).join(' · ')}</span>`);
@@ -513,8 +517,14 @@ export class Spiel {
     return z;
   }
 
+  /** Baukosten als Text, z. B. „2 Bretter, 1 Stein“. */
+  private kostenText(typ: string): string {
+    const k = this._sim.kosten(typ);
+    return k.map((n, i) => (n ? `${n} ${WARE_NAME[i]}` : '')).filter(Boolean).join(', ') || 'keine';
+  }
+
   private warenText(f: SichtFahne): string {
-    const n = [0, 0, 0, 0];
+    const n = new Array<number>(WAREN.length).fill(0);
     for (const x of f.waren) n[x]++;
     return n.map((c, i) => (c ? `${WARE_NAME[i]} ×${c}` : '')).filter(Boolean).join(', ') || 'leer';
   }
