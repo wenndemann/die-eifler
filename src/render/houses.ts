@@ -31,7 +31,8 @@ interface Haus { x: number; z: number; rot: number; typ: number; s: number; a: n
 
 export class Houses {
   readonly group = new THREE.Group();
-  private items: { mesh: THREE.InstancedMesh; data: Float32Array }[] = [];
+  private items: { mesh: THREE.InstancedMesh; data: Float32Array; weg: Uint8Array }[] = [];
+  private ex = 1;
   count = 0;
   /** Rasterzellen unter und neben den Häusern (für Wald: dort keine Bäume). */
   readonly maske: Uint8Array;
@@ -161,7 +162,7 @@ export class Houses {
       });
       mesh.castShadow = true;
       mesh.receiveShadow = true;
-      this.items.push({ mesh, data });
+      this.items.push({ mesh, data, weg: new Uint8Array(liste.length) });
       this.group.add(mesh);
       this.count += liste.length;
     });
@@ -191,15 +192,28 @@ export class Houses {
     }
   }
 
+  /** Kulissenhäuser im Umkreis (Ausschnitt-Meter) ausblenden, z. B. wenn dort ein Spielgebäude entsteht. Liefert die Zahl. */
+  verstecke(x: number, z: number, radius: number): number {
+    let n = 0;
+    for (const it of this.items) {
+      for (let t = 0; t < it.weg.length; t++) {
+        if (!it.weg[t] && Math.hypot(it.data[t * 5] - x, it.data[t * 5 + 2] - z) < radius) { it.weg[t] = 1; n++; }
+      }
+    }
+    if (n) this.setExaggeration(this.ex);
+    return n;
+  }
+
   setExaggeration(ex: number) {
+    this.ex = ex;
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3();
     const up = new THREE.Vector3(0, 1, 0);
-    for (const { mesh, data } of this.items) {
+    for (const { mesh, data, weg } of this.items) {
       for (let t = 0; t < data.length / 5; t++) {
         // Oberkante des Bruchsteinsockels liegt 1 m (echt) über der Hausmitte-Null: Haus sitzt 0,5 m im planierten Boden
         p.set(data[t * 5], data[t * 5 + 1] * ex - 0.5 * data[t * 5 + 4], data[t * 5 + 2]);
         q.setFromAxisAngle(up, data[t * 5 + 3]);
-        const sc = data[t * 5 + 4];
+        const sc = weg[t] ? 0 : data[t * 5 + 4];
         s.set(sc, sc, sc);
         mesh.setMatrixAt(t, m.compose(p, q, s));
       }

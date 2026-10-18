@@ -20,6 +20,7 @@ import { Bench, zeigeErgebnis, type BenchErgebnis } from './bench';
 import { ladeWelt, type Welt } from './welt/laden';
 import { ladeAusschnitt } from './welt/ausschnitt';
 import { GROESSEN, type AusschnittParam, type Groesse } from './welt/format';
+import { SimDemo } from './render/simdemo';
 import { hexToWorld } from './welt/hexwelt';
 
 const TERRAIN_NAMES: Record<string, string> = {
@@ -27,7 +28,7 @@ const TERRAIN_NAMES: Record<string, string> = {
 };
 const LAENDER: Record<string, string> = { DE: 'Deutschland', BE: 'Belgien', LU: 'Luxemburg', NL: 'Niederlande' };
 
-interface HashParam { version?: string; q?: number; r?: number; size?: Groesse; vorschlag?: string; bench?: boolean }
+interface HashParam { version?: string; q?: number; r?: number; size?: Groesse; vorschlag?: string; bench?: boolean; simdemo?: boolean }
 
 /** URL-Hash: #v=<version>&q=..&r=..&g=klein|mittel|gross oder #<vorschlag-id>. */
 function leseHash(): HashParam {
@@ -36,7 +37,7 @@ function leseHash(): HashParam {
   if (!h.includes('=')) return { vorschlag: decodeURIComponent(h) };
   const sp = new URLSearchParams(h);
   const g = sp.get('g') as Groesse | null;
-  const out: HashParam = { version: sp.get('v') ?? undefined, bench: sp.get('bench') === '1' };
+  const out: HashParam = { version: sp.get('v') ?? undefined, bench: sp.get('bench') === '1', simdemo: sp.get('simdemo') === '1' };
   if (sp.has('q') && sp.has('r') && g && g in GROESSEN) { out.q = Number(sp.get('q')); out.r = Number(sp.get('r')); out.size = g; }
   return out;
 }
@@ -116,6 +117,10 @@ async function main() {
   const trees = new Trees(map, base, ex, houses.maske);
   stage.scene.add(terrain.group, trees.group, houses.group);
 
+  // Entwicklungs-Demo ohne Simulation (#…&simdemo=1): Wege, Fahnen, Träger, Waren, Gebäude mit Fake-Sicht
+  const simdemo = hp.simdemo ? new SimDemo({ map, grid, base, ex, haken: { terrain, houses, trees } }) : null;
+  if (simdemo) stage.scene.add(simdemo.group);
+
   const yAt = (x: number, z: number) => (map.surfaceAt(x, z) - base) * ex;
 
   // Kamera bleibt auf Spielfeld + etwas Rand (fraktionaler Hex-Abstand zur Mitte)
@@ -141,6 +146,7 @@ async function main() {
     if (Math.abs(trees.group.userData.ex - ex) > 1e-6 || trees.group.userData.ex === undefined) {
       trees.setExaggeration(ex);
       houses.setExaggeration(ex);
+      simdemo?.setExaggeration(ex);
       trees.group.userData.ex = ex;
     }
     terrain.uniforms.uGrid.value = hud.settings.grid ? 1 : 0;
@@ -153,6 +159,7 @@ async function main() {
       trees.setQuality(qualitaet);
     }
   };
+  simdemo?.setKamera(cam.camera);
   hud.onSettings = apply;
   stage.setQuality(hud.settings.quality);
   terrain.setQuality(hud.settings.quality);
@@ -259,6 +266,7 @@ async function main() {
     stage.follow(cam.target, cam.distance);
     terrain.update(cam.camera.position);
     trees.update(cam.camera.position);
+    simdemo?.update(dt);
     water.uniforms.uTime.value += dt;
     rivers.uniforms.uTime.value += dt;
     trees.uniforms.uTime.value += dt;
@@ -323,7 +331,7 @@ async function main() {
     return r.center;
   };
   Object.assign(api, {
-    map, cam, stage, terrain, trees, hud, mockup, ausschnitt, grid, rails, rivers, ladezeit,
+    map, cam, stage, terrain, simdemo, trees, hud, mockup, ausschnitt, grid, rails, rivers, ladezeit,
     skipIntro: () => { intro = null; api.ready = true; },
     startBench, bench: null,
     /** alle fehlenden Gelände-Netze sofort bauen (Screenshots) */

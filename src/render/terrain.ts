@@ -74,6 +74,9 @@ export class Terrain {
   private kern = new THREE.Color(KERN_COLOR);
   private lastSweep = 0;
   private lodFaktor = 1;
+  /** Betretener Boden (0..255) je Rasterzelle: planierte Bauplätze färben sich erdig (siehe setzeErde). */
+  private erde: Uint8Array;
+  private erdeFarbe = new THREE.Color('#9a8460');
 
   constructor(private map: MapData, readonly base: number, hexOrigin: THREE.Vector2) {
     this.uniforms = {
@@ -85,6 +88,7 @@ export class Terrain {
       uHoverOn: { value: 0 },
     };
     this.grid = new HexGrid(map.originX, map.originZ, map.ausschnitt.hex);
+    this.erde = new Uint8Array(map.info.width * map.info.height);
     this.material = this.createMaterial();
     this.index = this.buildIndex(CHUNK);
 
@@ -124,6 +128,28 @@ export class Terrain {
 
   setExaggeration(ex: number) {
     this.group.scale.y = ex;
+  }
+
+  /** Rasterzelle (i, j) zu `anteil` (0..1) als festgetretene Erde färben (nur Darstellung, nimmt nie ab). */
+  setzeErde(i: number, j: number, anteil: number) {
+    const { width, height } = this.map.info;
+    if (i < 0 || j < 0 || i >= width || j >= height) return;
+    const k = j * width + i, v = Math.round(Math.min(1, Math.max(0, anteil)) * 255);
+    if (v > this.erde[k]) this.erde[k] = v;
+  }
+
+  /** Gelände im Rechteck (Ausschnitt-Meter) neu aufbauen, nachdem map.ground / setzeErde dort geändert wurden.
+   *  Vorhandene Netze werden an Ort und Stelle ersetzt (keine Löcher), fehlende baut update() später ohnehin frisch. */
+  erneuere(x0: number, z0: number, x1: number, z1: number) {
+    const cell = this.map.info.cell;
+    for (const n of this.nodes) {
+      if (!n.mesh) continue;
+      const size = (CHUNK << n.level) * cell;
+      if (n.i0 * cell > x1 + cell || n.j0 * cell > z1 + cell || n.i0 * cell + size < x0 - cell || n.j0 * cell + size < z0 - cell) continue;
+      const alt = n.mesh.geometry;
+      n.mesh.geometry = this.buildGeometry(n);
+      alt.dispose();
+    }
   }
 
   setQuality(q: Qualitaet) {
@@ -212,6 +238,9 @@ export class Terrain {
       const hi = this.grid.index(h);
       out.copy(hi >= 0 && map.hexTerrain[hi] === 6 ? this.kern : this.pal[1]);
     } else out.copy(this.pal[cv] ?? this.pal[1]);
+    // Festgetretene Erde (Bauplätze)
+    const er = this.erde[k];
+    if (er > 0) out.lerp(this.erdeFarbe, (er / 255) * 0.8);
     // Äcker: Streifen-Muster je Feldblock
     if (cv === 2) {
       const stripe = hash(Math.floor(i / 15), Math.floor(j / 21));
