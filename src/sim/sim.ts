@@ -3,11 +3,14 @@
 import { FLAG } from '../welt/format';
 import { Fnv2 } from '../welt/pruefsumme';
 import {
-  BAUM_WACHSEN, BUILD_ACTION, FAHNE_MAX_SEGMENTE, FELS_STEIL, FELS_STEIN, FLAG_CAP, GEBAEUDE, NOTPLAETZE, PRIO_MAX, PRIO_MIN,
-  PRIO_STANDARD, START_VORRAT, STEIL_GRAD, SUCHE_WARTE, TRAEGER_START, TREE_MAX, UEBERGABE_TICKS, WAREN, WEG_MAX_SCHRITTE,
+  ARBEIT_MITTE_MAX, BAUM_HEIDE_PROZENT, BAUM_MOOR_PROZENT, BAUM_WACHSEN, BAUM_WIESE_PROZENT, BUILD_ACTION, FAHNE_MAX_SEGMENTE,
+  FELS_LESE, FELS_LESE_START, FELS_STEIL, FELS_STEIN, FLAG_CAP, GEBAEUDE, LESE_PROZENT, NOTPLAETZE, PRIO_MAX, PRIO_MIN, PRIO_STANDARD,
+  RODUNG_STAMM_MAX, START_STEIN_ABSTAND_MIN, START_STEIN_MIN, START_STEIN_RADIUS, START_VORRAT, STEIL_GRAD, SUCHE_WARTE, TRAEGER_START,
+  TREE_MAX, UEBERGABE_TICKS, WARE, WAREN, WEG_MAX_SCHRITTE,
 } from './daten';
 import type { GebaeudeTyp } from './daten';
 import { SimKarte } from './karte';
+import { FELS_FELS, FELS_KLIPPE, FELS_LESE as ART_LESE, hashHex, hashHex2, hashHex3 } from './natur';
 import { sucheWeg, ZahlenHeap } from './pfad';
 import { PROMILLE } from './typen';
 import type {
@@ -61,6 +64,8 @@ interface Gebaeude {
   // Arbeiter: ar = 1, wenn ein Bewohner zugewiesen ist; Phase, Ticks in der Phase und deren Dauer, Schritt auf dem Gehweg,
   // Zielhex (-1 keiner), Gehweg Hütte → Ziel, getragene Ware (-1 keine), leer = 1: letzte Suche ohne Ergebnis.
   ar: number; ph: number; pt: number; pd: number; wi: number; zh: number; weg: number[]; traegt: number; leer: number;
+  /** Arbeitsmittelpunkt (Hex-Index) oder -1 = das Gebäude selbst. */
+  mitte: number;
 }
 
 const DIST_K = 1 << 21;
@@ -91,6 +96,11 @@ export class Simulation {
   private jungReif: Int32Array;
   private stufe: Uint8Array;
   private fels: Uint8Array;
+  /** Art des Steins je Hex (statisch) und Baumzahl beim Start (statisch). */
+  private felsArt: Uint8Array;
+  private baumStart!: Uint8Array;
+  private felsArtKopie!: Uint8Array;
+  private baumStartKopie!: Uint8Array;
   private baumRes: Uint8Array;
   private felsRes: Uint8Array;
   /** Hexe mit Jungbäumen (Einfüge-Reihenfolge). */
@@ -121,19 +131,66 @@ export class Simulation {
     this.jungReif = new Int32Array(n * TREE_MAX);
     this.stufe = new Uint8Array(n);
     this.fels = new Uint8Array(n);
+    this.felsArt = new Uint8Array(n);
     this.baumRes = new Uint8Array(n);
     this.felsRes = new Uint8Array(n);
-    // Wald der Karte → 3 Bäume je Hex; Steinfelder → 12, steile begehbare Hexe (Klippen) → 4 Einheiten Stein
-    for (let i = 0; i < n; i++) {
-      const t = this.karte.terrain[i];
-      if (t === 2) this.baum[i] = TREE_MAX;
-      if (t === 5) this.fels[i] = FELS_STEIN;
-      else if (t !== 0 && this.karte.neigung[i] >= STEIL_GRAD) this.fels[i] = FELS_STEIL;
-    }
+    this.natureStart();
     const h = this.karte.index(start.q, start.r);
     if (h < 0 || !this.karte.begehbar[h]) throw new Error('Startlager liegt nicht auf begehbarem Boden');
     const lager = this.gebaeudeErzeugen('lager', h, true);
     lager.vorrat = START_VORRAT.slice();
+    this.fairerStart(h);
+    this.felsArtKopie = this.felsArt.slice();
+    this.baumStartKopie = this.baumStart.slice();
+  }
+
+  /**
+   * Start-Natur nur aus Kartendaten und Welt-Hex-Koordinaten (hashHex, nicht die Saat): Wald 3 Bäume; Wiese, Heide, Moor je 1 Streubaum
+   * auf BAUM_*_PROZENT der Hexe; Steinfeld = Fels (FELS_STEIN), steile begehbare Hexe = Klippe (FELS_STEIL), Wiese/Wald mit
+   * LESE_PROZENT = Lesesteinhaufen (FELS_LESE). Ortskern-, Siedlungs-, Bahn- und Wasser-Hexe tragen keine Bäume.
+   */
+  private natureStart(): void {
+    const k = this.karte, n = k.count;
+    for (let i = 0; i < n; i++) {
+      const t = k.terrain[i], q = k.qs[i], r = k.rs[i];
+      const frei = t !== 0 && t !== 6 && !(k.flags[i] & (FLAG.ortskern | FLAG.bahn));
+      if (frei) {
+        if (t === 2) this.baum[i] = TREE_MAX;
+        else if (t === 1 && hashHex(q, r) % 100 < BAUM_WIESE_PROZENT) this.baum[i] = 1;
+        else if (t === 3 && hashHex(q, r) % 100 < BAUM_HEIDE_PROZENT) this.baum[i] = 1;
+        else if (t === 4 && hashHex(q, r) % 100 < BAUM_MOOR_PROZENT) this.baum[i] = 1;
+      }
+      if (t === 5) { this.fels[i] = FELS_STEIN; this.felsArt[i] = FELS_FELS; }
+      else if (t !== 0 && k.neigung[i] >= STEIL_GRAD) { this.fels[i] = FELS_STEIL; this.felsArt[i] = FELS_KLIPPE; }
+      else if (frei && (t === 1 || t === 2) && hashHex2(q, r) % 100 < LESE_PROZENT) { this.fels[i] = FELS_LESE; this.felsArt[i] = ART_LESE; }
+    }
+    this.baumStart = this.baum.slice();
+  }
+
+  /**
+   * Fairer Start: Liegen im Umkreis START_STEIN_RADIUS ums Lager weniger als START_STEIN_MIN Steine, kommen Lesesteinhaufen
+   * (je FELS_LESE_START) auf freie Wiesen-, Heide- und Wald-Hexe im Abstand START_STEIN_ABSTAND_MIN..START_STEIN_RADIUS dazu – in der
+   * festen Reihenfolge hashHex3, dann Index – bis es reicht.
+   */
+  private fairerStart(lager: number): void {
+    const k = this.karte;
+    let summe = 0;
+    const kand: number[] = [];
+    for (let i = 0; i < k.count; i++) {
+      const d = k.abstand(lager, i);
+      if (d > START_STEIN_RADIUS) continue;
+      summe += this.fels[i];
+      const t = k.terrain[i];
+      if (d >= START_STEIN_ABSTAND_MIN && (t === 1 || t === 2 || t === 3) && !this.fels[i] && !(k.flags[i] & FLAG.bahn) && !this.hexGeb[i]) kand.push(i);
+    }
+    if (summe >= START_STEIN_MIN) return;
+    kand.sort((a, b) => hashHex3(k.qs[a], k.rs[a]) - hashHex3(k.qs[b], k.rs[b]) || a - b);
+    for (const i of kand) {
+      if (summe >= START_STEIN_MIN) break;
+      this.fels[i] = FELS_LESE_START; this.felsArt[i] = ART_LESE;
+      summe += FELS_LESE_START;
+    }
+    this.natRev++;
   }
 
   get tick(): number { return this._tick; }
@@ -209,6 +266,14 @@ export class Simulation {
       case 'abriss_fahne': this.fahneAbreissen(b.id); break;
       case 'abriss_weg': if (this.segmente.has(b.id)) this.segmentEntfernen(b.id, 0); break;
       case 'abriss_gebaeude': this.gebaeudeAbreissen(b.id); break;
+      case 'arbeitsbereich': {
+        const g = this.gebaeude.get(b.id);
+        if (!g || !(GEBAEUDE[g.typ].radius > 0) || !Number.isInteger(b.q) || !Number.isInteger(b.r)) break;
+        const m = k.index(b.q, b.r);
+        if (m < 0 || !k.begehbar[m] || k.abstand(g.h, m) > ARBEIT_MITTE_MAX) break;
+        g.mitte = m === g.h ? -1 : m;
+        break;
+      }
       case 'prioritaet': {
         const g = this.gebaeude.get(b.id);
         if (g && !g.fertig && Number.isInteger(b.stufe) && b.stufe >= PRIO_MIN && b.stufe <= PRIO_MAX) g.prio = b.stufe;
@@ -244,17 +309,21 @@ export class Simulation {
 
   /**
    * Hexe im Arbeitsradius eines Holzfällers (ausgewachsene Bäume), Steinbruchs (Fels-Einheiten) oder Försters (freie Pflanzplätze)
-   * für die Bauvorschau; n = Menge je Hex, summe = Gesamtmenge. art 'keine' bei anderen Typen. Rechnet nur ~18 Hexe.
+   * für die Bauvorschau; (q, r) ist das Gebäude, `mitte` der Arbeitsmittelpunkt (ohne: das Gebäude). n = Menge je Hex, gut = im
+   * inneren Ring (Abstand zum Mittelpunkt ≤ radiusGut), summe = Gesamtmenge. art 'keine' bei anderen Typen. Rechnet höchstens ~60 Hexe.
    */
-  arbeitsHexe(typ: string, q: number, r: number): { art: 'baum' | 'fels' | 'platz' | 'keine'; hexe: { q: number; r: number; n: number }[]; summe: number } {
-    const t = typVon(typ), mitte = this.karte.index(q, r);
+  arbeitsHexe(typ: string, q: number, r: number, mitte?: { q: number; r: number }): { art: 'baum' | 'fels' | 'platz' | 'keine'; hexe: { q: number; r: number; n: number; gut: boolean }[]; summe: number } {
+    const t = typVon(typ), geb = this.karte.index(q, r);
     const art = t?.funktion === 'holzfaeller' ? 'baum' : t?.funktion === 'steinbruch' ? 'fels' : t?.funktion === 'foerster' ? 'platz' : 'keine';
-    const aus: { q: number; r: number; n: number }[] = [];
+    const aus: { q: number; r: number; n: number; gut: boolean }[] = [];
     let summe = 0;
-    if (!t || art === 'keine' || mitte < 0) return { art, hexe: aus, summe };
-    for (const x of this.hexeImRadius(mitte, t.radius)) {
+    if (!t || art === 'keine' || geb < 0) return { art, hexe: aus, summe };
+    const m = mitte ? this.karte.index(mitte.q, mitte.r) : -1;
+    const c = m >= 0 ? m : geb;
+    for (const x of this.hexeImRadius(c, t.radius, c !== geb)) {
+      if (x === geb) continue;
       const n = art === 'baum' ? this.baum[x] : art === 'fels' ? this.fels[x] : this.pflanzbar(x) ? TREE_MAX - this.baum[x] - this.jung[x] : 0;
-      if (n > 0) { aus.push({ q: this.karte.qs[x], r: this.karte.rs[x], n }); summe += n; }
+      if (n > 0) { aus.push({ q: this.karte.qs[x], r: this.karte.rs[x], n, gut: this.karte.abstand(c, x) <= t.radiusGut }); summe += n; }
     }
     return { art, hexe: aus, summe };
   }
@@ -338,6 +407,7 @@ export class Simulation {
         if (t.ausgangMax > 0) o.ausgang = g.ausgang.slice();
         const ar = this.arbeiterSicht(g, t);
         if (ar) o.arbeiter = ar;
+        if (g.mitte >= 0) o.mitte = hx(g.mitte);
         return o;
       }),
       freieTraeger: this.freieTraeger,
@@ -348,7 +418,7 @@ export class Simulation {
   /** Bäume und Felsen als Kopie; wird nur bei Änderung (rev) neu angelegt. */
   private naturSicht(): SichtNatur {
     if (!this.natCache || this.natCache.rev !== this.natRev) {
-      this.natCache = { rev: this.natRev, baum: this.baum.slice(), jung: this.jung.slice(), stufe: this.stufe.slice(), fels: this.fels.slice() };
+      this.natCache = { rev: this.natRev, baum: this.baum.slice(), jung: this.jung.slice(), stufe: this.stufe.slice(), fels: this.fels.slice(), felsArt: this.felsArtKopie, start: this.baumStartKopie };
     }
     return this.natCache;
   }
@@ -498,13 +568,13 @@ export class Simulation {
     for (const g of this.gebaeude.values()) {
       w(g.id); f.text(g.typ); w(g.h); w(g.fahne); w(g.fertig); liste(g.verbaut); w(g.prio); w(g.getrennt ? 1 : 0);
       liste(g.puffer); liste(g.incoming); liste(g.ausgang); w(g.zeit); w(g.arbeit); liste(g.vorrat);
-      w(g.ar); w(g.ph); w(g.pt); w(g.pd); w(g.wi); w(g.zh); liste(g.weg); w(g.traegt); w(g.leer);
+      w(g.ar); w(g.ph); w(g.pt); w(g.pd); w(g.wi); w(g.zh); liste(g.weg); w(g.traegt); w(g.leer); w(g.mitte);
     }
     // Natur: nur bei Änderung neu gehasht
     w(this.natRev);
     if (!this.natHash || this.natHash.rev !== this.natRev) {
       const n = new Fnv2();
-      for (let i = 0; i < this.karte.count; i++) { n.byte(this.baum[i]); n.byte(this.jung[i]); n.byte(this.fels[i]); }
+      for (let i = 0; i < this.karte.count; i++) { n.byte(this.baum[i]); n.byte(this.jung[i]); n.byte(this.fels[i]); n.byte(this.felsArt[i]); }
       for (let i = 0; i < this.jungReif.length; i++) {
         const v = this.jungReif[i];
         if (v) { n.byte(i); n.byte(i >>> 8); n.byte(i >>> 16); n.byte(v); n.byte(v >>> 8); n.byte(v >>> 16); }
@@ -546,13 +616,13 @@ export class Simulation {
 
   // ------------------------------------------------------------------ Natur: Bäume und Felsen
 
-  /** Hexe im Radius (ohne die Mitte), Reihenfolge dr, dq aufsteigend (also nach Index). */
-  private hexeImRadius(h: number, radius: number): number[] {
+  /** Hexe im Radius (ohne die Mitte, mit `mitteDazu` einschließlich), Reihenfolge dr, dq aufsteigend (also nach Index). */
+  private hexeImRadius(h: number, radius: number, mitteDazu = false): number[] {
     const k = this.karte, aus: number[] = [];
     const q = k.qs[h], r = k.rs[h];
     for (let dr = -radius; dr <= radius; dr++) {
       for (let dq = Math.max(-radius, -dr - radius); dq <= Math.min(radius, -dr + radius); dq++) {
-        if (dq === 0 && dr === 0) continue;
+        if (dq === 0 && dr === 0 && !mitteDazu) continue;
         const x = k.index(q + dq, r + dr);
         if (x >= 0) aus.push(x);
       }
@@ -560,8 +630,10 @@ export class Simulation {
     return aus;
   }
 
-  /** Belegen (Gebäude, Fahne, Weg) vertreibt alle Bäume und Jungbäume des Hex. */
+  /** Belegen (Gebäude, Fahne, Weg) vertreibt alle Bäume und Jungbäume des Hex (und Klippen-/Lesesteine). */
   private hexRaeumen(h: number): void {
+    // Klippen und Lesesteine gehen beim Belegen verloren; ein Fels-Hex (Steinfeld) bleibt, wie er ist
+    if (this.fels[h] && this.felsArt[h] !== FELS_FELS) { this.fels[h] = 0; this.natRev++; }
     if (!this.baum[h] && !this.jung[h]) return;
     this.baum[h] = 0; this.jung[h] = 0; this.stufe[h] = 0;
     for (let j = 0; j < TREE_MAX; j++) this.jungReif[h * TREE_MAX + j] = 0;
@@ -631,12 +703,19 @@ export class Simulation {
       id: this.naechsteId++, typ, h, fahne: 0, fertig: sofort || t.kostenSumme === 0 ? 1 : 0,
       verbaut: sofort ? t.kosten.slice() : nul(), prio: PRIO_STANDARD, getrennt: typ !== 'lager',
       puffer: nul(), incoming: nul(), ausgang: nul(), zeit: 0, arbeit: 0, vorrat: nul(),
-      ar: 0, ph: PH_SUCHE, pt: 0, pd: 0, wi: 0, zh: -1, weg: [], traegt: -1, leer: 0,
+      ar: 0, ph: PH_SUCHE, pt: 0, pd: 0, wi: 0, zh: -1, weg: [], traegt: -1, leer: 0, mitte: -1,
     };
+    // gerodete ausgewachsene Bäume (höchstens RODUNG_STAMM_MAX) werden zu Stämmen an der Gebäudefahne
+    const staemme = sofort ? 0 : Math.min(RODUNG_STAMM_MAX, this.baum[h]);
     const f = this.fahneErzeugen(h, g.id);
     g.fahne = f.id;
+
     this.hexGeb[h] = g.id;
     this.gebaeude.set(g.id, g);
+    for (let i = 0; i < staemme && f.waren.length < FLAG_CAP; i++) {
+      this.wareAufFahne(f, WARE.stamm);
+      this.stat.erzeugt++; this.erzeugtJe[WARE.stamm]++;
+    }
     return g;
   }
 
@@ -1057,25 +1136,33 @@ export class Simulation {
     return weg;
   }
 
-  /** Nächster Hex im Radius mit freiem Baum/Fels (Gleichstand: kleinerer Index) samt Gehweg, oder null. */
+  /** Mittelpunkt des Arbeitsbereichs (Hex-Index): der gesetzte oder das Gebäude selbst. */
+  private arbeitsMitte(g: Gebaeude): number { return g.mitte >= 0 ? g.mitte : g.h; }
+
+  /** Hexe des Arbeitsbereichs: Radius um den Mittelpunkt (dieser selbst nur, wenn er nicht das Gebäude ist), ohne das Gebäude-Hex. */
+  private arbeitsHexeVon(g: Gebaeude, t: GebaeudeTyp): number[] {
+    return this.hexeImRadius(this.arbeitsMitte(g), t.radius, g.mitte >= 0).filter((x) => x !== g.h);
+  }
+
+  /** Hex im Arbeitsbereich mit freiem Baum/Fels, der vom Gebäude aus am schnellsten erreichbar ist (Gleichstand: kleinerer Index), samt Gehweg, oder null. */
   private sucheRessource(g: Gebaeude, t: GebaeudeTyp): number[] | null {
     const baum = t.funktion === 'holzfaeller';
-    let best: number[] | null = null, bd = Infinity, bi = 0;
-    for (const x of this.hexeImRadius(g.h, t.radius)) {
+    let best: number[] | null = null, bk = Infinity, bi = 0;
+    for (const x of this.arbeitsHexeVon(g, t)) {
       const frei = baum ? this.baum[x] - this.baumRes[x] : this.fels[x] - this.felsRes[x];
       if (frei <= 0) continue;
-      const d = this.karte.abstand(g.h, x);
-      if (d > bd || (d === bd && x > bi)) continue;
       const weg = this.gehPfad(g.h, x);
-      if (weg) { best = weg; bd = d; bi = x; }
+      if (!weg) continue;
+      const kosten = this.karte.pfadKosten(weg);
+      if (kosten < bk || (kosten === bk && x < bi)) { best = weg; bk = kosten; bi = x; }
     }
     return best;
   }
 
-  /** Förster: zufälliger Pflanzplatz unter allen erreichbaren Kandidaten im Radius, samt Gehweg, oder null. */
+  /** Förster: zufälliger Pflanzplatz unter allen erreichbaren Kandidaten im Arbeitsbereich, samt Gehweg, oder null. */
   private suchePflanzplatz(g: Gebaeude, t: GebaeudeTyp): number[] | null {
     const wege: number[][] = [];
-    for (const x of this.hexeImRadius(g.h, t.radius)) {
+    for (const x of this.arbeitsHexeVon(g, t)) {
       if (!this.pflanzbar(x)) continue;
       const weg = this.gehPfad(g.h, x);
       if (weg) wege.push(weg);
