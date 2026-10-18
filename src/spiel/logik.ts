@@ -155,3 +155,91 @@ export function hexLinie(a: Hx, b: Hx, max = 60): Hx[] {
   }
   return out;
 }
+
+// ---------------------------------------------------------------- Selbst geführter Weg
+
+/** Die sechs Nachbarn eines Hex (axial, gleiche Reihenfolge wie die Simulation). */
+export const NACHBAR_RICHTUNGEN: readonly [number, number][] = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
+
+export function nachbarn(h: Hx): Hx[] {
+  return NACHBAR_RICHTUNGEN.map(([dq, dr]) => ({ q: h.q + dq, r: h.r + dr }));
+}
+
+/** Höchstzahl der Schritte eines Wegs (wie WEG_MAX_SCHRITTE der Simulation). */
+export const WEG_MAX = 60;
+
+/**
+ * Der „offene Weg“ beim Wegbau von Hand: Start (Fahne), dann Zwischenpunkte; zwischen je zwei Punkten steht ein Teilstück
+ * (Hex für Hex benachbart). Kennt die Simulation nicht – die Teilstücke kommen von außen (wegAbschnitt) und werden nur angehängt.
+ */
+export class OffenerWeg {
+  private _pfad: Hx[] = [];
+  /** Länge von `_pfad` nach jedem festen Punkt (Index 0 = Start: 1). */
+  private enden: number[] = [];
+
+  get aktiv(): boolean { return this._pfad.length > 0; }
+  get start(): Hx | null { return this._pfad.length ? this._pfad[0] : null; }
+  /** Letzter fester Punkt (Start oder Zwischenpunkt). */
+  get letzter(): Hx | null { return this._pfad.length ? this._pfad[this._pfad.length - 1] : null; }
+  /** Alle Hexe des festen Stücks, Start bis letzter Punkt (Kopie). */
+  get pfad(): Hx[] { return this._pfad.map((h) => ({ ...h })); }
+  get schritte(): number { return Math.max(0, this._pfad.length - 1); }
+  /** Noch erlaubte Schritte bis WEG_MAX. */
+  get rest(): number { return Math.max(0, WEG_MAX - this.schritte); }
+  /** Zwischenpunkte ohne den Start. */
+  get zwischenpunkte(): Hx[] {
+    return this.enden.slice(1).map((n) => ({ ...this._pfad[n - 1] }));
+  }
+  /** Kurzform für Vergleiche (Vorschau-Zwischenspeicher). */
+  get sig(): string { return this._pfad.map((h) => `${h.q},${h.r}`).join(';'); }
+
+  beginne(h: Hx): void {
+    this._pfad = [{ q: h.q, r: h.r }];
+    this.enden = [1];
+  }
+
+  leeren(): void {
+    this._pfad = [];
+    this.enden = [];
+  }
+
+  /** Teilstück anhängen: muss am letzten Punkt beginnen, aus benachbarten, noch unbenutzten Hexen bestehen und in WEG_MAX passen. */
+  haengeAn(abschnitt: readonly Hx[]): boolean {
+    if (!this.aktiv || abschnitt.length < 2) return false;
+    const l = this._pfad[this._pfad.length - 1];
+    if (abschnitt[0].q !== l.q || abschnitt[0].r !== l.r) return false;
+    if (abschnitt.length - 1 > this.rest) return false;
+    const benutzt = new Set(this._pfad.map((h) => `${h.q},${h.r}`));
+    for (let i = 1; i < abschnitt.length; i++) {
+      const k = `${abschnitt[i].q},${abschnitt[i].r}`;
+      if (benutzt.has(k) || hexAbstand(abschnitt[i - 1], abschnitt[i]) !== 1) return false;
+      benutzt.add(k);
+    }
+    for (let i = 1; i < abschnitt.length; i++) this._pfad.push({ q: abschnitt[i].q, r: abschnitt[i].r });
+    this.enden.push(this._pfad.length);
+    return true;
+  }
+
+  /** Letzten Zwischenpunkt samt Teilstück entfernen; der Start bleibt. */
+  zurueck(): boolean {
+    if (this.enden.length < 2) return false;
+    this.enden.pop();
+    this._pfad.length = this.enden[this.enden.length - 1];
+    return true;
+  }
+
+  /** Ist der Hex schon Teil des offenen Wegs? */
+  benutzt(h: Hx): boolean {
+    return this._pfad.some((p) => p.q === h.q && p.r === h.r);
+  }
+}
+
+/**
+ * Welche der sechs Nachbarn des letzten Punkts sind als nächster Schritt gültig? `abschnitt(von, nach)` liefert das Teilstück
+ * (Simulation: wegAbschnitt mit Schrittgrenze 1); gültig ist ein Nachbar, wenn genau ein Schritt herauskommt.
+ */
+export function naechsteSchritte(weg: OffenerWeg, abschnitt: (von: Hx, nach: Hx) => Hx[] | null): Hx[] {
+  const l = weg.letzter;
+  if (!l || weg.rest < 1) return [];
+  return nachbarn(l).filter((n) => !weg.benutzt(n) && abschnitt(l, n)?.length === 2);
+}

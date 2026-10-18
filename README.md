@@ -41,7 +41,10 @@ nach Gebrauch wieder. Unterbrochen? Einfach neu starten, es setzt fort. Details 
 - Steuerung: <kbd>WASD</kbd> bewegen, <kbd>Q</kbd>/<kbd>E</kbd> drehen, Rad zoomen, rechte Maustaste ziehen;
   <kbd>G</kbd> Hex-Raster, <kbd>F3</kbd> Leistungsanzeige. Touch: ein Finger verschieben, zwei zoomen/drehen.
 - **Wege und Träger (M3):** Das Lager steht im Ortskern des Startorts. Bauleiste unten: <kbd>1</kbd> Weg
-  (Fahne antippen, Ziel zeigen – die Vorschau sucht den Pfad –, zweiter Klick baut; Wege lassen sich verketten),
+  (Fahne anklicken, dann den Weg selbst führen: freie Hexe sind Zwischenpunkte, die Vorschau sucht jeweils das Teilstück
+  und markiert die möglichen nächsten Schritte, so geht es Hex für Hex; eine Fahne oder ein Weg anklicken baut den ganzen Weg,
+  den letzten Zwischenpunkt nochmal anklicken oder <kbd>Enter</kbd> baut bis dorthin, <kbd>Rücktaste</kbd> bzw. „Zurück“ nimmt
+  den letzten Punkt weg, höchstens 60 Schritte; Wege lassen sich verketten),
   <kbd>2</kbd> Fahne (auf einem Weg teilt sie ihn), <kbd>3</kbd>–<kbd>6</kbd> Holzfäller, Steinbruch, Sägewerk,
   Wohnhaus, <kbd>X</kbd> Abriss, <kbd>Esc</kbd>/Rechtsklick abbrechen, <kbd>Leertaste</kbd> Pause,
   <kbd>+</kbd>/<kbd>−</kbd> Tempo 1–3×. Auf jedem Weg pendelt ein Träger und trägt sichtbar eine Ware;

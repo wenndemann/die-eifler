@@ -26,14 +26,14 @@ class Ring {
     this.mesh.visible = false;
   }
 
-  zeige(map: MapData, grid: HexGrid, base: number, h: { q: number; r: number }, art: RingArt, breite: number, rev: number) {
-    const sig = `${h.q},${h.r},${Math.round(breite * 4)},${rev},${map.groundRev}`;
+  zeige(map: MapData, grid: HexGrid, base: number, h: { q: number; r: number }, art: RingArt, breite: number, rev: number, skala = 1) {
+    const sig = `${h.q},${h.r},${Math.round(breite * 4)},${rev},${map.groundRev},${skala}`;
     this.mat.color.set(RING_FARBE[art]);
     this.mesh.visible = true;
     if (sig === this.sig) return;
     this.sig = sig;
     const c = grid.toWorld(h);
-    const R = HEX.R * 0.94;
+    const R = HEX.R * 0.94 * skala;
     const ecke = (k: number) => {
       const a = Math.PI / 6 + (Math.PI / 3) * k;
       return { x: Math.cos(a), z: Math.sin(a) };
@@ -70,6 +70,8 @@ class Ring {
 export class Markierung {
   readonly group = new THREE.Group();
   private ringe = [new Ring(), new Ring(), new Ring()];
+  /** Kleine Ringe in Gruppen (z. B. Zwischenpunkte, mögliche nächste Schritte); wächst nach Bedarf. */
+  private gruppen = new Map<string, Ring[]>();
   private rev = 0;
 
   constructor(private map: MapData, private grid: HexGrid, private base: number, ex: number) {
@@ -89,7 +91,20 @@ export class Markierung {
     ring.zeige(this.map, this.grid, this.base, h, art, breite, this.rev);
   }
 
+  /** Mehrere kleine Ringe einer Gruppe setzen (überzählige werden ausgeblendet); leere Liste blendet die Gruppe aus. */
+  setzeListe(gruppe: string, hexe: { q: number; r: number }[], art: RingArt, kameraAbstand: number, skala = 0.5) {
+    let ringe = this.gruppen.get(gruppe);
+    if (!ringe) { ringe = []; this.gruppen.set(gruppe, ringe); }
+    while (ringe.length < hexe.length) { const r = new Ring(); ringe.push(r); this.group.add(r.mesh); }
+    const breite = Math.min(HEX.R * 0.18, Math.max(3, kameraAbstand * 0.005));
+    ringe.forEach((ring, i) => {
+      if (i < hexe.length) ring.zeige(this.map, this.grid, this.base, hexe[i], art, breite, this.rev, skala);
+      else ring.verstecke();
+    });
+  }
+
   alleAus() {
     for (const r of this.ringe) r.verstecke();
+    for (const g of this.gruppen.values()) for (const r of g) r.verstecke();
   }
 }

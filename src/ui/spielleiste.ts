@@ -10,7 +10,7 @@ export interface WerkzeugInfo { id: Werkzeug; taste: string; label: string; icon
 const AUF_PUMP = 'Material kommt in M4 – bis dahin baut der Eifeler auf Pump.';
 
 export const WERKZEUGE: readonly WerkzeugInfo[] = [
-  { id: 'weg', taste: '1', label: 'Weg', icon: '🛤️', titel: 'Weg bauen: Fahne als Start wählen, dann das Ziel. Weitere Wege schließen sich an.' },
+  { id: 'weg', taste: '1', label: 'Weg', icon: '🛤️', titel: 'Weg bauen: Fahne als Start wählen, dann Hex für Hex oder über Zwischenpunkte führen; Fahne oder Weg anklicken baut. Rücktaste nimmt den letzten Punkt zurück.' },
   { id: 'fahne', taste: '2', label: 'Fahne', icon: '🚩', titel: 'Freie Fahne setzen (auch mitten auf einen Weg, das teilt ihn)' },
   { id: 'holzfaeller', taste: '3', label: 'Holzfäller', icon: '🪓', titel: `Holzfäller (Platzhalter ohne Bäume: erzeugt einfach Stämme). ${AUF_PUMP}` },
   { id: 'steinbruch', taste: '4', label: 'Steinbruch', icon: '⛏️', titel: `Steinbruch (Platzhalter ohne Felsen: erzeugt einfach Steine). ${AUF_PUMP}` },
@@ -31,6 +31,8 @@ export interface LeistenAufrufe {
   onWerkzeug(w: Werkzeug): void;
   onBestaetigen(): void;
   onAbbrechen(): void;
+  /** Letzten Zwischenpunkt des offenen Wegs entfernen. */
+  onZurueck(): void;
   /** 0 = Pause umschalten, sonst Tempo 1..3 setzen. */
   onTempo(t: number): void;
 }
@@ -53,6 +55,7 @@ export class Spielleiste {
   private hinweis = el('div', 'hinweis');
   private hinweisText = el('span', 'text');
   private bauen = el('button', 'aktion bauen', 'Bauen');
+  private zurueck = el('button', 'aktion zurueck', 'Zurück');
   private abbrechen = el('button', 'aktion abbrechen', 'Abbrechen');
   private knoepfe = new Map<Werkzeug, HTMLButtonElement>();
   private status = el('div', 'panel spielstatus');
@@ -63,10 +66,12 @@ export class Spielleiste {
 
   constructor(root: HTMLElement, auf: LeistenAufrufe) {
     // Hinweiszeile mit Knöpfen
-    this.bauen.type = 'button'; this.abbrechen.type = 'button';
+    this.bauen.type = 'button'; this.abbrechen.type = 'button'; this.zurueck.type = 'button';
+    this.zurueck.title = 'Letzten Zwischenpunkt entfernen (Rücktaste)';
     this.bauen.addEventListener('click', () => { auf.onBestaetigen(); this.bauen.blur(); });
     this.abbrechen.addEventListener('click', () => { auf.onAbbrechen(); this.abbrechen.blur(); });
-    this.hinweis.append(this.hinweisText, this.bauen, this.abbrechen);
+    this.zurueck.addEventListener('click', () => { auf.onZurueck(); this.zurueck.blur(); });
+    this.hinweis.append(this.hinweisText, this.bauen, this.zurueck, this.abbrechen);
     // Werkzeugreihe
     const reihe = el('div', 'panel werkzeuge');
     for (const w of WERKZEUGE) {
@@ -109,11 +114,12 @@ export class Spielleiste {
     this.hinweisZeigen();
   }
 
-  /** „Bauen“-Knopf (Text oder null = weg; `aus` = sichtbar, aber nicht tippbar) und „Abbrechen“-Knopf. */
-  setAktionen(bauenText: string | null, abbrechenSichtbar: boolean, aus = false) {
+  /** „Bauen“-Knopf (Text oder null = weg; `aus` = sichtbar, aber nicht tippbar), „Abbrechen“-Knopf und „Zurück“ (beim Wegführen). */
+  setAktionen(bauenText: string | null, abbrechenSichtbar: boolean, aus = false, zurueckSichtbar = false) {
     this.bauen.style.display = bauenText ? 'block' : 'none';
     if (bauenText) this.bauen.textContent = bauenText;
     this.bauen.disabled = aus;
+    this.zurueck.style.display = zurueckSichtbar ? 'block' : 'none';
     this.abbrechen.style.display = abbrechenSichtbar ? 'block' : 'none';
     this.hinweisZeigen();
   }
