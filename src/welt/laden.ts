@@ -1,5 +1,6 @@
 // Weltdaten laden: Versionen, Manifest, Ortsverzeichnis, Kacheln. Kacheln liegen unter versionierten
 // Pfaden und ändern sich nie, darum merkt sich der Browser sie im Cache-Speicher (Drehbuch 8.1).
+import { parseBuendel } from './buendel';
 import type { Manifest, Orte, Versionen } from './format';
 
 /** Basis-URL der Weltdaten: VITE_WELT_URL oder <base>/welt (Entwicklungsserver liefert welt-daten/ dort aus). */
@@ -33,13 +34,55 @@ async function cached(url: string): Promise<Response> {
   return res;
 }
 
+/** Kachel-URL aufteilen: Versionsordner und Pfad darin (r10/…, r40/…, vec/…, hex/…), sonst null. */
+const kachelPfad = (url: string) => /^(.*)\/((?:r10|r40|vec|hex)\/[^/?]+)$/.exec(url.split('?')[0]);
+
+/** Teilen-Version: Bündel-Index je Versionsordner (null = keine Bündel, Einzeldateien) und geladene Bündel, je einmal. */
+const buendelIndex = new Map<string, Promise<Record<string, string> | null>>();
+const buendelInhalt = new Map<string, Promise<Map<string, string>>>();
+
+function holeBuendelIndex(ordner: string) {
+  let p = buendelIndex.get(ordner);
+  if (!p) {
+    p = cached(`${ordner}/buendel.json`).then((r) => r.json() as Promise<Record<string, string>>).catch(() => null);
+    buendelIndex.set(ordner, p);
+  }
+  return p;
+}
+
+/** Base64-Text einer Datei aus einem Bündel (lädt das Bündel erst, wenn eine Datei daraus gebraucht wird); null = nicht in Bündeln. */
+async function ausBuendel(url: string): Promise<string | null> {
+  const t = kachelPfad(url);
+  if (!t) return null;
+  const index = await holeBuendelIndex(t[1]);
+  if (!index) return null;
+  const name = index[t[2]];
+  if (!name) throw new Error(`${url}: 404`);
+  const key = `${t[1]}/${name}`;
+  let p = buendelInhalt.get(key);
+  if (!p) {
+    p = cached(key).then((r) => r.text()).then(parseBuendel);
+    buendelInhalt.set(key, p);
+    p.catch(() => buendelInhalt.delete(key));
+  }
+  const b64 = (await p).get(t[2]);
+  if (b64 === undefined) throw new Error(`${url}: 404`);
+  return b64;
+}
+
 /** Bytes einer Datei; gzip wird erkannt (Magic 1f 8b) und entpackt, auch wenn der Server es schon getan hat. */
 export async function holeBytes(url: string, immutable = true): Promise<Uint8Array> {
   const b64 = WELT_B64 && istBinaer(url);
-  const echt = b64 ? `${url}.txt` : url;
-  const res = immutable ? await cached(echt) : await fetch(echt);
-  if (!res.ok) throw new Error(`${echt}: ${res.status}`);
-  const buf = b64 ? base64ZuBytes(await res.text()) : new Uint8Array(await res.arrayBuffer());
+  let buf: Uint8Array;
+  const gebuendelt = b64 ? await ausBuendel(url) : null;
+  if (gebuendelt !== null) {
+    buf = base64ZuBytes(gebuendelt);
+  } else {
+    const echt = b64 ? `${url}.txt` : url;
+    const res = immutable ? await cached(echt) : await fetch(echt);
+    if (!res.ok) throw new Error(`${echt}: ${res.status}`);
+    buf = b64 ? base64ZuBytes(await res.text()) : new Uint8Array(await res.arrayBuffer());
+  }
   if (buf.length < 2 || buf[0] !== 0x1f || buf[1] !== 0x8b) return buf;
   const ds = new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'));
   return new Uint8Array(await new Response(ds).arrayBuffer());

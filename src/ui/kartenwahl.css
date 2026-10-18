@@ -37,6 +37,8 @@
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5); opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
   text-align: center;
 }
+.kw-toast { font-size: 16px; line-height: 1.35; }
+.kw-teil p { margin: 0; font-size: 14px; line-height: 1.35; opacity: 0.85; }
 .kw-toast.an { opacity: 1; transform: translate(-50%, 0); }
 
 .kw-leiste {
@@ -137,4 +139,5 @@
   .kw-los { min-height: 48px; padding: 0 16px; font-size: 19px; }
   .kw-groesse { min-height: 76px; }
   .kw-zoom { flex-direction: row; right: 8px; top: 8px; }
+  .kw-toast { top: 60px; max-width: calc(100% - 24px); }
 }
