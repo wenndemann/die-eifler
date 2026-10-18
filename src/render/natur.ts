@@ -1,9 +1,13 @@
 // Bäume und Felsen aus der Simulation (M4; nur lesen aus SimSicht.natur, nie die Sim ändern).
-// - Kartenwald (trees.ts) bleibt die Grundlage. Je Wald-Hex vergleicht diese Datei natur.baum mit dem Startwert (3):
-//   bei weniger Bäumen blendet sie anteilig Kartenbäume dieses Hex aus (Trees.setzeHexAnteil, feste Auswahl je Hex).
+// - „Was man sieht, gibt es“: Im Spielfeld zeigt der Kartenwald (trees.ts) nur noch Bäume auf Wald-Hexen. Je Wald-Hex
+//   vergleicht diese Datei natur.baum mit dem Startwert (natur.start, sonst 3): bei weniger Bäumen blendet sie anteilig
+//   Kartenbäume dieses Hex aus (Trees.setzeHexAnteil, feste Auswahl je Hex). Raster-Bäume auf Nicht-Wald-Hexen im Spielfeld
+//   (Streubäume, Waldränder) sind weg; stattdessen steht dort, wo die Simulation einen Baum hat (Wiese, Heide, Moor), ein
+//   ausgewachsener Baum an festem Platz. Die Kulisse außerhalb des Spielfelds bleibt unberührt.
 // - Gepflanzte und nachgewachsene Bäume sind eigene Instanzen an festen Plätzen im Hex (Hash aus q, r), Größe nach
 //   Wachstumsstufe (Setzling klein … ausgewachsen wie ein Kartenbaum). Gefällte Bäume lassen einen Baumstumpf zurück.
-// - Felsbrocken (grau, kantig) auf Hexen mit natur.fels > 0: Zahl und Größe nach Restmenge, bei 0 verschwinden sie.
+// - Steine nach natur.felsArt: Fels = große Felsgruppe aus mehreren kantigen Blöcken, Klippe = mittlere Brocken,
+//   Lesesteine = kleiner flacher Steinhaufen. Zahl und Größe schrumpfen stufenweise mit der Restmenge, bei 0 ist alles weg.
 // Es wird nur neu gerechnet, wenn natur.rev steigt, und nur für Hexe, die sich gegenüber der vorigen Kopie geändert haben.
 import * as THREE from 'three';
 import type { MapData } from '../map/mapdata';
@@ -44,7 +48,7 @@ function felsGeometrie(variante: number): THREE.BufferGeometry {
     const d = new THREE.Vector3(pos.getX(f + 2), pos.getY(f + 2), pos.getZ(f + 2));
     const n = b.clone().sub(a).cross(d.clone().sub(a)).normalize();
     const hell = 0.5 + 0.5 * n.y;
-    c.set('#7d776e').lerp(new THREE.Color('#b4aea2'), hell * 0.9);
+    c.set('#665f57').lerp(new THREE.Color('#9d968a'), hell * 0.9);
     c.multiplyScalar(0.92 + hash(f, 9 + variante) * 0.16);
     for (let k = 0; k < 3; k++) { col[(f + k) * 3] = c.r; col[(f + k) * 3 + 1] = c.g; col[(f + k) * 3 + 2] = c.b; }
   }
@@ -87,6 +91,8 @@ export class Natur {
   private pJung: Uint8Array | null = null;
   private pStufe: Uint8Array | null = null;
   private pFels: Uint8Array | null = null;
+  /** Hat der Kartenwald auf diesem Hex Bäume (nur dann zeichnet er die Wald-Bäume)? Einmal berechnet. */
+  private kartenWald: Uint8Array;
   /** Hexe mit eigenen Bäumen/Stümpfen bzw. mit Fels. */
   private baumHexe = new Set<number>();
   private felsHexe = new Set<number>();
@@ -104,6 +110,8 @@ export class Natur {
     const feld = grid.feld;
     this.terrain = feld.terrain; this.hoehe = feld.height;
     const n = feld.count;
+    this.kartenWald = new Uint8Array(n);
+    for (let i = 0; i < n; i++) this.kartenWald[i] = feld.terrain[i] === 2 && trees && trees.hexBaeume(i) > 0 ? 1 : 0;
     this.qs = new Int32Array(n); this.rs = new Int32Array(n);
     let i = 0;
     for (let dr = -feld.n; dr <= feld.n; dr++) {
@@ -131,6 +139,17 @@ export class Natur {
     return { x: mitte.x + Math.cos(a) * r, z: mitte.z + Math.sin(a) * r, dreh: hash(i, k + 40) * Math.PI * 2, v: hash(i * 3 + k, 77) };
   }
 
+  /** Start-Baumzahl des Hex: aus der Sicht, sonst Wald = 3 und sonst 0. */
+  private startBaeume(nat: SimSicht['natur'], i: number): number {
+    return nat.start ? nat.start[i] : this.terrain[i] === 2 ? START_WALD : 0;
+  }
+
+  /** Zahl der Bäume, Jungbäume und Stümpfe, die diese Datei selbst zeichnen muss (der Kartenwald zeichnet den Rest). */
+  private eigeneBaeume(i: number, b: number, j: number, start: number): number {
+    const wald = this.kartenWald[i] === 1;
+    return (wald ? Math.max(0, b - start) : b) + j + Math.max(0, start - b - j);
+  }
+
   update(sicht: SimSicht) {
     const nat = sicht.natur;
     if (!nat.baum.length) return;
@@ -140,12 +159,16 @@ export class Natur {
     const pb = this.pBaum, pj = this.pJung, ps = this.pStufe, pf = this.pFels;
     for (let i = 0; i < n; i++) {
       const b = nat.baum[i], j = nat.jung[i], st = nat.stufe[i], f = nat.fels[i];
-      const start = this.terrain[i] === 2 ? START_WALD : 0;
-      const bAlt = pb ? pb[i] : start, jAlt = pj ? pj[i] : 0, sAlt = ps ? ps[i] : 0;
+      const start = this.startBaeume(nat, i);
+      const wald = this.kartenWald[i] === 1;
+      if (!pb) {
+        // erster Durchlauf: Raster-Bäume auf Nicht-Wald-Hexen im Spielfeld ausblenden (Simulation hat dort keine)
+        if (!wald && this.trees && this.trees.hexBaeume(i) > 0) this.trees.setzeHexAnteil(i, 0);
+      }
+      const bAlt = pb ? pb[i] : wald ? start : -1, jAlt = pj ? pj[i] : 0, sAlt = ps ? ps[i] : 0;
       if (b !== bAlt || j !== jAlt || st !== sAlt) {
-        if (start && this.trees && this.trees.hexBaeume(i) > 0) this.trees.setzeHexAnteil(i, Math.min(1, b / start));
-        const extra = Math.max(0, b - start) + j + (start ? Math.max(0, start - b - j) : 0);
-        if (extra > 0) this.baumHexe.add(i); else this.baumHexe.delete(i);
+        if (wald) this.trees!.setzeHexAnteil(i, start > 0 ? Math.min(1, b / start) : 0);
+        if (this.eigeneBaeume(i, b, j, start) > 0) this.baumHexe.add(i); else this.baumHexe.delete(i);
         this.baumNeu = true;
       }
       if (pf ? f !== pf[i] : f > 0) {
@@ -172,10 +195,10 @@ export class Natur {
     this.stumpf.beginne();
     const { m, q, p, s, farbe, yAchse } = this;
     for (const i of this.baumHexe) {
-      const start = this.terrain[i] === 2 ? START_WALD : 0;
+      const start = this.startBaeume(nat, i);
       const b = nat.baum[i], j = nat.jung[i], st = nat.stufe[i];
-      const extra = Math.max(0, b - start);
-      const stumpfe = start ? Math.max(0, start - b - j) : 0;
+      const extra = this.kartenWald[i] === 1 ? Math.max(0, b - start) : b;
+      const stumpfe = Math.max(0, start - b - j);
       const mitte = this.grid.toWorld({ q: this.qs[i], r: this.rs[i] });
       // Plätze: erst die Neupflanzungen (ausgewachsene, dann junge, älteste zuerst), Stümpfe von hinten
       let k = 0;
@@ -203,24 +226,62 @@ export class Natur {
     this.stumpf.fertig();
   }
 
+  /** Art des Steins auf dem Hex: aus der Sicht, sonst nach Restmenge geschätzt (Fels > Klippe > Lesesteine). */
+  private felsArt(nat: SimSicht['natur'], i: number): number {
+    if (nat.felsArt) return nat.felsArt[i] || 1;
+    const f = nat.fels[i];
+    return this.terrain[i] === 5 || f >= 40 ? 1 : f >= 12 ? 2 : 3;
+  }
+
   private baueFelsen(nat: SimSicht['natur']) {
     for (const s of this.felsSaetze) s.beginne();
     const { m, q, p, s, farbe, yAchse } = this;
     for (const i of this.felsHexe) {
       const f = nat.fels[i];
       if (f <= 0) continue;
-      const mitte = this.grid.toWorld({ q: this.qs[i], r: this.rs[i] });
-      const stuecke = Math.min(5, 1 + Math.floor(f / 3));
-      const gross = 1.8 + 7 * Math.sqrt(Math.min(f, 12) / 12);
-      for (let k = 0; k < stuecke; k++) {
-        const a = hash(this.qs[i] * 31 + k, this.rs[i] * 17 + 7) * Math.PI * 2;
-        const r = k === 0 ? HEX.R * 0.08 * hash(i, 5) : HEX.R * (0.2 + 0.34 * hash(this.qs[i] + k * 5, this.rs[i] * 3 + 11));
-        const x = mitte.x + Math.cos(a) * r, z = mitte.z + Math.sin(a) * r;
-        const sz = gross * (k === 0 ? 1 : 0.5 + 0.35 * hash(i + k, 21));
-        q.setFromAxisAngle(yAchse, hash(i, k + 90) * Math.PI * 2);
-        s.set(sz * (0.9 + 0.3 * hash(i, k + 3)), sz * (0.8 + 0.35 * hash(i, k + 4)), sz * (0.9 + 0.3 * hash(i + 1, k + 5)));
-        m.compose(p.set(x, this.y(x, z) - sz * 0.12, z), q, s);
-        this.felsSaetze[(i + k) % 2].fuege(m, farbe.setScalar(0.86 + 0.24 * hash(i, k + 60)));
+      const art = this.felsArt(nat, i);
+      const qi = this.qs[i], ri = this.rs[i];
+      const mitte = this.grid.toWorld({ q: qi, r: ri });
+      const h = (k: number, z: number) => hash(qi * 31 + k * 7 + z, ri * 17 + z * 3 + 7);
+      // Stein k: Abstand vom Hex-Mittelpunkt, Winkel, Größe (Radius in Metern), Höhenfaktor, Helligkeit (Tönung)
+      const stein = (k: number, ab: number, winkel: number, gr: number, hoch: number, ton: number, warm: number) => {
+        const x = mitte.x + Math.cos(winkel) * ab, z = mitte.z + Math.sin(winkel) * ab;
+        q.setFromAxisAngle(yAchse, h(k, 90) * Math.PI * 2);
+        s.set(gr * (0.9 + 0.3 * h(k, 3)), gr * hoch * (0.85 + 0.3 * h(k, 4)), gr * (0.9 + 0.3 * h(k, 5)));
+        m.compose(p.set(x, this.y(x, z) - gr * 0.14, z), q, s);
+        // Lesesteine etwas wärmer (gelblich) als der blaugraue Fels
+        this.felsSaetze[(k + i) % 2].fuege(m, farbe.setRGB(ton * (1 + warm * 0.1), ton, ton * (1 - warm * 0.12)));
+      };
+      const w0 = h(0, 1) * Math.PI * 2;
+      if (art === 1) {
+        // Felsgruppe: ein großer Block in der Mitte, drumherum kleinere; bei weniger Rest erst weniger Blöcke, dann kleinere
+        const t = Math.sqrt(Math.min(f, 80) / 80);
+        const n = Math.max(2, Math.min(6, Math.round(2 + 4 * t)));
+        const gross = 8 + 16 * t;
+        stein(0, HEX.R * 0.05 * h(0, 2), w0, gross, 1.05, 0.74 + 0.16 * h(0, 6), 0);
+        for (let k = 1; k < n; k++) {
+          const gr = gross * (0.38 + 0.3 * h(k, 8));
+          stein(k, gross * (0.6 + 0.4 * h(k, 9)) + gr * 0.4, w0 + (k / (n - 1)) * Math.PI * 2 + h(k, 10) * 0.7, gr, 0.9, 0.7 + 0.2 * h(k, 6), 0);
+        }
+      } else if (art === 2) {
+        // Klippe: mittlere Brocken, kantig und etwas höher
+        const t = Math.sqrt(Math.min(f, 25) / 25);
+        const n = Math.max(1, Math.min(4, Math.round(1 + 3 * t)));
+        const gross = 5 + 6 * t;
+        stein(0, HEX.R * 0.06 * h(0, 2), w0, gross, 1.2, 0.8 + 0.16 * h(0, 6), 0);
+        for (let k = 1; k < n; k++) {
+          const gr = gross * (0.5 + 0.25 * h(k, 8));
+          stein(k, gross * (1.0 + 0.4 * h(k, 9)) + gr * 0.4, w0 + k * 2.1 + h(k, 10) * 0.8, gr, 1.1, 0.76 + 0.2 * h(k, 6), 0);
+        }
+      } else {
+        // Lesesteinhaufen: viele kleine, flache Steine, aufgehäuft; jeder Stein weniger = ein Stein weniger im Haufen
+        const n = Math.max(1, Math.min(8, f));
+        for (let k = 0; k < n; k++) {
+          const innen = k < 2;
+          const gr = (innen ? 6 : 4.2) * (0.85 + 0.35 * h(k, 8));
+          const ab = innen ? 2.2 * k : 7 + 3 * Math.sqrt(k) + 2.5 * h(k, 9);
+          stein(k, ab, w0 + k * 2.4, gr, innen ? 0.7 : 0.55, 0.95 + 0.18 * h(k, 6), 1);
+        }
       }
     }
     for (const sa of this.felsSaetze) sa.fertig();

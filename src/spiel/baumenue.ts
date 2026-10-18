@@ -83,13 +83,15 @@ const OHNE_ARBEIT: Record<string, string> = {
   platz: 'Kein Pflanzplatz in Reichweite – die Försterei hätte nichts zu tun.',
 };
 
-/** Was im Arbeitsradius liegt, als Text (arbeitsHexe der Simulation); `warn` bei nichts. null bei Gebäuden ohne Arbeitsradius. */
-export function reichweiteText(art: string, summe: number): { text: string; warn: boolean } | null {
+/** Was im Arbeitsradius liegt, als Text (arbeitsHexe der Simulation); `warn` bei nichts. null bei Gebäuden ohne Arbeitsradius.
+ *  `nah` = davon im inneren („guten“) Ring; ohne Angabe fehlt der Nachsatz. */
+export function reichweiteText(art: string, summe: number, nah?: number): { text: string; warn: boolean } | null {
   if (!(art in OHNE_ARBEIT)) return null;
   if (summe <= 0) return { text: OHNE_ARBEIT[art], warn: true };
-  if (art === 'baum') return { text: `${summe} ${summe === 1 ? 'Baum' : 'Bäume'} in Reichweite`, warn: false };
-  if (art === 'fels') return { text: `Fels für ${summe} ${summe === 1 ? 'Stein' : 'Steine'} in Reichweite`, warn: false };
-  return { text: `Platz für ${summe} ${summe === 1 ? 'Baum' : 'Bäume'} in Reichweite`, warn: false };
+  const rest = nah === undefined ? '' : nah <= 0 ? ', keiner davon nah' : nah >= summe && summe > 1 ? ', alle nah' : `, ${nah} davon nah`;
+  if (art === 'baum') return { text: `${summe} ${summe === 1 ? 'Baum' : 'Bäume'} in Reichweite${rest}`, warn: false };
+  if (art === 'fels') return { text: `Fels für ${summe} ${summe === 1 ? 'Stein' : 'Steine'} in Reichweite${rest}`, warn: false };
+  return { text: `Platz für ${summe} ${summe === 1 ? 'Baum' : 'Bäume'} in Reichweite${rest}`, warn: false };
 }
 
 /** Zustand eines Gebäudes in Klartext mit kurzem Spruch. */

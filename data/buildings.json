@@ -1,5 +1,5 @@
 {
- "hinweis": "Gebäude nach DESIGN §6.2 (Startwerte, werden beim Spielen eingestellt). Zeiten in Sekunden, Kosten und Waren über Waren-Ids (goods.json). 'funktion' wählt das Verhalten in der Simulation; 'radius' ist der Arbeitsradius in Hexen; 'eingang' der Input-Puffer je Ware, 'ausgang' der Output-Puffer.",
+ "hinweis": "Gebäude nach DESIGN §6.2 (Startwerte, werden beim Spielen eingestellt). Zeiten in Sekunden, Kosten und Waren über Waren-Ids (goods.json). 'funktion' wählt das Verhalten in der Simulation; 'radius' ist der äußere Arbeitsradius in Hexen („geht noch“), 'radiusGut' der innere („gut“); 'eingang' der Input-Puffer je Ware, 'ausgang' der Output-Puffer.",
  "gebaeude": [
   {
    "id": "lager", "name": "Dorfkern", "gruppe": "Wohnen", "symbol": "🏘️",
@@ -10,14 +10,14 @@
   {
    "id": "holzfaeller", "name": "Holzfällerhütte", "gruppe": "Holz & Stein", "symbol": "🪓",
    "spruch": "Der Baum lag schon da. Wir haben ihn nur gefunden.",
-   "funktion": "holzfaeller", "groesse": 1, "kosten": { "bretter": 2 }, "radius": 2, "arbeiter": 1,
+   "funktion": "holzfaeller", "groesse": 1, "kosten": { "bretter": 2 }, "radius": 4, "radiusGut": 2, "arbeiter": 1,
    "ausgang": { "ware": "stamm", "max": 6 },
    "zeiten": { "arbeit_s": 5, "ruhe_s": 2 }
   },
   {
    "id": "foerster", "name": "Försterei", "gruppe": "Holz & Stein", "symbol": "🌱",
    "spruch": "Wer pflanzt, braucht Geduld – und einen Hang, den kein Flachländer will.",
-   "funktion": "foerster", "groesse": 1, "kosten": { "bretter": 1 }, "radius": 2, "arbeiter": 1,
+   "funktion": "foerster", "groesse": 1, "kosten": { "bretter": 1 }, "radius": 4, "radiusGut": 2, "arbeiter": 1,
    "zeiten": { "arbeit_s": 3, "ruhe_s": 3 }
   },
   {
@@ -31,7 +31,7 @@
   {
    "id": "steinbruch", "name": "Steinbruch", "gruppe": "Holz & Stein", "symbol": "⛏️",
    "spruch": "Steine gibt es in der Eifel genug. Man muss sie nur finden – und dann noch tragen.",
-   "funktion": "steinbruch", "groesse": 1, "kosten": { "bretter": 2 }, "radius": 2, "arbeiter": 1,
+   "funktion": "steinbruch", "groesse": 1, "kosten": { "bretter": 2 }, "radius": 4, "radiusGut": 2, "arbeiter": 1,
    "ausgang": { "ware": "stein", "max": 6 },
    "zeiten": { "arbeit_s": 6, "ruhe_s": 2 }
   },

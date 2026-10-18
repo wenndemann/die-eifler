@@ -8,7 +8,7 @@ interface WareJson { id: string; name: string; gruppe: string }
 interface GebaeudeJson {
   id: string; name: string; gruppe: string; symbol: string; spruch: string;
   funktion: string; groesse: number; kosten: Record<string, number>;
-  radius?: number; arbeiter?: number; wohnraum?: number;
+  radius?: number; radiusGut?: number; arbeiter?: number; wohnraum?: number;
   vorrat?: Record<string, number>;
   eingang?: Record<string, number>;
   ausgang?: { ware: string; max: number };
@@ -48,6 +48,8 @@ export const TRAEGER_START = 40;
 
 /** Bäume (DESIGN §12): höchstens so viele je Hex (ausgewachsen + Jungbäume). */
 export const TREE_MAX = 3;
+/** Größter Hex-Abstand Gebäude → Arbeitsmittelpunkt. */
+export const ARBEIT_MITTE_MAX = 6;
 /** Ein Jungbaum wird in dieser Zeit zum Baum (Startwert 75 s). */
 export const BAUM_WACHSEN = 75 * TICK_HZ;
 /** Felsen: Einheiten Stein je Hex (Steinfeld, Klippen ab STEIL_GRAD). */
@@ -70,8 +72,10 @@ export interface GebaeudeTyp {
   /** Baukosten je Warenart. */
   kosten: readonly number[];
   kostenSumme: number;
-  /** Arbeitsradius in Hexen (0 = keiner). */
+  /** Äußerer Arbeitsradius in Hexen (0 = keiner), „geht noch“. */
   radius: number;
+  /** Innerer Arbeitsradius („gut“, kurze Wege). */
+  radiusGut: number;
   /** Braucht je einen Bewohner aus dem Vorrat (0 oder 1). */
   arbeiter: number;
   /** Input-Puffer: Größe je Warenart; 0 = nimmt die Ware nicht an. */
@@ -113,6 +117,7 @@ function baue(j: GebaeudeJson): GebaeudeTyp {
     groesse: j.groesse as 1 | 2 | 3,
     kosten, kostenSumme: kosten.reduce((s, n) => s + n, 0),
     radius: j.radius ?? 0,
+    radiusGut: j.radiusGut ?? 0,
     arbeiter: j.arbeiter ?? 0,
     puffer, pufferSumme: puffer.reduce((s, n) => s + n, 0),
     ausgangWare: j.ausgang ? ausId(j.ausgang.ware) : -1,

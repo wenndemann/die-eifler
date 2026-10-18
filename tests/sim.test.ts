@@ -317,18 +317,18 @@ describe('M4: Bauplatz, Kosten, Natur am Start', () => {
     const sim = neu();
     const b = sim.arbeitsHexe('holzfaeller', 9, 0);
     expect(b.art).toBe('baum');
-    expect(b.summe).toBe(18 * TREE_MAX);
-    expect(b.hexe.length).toBe(18);
+    expect(b.summe).toBe(b.hexe.length * TREE_MAX);
+    expect(b.hexe.length).toBeGreaterThanOrEqual(18);
     const f = sim.arbeitsHexe('steinbruch', 9, 3);
     expect(f.art).toBe('fels');
-    expect(f.summe).toBe(3 * FELS_STEIN);
-    expect(f.hexe.length).toBe(3);
+    expect(f.summe).toBe(f.hexe.length * FELS_STEIN);
+    expect(f.hexe.length).toBeGreaterThanOrEqual(3);
     const p = sim.arbeitsHexe('foerster', -3, 0);
     expect(p.art).toBe('platz');
-    expect(p.summe).toBe(18 * TREE_MAX);
-    expect(sim.arbeitsHexe('foerster', 9, 0).summe).toBe(0); // Wald ist voll
+    expect(p.summe).toBe(p.hexe.length * TREE_MAX);
+    expect(sim.arbeitsHexe('foerster', 9, 0).summe).toBeLessThan(p.summe); // im Wald nur noch die Ränder frei (Radius 4 reicht hinaus)
     expect(sim.arbeitsHexe('huette', 3, 0)).toEqual({ art: 'keine', hexe: [], summe: 0 });
-    expect(sim.arbeitsHexe('holzfaeller', -3, 0).summe).toBe(0);
+    expect(sim.arbeitsHexe('holzfaeller', -3, 0).summe).toBeLessThan(b.summe);
   });
 });
 
@@ -476,7 +476,7 @@ describe('M4: Holz', () => {
     tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 9) });
     lauf(sim, 1);
     const vorher = sim.sicht().natur.baum.slice();
-    const imRadius = new Set(hexeImRadius(sim, mitte, 2));
+    const imRadius = new Set(hexeImRadius(sim, mitte, 4));
     let anfang = 0;
     for (const h of imRadius) anfang += vorher[h];
     expect(anfang).toBeLessThan(18 * TREE_MAX);   // der Weg hat ein paar Bäume vertrieben
@@ -537,7 +537,7 @@ describe('M4: Holz', () => {
     tu(sim, { art: 'gebaeude', typ: 'foerster', ...mitte });
     tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 3) });
     lauf(sim, 1);
-    const imRadius = new Set(hexeImRadius(sim, mitte, 2));
+    const imRadius = new Set(hexeImRadius(sim, mitte, 4));
     const stadien = new Set<number>();
     let ersterBaum = -1, erstesJung = -1;
     let verstoesse = 0;

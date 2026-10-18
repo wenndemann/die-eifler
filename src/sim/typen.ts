@@ -46,6 +46,8 @@ export type Befehl =
   | { art: 'gebaeude'; typ: string; q: number; r: number }
   /** Baustellen-Priorität 1..3 (3 wird zuerst beliefert). Ungültig (keine Baustelle, Stufe außerhalb) → wirkungslos. */
   | { art: 'prioritaet'; id: Id; stufe: number }
+  /** Arbeitsmittelpunkt von Holzfäller, Förster, Steinbruch setzen (Abstand ≤ ARBEIT_MITTE_MAX); der Gebäude-Hex selbst setzt zurück. */
+  | { art: 'arbeitsbereich'; id: Id; q: number; r: number }
   | { art: 'abriss_fahne'; id: Id }
   | { art: 'abriss_weg'; id: Id }
   | { art: 'abriss_gebaeude'; id: Id };
@@ -147,6 +149,8 @@ export interface SichtGebaeude {
   zustand: GebaeudeZustand;
   /** Arbeiter-Figur (Holzfäller, Förster, Steinbruch), sobald ein Bewohner zugewiesen ist. */
   arbeiter?: SichtArbeiter;
+  /** Gesetzter Arbeitsmittelpunkt (nur wenn ≠ Gebäude-Hex). */
+  mitte?: { q: number; r: number };
 }
 
 /**
@@ -163,6 +167,10 @@ export interface SichtNatur {
   stufe: Uint8Array;
   /** Restmenge Fels (Stein) je Hex. */
   fels: Uint8Array;
+  /** Art des Steins je Hex (statisch): 0 keiner, 1 Fels, 2 Klippe, 3 Lesesteine. */
+  felsArt?: Uint8Array;
+  /** Start-Baumzahl je Hex (statisch). */
+  start?: Uint8Array;
 }
 
 export interface SimSicht {

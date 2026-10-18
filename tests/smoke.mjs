@@ -349,7 +349,7 @@ try {
     if (r2.summe !== aufbau.pruefsumme) fail(`Replay Kontext 2 ${r2.summe} ungleich Kontext 1 ${aufbau.pruefsumme}`);
   }
 
-  // ---- M4 Bedienung: Baumenü, Geist, Bauplätze, echte Mausklicks, Gebäudekarte mit Priorität, Handy-Ansicht (Screenshots 5 bis 9)
+  // ---- M4 Bedienung: Baumenü, Geist, Bauplätze, echte Mausklicks, Gebäudekarte mit Priorität, Handy-Ansicht (Screenshots 5 bis 11)
   await page.goto('about:blank');   // die schwere Szene der Hauptseite nicht weiterrechnen lassen
   await bedienungsTest({ browser, url, aus: AUS, info, fail });
 

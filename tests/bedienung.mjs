@@ -5,6 +5,8 @@
 //   7-baustelle.png     gebaute Baustelle mit Gebäudekarte und Priorität
 //   8-handy-menue.png   Menü auf dem Handy
 //   9-handy-bauen.png   Handy: Tipp zeigt Geist und Bauplätze, zweiter Tipp baut
+//   10-arbeitsbereich.png  Gebäudekarte, Modus „Arbeitsbereich“: zwei Ringe, Fähnchen und Linie am Zeiger
+//   11-natur-nah.png    Nahansicht: Fels, Lesesteine und Bäume auf der Wiese
 import { statSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -125,6 +127,87 @@ export async function bedienungsTest({ browser, url, aus, info, fail }) {
   await page.waitForSelector('.gebkarte:not([hidden])', { timeout: 10000 });
   await page.waitForTimeout(800);
   await bild(page, '7-baustelle.png');
+  // Arbeitsbereich: Knopf in der Karte, Ringe folgen dem Zeiger, echter Klick setzt den Mittelpunkt (Befehl 'arbeitsbereich')
+  const bz = await page.evaluate((b) => {
+    const e = window.eifeler, sp = e.spiel, w = e.grid.toWorld(b);
+    e.cam.pitchOverride = 45;
+    e.cam.jumpTo(w.x, w.z + 120, 950, 0.25);
+    e.settle();
+    const dist = (a, c) => (Math.abs(a.q - c.q) + Math.abs(a.r - c.r) + Math.abs(a.q + a.r - c.q - c.r)) / 2;
+    const k = sp.sim.karte;
+    let best = null;
+    for (let dq = -3; dq <= 3; dq++) for (let dr = -3; dr <= 3; dr++) {
+      const c = { q: b.q + dq, r: b.r + dr };
+      if (dist(c, b) !== 3) continue;
+      const i = k.index(c.q, c.r);
+      if (i < 0 || !k.begehbar[i]) continue;
+      const p = sp.bildschirm(c);
+      if (p.x < 100 || p.x > 1000 || p.y < 110 || p.y > 620) continue;
+      if (p.x > 400 && p.x < 880 && p.y > 300) continue;   // hinter Gebäudekarte und Hinweiszeile
+      if (!best || Math.abs(p.x - 640) + Math.abs(p.y - 220) < Math.abs(best.p.x - 640) + Math.abs(best.p.y - 220)) best = { c, p };
+    }
+    return best;
+  }, ziel.hex);
+  await frames(page, 4);
+  if (!bz) fail('Bedienung: kein Hex in drei Hexen Abstand im Blickfeld für den Arbeitsbereich');
+  else {
+    const bp = await page.evaluate((c) => window.eifeler.spiel.bildschirm(c), bz.c);
+    await page.locator('.gk-bereich-an').click();
+    await page.waitForSelector('.gk-bereich-an.an', { timeout: 5000 });
+    await page.mouse.move(bp.x - 20, bp.y - 10);
+    await page.mouse.move(bp.x, bp.y, { steps: 4 });
+    // der Zeiger trifft nicht immer genau den Nachbar-Hex (Hang, Überhöhung): der tatsächlich getroffene Hex zählt
+    await page.waitForFunction((b) => { const f = window.eifeler.spiel.fokus; return f && Math.max(Math.abs(f.q - b.q), Math.abs(f.r - b.r)) <= 6; }, ziel.hex, { timeout: 30000, polling: 200 });
+    const treff = await page.evaluate(() => ({ ...window.eifeler.spiel.fokus }));
+    bz.c = treff;
+    await frames(page, 6);
+    await page.waitForTimeout(800);
+    const hint = await page.evaluate(() => document.querySelector('.hinweis .text')?.textContent);
+    info(`Bedienung: Arbeitsbereich-Modus, Hinweis „${hint}“`);
+    if (!/Arbeitsbereich/.test(hint ?? '')) fail(`Bedienung: Hinweis im Arbeitsbereich-Modus: ${hint}`);
+    await bild(page, '10-arbeitsbereich.png');
+    await page.mouse.click(bp.x, bp.y);
+    await page.waitForFunction((h) => window.eifeler.spiel.protokoll().befehle.some((x) => x.befehl.art === 'arbeitsbereich' && x.befehl.q === h.q && x.befehl.r === h.r), bz.c, { timeout: 30000, polling: 200 });
+    const gesetzt = await page.evaluate((b) => ({
+      id: window.eifeler.spiel.sicht.gebaeude.find((g) => g.q === b.q && g.r === b.r)?.id,
+      befehle: window.eifeler.spiel.protokoll().befehle.filter((x) => x.befehl.art === 'arbeitsbereich').map((x) => x.befehl),
+      mitte: window.eifeler.spiel.sicht.gebaeude.find((g) => g.q === b.q && g.r === b.r)?.mitte ?? null,
+      modus: !!document.querySelector('.gk-bereich-an.an'),
+    }), ziel.hex);
+    info(`Bedienung: Arbeitsbereich gesetzt, Befehl ${JSON.stringify(gesetzt.befehle[0])}, Sicht.mitte ${JSON.stringify(gesetzt.mitte)}`);
+    if (gesetzt.befehle[0]?.id !== gesetzt.id) fail('Bedienung: Befehl arbeitsbereich mit falscher Gebäude-Id');
+    if (gesetzt.modus) fail('Bedienung: Arbeitsbereich-Modus nach dem Setzen noch an');
+    // Esc beendet den Modus ohne Befehl
+    const vorBefehle = gesetzt.befehle.length;
+    await page.locator('.gk-bereich-an').click();
+    await page.waitForSelector('.gk-bereich-an.an', { timeout: 5000 });
+    await page.keyboard.press('Escape');
+    const nachEsc = await page.evaluate(() => ({ modus: !!document.querySelector('.gk-bereich-an.an'), n: window.eifeler.spiel.protokoll().befehle.filter((x) => x.befehl.art === 'arbeitsbereich').length }));
+    if (nachEsc.modus || nachEsc.n !== vorBefehle) fail(`Bedienung: Esc im Arbeitsbereich-Modus: ${JSON.stringify(nachEsc)}`);
+  }
+  // Natur aus der Nähe: Felsgruppe, Lesesteine, Bäume auf der Wiese (Sicht.natur; ohne felsArt/start aus der Menge geschätzt)
+  await page.keyboard.press('Escape');   // Gebäudekarte zu (vor der Kamerafahrt: Tasten brechen sie ab)
+  const natur = await page.evaluate(() => {
+    const e = window.eifeler, sp = e.spiel, k = sp.sim.karte, nat = sp.sicht.natur, L = sp.lagerHex;
+    const dist = (a, c) => (Math.abs(a.q - c.q) + Math.abs(a.r - c.r) + Math.abs(a.q + a.r - c.q - c.r)) / 2;
+    const art = (i) => (nat.felsArt ? nat.felsArt[i] : k.terrain[i] === 5 ? 1 : nat.fels[i] >= 12 ? 2 : 3);
+    const hexe = (f) => { const l = []; for (let i = 0; i < k.count; i++) if (f(i)) l.push({ q: k.qs[i], r: k.rs[i] }); return l; };
+    const naechster = (l, von) => l.reduce((b, h) => (!b || dist(h, von) < dist(b, von) ? h : b), null);
+    const fels = hexe((i) => nat.fels[i] > 0 && art(i) === 1), lese = hexe((i) => nat.fels[i] > 0 && art(i) === 3);
+    const wiese = hexe((i) => k.terrain[i] === 1 && nat.baum[i] > 0);
+    const f = naechster(fels, L), l = f ? naechster(lese, f) : naechster(lese, L), w = naechster(wiese, f ?? L);
+    const a = f ?? l ?? L, b = l ?? a;
+    const mitte = { q: Math.round((a.q + b.q) / 2), r: Math.round((a.r + b.r) / 2) };
+    const wm = e.grid.toWorld(mitte);
+    e.cam.pitchOverride = 38;
+    e.cam.jumpTo(wm.x, wm.z + 40, 380 + dist(a, b) * 55, 0.3);
+    e.settle();
+    return { fels: fels.length, lese: lese.length, wiese: wiese.length, f, l, w };
+  });
+  info(`Bedienung: Natur nah – Felshexe ${natur.fels}, Lesesteinhexe ${natur.lese}, Wiesenbaum-Hexe ${natur.wiese}`);
+  await frames(page, 4);
+  await page.waitForTimeout(2500);
+  await bild(page, '11-natur-nah.png');
   // Tasten: B öffnet das Menü, Esc schließt es; P schaltet die Bauplätze ohne Werkzeug
   await page.keyboard.press('b');
   if (!(await page.evaluate(() => !document.querySelector('.baumenue').hidden))) fail('Bedienung: Taste B öffnet das Menü nicht');
