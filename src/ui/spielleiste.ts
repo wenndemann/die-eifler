@@ -39,6 +39,8 @@ export interface KartenDaten {
   fortschritt?: number;
   /** Baustellen-Priorität 1..3 (nur Baustelle). */
   prio?: number;
+  /** Arbeitsbereich (Holzfäller, Förster, Steinbruch): Modus läuft, Mittelpunkt ist gesetzt (dann „Zurücksetzen“). */
+  bereich?: { modus: boolean; gesetzt: boolean };
 }
 
 export interface StatusDaten {
@@ -61,6 +63,10 @@ export interface LeistenAufrufe {
   onPrioritaet(stufe: number): void;
   /** Gebäudekarte schließen. */
   onKarteZu(): void;
+  /** Arbeitsbereich-Modus ein- oder ausschalten (Mittelpunkt wählen). */
+  onBereich(): void;
+  /** Arbeitsmittelpunkt auf das Gebäude zurücksetzen. */
+  onBereichZurueck(): void;
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, html = ''): HTMLElementTagNameMap[K] {
@@ -97,6 +103,7 @@ export class Spielleiste {
   private k = {
     sym: el('span', 'gk-sym'), titel: el('b', 'gk-titel'), status: el('div', 'gk-status'), balken: el('div', 'gk-balken', '<i></i>'),
     zeilen: el('div', 'gk-zeilen'), spruch: el('div', 'gk-spruch'), prio: el('div', 'gk-prio'), prioKnoepfe: [] as HTMLButtonElement[],
+    bereich: el('div', 'gk-bereich'), bereichKnopf: el('button', 'gk-knopf gk-bereich-an', '🚩 Arbeitsbereich'), zuruecksetzen: el('button', 'gk-knopf gk-bereich-aus', 'Zurücksetzen'),
   };
   private karteSig = '';
   private status = el('div', 'panel spielstatus');
@@ -221,7 +228,13 @@ export class Spielleiste {
       this.k.prioKnoepfe.push(b);
       this.k.prio.append(b);
     });
-    this.karte.append(kopf, this.k.status, this.k.balken, this.k.zeilen, this.k.spruch, this.k.prio);
+    this.k.bereichKnopf.type = 'button'; this.k.zuruecksetzen.type = 'button';
+    this.k.bereichKnopf.title = 'Mittelpunkt des Arbeitsbereichs wählen: Ringe folgen dem Zeiger, Klick setzt (höchstens 6 Hexe vom Gebäude)';
+    this.k.zuruecksetzen.title = 'Arbeitsbereich wieder um das Gebäude legen';
+    this.k.bereichKnopf.addEventListener('click', () => { this.auf.onBereich(); this.k.bereichKnopf.blur(); });
+    this.k.zuruecksetzen.addEventListener('click', () => { this.auf.onBereichZurueck(); this.k.zuruecksetzen.blur(); });
+    this.k.bereich.append(this.k.bereichKnopf, this.k.zuruecksetzen);
+    this.karte.append(kopf, this.k.status, this.k.balken, this.k.zeilen, this.k.spruch, this.k.bereich, this.k.prio);
   }
 
   /** Gebäudekarte zeigen oder (null) ausblenden. */
@@ -246,6 +259,12 @@ export class Spielleiste {
       if (hatBalken) (this.k.balken.firstElementChild as HTMLElement).style.width = `${Math.max(2, Math.min(100, d.fortschritt!))}%`;
       this.k.prio.style.display = d.prio !== undefined ? '' : 'none';
       for (const b of this.k.prioKnoepfe) b.classList.toggle('an', Number(b.dataset.p) === d.prio);
+      this.k.bereich.style.display = d.bereich ? '' : 'none';
+      if (d.bereich) {
+        this.k.bereichKnopf.classList.toggle('an', d.bereich.modus);
+        this.k.bereichKnopf.textContent = d.bereich.modus ? '🚩 Mittelpunkt wählen …' : '🚩 Arbeitsbereich';
+        this.k.zuruecksetzen.style.display = d.bereich.gesetzt ? '' : 'none';
+      }
     }
     if (warAus) this.hoeheMelden();
   }

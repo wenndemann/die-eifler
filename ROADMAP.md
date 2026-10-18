@@ -120,6 +120,12 @@ Verschoben:
 **Abnahme:** Aus 12 Brettern und 8 Steinen entsteht ohne Eingriff eine laufende Holzwirtschaft. Holzfäller und Förster nebeneinander liefern nach 2 Minuten weiter Stämme.
 → Vitest-Szenario `tests/m4-abnahme.test.ts` (mit Förster zwischen Minute 8 und 12 noch 16 Stämme, ohne Förster nach 4 Minuten keine mehr); Holzwirtschaft auch im Smoke-Test auf der echten Karte, Node = Browser.
 
+Nachgezogen nach dem ersten Anspielen: Im Spielfeld gibt es nur Bäume und Steine, die die Simulation kennt (Wald 3, Wiese/Heide/Moor teils 1 Baum; Fels 80, Klippe 25, Lesesteine 6–8 Steine), Bauen rodet und gibt Stämme, Arbeitsbereich mit setzbarem Mittelpunkt, Radius 4 mit innerem Ring 2, fairer Start (mindestens 150 Steine im Umkreis 8 ums Lager).
+
+Später (Feinschliff, nicht jetzt):
+- Gebäude-Effizienz als Anzeige (Auslastung, Laufwege) – mit den Gebäudefenstern (M7) und dem Balancing (M8)
+- Zahlen: Radien, Gebäudeabstand, Bäume je Hex, Wachstumszeit, Steinmengen
+
 ---
 
 ## M5 – Bewohner, Nahrung, erste Kirmes
