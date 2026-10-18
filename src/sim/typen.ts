@@ -46,6 +46,12 @@ export type Befehl =
   | { art: 'gebaeude'; typ: string; q: number; r: number }
   /** Baustellen-Priorität 1..3 (3 wird zuerst beliefert). Ungültig (keine Baustelle, Stufe außerhalb) → wirkungslos. */
   | { art: 'prioritaet'; id: Id; stufe: number }
+  /**
+   * Arbeitsmittelpunkt eines Holzfällers, Försters oder Steinbruchs (auch als Baustelle) setzen: Der Arbeiter sucht im Radius um (q, r)
+   * und läuft vom Gebäude dorthin. Hex-Abstand zum Gebäude höchstens ARBEIT_MITTE_MAX, im Spielfeld, begehbar; das Gebäude-Hex selbst
+   * setzt zurück. Ungültig → wirkungslos.
+   */
+  | { art: 'arbeitsbereich'; id: Id; q: number; r: number }
   | { art: 'abriss_fahne'; id: Id }
   | { art: 'abriss_weg'; id: Id }
   | { art: 'abriss_gebaeude'; id: Id };
@@ -147,6 +153,8 @@ export interface SichtGebaeude {
   zustand: GebaeudeZustand;
   /** Arbeiter-Figur (Holzfäller, Förster, Steinbruch), sobald ein Bewohner zugewiesen ist. */
   arbeiter?: SichtArbeiter;
+  /** Arbeitsmittelpunkt, nur wenn gesetzt und ungleich dem Gebäude-Hex. */
+  mitte?: { q: number; r: number };
 }
 
 /**
@@ -163,6 +171,10 @@ export interface SichtNatur {
   stufe: Uint8Array;
   /** Restmenge Fels (Stein) je Hex. */
   fels: Uint8Array;
+  /** Art des Steins (statisch, bleibt auch nach dem Abbau): 0 keiner, 1 Fels, 2 Klippe, 3 Lesesteine. */
+  felsArt: Uint8Array;
+  /** Baumzahl je Hex beim Spielstart (statisch). */
+  start?: Uint8Array;
 }
 
 export interface SimSicht {
@@ -177,4 +189,4 @@ export interface SimSicht {
 }
 
 /** Leere Natur (ohne Hexe) für Darstellungen ohne Simulation, z. B. die Demo. */
-export const KEINE_NATUR: SichtNatur = { rev: 0, baum: new Uint8Array(0), jung: new Uint8Array(0), stufe: new Uint8Array(0), fels: new Uint8Array(0) };
+export const KEINE_NATUR: SichtNatur = { rev: 0, baum: new Uint8Array(0), jung: new Uint8Array(0), stufe: new Uint8Array(0), fels: new Uint8Array(0), felsArt: new Uint8Array(0) };

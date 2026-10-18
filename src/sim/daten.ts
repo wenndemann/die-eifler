@@ -8,7 +8,7 @@ interface WareJson { id: string; name: string; gruppe: string }
 interface GebaeudeJson {
   id: string; name: string; gruppe: string; symbol: string; spruch: string;
   funktion: string; groesse: number; kosten: Record<string, number>;
-  radius?: number; arbeiter?: number; wohnraum?: number;
+  radius?: number; radiusGut?: number; arbeiter?: number; wohnraum?: number;
   vorrat?: Record<string, number>;
   eingang?: Record<string, number>;
   ausgang?: { ware: string; max: number };
@@ -50,10 +50,25 @@ export const TRAEGER_START = 40;
 export const TREE_MAX = 3;
 /** Ein Jungbaum wird in dieser Zeit zum Baum (Startwert 75 s). */
 export const BAUM_WACHSEN = 75 * TICK_HZ;
-/** Felsen: Einheiten Stein je Hex (Steinfeld, Klippen ab STEIL_GRAD). */
-export const FELS_STEIN = 12;
-export const FELS_STEIL = 4;
+/** Wiese, Heide und Moor tragen auf einem Teil der Hexe einen Streubaum (Prozent der Hexe, nach hashHex). */
+export const BAUM_WIESE_PROZENT = 12;
+export const BAUM_HEIDE_PROZENT = 8;
+export const BAUM_MOOR_PROZENT = 5;
+/** Beim Bauen werden höchstens so viele gerodete Bäume zu Stämmen an der Gebäudefahne. */
+export const RODUNG_STAMM_MAX = 2;
+/** Stein (Einheiten je Hex): Fels-Hex (Steinfeld), Klippe (ab STEIL_GRAD), Lesesteinhaufen (Prozent der Wiesen-/Wald-Hexe nach hashHex2). */
+export const FELS_STEIN = 80;
+export const FELS_STEIL = 25;
 export const STEIL_GRAD = 22;
+export const FELS_LESE = 6;
+export const LESE_PROZENT = 4;
+/** Fairer Start: mindestens so viel Stein im Umkreis ums Lager; fehlt es, kommen Lesesteinhaufen (je FELS_LESE_START) dazu. */
+export const START_STEIN_MIN = 150;
+export const START_STEIN_RADIUS = 8;
+export const START_STEIN_ABSTAND_MIN = 3;
+export const FELS_LESE_START = 8;
+/** Arbeitsbereich: Hex-Abstand vom Gebäude zum setzbaren Mittelpunkt höchstens so groß. */
+export const ARBEIT_MITTE_MAX = 6;
 /** Baustellen-Priorität 1..3, Standard 2. */
 export const PRIO_MIN = 1;
 export const PRIO_MAX = 3;
@@ -70,8 +85,9 @@ export interface GebaeudeTyp {
   /** Baukosten je Warenart. */
   kosten: readonly number[];
   kostenSumme: number;
-  /** Arbeitsradius in Hexen (0 = keiner). */
+  /** Arbeitsradius in Hexen um den Mittelpunkt (0 = keiner); radiusGut: innerer Ring „gut“ (kurze Wege), außen „geht noch“. */
   radius: number;
+  radiusGut: number;
   /** Braucht je einen Bewohner aus dem Vorrat (0 oder 1). */
   arbeiter: number;
   /** Input-Puffer: Größe je Warenart; 0 = nimmt die Ware nicht an. */
@@ -113,6 +129,7 @@ function baue(j: GebaeudeJson): GebaeudeTyp {
     groesse: j.groesse as 1 | 2 | 3,
     kosten, kostenSumme: kosten.reduce((s, n) => s + n, 0),
     radius: j.radius ?? 0,
+    radiusGut: j.radiusGut ?? 0,
     arbeiter: j.arbeiter ?? 0,
     puffer, pufferSumme: puffer.reduce((s, n) => s + n, 0),
     ausgangWare: j.ausgang ? ausId(j.ausgang.ware) : -1,

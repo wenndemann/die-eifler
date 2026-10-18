@@ -216,6 +216,21 @@ try {
     const dist = (a, b) => (Math.abs(a.q - b.q) + Math.abs(a.r - b.r) + Math.abs(a.q + a.r - b.q - b.r)) / 2;
     const gebaut = [];
     let wege = 0;
+    // 0) Start-Natur der echten Karte (Schnittstelle M4b): Bäume, Steine nach Art, Stein im Umkreis 8 ums Lager vor/nach dem fairen Start
+    const nat = sp.sicht.natur, kk = sp.sim.karte;
+    const natur = { baeume: 0, baeumeWiese: 0, baeumeWald: 0, stein: { fels: 0, klippe: 0, lese: 0 }, umkreisVor: 0, umkreisNach: 0, haufen: 0 };
+    for (let i = 0; i < kk.count; i++) {
+      const b = nat.start[i];
+      natur.baeume += b;
+      if (kk.terrain[i] === 1) natur.baeumeWiese += b;
+      if (kk.terrain[i] === 2) natur.baeumeWald += b;
+      natur.stein[['', 'fels', 'klippe', 'lese'][nat.felsArt[i]]] += nat.fels[i];
+      if (dist({ q: kk.qs[i], r: kk.rs[i] }, L) <= 8) {
+        natur.umkreisNach += nat.fels[i];
+        // Haufen des fairen Starts haben genau 8 Stein (normale Lesesteine 6)
+        if (nat.felsArt[i] === 3 && nat.fels[i] === 8) natur.haufen++; else natur.umkreisVor += nat.fels[i];
+      }
+    }
     // 1) Wege vom Lager in verschiedene Richtungen, jeweils zu einem freien Hex (dort entsteht eine Fahne)
     for (let d = 0; d < 6 && wege < 4; d++) {
       for (const k of [4, 3, 5, 2]) {
@@ -266,7 +281,12 @@ try {
     if (hf && baeume(hf) > 0 && nutzen('holzfaeller', hf)) {
       sp.schritte(2);
       const fo = beste('foerster', hf, () => 1);
-      if (fo) nutzen('foerster', fo);
+      if (fo && nutzen('foerster', fo)) {
+        // Arbeitsbereich der Försterei auf den Holzfäller setzen (prüft den Befehl auf der echten Karte)
+        sp.schritte(2);
+        const fg = sp.sicht.gebaeude.find((g) => g.typ === 'foerster' && g.q === fo.q && g.r === fo.r);
+        if (fg) sp.befehl({ art: 'arbeitsbereich', id: fg.id, q: hf.q, r: hf.r });
+      }
     }
     for (const [typ, wert] of [['saegewerk', null], ['steinbruch', felsen], ['huette', null]]) {
       sp.schritte(2);
@@ -279,6 +299,11 @@ try {
         const m = sg.pfad[i];
         if (sp.sim.kannFahne(m.q, m.r)) sp.befehl({ art: 'fahne', q: m.q, r: m.r });
       }
+    }
+    // Ohne Försterei (kein Platz gefunden): Arbeitsbereich des Holzfällers um ein Hex verschieben, damit der Befehl getestet wird
+    if (hf && !gebaut.some((g) => g.typ === 'foerster')) {
+      const hg = sp.sicht.gebaeude.find((g) => g.typ === 'holzfaeller' && g.q === hf.q && g.r === hf.r);
+      if (hg) sp.befehl({ art: 'arbeitsbereich', id: hg.id, q: hf.q + 1, r: hf.r });
     }
     const holzfaeller = gebaut.find((g) => g.typ === 'holzfaeller');
     const baumVorher = holzfaeller ? baeume(holzfaeller) : 0;
@@ -293,6 +318,7 @@ try {
     const fertig = sp.sicht.gebaeude.filter((g) => g.typ !== 'lager' && g.bau === 1000).map((g) => g.typ);
     return {
       lager: L, gebaut, fertig, baumVorher, wegeGesetzt: wege, segmente: sp.sicht.segmente.length, fahnen: sp.sicht.fahnen.length, tick: sp.sim.tick,
+      natur, foersterMitte: (sp.sicht.gebaeude.find((g) => g.mitte) ?? {}).mitte ?? null,
       maxUnterwegs, maxMitWare, statistik: sp.sim.statistik(), innen: sp.sim.pruefeInnenzustand(), pruefsumme: sp.pruefsumme(),
       protokoll: JSON.parse(JSON.stringify(sp.protokoll())), eigenReplay: sp.nachspielen(sp.protokoll()),
       getrennt: sp.sicht.gebaeude.filter((g) => g.getrennt).length,
@@ -302,6 +328,11 @@ try {
   info(`Spiel: Lager ${aufbau.lager.q},${aufbau.lager.r}; gebaut ${aufbau.gebaut.map((g) => g.typ).join(', ')}; fertig ${aufbau.fertig.join(', ') || '-'}; ` +
     `Bäume im Holzfäller-Radius beim Bau ${aufbau.baumVorher}; ${aufbau.segmente} Segmente, ${aufbau.fahnen} Fahnen; ` +
     `Tick ${aufbau.tick}; Träger unterwegs max ${aufbau.maxUnterwegs}, mit Ware max ${aufbau.maxMitWare}; Statistik ${JSON.stringify(aufbau.statistik)}`);
+  info(`Spiel: Natur – Bäume ${aufbau.natur.baeume} (Wald ${aufbau.natur.baeumeWald}, Wiese ${aufbau.natur.baeumeWiese}); Stein Fels ${aufbau.natur.stein.fels}, ` +
+    `Klippe ${aufbau.natur.stein.klippe}, Lesesteine ${aufbau.natur.stein.lese}; im Umkreis 8 ums Lager ${aufbau.natur.umkreisVor} vor, ${aufbau.natur.umkreisNach} nach dem Auffüllen (${aufbau.natur.haufen} Haufen)`);
+  info(`Spiel: Arbeitsmittelpunkt (Försterei bzw. Holzfäller) ${JSON.stringify(aufbau.foersterMitte)}`);
+  if (aufbau.natur.umkreisNach < 150) fail(`Spiel: nur ${aufbau.natur.umkreisNach} Stein im Umkreis 8 ums Lager (erwartet mindestens 150)`);
+  if (aufbau.gebaut.some((g) => g.typ === 'holzfaeller') && !aufbau.foersterMitte) fail('Spiel: Arbeitsbereich wurde nicht gesetzt');
   info(`Spiel: Zustände ${aufbau.zustaende.join(' | ')}`);
   info(`Spiel: Sim-Prüfsumme Kontext 1: ${aufbau.pruefsumme}; Replay im selben Kontext: ${aufbau.eigenReplay}`);
   if (aufbau.gebaut.length < 3) fail(`Spiel: nur ${aufbau.gebaut.length} Gebäude ließen sich bauen (erwartet mindestens 3)`);

@@ -4,7 +4,7 @@ import { Simulation } from '../src/sim/sim';
 import { SimKarte } from '../src/sim/karte';
 import { BAUM_WACHSEN, FLAG_CAP, FELS_STEIL, FELS_STEIN, START_VORRAT, TREE_MAX, WARE } from '../src/sim/daten';
 import type { Befehl, Protokoll } from '../src/sim/typen';
-import { baueSzenario30, baueTestKarte, gerade, KARTE_INFO, knoten } from './sim-szenario';
+import { baueSzenario30, baueTestKarte, gerade, KARTE_INFO, knoten, setzeWald, fuegeStartStein } from './sim-szenario';
 
 const START = { q: 0, r: 0 };
 
@@ -24,7 +24,7 @@ function karteMitWald(zentren: { q: number; r: number }[]) {
     for (let dq = -2; dq <= 2; dq++) for (let dr = -2; dr <= 2; dr++) {
       if ((dq === 0 && dr === 0) || Math.abs(dq + dr) > 2) continue;
       const i = k.index(z.q + dq, z.r + dr);
-      if (i >= 0) d.terrain[i] = 2;
+      if (i >= 0) setzeWald(d, i);
     }
   }
   return d;
@@ -129,7 +129,7 @@ describe('Warenfluss', () => {
     expect(sim.pruefeInnenzustand()).toEqual([]);
   });
   it('Gebäude ohne Verbindung ist getrennt und liefert nichts', () => {
-    const sim = neu();
+    const sim = neu(1, START, baueTestKarte(false));
     tu(sim, { art: 'gebaeude', typ: 'holzfaeller', q: 6, r: 0 });
     lauf(sim, 1500);
     const g = sim.sicht().gebaeude.find((x) => x.typ === 'holzfaeller')!;
@@ -313,20 +313,38 @@ describe('M4: Bauplatz, Kosten, Natur am Start', () => {
     expect(n.baum[k.index(8, 0)]).toBe(TREE_MAX); // alte Kopie bleibt unverändert
     expect(sim.pruefeInnenzustand()).toEqual([]);
   });
-  it('arbeitsHexe zählt Bäume, Felsen und Pflanzplätze im Radius', () => {
-    const sim = neu();
+  it('arbeitsHexe zählt Bäume, Felsen und Pflanzplätze im Radius 4 und trennt den inneren Ring „gut“', () => {
+    const karte = karteMitWald([{ q: 9, r: 0 }]);
+    fuegeStartStein(karte);
+    const kk = new SimKarte(karte);
+    for (const [q, r] of [[10, 3], [11, 3], [10, 4]]) { karte.terrain[kk.index(q, r)] = 5; karte.build[kk.index(q, r)] = 0; }
+    const sim = neu(1, START, karte);
     const b = sim.arbeitsHexe('holzfaeller', 9, 0);
     expect(b.art).toBe('baum');
     expect(b.summe).toBe(18 * TREE_MAX);
     expect(b.hexe.length).toBe(18);
+    // gut = höchstens 2 Hexe vom Mittelpunkt (Gebäude): der Wald-Ring 1..2 ist komplett „gut“
+    expect(b.hexe.every((h) => h.gut)).toBe(true);
     const f = sim.arbeitsHexe('steinbruch', 9, 3);
     expect(f.art).toBe('fels');
-    expect(f.summe).toBe(3 * FELS_STEIN);
-    expect(f.hexe.length).toBe(3);
+    // die drei Fels-Hexe (zusätzlich vielleicht ein Lesesteinhaufen im Wald) – (10,3) ist 1, (11,3) und (10,4) sind 2 Hexe entfernt
+    const felsHexe = f.hexe.filter((h) => h.n === FELS_STEIN);
+    expect(felsHexe.length).toBe(3);
+    expect(felsHexe.every((h) => h.gut)).toBe(true);
+    expect(f.summe).toBe(3 * FELS_STEIN + f.hexe.filter((h) => h.n !== FELS_STEIN).reduce((x, h) => x + h.n, 0));
     const p = sim.arbeitsHexe('foerster', -3, 0);
     expect(p.art).toBe('platz');
-    expect(p.summe).toBe(18 * TREE_MAX);
-    expect(sim.arbeitsHexe('foerster', 9, 0).summe).toBe(0); // Wald ist voll
+    expect(p.hexe.length).toBe(60 - 1); // Radius 4 ohne das Lager-Hex
+    expect(p.summe).toBe(59 * TREE_MAX);
+    expect(p.hexe.filter((h) => h.gut).length).toBe(18); // innerer Ring (Abstand 1..2); das Lager liegt 3 entfernt
+    // Wald ist voll: der Förster am Wald findet dort keinen Platz
+    const fo = sim.arbeitsHexe('foerster', 9, 0);
+    expect(fo.hexe.some((h) => b.hexe.some((x) => x.q === h.q && x.r === h.r))).toBe(false);
+    // Mittelpunkt verschoben: Radius 4 um (9,0) + 6 statt ums Gebäude
+    const v = sim.arbeitsHexe('holzfaeller', 3, 0, { q: 9, r: 0 });
+    expect(v.summe).toBe(18 * TREE_MAX);
+    expect(v.hexe.every((h) => h.gut)).toBe(true);
+    expect(sim.arbeitsHexe('holzfaeller', -3, 0, { q: -3, r: 0 }).summe).toBe(0); // Mittelpunkt = Gebäude: wie ohne
     expect(sim.arbeitsHexe('huette', 3, 0)).toEqual({ art: 'keine', hexe: [], summe: 0 });
     expect(sim.arbeitsHexe('holzfaeller', -3, 0).summe).toBe(0);
   });
@@ -476,7 +494,7 @@ describe('M4: Holz', () => {
     tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 9) });
     lauf(sim, 1);
     const vorher = sim.sicht().natur.baum.slice();
-    const imRadius = new Set(hexeImRadius(sim, mitte, 2));
+    const imRadius = new Set(hexeImRadius(sim, mitte, 4));
     let anfang = 0;
     for (const h of imRadius) anfang += vorher[h];
     expect(anfang).toBeLessThan(18 * TREE_MAX);   // der Weg hat ein paar Bäume vertrieben
@@ -537,7 +555,7 @@ describe('M4: Holz', () => {
     tu(sim, { art: 'gebaeude', typ: 'foerster', ...mitte });
     tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 3) });
     lauf(sim, 1);
-    const imRadius = new Set(hexeImRadius(sim, mitte, 2));
+    const imRadius = new Set(hexeImRadius(sim, mitte, 4));
     const stadien = new Set<number>();
     let ersterBaum = -1, erstesJung = -1;
     let verstoesse = 0;
@@ -633,8 +651,9 @@ describe('M4: Holz', () => {
 });
 
 describe('M4: Stein', () => {
-  it('Steinbruch erschöpft den Fels (36 Einheiten), liefert genau so viel Stein und ruht dann („kein Fels“)', () => {
+  it('Steinbruch erschöpft den Fels (3 Hexe à 80 Einheiten), liefert genau so viel Stein und ruht dann („kein Fels“)', () => {
     const karte = baueTestKarte(false);
+    fuegeStartStein(karte);
     const k = new SimKarte(karte);
     for (const [q, r] of [[7, 0], [8, 0], [7, -1]]) { karte.terrain[k.index(q, r)] = 5; karte.build[k.index(q, r)] = 0; }
     const sim = neu(1, START, karte);
@@ -645,7 +664,7 @@ describe('M4: Stein', () => {
     lauf(sim, 1);
     expect(sim.arbeitsHexe('steinbruch', 6, 0).summe).toBe(3 * FELS_STEIN);
     const felsAnfang = summe(sim.sicht().natur.fels);
-    lauf(sim, 15000);
+    lauf(sim, 90000);
     const n = sim.sicht().natur;
     expect(felsAnfang - summe(n.fels)).toBe(3 * FELS_STEIN);
     for (const [q, r] of [[7, 0], [8, 0], [7, -1]]) expect(n.fels[sim.karte.index(q, r)]).toBe(0);

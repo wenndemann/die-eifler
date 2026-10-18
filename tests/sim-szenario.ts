@@ -37,6 +37,9 @@ export function baueTestKarte(natur = true): KarteDaten {
       if (abstand(q, r, -15, 8) <= 2 || abstand(q, r, 6, 14) <= 1) { k.terrain[i] = 0; k.build[i] = 0; }
       if ((q === 8 && r === -10) || (q === 9 && r === -10) || (q === 8 && r === -9)) { k.terrain[i] = 5; k.build[i] = 0; }
       if (r === 18) { k.flags[i] |= 32; k.build[i] = 0; }
+      // Kahle Karte: Wiesen-Hexe als Ortskern-Hexe (Bit 0) markiert – die tragen keine Streubäume und keine Lesesteine (Schnittstelle M4b).
+      // Wald, den ein Test hinzufügt, setzt setzeWald (löscht die Markierung wieder).
+      if (!natur && k.terrain[i] === 1) k.flags[i] |= 1;
       if (natur) {
         for (const [wq, wr] of WALD_UM) { const d = abstandHex(q, r, wq, wr); if (d >= 1 && d <= 2) k.terrain[i] = 2; }
         for (const [fq, fr] of FELS_BEI) if (q === fq && r === fr) { k.terrain[i] = 5; k.build[i] = 0; }
@@ -44,6 +47,15 @@ export function baueTestKarte(natur = true): KarteDaten {
     }
   }
   return k;
+}
+
+/** Hex i der Testkarte zu Wald machen (3 Bäume; nimmt die Kahl-Markierung von baueTestKarte(false) weg). */
+export function setzeWald(k: KarteDaten, i: number): void { k.terrain[i] = 2; k.flags[i] &= ~1; }
+
+/** Zwei Fels-Hexe (2 × 80 Stein) nördlich des Lagers: erfüllt den fairen Start, es kommen keine Lesesteinhaufen dazu. */
+export function fuegeStartStein(k: KarteDaten): void {
+  const sim = new SimKarte(k);
+  for (const [q, r] of [[0, -6], [1, -6]]) { const i = sim.index(q, r); k.terrain[i] = 5; k.build[i] = 0; }
 }
 
 export const RICHT: readonly [number, number][] = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
@@ -124,7 +136,7 @@ export const M4_ORTE = {
 export function baueM4Karte(): KarteDaten {
   const k = baueTestKarte(false);
   const sim = new SimKarte(k);
-  for (const h of M4_WALD) k.terrain[sim.index(h.q, h.r)] = 2;
+  for (const h of M4_WALD) setzeWald(k, sim.index(h.q, h.r));
   for (const h of M4_FELS) { const i = sim.index(h.q, h.r); k.terrain[i] = 5; k.build[i] = 0; }
   return k;
 }
