@@ -45,11 +45,20 @@ nach Gebrauch wieder. Unterbrochen? Einfach neu starten, es setzt fort. Details 
   und markiert die möglichen nächsten Schritte, so geht es Hex für Hex; eine Fahne oder ein Weg anklicken baut den ganzen Weg,
   den letzten Zwischenpunkt nochmal anklicken oder <kbd>Enter</kbd> baut bis dorthin, <kbd>Rücktaste</kbd> bzw. „Zurück“ nimmt
   den letzten Punkt weg, höchstens 60 Schritte; Wege lassen sich verketten),
-  <kbd>2</kbd> Fahne (auf einem Weg teilt sie ihn), <kbd>3</kbd>–<kbd>6</kbd> Holzfäller, Steinbruch, Sägewerk,
-  Wohnhaus, <kbd>X</kbd> Abriss, <kbd>Esc</kbd>/Rechtsklick abbrechen, <kbd>Leertaste</kbd> Pause,
-  <kbd>+</kbd>/<kbd>−</kbd> Tempo 1–3×. Auf jedem Weg pendelt ein Träger und trägt sichtbar eine Ware;
-  ⚠ heißt: keine Wegverbindung zum Lager. Am Handy geht alles per Tippen (Tippen, dann „Bauen“).
-  Bauen kostet in M3 noch nichts, Holzfäller und Steinbruch sind Platzhalter (echte Bäume und Felsen kommen in M4).
+  <kbd>2</kbd> Fahne (auf einem Weg teilt sie ihn), <kbd>B</kbd> Baumenü, <kbd>X</kbd> Abriss, <kbd>Esc</kbd>/Rechtsklick
+  abbrechen, <kbd>Leertaste</kbd> Pause, <kbd>+</kbd>/<kbd>−</kbd> Tempo 1–3×. Auf jedem Weg pendelt ein Träger und trägt
+  sichtbar eine Ware; lange Wege mit Fahnen teilen, sonst staut es. ⚠ heißt: keine Wegverbindung zum Lager.
+  Am Handy geht alles per Tippen (Tippen, dann „Bauen“).
+- **Bauen mit Holz und Stein (M4):** Das Lager startet mit 12 Brettern, 8 Steinen und 8 Kartoffeln. Das Baumenü
+  (<kbd>B</kbd>, Ziffern ab <kbd>3</kbd> direkt) zeigt die Gebäude aus `data/buildings.json` mit Kosten und Bauplatzgröße.
+  Mit gewähltem Gebäude zeigt die Karte die Bauplätze (klein/mittel/groß, <kbd>P</kbd> auch ohne Werkzeug), ein
+  Geistermodell am Ziel und den Arbeitsradius („36 Bäume in Reichweite“). Platzieren kostet nichts: Die Baustelle
+  meldet Bedarf, Träger bringen Bretter und Steine einzeln und verbauen sie, das Haus wächst in drei Phasen.
+  Gebäude anklicken öffnet eine Karte mit Zustand („Wartet auf Bretter“, „Kein Baum mehr in Reichweite“), Bedarf und
+  Priorität 1–3 (Rechtsklick auf eine Baustelle schaltet sie reihum). Holzfäller fällt Bäume im Radius 2 (der Kartenwald
+  ist Simulationszustand), Förster pflanzt nach, Jungbäume wachsen in drei Stufen, Sägewerk macht aus Stämmen Bretter,
+  Steinbruch haut endliche Felsen (Felshexe und Klippen) ab. Das Lager liefert auf Abruf (Pull), Abriss gibt die Hälfte
+  des verbauten Materials zurück. Waren und Gebäude sind Daten: `data/goods.json`, `data/buildings.json`.
 - **Simulation** (`src/sim/`): fester Tick (20/s), nur Ganzzahlen, jede Aktion ist ein Befehl mit Tick-Nummer,
   Prüfsumme über den Zustand (Statusleiste „Sim“), Befehlsprotokoll zum Abspielen (`spieleAb`). Der Smoke-Test
   prüft, dass Node und Browser dieselbe Prüfsumme bekommen und ein Replay im zweiten Browser-Fenster gleich ausgeht.

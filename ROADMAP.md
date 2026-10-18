@@ -106,11 +106,11 @@ Verschoben:
 
 ---
 
-## M4 – Bauen mit Holz und Stein
+## M4 – Bauen mit Holz und Stein ✅ (erster Stand)
 
 **Ziel:** Bauen kostet Material, Holz und Stein tragen das Wachstum (Drehbuch 4.2, 5.1).
 
-- [x] Baustellen: Bedarf statt Sofortkosten, Einzel-Lieferung, Bau-Aktion, Priorität (DESIGN §4.6) (Simulation; Darstellung folgt)
+- [x] Baustellen: Bedarf statt Sofortkosten, Einzel-Lieferung, Bau-Aktion, Priorität (DESIGN §4.6)
 - [x] Holzkette: Holzfäller, Förster, Sägewerk; Bäume als Zustand, aus dem Kartenwald übernommen
 - [x] Steinkette: Steinbruch an endlichen Felsen
 - [x] Input-Puffer, Lager-Auslieferung (Pull), Abriss (DESIGN §4.5, §4.7)
@@ -118,6 +118,7 @@ Verschoben:
 - [x] Erstes Baumenü mit Geistermodell, Bauplatz-Anzeige (klein/mittel/groß) und Bauvorschau (Taste B, P; Gebäudekarte mit Priorität)
 
 **Abnahme:** Aus 12 Brettern und 8 Steinen entsteht ohne Eingriff eine laufende Holzwirtschaft. Holzfäller und Förster nebeneinander liefern nach 2 Minuten weiter Stämme.
+→ Vitest-Szenario `tests/m4-abnahme.test.ts` (mit Förster zwischen Minute 8 und 12 noch 16 Stämme, ohne Förster nach 4 Minuten keine mehr); Holzwirtschaft auch im Smoke-Test auf der echten Karte, Node = Browser.
 
 ---
 
