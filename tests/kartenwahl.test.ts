@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { dubletteUeberschrift, gruppiereOrte, klemme, normalisiere, passtInKacheln, sucheOrte, zahlWort } from '../src/ui/kartenwahl';
-import type { OrtEintrag } from '../src/welt/format';
+import { dubletteUeberschrift, gruppiereOrte, klemmGrund, klemmMeldung, klemme, normalisiere, passtInKacheln, sucheOrte, zahlWort } from '../src/ui/kartenwahl';
+import { KACHEL, WELT, type OrtEintrag } from '../src/welt/format';
+import { worldToHex } from '../src/welt/hexwelt';
 
 const o = (n: string, art: number, bei = '', q = 0, r = 0): OrtEintrag => [n, art, 0, 0, 1, q, r, bei];
 const ORTE: OrtEintrag[] = [
@@ -55,5 +56,42 @@ describe('klemme', () => {
   it('Größe passt nirgends: passt=false', () => {
     const klein: [number, number][] = [[8, 3], [9, 3], [8, 4], [9, 4]];
     expect(klemme(klein, 450, 230, 'gross').passt).toBe(false);
+  });
+});
+
+describe('Weltrand oder Ende der Kacheln', () => {
+  const nideggen: [number, number][] = [];
+  for (let tx = 8; tx <= 10; tx++) for (let tz = 3; tz <= 5; tz++) nideggen.push([tx, tz]);
+  const nideggenSet = new Set(nideggen.map(([a, b]) => a * 1000 + b));
+  const ganz: [number, number][] = [];
+  for (let tx = 0; tx < Math.ceil(WELT.SX / KACHEL.m); tx++) for (let tz = 0; tz < Math.ceil(WELT.SZ / KACHEL.m); tz++) ganz.push([tx, tz]);
+  const ganzSet = new Set(ganz.map(([a, b]) => a * 1000 + b));
+  const mitteVon = (tx: number, tz: number) => worldToHex((tx + 0.5) * KACHEL.m, (tz + 0.5) * KACHEL.m);
+
+  it('passt: kein Grund', () => {
+    const m = mitteVon(9, 4);
+    expect(klemmGrund(nideggenSet, m.q, m.r, 'klein')).toBeNull();
+  });
+  it('Teilgebiet: Ort knapp außerhalb der Kacheln = Ende der Kacheln', () => {
+    const o = mitteVon(7, 4); // links neben den vorhandenen Kacheln, mitten in der Welt
+    expect(klemmGrund(nideggenSet, o.q, o.r, 'klein')).toBe('kachelende');
+    expect(klemme(nideggen, o.q, o.r, 'klein')).toMatchObject({ geklemmt: true, grund: 'kachelende' });
+  });
+  it('ganze Welt: am Rand = Weltrand', () => {
+    const o = worldToHex(1000, 60000);
+    expect(klemmGrund(ganzSet, o.q, o.r, 'mittel')).toBe('weltrand');
+    expect(klemme(ganz, o.q, o.r, 'mittel')).toMatchObject({ geklemmt: true, grund: 'weltrand' });
+  });
+  it('ganze Welt, innen: nicht geklemmt, kein Grund', () => {
+    const o = worldToHex(60000, 70000);
+    expect(klemmGrund(ganzSet, o.q, o.r, 'gross')).toBeNull();
+    expect(klemme(ganz, o.q, o.r, 'gross').grund).toBeUndefined();
+  });
+  it('Meldungen nennen den Ort und den Grund', () => {
+    expect(klemmMeldung('kachelende', 'Gemünd')).toBe('Hier enden die Kacheln dieser Version – Gemünd liegt deshalb nicht in der Mitte.');
+    expect(klemmMeldung('kachelende')).toMatch(/Hier enden die Kacheln dieser Version/);
+    expect(klemmMeldung('weltrand', 'Aachen')).toMatch(/Aachen liegt zu nah am Weltrand/);
+    expect(klemmMeldung('weltrand')).toMatch(/Weltrand/);
+    expect(klemmMeldung('weltrand')).not.toMatch(/Kacheln/);
   });
 });

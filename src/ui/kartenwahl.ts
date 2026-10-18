@@ -83,7 +83,44 @@ export function passtInKacheln(kacheln: ReadonlySet<number>, q: number, r: numbe
   return true;
 }
 
-export interface KlemmErgebnis { q: number; r: number; geklemmt: boolean; passt: boolean }
+/** Warum reicht das Hex nicht in die gebauten Kacheln? Weltrand (Drehbuch 3.1) oder Ende der Kacheln dieser Datenversion. */
+export type KlemmGrund = 'weltrand' | 'kachelende';
+
+/**
+ * Grund, warum Spielfeld + Kulisse bei (q, r) nicht passen; null = passt. Fehlt irgendeine Kachel innerhalb der Welt,
+ * ist es das Ende der Kacheln (Teilgebiet / Teilen-Version), sonst ragt das Rechteck über den Weltrand.
+ */
+export function klemmGrund(kacheln: ReadonlySet<number>, q: number, r: number, size: Groesse): KlemmGrund | null {
+  if (passtInKacheln(kacheln, q, r, size)) return null;
+  const b = bigHexBounds(q, r, GROESSEN[size]);
+  const x0 = Math.max(0, b.x0 - KULISSE), z0 = Math.max(0, b.z0 - KULISSE);
+  const x1 = Math.min(WELT.SX, b.x1 + KULISSE), z1 = Math.min(WELT.SZ, b.z1 + KULISSE);
+  const t = KACHEL.m;
+  for (let tz = Math.floor(z0 / t); tz <= Math.ceil(z1 / t) - 1; tz++) {
+    for (let tx = Math.floor(x0 / t); tx <= Math.ceil(x1 / t) - 1; tx++) {
+      if (!kacheln.has(kachelKey(tx, tz))) return 'kachelende';
+    }
+  }
+  return 'weltrand';
+}
+
+/** Meldung, wenn das Hex verschoben wurde. ziel = Ortsname (oder Vorschlag), der eigentlich in der Mitte liegen sollte. */
+export function klemmMeldung(grund: KlemmGrund, ziel?: string): string {
+  if (grund === 'kachelende') {
+    return ziel
+      ? `Hier enden die Kacheln dieser Version – ${ziel} liegt deshalb nicht in der Mitte.`
+      : 'Hier enden die Kacheln dieser Version – das Hex ist deshalb nach innen gerückt.';
+  }
+  return ziel
+    ? `${ziel} liegt zu nah am Weltrand – das Hex ist nach innen gerückt, ${ziel} sitzt nicht ganz in der Mitte.`
+    : 'Zu nah am Weltrand – das Hex ist nach innen gerückt.';
+}
+
+export interface KlemmErgebnis {
+  q: number; r: number; geklemmt: boolean; passt: boolean;
+  /** Nur wenn geklemmt: warum das gewünschte Hex nicht passte. */
+  grund?: KlemmGrund;
+}
 
 /**
  * Mittel-Hex nach innen schieben, bis Spielfeld + 2000 m Kulisse in den gebauten Kacheln liegen
@@ -94,6 +131,7 @@ export function klemme(kacheln: [number, number][], q: number, r: number, size: 
   const set = new Set(kacheln.map(([tx, tz]) => kachelKey(tx, tz)));
   if (passtInKacheln(set, q, r, size)) return { q, r, geklemmt: false, passt: true };
   if (!kacheln.length) return { q, r, geklemmt: false, passt: false };
+  const grund = klemmGrund(set, q, r, size) ?? 'kachelende';
   let sx = 0, sz = 0;
   for (const [tx, tz] of kacheln) { sx += (tx + 0.5) * KACHEL.m; sz += (tz + 0.5) * KACHEL.m; }
   const ziel = worldToHex(sx / kacheln.length, sz / kacheln.length);
@@ -101,9 +139,9 @@ export function klemme(kacheln: [number, number][], q: number, r: number, size: 
   for (let i = 1; i <= d; i++) {
     const t = i / d;
     const h = hexRound(q + (ziel.q - q) * t, r + (ziel.r - r) * t);
-    if (passtInKacheln(set, h.q, h.r, size)) return { q: h.q, r: h.r, geklemmt: true, passt: true };
+    if (passtInKacheln(set, h.q, h.r, size)) return { q: h.q, r: h.r, geklemmt: true, passt: true, grund };
   }
-  return { q: ziel.q, r: ziel.r, geklemmt: true, passt: passtInKacheln(set, ziel.q, ziel.r, size) };
+  return { q: ziel.q, r: ziel.r, geklemmt: true, passt: passtInKacheln(set, ziel.q, ziel.r, size), grund };
 }
 
 /** Fläche in km² und Breite in km eines Spielfelds. */
@@ -117,6 +155,8 @@ export function groesseMasse(size: Groesse) {
 /* ------------------------------------------------------------------ Hilfen */
 
 const SPEICHER = 'eifeler.kartenwahl';
+/** Meldungen (Klemmen) bleiben lange genug stehen, damit man sie auf dem Handy in Ruhe lesen kann. */
+const TOAST_MS = 7000;
 const GROESSEN_LISTE: Groesse[] = ['klein', 'mittel', 'gross'];
 const LAND_NAME: Record<string, string> = { DE: 'Deutschland', BE: 'Belgien', LU: 'Luxemburg', NL: 'Niederlande' };
 const ZIFFERN = new Intl.NumberFormat('de-DE');
@@ -163,6 +203,8 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Ausschni
     const man = welt.manifest;
     const kacheln = man.kacheln;
     const kachelSet = new Set(kacheln.map(([a, b]) => kachelKey(a, b)));
+    /** Datenversion deckt nicht die ganze Welt ab (Teilgebiet / Teilen-Version). */
+    const teilgebiet = man.gebiet !== 'welt';
     const gruppen = gruppiereOrte(welt.orte.orte);
     const kinds = welt.orte.kinds;
 
@@ -246,7 +288,7 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Ausschni
       b.append(el('b', '', v.name), el('span', '', v.text), el('em', '', GROESSE_NAME[v.size]));
       b.addEventListener('click', () => {
         size = v.size;
-        setzeMitte(v.q, v.r, `${v.name} liegt nicht ganz in den gebauten Daten – das Hex ist ein Stück gerückt.`);
+        setzeMitte(v.q, v.r, v.name);
         zoomZumHex();
       });
       vorListe.append(b);
@@ -255,6 +297,12 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Ausschni
     if (!VORSCHLAEGE.length) vorBox.hidden = true;
 
     scroll.append(kopf, groesseBox, sucheBox, infoBox, vorBox);
+    if (teilgebiet) {
+      const hinweis = el('section', 'kw-block kw-teil');
+      hinweis.append(el('h3', '', 'Teilgebiet'));
+      hinweis.append(el('p', '', `Diese Version enthält nur einen Teil der Welt (${man.gebiet}, ${kacheln.length} Kacheln). Die schraffierten Bereiche der Karte haben keine Kacheln – dort kann man nicht siedeln.`));
+      scroll.append(hinweis);
+    }
 
     // Fuß: Kurzstatus + Los
     const kurz = el('div', 'kw-kurz');
@@ -329,19 +377,21 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Ausschni
     /* --- Auswahl --- */
     const radius = () => GROESSEN[size];
 
-    function setzeMitte(nq: number, nr: number, meldungKlemmt?: string, ortName?: string) {
+    /** ziel: Name des Orts/Vorschlags, der in die Mitte sollte (für die Meldung); mitMarke: Ort auf der Karte markieren. */
+    function setzeMitte(nq: number, nr: number, ziel?: string, mitMarke = false, meldung = true) {
       const k = klemme(kacheln, nq, nr, size);
       q = k.q; r = k.r;
+      toast.classList.remove('an'); // alte Meldung weg, sobald eine neue Aktion kommt
       if (!k.passt) toastZeigen('Für diese Größe ist hier noch nicht genug Karte gebaut.');
-      else if (k.geklemmt && meldungKlemmt) toastZeigen(meldungKlemmt);
-      marke = ortName ? { ...hexToWorld(nq, nr), name: ortName } : null;
+      else if (k.geklemmt && k.grund && meldung) toastZeigen(klemmMeldung(k.grund, ziel));
+      marke = ziel && mitMarke ? { ...hexToWorld(nq, nr), name: ziel } : null;
       nachAenderung();
     }
 
     function setzeGroesse(g: Groesse) {
       if (g === size) return;
       size = g;
-      setzeMitte(q, r, `Für „${GROESSE_NAME[g]}“ war hier zu wenig Platz am Rand – das Hex ist nach innen gerückt.`);
+      setzeMitte(q, r);
       zoomZumHex();
     }
 
@@ -350,6 +400,10 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Ausschni
       const k = klemme(kacheln, nq, nr, size);
       if (k.q === q && k.r === r) return;
       q = k.q; r = k.r; marke = null;
+      if (k.geklemmt && k.grund) {
+        const t = klemmMeldung(k.grund);
+        if (toast.textContent !== t || !toast.classList.contains('an')) toastZeigen(t);
+      }
       zeichne();
       planeInfo();
     }
@@ -366,7 +420,7 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Ausschni
       toast.textContent = t;
       toast.classList.add('an');
       clearTimeout(toastTimer);
-      toastTimer = window.setTimeout(() => toast.classList.remove('an'), 4500);
+      toastTimer = window.setTimeout(() => toast.classList.remove('an'), TOAST_MS);
     }
 
     /* --- Auswertung des Hex --- */
@@ -611,7 +665,7 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Ausschni
       eingabe.value = o[0];
       vorschlagListe.replaceChildren();
       treffer = [];
-      setzeMitte(o[5], o[6], `${o[0]} liegt zu nah am Rand – das Hex ist nach innen gerückt, ${o[0]} sitzt nicht ganz in der Mitte.`, o[0]);
+      setzeMitte(o[5], o[6], o[0], true);
       zoomZumHex();
     }
 
@@ -675,6 +729,12 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Ausschni
       for (const [tx, tz] of kacheln) ctx.rect(sx(tx * KACHEL.m), sz(tz * KACHEL.m), KACHEL.m * s, KACHEL.m * s);
       ctx.fillStyle = 'rgba(14, 16, 18, 0.72)';
       ctx.fill('evenodd');
+      // Teilgebiet (Teilen-Version, Probedaten): zusätzlich schraffieren, damit man sieht, wo Kacheln fehlen
+      const muster = teilgebiet ? schraffur() : null;
+      if (muster) {
+        ctx.fillStyle = muster;
+        ctx.fill('evenodd');
+      }
       ctx.restore();
       // Hinweis in ungebauten Kacheln (nur wenn groß genug)
       if (KACHEL.m * s > 150) {
@@ -694,6 +754,25 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Ausschni
       maleHex();
       maleBeschriftung();
       maleMassstab();
+    }
+
+    let schraffurMuster: CanvasPattern | null = null;
+    /** Feine Diagonallinien als Muster (einmal erzeugt). */
+    function schraffur(): CanvasPattern | null {
+      if (schraffurMuster) return schraffurMuster;
+      const c = document.createElement('canvas');
+      c.width = c.height = 14;
+      const g = c.getContext('2d');
+      if (!g) return null;
+      g.strokeStyle = 'rgba(231, 194, 122, 0.22)';
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.moveTo(-2, 16); g.lineTo(16, -2);
+      g.moveTo(-2, 2); g.lineTo(2, -2);
+      g.moveTo(12, 16); g.lineTo(16, 12);
+      g.stroke();
+      schraffurMuster = ctx.createPattern(c, 'repeat');
+      return schraffurMuster;
     }
 
     function sichtbar(x0: number, z0: number, x1: number, z1: number) {
@@ -978,7 +1057,7 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Ausschni
         if (weg) zeigeTip(p.x, p.y, weg, true);
         if (modus === 'schieben') {
           const h = worldToHex(wx(p.x), wz(p.y));
-          setzeMitte(h.q, h.r, 'Zu nah am Rand – das Hex ist nach innen gerückt.');
+          setzeMitte(h.q, h.r);
         }
       } else if (modus === 'hex') {
         nachAenderung();
