@@ -115,7 +115,7 @@ Verschoben:
 - [x] Steinkette: Steinbruch an endlichen Felsen
 - [x] Input-Puffer, Lager-Auslieferung (Pull), Abriss (DESIGN §4.5, §4.7)
 - [x] Datengetrieben: `data/goods.json`, `data/buildings.json` (Startwerte aus DESIGN §6)
-- [ ] Erstes Baumenü mit Geistermodell, Bauplatz-Anzeige (klein/mittel/groß) und Bauvorschau
+- [x] Erstes Baumenü mit Geistermodell, Bauplatz-Anzeige (klein/mittel/groß) und Bauvorschau (Taste B, P; Gebäudekarte mit Priorität)
 
 **Abnahme:** Aus 12 Brettern und 8 Steinen entsteht ohne Eingriff eine laufende Holzwirtschaft. Holzfäller und Förster nebeneinander liefern nach 2 Minuten weiter Stämme.
 

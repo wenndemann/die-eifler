@@ -283,6 +283,14 @@ export function bauPhase(bau: number): 1 | 2 | 3 {
   return (1 + Math.min(2, Math.floor((3 * bau) / (PROMILLE + 1)))) as 1 | 2 | 3;
 }
 
+/** Für das Geistermodell (geist.ts): fertiges Modell, Skala, Lage (Ausschnitt-Meter) und Bodenversatz auf Hex (q, r), ohne Planieren. */
+export function geistModell(typ: string, grid: HexGrid, q: number, r: number) {
+  const t = TYPEN[modellTyp(typ)];
+  const sk = HAUS_SKALE * t.skala;
+  const w = grid.toWorld({ q, r });
+  return { geo: modell(typ, 3), sk, x: w.x, z: w.z - 4 - t.grund[3] * sk, boden: G * sk };
+}
+
 // ---------------------------------------------------------------- Warnzeichen
 
 function warnTextur(): THREE.CanvasTexture {

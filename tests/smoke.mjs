@@ -2,7 +2,7 @@
 // Screenshots aus drei festen Kamerapositionen, Prüfsumme nach Neuladen gleich, Gegenprobe mit tools/map/pruefsumme.py.
 // Dazu (M3/M4): Determinismus Node = Browser (30-Segment-Szenario und Holzwirtschaft M4), Spiel auf der echten Karte
 // (Aufbau per Befehle mit Holz und Stein, 5 Spielminuten, Screenshot nah am Lager) und Replay des Protokolls in einem
-// zweiten Browser-Kontext.
+// zweiten Browser-Kontext. Dazu die Bedienung (tests/bedienung.mjs): Baumenü, Geist, Bauplätze, Klick-Bau, Priorität, Handy.
 //
 // Aufruf:  WELT_DATEN=/pfad/zu/daten npm run test:smoke
 //   WELT_DATEN   Weltdaten (Standard welt-daten/), werden auch vom selbst gestarteten Vite-Server ausgeliefert
@@ -19,6 +19,7 @@ import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 import { chromium } from 'playwright';
 import { createServer } from 'vite';
+import { bedienungsTest } from './bedienung.mjs';
 
 const WURZEL = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DATEN = resolve(process.env.WELT_DATEN ?? join(WURZEL, 'welt-daten'));
@@ -337,6 +338,10 @@ try {
     if (r2.karte !== a1.pruefsumme) fail(`Kontext 2 hat eine andere Karten-Prüfsumme: ${r2.karte}`);
     if (r2.summe !== aufbau.pruefsumme) fail(`Replay Kontext 2 ${r2.summe} ungleich Kontext 1 ${aufbau.pruefsumme}`);
   }
+
+  // ---- M4 Bedienung: Baumenü, Geist, Bauplätze, echte Mausklicks, Gebäudekarte mit Priorität, Handy-Ansicht (Screenshots 5 bis 9)
+  await page.goto('about:blank');   // die schwere Szene der Hauptseite nicht weiterrechnen lassen
+  await bedienungsTest({ browser, url, aus: AUS, info, fail });
 
   for (const s of seitenfehler) fail(s);
 } catch (e) {
