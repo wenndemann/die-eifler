@@ -272,6 +272,13 @@ try {
       const c = beste(typ, null, wert);
       if (c && (typ !== 'steinbruch' || felsen(c) > 0)) nutzen(typ, c);
     }
+    // Wie ein Spieler: lange Wege alle 2 Hexe mit Fahnen teilen (ein Träger je Abschnitt, sonst staut es)
+    for (const sg of sp.sicht.segmente.slice()) {
+      for (let i = 2; i < sg.pfad.length - 2; i += 2) {
+        const m = sg.pfad[i];
+        if (sp.sim.kannFahne(m.q, m.r)) sp.befehl({ art: 'fahne', q: m.q, r: m.r });
+      }
+    }
     const holzfaeller = gebaut.find((g) => g.typ === 'holzfaeller');
     const baumVorher = holzfaeller ? baeume(holzfaeller) : 0;
     // 4) fünf Spielminuten rechnen, dabei Träger mit Ware zählen
@@ -288,16 +295,19 @@ try {
       maxUnterwegs, maxMitWare, statistik: sp.sim.statistik(), innen: sp.sim.pruefeInnenzustand(), pruefsumme: sp.pruefsumme(),
       protokoll: JSON.parse(JSON.stringify(sp.protokoll())), eigenReplay: sp.nachspielen(sp.protokoll()),
       getrennt: sp.sicht.gebaeude.filter((g) => g.getrennt).length,
+      zustaende: sp.sicht.gebaeude.map((g) => `${g.typ} ${g.zustand}`),
     };
   });
   info(`Spiel: Lager ${aufbau.lager.q},${aufbau.lager.r}; gebaut ${aufbau.gebaut.map((g) => g.typ).join(', ')}; fertig ${aufbau.fertig.join(', ') || '-'}; ` +
     `Bäume im Holzfäller-Radius beim Bau ${aufbau.baumVorher}; ${aufbau.segmente} Segmente, ${aufbau.fahnen} Fahnen; ` +
     `Tick ${aufbau.tick}; Träger unterwegs max ${aufbau.maxUnterwegs}, mit Ware max ${aufbau.maxMitWare}; Statistik ${JSON.stringify(aufbau.statistik)}`);
+  info(`Spiel: Zustände ${aufbau.zustaende.join(' | ')}`);
   info(`Spiel: Sim-Prüfsumme Kontext 1: ${aufbau.pruefsumme}; Replay im selben Kontext: ${aufbau.eigenReplay}`);
   if (aufbau.gebaut.length < 3) fail(`Spiel: nur ${aufbau.gebaut.length} Gebäude ließen sich bauen (erwartet mindestens 3)`);
   if (aufbau.segmente < 3) fail(`Spiel: nur ${aufbau.segmente} Segmente`);
   if (aufbau.maxUnterwegs < 1) fail('Spiel: kein Träger unterwegs');
   if (aufbau.maxMitWare < 1) fail('Spiel: nie ein Träger mit Ware');
+  if (aufbau.gebaut.some((g) => g.typ === 'saegewerk') && aufbau.fertig.includes('saegewerk') && !(aufbau.statistik.erzeugtJe[1] > 0)) fail('Spiel: Sägewerk fertig, aber keine Bretter erzeugt');
   if (aufbau.fertig.length < 1) fail(`Spiel: nach 5 Spielminuten ist keine Baustelle fertig (gebaut: ${aufbau.gebaut.map((g) => g.typ).join(', ')})`);
   if (aufbau.gebaut.some((g) => g.typ === 'holzfaeller') && aufbau.fertig.includes('holzfaeller') && !(aufbau.statistik.erzeugtJe[0] > 0)) {
     fail(`Spiel: Holzfäller fertig, aber nach 5 Spielminuten kein Stamm erzeugt (${JSON.stringify(aufbau.statistik)})`);

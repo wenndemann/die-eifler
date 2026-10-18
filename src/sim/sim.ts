@@ -1141,6 +1141,13 @@ export class Simulation {
    * Lager-Auslieferung als Pull (DESIGN §4.5): Baustellen (Priorität absteigend, dann Id) und danach Verarbeiter melden Bedarf, das
    * nächste verbundene Lager mit Vorrat gibt je Durchlauf eine Ware an seine Fahne.
    */
+  /** Waren an der Lagerfahne, die das Lager verlassen (Ziel nicht das Lager selbst). */
+  private ausgehend(l: Gebaeude): number {
+    let n = 0;
+    for (const w of this.fahnen.get(l.fahne)!.waren) if (w.ziel !== l.id) n++;
+    return n;
+  }
+
   private lagerPull(): void {
     const gezogen = new Set<Id>();
     const baustellen: Gebaeude[] = [], verarbeiter: Gebaeude[] = [];
@@ -1158,8 +1165,8 @@ export class Simulation {
         let best: Gebaeude | null = null, bd = Infinity;
         for (const l of this.gebaeude.values()) {
           if (l.typ !== 'lager' || gezogen.has(l.id) || l.vorrat[a] <= 0) continue;
-          const lf = this.fahnen.get(l.fahne)!;
-          if (lf.waren.length + this.inbGet(lf.id) >= FLAG_CAP / 2) continue;
+          // Nur ausgehende Waren an der Lagerfahne bremsen; was zum Lager unterwegs ist, nimmt das Lager selbst ab
+          if (this.ausgehend(l) >= FLAG_CAP / 2) continue;
           const d = dm.get(l.fahne);
           if (d !== undefined && d < bd) { bd = d; best = l; }
         }
