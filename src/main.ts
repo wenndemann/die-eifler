@@ -21,6 +21,7 @@ import { ladeWelt, type Welt } from './welt/laden';
 import { ladeAusschnitt } from './welt/ausschnitt';
 import { GROESSEN, type AusschnittParam, type Groesse } from './welt/format';
 import { SimDemo } from './render/simdemo';
+import { Spiel } from './spiel/spiel';
 import { hexToWorld } from './welt/hexwelt';
 
 const TERRAIN_NAMES: Record<string, string> = {
@@ -118,7 +119,8 @@ async function main() {
   stage.scene.add(terrain.group, trees.group, houses.group);
 
   // Entwicklungs-Demo ohne Simulation (#…&simdemo=1): Wege, Fahnen, Träger, Waren, Gebäude mit Fake-Sicht
-  const simdemo = hp.simdemo ? new SimDemo({ map, grid, base, ex, haken: { terrain, houses, trees } }) : null;
+  const haken = { terrain, houses, trees };
+  const simdemo = hp.simdemo ? new SimDemo({ map, grid, base, ex, haken }) : null;
   if (simdemo) stage.scene.add(simdemo.group);
 
   const yAt = (x: number, z: number) => (map.surfaceAt(x, z) - base) * ex;
@@ -137,7 +139,19 @@ async function main() {
   const cam = new RtsCamera(stage.renderer.domElement, { groundY: yAt, bounds: { x: map.sizeX, z: map.sizeZ }, clamp });
   const breite = rad * 2 * 104;
   cam.maxDistance = Math.max(16000, breite * 1.4);
-  const start = map.info.places.find((p) => p.name === map.info.start) ?? { x: cx, z: cz };
+
+  // Das Spiel: Simulation, Darstellung von Wegen/Fahnen/Trägern/Gebäuden und Bauleiste (nicht in der Demo ohne Simulation)
+  const spiel = simdemo ? null : new Spiel({
+    map, grid, ausschnitt, base, ex, haken, scene: stage.scene, camera: cam.camera, abstand: () => cam.distance,
+    canvas: stage.renderer.domElement, root: document.body,
+    pick: (x, y) => {
+      const p = pickGelaende(new THREE.Vector2((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1));
+      return p ? { x: p.x, z: p.z } : null;
+    },
+    yAt,
+  });
+  const lagerW = spiel ? grid.toWorld(spiel.lagerHex) : null;
+  const start = lagerW ?? map.info.places.find((p) => p.name === map.info.start) ?? { x: cx, z: cz };
 
   let qualitaet = gespeicherteQualitaet();
   const apply = () => {
@@ -147,6 +161,7 @@ async function main() {
       trees.setExaggeration(ex);
       houses.setExaggeration(ex);
       simdemo?.setExaggeration(ex);
+      spiel?.setExaggeration(ex);
       trees.group.userData.ex = ex;
     }
     terrain.uniforms.uGrid.value = hud.settings.grid ? 1 : 0;
@@ -175,7 +190,7 @@ async function main() {
     mouse.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   });
   stage.renderer.domElement.addEventListener('pointerleave', () => mouse.set(9, 9));
-  const pick = (ndc: THREE.Vector2): THREE.Vector3 | null => {
+  const pickGelaende = (ndc: THREE.Vector2): THREE.Vector3 | null => {
     ray.setFromCamera(ndc, cam.camera);
     const o = ray.ray.origin, d = ray.ray.direction;
     const step = Math.max(8, cam.distance * 0.006);
@@ -217,7 +232,7 @@ async function main() {
   resize();
 
   // Kamerafahrt: von hoch über dem Spielfeld hinunter zum Startort
-  const nahDist = 3800;
+  const nahDist = 2600;
   const hochDist = Math.min(cam.maxDistance, breite * 1.25);
   let intro: { t: number } | null = { t: 0 };
   const INTRO_S = 6;
@@ -226,7 +241,7 @@ async function main() {
   const introPose = (t: number) => {
     const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     const dist = Math.exp(Math.log(hochDist) * (1 - e) + Math.log(nahDist) * e);
-    const gx = cx + (start.x - cx) * e, gz = cz + (start.z + 600 - cz) * e;
+    const gx = cx + (start.x - cx) * e, gz = cz + (start.z + 350 - cz) * e;
     cam.jumpTo(gx, gz, dist, 0.5 * (1 - e));
   };
   introPose(0);
@@ -267,6 +282,7 @@ async function main() {
     terrain.update(cam.camera.position);
     trees.update(cam.camera.position);
     simdemo?.update(dt);
+    spiel?.update(dt);
     water.uniforms.uTime.value += dt;
     rivers.uniforms.uTime.value += dt;
     trees.uniforms.uTime.value += dt;
@@ -275,9 +291,11 @@ async function main() {
     infoTimer -= dt;
     if (infoTimer <= 0) {
       infoTimer = 0.05;
-      const p = mouse.x < 2 ? pick(mouse) : null;
-      if (p) {
-        const h = grid.fromWorld(p.x, p.z);
+      // Hex unter der Maus bzw. (im Spiel) der Hex, den das Spiel im Fokus hat (Maus-Hover oder letzter Tipp)
+      let h: { q: number; r: number } | null = null;
+      if (spiel) h = spiel.fokus;
+      else { const p = mouse.x < 2 ? pickGelaende(mouse) : null; if (p) h = grid.fromWorld(p.x, p.z); }
+      if (h) {
         const info = map.hexInfo(h.q, h.r);
         terrain.uniforms.uHover.value.set(h.q, h.r);
         terrain.uniforms.uHoverOn.value = info.imSpielfeld ? 1 : 0;
@@ -287,9 +305,11 @@ async function main() {
             `<span>${Math.round(info.hoehe!)} m ü. NN · Bauplatz ${info.bauplatz}</span>`];
           if (info.ort) zeilen.push(`<span>Ortskern ${info.ort}</span>`);
           if (info.bahn) zeilen.push('<span>Bahnstrecke</span>');
+          if (spiel) zeilen.unshift(...spiel.infoZeilen(h));
           hud.setInfo(zeilen.join(''));
         } else {
-          hud.setInfo(`<b>Kulisse</b><span>Hex ${h.q}, ${h.r}</span><span>${Math.round(map.heightAt(p.x, p.z))} m ü. NN · nicht bespielbar</span>`);
+          const w = grid.toWorld(h);
+          hud.setInfo(`<b>Kulisse</b><span>Hex ${h.q}, ${h.r}</span><span>${Math.round(map.heightAt(w.x, w.z))} m ü. NN · nicht bespielbar</span>`);
         }
       } else {
         terrain.uniforms.uHoverOn.value = 0;
@@ -331,7 +351,7 @@ async function main() {
     return r.center;
   };
   Object.assign(api, {
-    map, cam, stage, terrain, simdemo, trees, hud, mockup, ausschnitt, grid, rails, rivers, ladezeit,
+    map, cam, stage, terrain, simdemo, spiel, trees, hud, mockup, ausschnitt, grid, rails, rivers, ladezeit,
     skipIntro: () => { intro = null; api.ready = true; },
     startBench, bench: null,
     /** alle fehlenden Gelände-Netze sofort bauen (Screenshots) */

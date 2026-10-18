@@ -1,5 +1,7 @@
 // Rauchtest im echten Browser: Kartenwahl -> Vorschlag -> „Hier siedeln!“ -> Ausschnitt lädt, keine Seitenfehler,
 // Screenshots aus drei festen Kamerapositionen, Prüfsumme nach Neuladen gleich, Gegenprobe mit tools/map/pruefsumme.py.
+// Dazu (M3): Determinismus Node = Browser (30-Segment-Szenario), Spiel auf der echten Karte (Aufbau per Befehle,
+// 3 Spielminuten, Screenshot nah am Lager) und Replay des Protokolls in einem zweiten Browser-Kontext.
 //
 // Aufruf:  WELT_DATEN=/pfad/zu/daten npm run test:smoke
 //   WELT_DATEN   Weltdaten (Standard welt-daten/), werden auch vom selbst gestarteten Vite-Server ausgeliefert
@@ -41,6 +43,20 @@ export { VORSCHLAEGE } from './src/map/presets.ts';`,
     bundle: true, format: 'esm', platform: 'node', write: false, define: { 'import.meta.env': '{}' }, logLevel: 'error',
   });
   return import(`data:text/javascript;base64,${Buffer.from(b.outputFiles[0].text).toString('base64')}`);
+}
+
+// Szenario-Replay als Bündel: einmal für Node (ESM), einmal für den Browser (IIFE, window.szenario.pruefsumme()).
+async function szenarioBuendel(format, plattform) {
+  const b = await build({
+    stdin: {
+      contents: `import { baueSzenario30 } from './tests/sim-szenario.ts';
+import { spieleAb } from './src/sim/replay.ts';
+export function pruefsumme() { const { karte, protokoll } = baueSzenario30(); return spieleAb(karte, protokoll).pruefsumme(); }`,
+      resolveDir: WURZEL, loader: 'ts',
+    },
+    bundle: true, format, globalName: format === 'iife' ? 'szenario' : undefined, platform: plattform, write: false, logLevel: 'error',
+  });
+  return b.outputFiles[0].text;
 }
 
 let vite = null;
@@ -166,6 +182,130 @@ try {
       if (py16 !== a1.pruefsumme) fail(`Prüfsumme Browser ${a1.pruefsumme} ist ungleich Python ${py16}`);
     }
   } else info('Gegenprobe Python übersprungen (Skript oder Daten fehlen)');
+
+  // ---- M3 a) Determinismus Node = Browser: das 30-Segment-Szenario (12000 Ticks) in beiden Umgebungen abspielen
+  {
+    const nodeCode = await szenarioBuendel('esm', 'node');
+    const nodeMod = await import(`data:text/javascript;base64,${Buffer.from(nodeCode).toString('base64')}`);
+    const t1 = Date.now();
+    const sumNode = nodeMod.pruefsumme();
+    const msNode = Date.now() - t1;
+    const leer = await browser.newPage();
+    await leer.addScriptTag({ content: await szenarioBuendel('iife', 'browser') });
+    const t2 = Date.now();
+    const sumBrowser = await leer.evaluate(() => window.szenario.pruefsumme());
+    const msBrowser = Date.now() - t2;
+    await leer.close();
+    info(`Determinismus 30-Segment-Szenario: Node ${sumNode} (${msNode} ms), Browser ${sumBrowser} (${msBrowser} ms)`);
+    if (sumNode !== sumBrowser) fail(`Determinismus: Prüfsumme Node ${sumNode} ungleich Browser ${sumBrowser}`);
+  }
+
+  // ---- M3 b) Spiel auf der echten Karte: kleiner Aufbau per Befehle, 3 Spielminuten, Screenshot, Replay in zweitem Kontext
+  const url = `${basis}#v=${a1.param.version}&q=${a1.param.q}&r=${a1.param.r}&g=${a1.param.size}`;
+  await page.goto('about:blank');
+  await page.goto(url);
+  await page.waitForFunction(() => window.eifeler?.spiel, null, { timeout: 600000, polling: 500 });
+  await page.evaluate(() => window.eifeler.skipIntro());
+  const aufbau = await page.evaluate(() => {
+    const sp = window.eifeler.spiel;
+    sp.pause(true);   // keine Echtzeit-Ticks dazwischen; befehl() rechnet bei Pause selbst 2 Ticks
+    const L = sp.lagerHex;
+    const RICHT = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
+    const dist = (a, b) => (Math.abs(a.q - b.q) + Math.abs(a.r - b.r) + Math.abs(a.q + a.r - b.q - b.r)) / 2;
+    const gebaut = [];
+    let wege = 0;
+    // 1) Wege vom Lager in verschiedene Richtungen, jeweils zu einem freien Hex (dort entsteht eine Fahne)
+    for (let d = 0; d < 6 && wege < 4; d++) {
+      for (const k of [4, 3, 5, 2]) {
+        const T = { q: L.q + RICHT[d][0] * k, r: L.r + RICHT[d][1] * k };
+        const p = sp.sim.wegVorschau(L, T);
+        if (p && p.length <= 8) { sp.befehl({ art: 'weg', pfad: p }); wege++; break; }
+      }
+    }
+    // 2) eine Fahne mitten auf den ersten Weg (teilt das Segment)
+    const erster = sp.sicht.segmente[0];
+    if (erster && erster.pfad.length > 3) {
+      const m = erster.pfad[Math.floor(erster.pfad.length / 2)];
+      if (sp.sim.kannFahne(m.q, m.r)) sp.befehl({ art: 'fahne', q: m.q, r: m.r });
+    }
+    // 3) Gebäude an passenden Plätzen (kannBauen), jeweils mit Weg zur nächsten Fahne (wegVorschau vorher prüfen)
+    const kandidaten = [];
+    for (let dq = -8; dq <= 8; dq++) for (let dr = -8; dr <= 8; dr++) {
+      const c = { q: L.q + dq, r: L.r + dr };
+      const dd = dist(c, L);
+      if (dd >= 2 && dd <= 7) kandidaten.push({ ...c, dd });
+    }
+    kandidaten.sort((a, b) => a.dd - b.dd || a.r - b.r || a.q - b.q);
+    for (const typ of ['holzfaeller', 'holzfaeller', 'steinbruch', 'saegewerk', 'wohnhaus']) {
+      for (const c of kandidaten) {
+        if (!sp.sim.kannBauen(typ, c.q, c.r)) continue;
+        const fs = sp.sicht.fahnen.slice().sort((a, b) => dist(a, c) - dist(b, c) || a.id - b.id).slice(0, 6);
+        const von = fs.find((f) => sp.sim.wegVorschau(f, c));
+        if (!von) continue;
+        sp.befehl({ art: 'gebaeude', typ, q: c.q, r: c.r });
+        const p = sp.sim.wegVorschau(von, c);
+        if (p) sp.befehl({ art: 'weg', pfad: p });
+        gebaut.push({ typ, q: c.q, r: c.r });
+        break;
+      }
+    }
+    // 4) drei Spielminuten rechnen, dabei Träger mit Ware zählen
+    let maxUnterwegs = 0, maxMitWare = 0;
+    for (let i = 0; i < 36; i++) {
+      sp.schritte(100);
+      const t = sp.sicht.traeger;
+      maxUnterwegs = Math.max(maxUnterwegs, t.length);
+      maxMitWare = Math.max(maxMitWare, t.filter((x) => x.ware >= 0).length);
+    }
+    return {
+      lager: L, gebaut, wegeGesetzt: wege, segmente: sp.sicht.segmente.length, fahnen: sp.sicht.fahnen.length, tick: sp.sim.tick,
+      maxUnterwegs, maxMitWare, statistik: sp.sim.statistik(), innen: sp.sim.pruefeInnenzustand(), pruefsumme: sp.pruefsumme(),
+      protokoll: JSON.parse(JSON.stringify(sp.protokoll())), eigenReplay: sp.nachspielen(sp.protokoll()),
+      getrennt: sp.sicht.gebaeude.filter((g) => g.getrennt).length,
+    };
+  });
+  info(`Spiel: Lager ${aufbau.lager.q},${aufbau.lager.r}; gebaut ${aufbau.gebaut.map((g) => g.typ).join(', ')}; ${aufbau.segmente} Segmente, ${aufbau.fahnen} Fahnen; ` +
+    `Tick ${aufbau.tick}; Träger unterwegs max ${aufbau.maxUnterwegs}, mit Ware max ${aufbau.maxMitWare}; Statistik ${JSON.stringify(aufbau.statistik)}`);
+  info(`Spiel: Sim-Prüfsumme Kontext 1: ${aufbau.pruefsumme}; Replay im selben Kontext: ${aufbau.eigenReplay}`);
+  if (aufbau.gebaut.length < 3) fail(`Spiel: nur ${aufbau.gebaut.length} Gebäude ließen sich bauen (erwartet mindestens 3)`);
+  if (aufbau.segmente < 3) fail(`Spiel: nur ${aufbau.segmente} Segmente`);
+  if (aufbau.maxUnterwegs < 1) fail('Spiel: kein Träger unterwegs');
+  if (aufbau.maxMitWare < 1) fail('Spiel: nie ein Träger mit Ware');
+  if (!(aufbau.statistik.angekommen > 0)) fail(`Spiel: keine Ware angekommen (${JSON.stringify(aufbau.statistik)})`);
+  if (aufbau.innen.length) fail(`Spiel: Innenzustand widersprüchlich: ${aufbau.innen.join('; ')}`);
+  if (aufbau.getrennt) fail(`Spiel: ${aufbau.getrennt} Gebäude ohne Verbindung zum Lager`);
+  if (aufbau.eigenReplay !== aufbau.pruefsumme) fail(`Spiel: Replay im selben Browser ${aufbau.eigenReplay} ungleich live ${aufbau.pruefsumme}`);
+  if (aufbau.protokoll.karte.pruefsumme !== a1.pruefsumme) fail('Spiel: Karten-Prüfsumme im Protokoll passt nicht zum Ausschnitt');
+
+  // Screenshot nah am Lager (etwa 500 m)
+  await page.evaluate((h) => {
+    const e = window.eifeler;
+    const w = e.grid.toWorld(h);
+    e.cam.pitchOverride = 38;
+    e.cam.jumpTo(w.x, w.z + 60, 500, 0.3);
+    e.settle();
+  }, aufbau.lager);
+  await page.evaluate(() => new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok))));
+  await page.waitForTimeout(3000);
+  const spielBild = join(AUS, '4-spiel-lager-nah.png');
+  await page.screenshot({ path: spielBild, timeout: 180000 });
+  const kbSpiel = Math.round(statSync(spielBild).size / 1024);
+  info(`Screenshot ${spielBild} (${kbSpiel} KB)`);
+  if (kbSpiel < 20) fail(`Spiel-Screenshot verdächtig klein (${kbSpiel} KB)`);
+
+  // Replay in einem zweiten, frischen Browser-Kontext mit derselben Karten-Adresse und eigener Karte
+  {
+    const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+    const page2 = await ctx2.newPage();
+    page2.on('pageerror', (e) => seitenfehler.push(`pageerror (Kontext 2): ${e.message}`));
+    await page2.goto(url);
+    await page2.waitForFunction(() => window.eifeler?.spiel, null, { timeout: 600000, polling: 500 });
+    const r2 = await page2.evaluate((p) => ({ summe: window.eifeler.spiel.nachspielen(p), karte: window.eifeler.ausschnitt.pruefsumme }), aufbau.protokoll);
+    await ctx2.close();
+    info(`Replay in zweitem Kontext: Sim-Prüfsumme ${r2.summe} (Karte ${r2.karte})`);
+    if (r2.karte !== a1.pruefsumme) fail(`Kontext 2 hat eine andere Karten-Prüfsumme: ${r2.karte}`);
+    if (r2.summe !== aufbau.pruefsumme) fail(`Replay Kontext 2 ${r2.summe} ungleich Kontext 1 ${aufbau.pruefsumme}`);
+  }
 
   for (const s of seitenfehler) fail(s);
 } catch (e) {
