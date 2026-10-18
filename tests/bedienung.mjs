@@ -254,6 +254,27 @@ export async function bedienungsTest({ browser, url, aus, info, fail }) {
   await hp.locator('.aktion.bauen').tap();   // „Bauen“ bestätigt
   await hp.waitForFunction((n) => window.eifeler.spiel.sicht.gebaeude.length > n, hv.n, { timeout: 30000, polling: 200 });
   info('Bedienung Handy: Gebäude per Tipp und „Bauen“ gebaut');
+  // Weg am Handy: Start-Fahne, ein Zwischenpunkt, dann Tipp auf die Gebäudefahne baut sofort (ohne Bestätigen)
+  const weg = await hp.evaluate((ziel) => {
+    const sp = window.eifeler.spiel;
+    const L = sp.lagerHex;
+    const n = sp.sicht.segmente.length;
+    sp.waehleWerkzeug('weg');
+    sp.klickAuf(L, true);
+    const RICHT = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
+    const zw = RICHT.map(([dq, dr]) => ({ q: L.q + dq, r: L.r + dr }))
+      .find((h) => sp.sim.wegAbschnitt(L, h, [L], 1) && sp.sim.wegAbschnitt(h, ziel, [L, h], 59));
+    if (!zw) return { n, zw: null };
+    sp.klickAuf(zw, true);
+    sp.klickAuf(ziel, true);
+    return { n, zw };
+  }, z2.hex);
+  if (!weg.zw) info('Bedienung Handy: kein Zwischenpunkt neben dem Lager gefunden, Weg-Test übersprungen');
+  else {
+    await hp.waitForFunction((n) => window.eifeler.spiel.sicht.segmente.length > n, weg.n, { timeout: 30000, polling: 200 })
+      .then(() => info('Bedienung Handy: Weg mit Zwischenpunkt per Tipp auf die Fahne sofort gebaut'))
+      .catch(() => fail('Bedienung Handy: Tipp auf die Fahne hat den Weg nicht gebaut'));
+  }
   await handy.close();
   await ctx.close().catch(() => undefined);
 }

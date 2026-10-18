@@ -400,7 +400,7 @@ export class Spiel {
       else this.melde('Ein Weg beginnt an einer Fahne – erst eine Fahne wählen.', true);
       return;
     }
-    if (w === 'weg') { this.wegKlick(h, touch); return; }
+    if (w === 'weg') { this.wegKlick(h); return; }
     if (!touch) { this.aktion(h); return; }
     // Touch: erster Tipp zeigt, zweiter Tipp auf dasselbe Ziel (oder „Bauen“) führt aus
     if (gleich(this.offen, h)) { this.offen = null; this.aktion(h); return; }
@@ -414,7 +414,7 @@ export class Spiel {
   }
 
   /** Klick auf einen Hex bei laufendem Wegbau. */
-  private wegKlick(h: Hx, touch: boolean): void {
+  private wegKlick(h: Hx): void {
     const l = this.weg.letzter!;
     if (gleich(h, l)) {
       // nochmal auf den letzten Punkt: bis dorthin bauen; auf dem Start ohne Zwischenpunkte: Start verwerfen
@@ -423,8 +423,7 @@ export class Spiel {
       return;
     }
     if (this.istEndziel(h)) {
-      // Touch: erst zeigen, zweiter Tipp (oder „Weg bauen“) baut
-      if (touch && !gleich(this.offen, h)) { this.offen = h; this.hinweisSetzen(); return; }
+      // Fahne oder Weg baut sofort, auch am Handy: Wege kosten nichts und lassen sich abreißen
       this.offen = null;
       this.wegZu(h, true);
       return;
@@ -476,7 +475,7 @@ export class Spiel {
       if (this.offen) { const h = this.offen; this.offen = null; this.wegZu(h, true); return; }
       if (this.weg.zwischenpunkte.length) { this.wegBauen(); return; }
       // ohne Zwischenpunkte: wie ein Klick auf den Hex unter der Maus
-      if (this.zeiger === 'mouse' && this.fokus && !gleich(this.fokus, this.weg.start)) this.wegKlick(this.fokus, false);
+      if (this.zeiger === 'mouse' && this.fokus && !gleich(this.fokus, this.weg.start)) this.wegKlick(this.fokus);
       return;
     }
     const h = this.offen ?? (this.zeiger === 'mouse' ? this.fokus : null);
@@ -873,8 +872,8 @@ export class Spiel {
       const n = this.weg.schritte;
       if (!this.weg.aktiv) t = `Weg: eine Fahne als Start ${tippe}.`;
       else if (touch) {
-        t = n === 0 ? 'Weg: Hex antippen = Zwischenpunkt, Fahne antippen und nochmal = bauen.'
-          : `Weg: ${n} Schritte – Hex = Zwischenpunkt, Fahne zweimal tippen oder „Weg bauen“ baut, „Zurück“ nimmt den letzten Punkt weg.`;
+        t = n === 0 ? 'Weg: Hex antippen = Zwischenpunkt, Fahne oder Weg antippen = bauen.'
+          : `Weg: ${n} Schritte – Hex = Zwischenpunkt, Fahne/Weg antippen oder „Weg bauen“ baut, „Zurück“ nimmt den letzten Punkt weg.`;
       } else {
         t = n === 0 ? 'Weg: Hex für Hex anklicken (Zwischenpunkte) oder gleich eine Fahne – die baut. Esc bricht ab.'
           : `Weg: ${n} Schritte – Ziel anklicken (Fahne baut, freier Hex = Zwischenpunkt), letzten Punkt nochmal oder Enter baut, Rücktaste zurück.`;
