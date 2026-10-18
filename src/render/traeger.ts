@@ -31,7 +31,7 @@ function rohr(a: [number, number, number], b: [number, number, number], r1: numb
   return paint(g, farbe);
 }
 
-function figur(): THREE.BufferGeometry {
+export function figur(): THREE.BufferGeometry {
   teile.length = 0;
   const HOSE = '#6b4a2e', STIEFEL = '#2c2118', HAUT = '#f1bf96', NASE = '#e98a73', KAPPE = '#c0392b';
   for (const [i, sx] of [[1, -1], [2, 1]] as const) {
@@ -78,7 +78,7 @@ function figur(): THREE.BufferGeometry {
 
 const TRACHT = ['#3f6fb5', '#b5463f', '#4f8a4a', '#d0a030', '#7a4fa0', '#3a8a8a', '#d9d2c0', '#c8642f'].map((c) => new THREE.Color(c));
 
-function material(): THREE.MeshStandardMaterial {
+export function material(): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75, flatShading: true });
   mat.onBeforeCompile = (shader) => {
     shader.vertexShader = shader.vertexShader

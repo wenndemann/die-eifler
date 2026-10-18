@@ -15,6 +15,8 @@ import type { Befehl, Protokoll, SichtFahne, SichtGebaeude, SichtSegment, SimSic
 import { Wege } from '../render/wege';
 import { Fahnen } from '../render/fahnen';
 import { Traeger } from '../render/traeger';
+import { Arbeiter } from '../render/arbeiter';
+import { Natur } from '../render/natur';
 import { Gebaeude, type GebaeudeHaken } from '../render/gebaeude';
 import { Markierung, type RingArt } from '../render/markierung';
 import { Spielleiste, WERKZEUGE, type Werkzeug } from '../ui/spielleiste';
@@ -64,6 +66,8 @@ export class Spiel {
   private readonly wege: Wege;
   private readonly fahnen: Fahnen;
   private readonly traeger: Traeger;
+  private readonly arbeiter: Arbeiter;
+  private readonly natur: Natur;
   private readonly gebaeude: Gebaeude;
   private readonly markierung: Markierung;
   private readonly leiste: Spielleiste;
@@ -108,10 +112,12 @@ export class Spiel {
     this.fahnen = new Fahnen(map, grid, base, ex);
     this.traeger = new Traeger(map, grid, base, ex);
     this.gebaeude = new Gebaeude(map, grid, base, ex, ctx.haken);
+    this.arbeiter = new Arbeiter(map, grid, base, ex);
+    this.natur = new Natur(map, grid, base, ex, ctx.haken.trees);
     this.markierung = new Markierung(map, grid, base, ex);
     this.wege.wald = ctx.haken.trees ?? null;
-    this.fahnen.kamera = ctx.camera; this.traeger.kamera = ctx.camera; this.gebaeude.kamera = ctx.camera;
-    this.group.add(this.wege.group, this.fahnen.group, this.traeger.group, this.gebaeude.group, this.markierung.group);
+    this.fahnen.kamera = ctx.camera; this.traeger.kamera = ctx.camera; this.gebaeude.kamera = ctx.camera; this.arbeiter.kamera = ctx.camera;
+    this.group.add(this.wege.group, this.fahnen.group, this.traeger.group, this.gebaeude.group, this.arbeiter.group, this.natur.group, this.markierung.group);
     ctx.scene.add(this.group);
 
     this.zeiger = matchMedia('(pointer: coarse)').matches ? 'touch' : 'mouse';
@@ -181,6 +187,7 @@ export class Spiel {
     this.ctx.ex = ex;
     this.wege.setExaggeration(ex); this.fahnen.setExaggeration(ex); this.traeger.setExaggeration(ex);
     this.gebaeude.setExaggeration(ex); this.markierung.setExaggeration(ex);
+    this.arbeiter.setExaggeration(ex); this.natur.setExaggeration(ex);
   }
 
   // ------------------------------------------------------------------ Frame
@@ -196,6 +203,8 @@ export class Spiel {
     this.wege.update(this._sicht, a, dt);
     this.fahnen.update(this._sicht, a, dt);
     this.traeger.update(this._sicht, a, dt);
+    this.natur.update(this._sicht);
+    this.arbeiter.update(this._sicht, a, dt);
 
     // Maus: Hex unter dem Zeiger (gedrosselt, folgt auch der bewegten Kamera)
     this.mausTimer -= dt;
