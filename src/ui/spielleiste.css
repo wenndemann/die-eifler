@@ -63,6 +63,8 @@
   .spielstatus { left: calc(10px + env(safe-area-inset-left, 0px)); top: calc(56px + env(safe-area-inset-top, 0px)); font-size: 11.5px; max-width: calc(100vw - 20px); padding: 5px 8px; }
   .spielstatus .zeit { font-size: 12px; }
   .perf { top: 150px; }
+  /* Ansicht unter Kopf- und Statusleiste, damit „Andere Karte“ frei bleibt */
+  .settings { top: calc(150px + env(safe-area-inset-top, 0px)); }
   .info { bottom: calc(var(--leiste-h, 0px) + 16px + env(safe-area-inset-bottom, 0px)); }
   .minimap { bottom: calc(var(--leiste-h, 0px) + 16px + env(safe-area-inset-bottom, 0px)); }
   .info { max-width: calc(100vw - 160px); }

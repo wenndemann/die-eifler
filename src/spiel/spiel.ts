@@ -71,6 +71,8 @@ export class Spiel {
   private gebAt = new Map<string, SichtGebaeude>();
   private segAt = new Map<string, SichtSegment>();
   private netzSig = '';
+  /** Segmente, unter denen die Kulissenhäuser schon ausgeblendet sind. */
+  private freigeraeumt = new Set<number>();
 
   tempo = 1;
   pausiert = false;
@@ -215,6 +217,14 @@ export class Spiel {
     for (const sg of s.segmente) {
       maxS = Math.max(maxS, sg.id);
       for (let i = 1; i < sg.pfad.length - 1; i++) this.segAt.set(key(sg.pfad[i]), sg);
+      // Wege laufen nicht durch die Kulissenhäuser der echten Ortskerne
+      if (!this.freigeraeumt.has(sg.id)) {
+        this.freigeraeumt.add(sg.id);
+        for (const h of sg.pfad) {
+          const w = this.ctx.grid.toWorld(h);
+          this.ctx.haken.houses?.verstecke(w.x, w.z, this.ctx.map.info.hex.size * 0.6);
+        }
+      }
     }
     for (const f of s.fahnen) maxF = Math.max(maxF, f.id);
     this.netzSig = `${s.fahnen.length}/${s.segmente.length}/${s.gebaeude.length}/${maxF}/${maxS}`;
