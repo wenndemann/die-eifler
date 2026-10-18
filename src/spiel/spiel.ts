@@ -9,9 +9,9 @@ import type { Ausschnitt } from '../welt/ausschnitt';
 import { FLAG, HEX } from '../welt/format';
 import { Simulation } from '../sim/sim';
 import { spieleAb } from '../sim/replay';
-import { FLAG_CAP, GEBAEUDE, WAREN, WAREN_NAMEN } from '../sim/daten';
+import { FLAG_CAP, GEBAEUDE, GEBAEUDE_IDS, WAREN, WAREN_NAMEN } from '../sim/daten';
 import { PROMILLE, TICK_HZ } from '../sim/typen';
-import type { Befehl, Protokoll, SichtFahne, SichtGebaeude, SichtSegment, SimSicht } from '../sim/typen';
+import type { Befehl, Id, Protokoll, SichtFahne, SichtGebaeude, SichtSegment, SimSicht } from '../sim/typen';
 import { Wege } from '../render/wege';
 import { Fahnen } from '../render/fahnen';
 import { Traeger } from '../render/traeger';
@@ -19,7 +19,13 @@ import { Arbeiter } from '../render/arbeiter';
 import { Natur } from '../render/natur';
 import { Gebaeude, type GebaeudeHaken } from '../render/gebaeude';
 import { Markierung, type RingArt } from '../render/markierung';
-import { Spielleiste, WERKZEUGE, type Werkzeug } from '../ui/spielleiste';
+import { Bauplaetze } from '../render/bauplaetze';
+import { Geist } from '../render/geist';
+import { Spielleiste, type KartenDaten, type MenueGruppeDaten, type Werkzeug } from '../ui/spielleiste';
+import {
+  BAUPLATZ_NAMEN, bedarfNamen, fehlmengen, hexeImUmkreis, kostenText as kostenAlsText, menueGruppen, naechstePrioritaet, PRIO_NAMEN,
+  reichweiteText, wareTexte, zustandsText,
+} from './baumenue';
 import {
   KlickErkenner, OffenerWeg, TEMPI, TickTakt, hexLinie, naechsteSchritte, saatAusPruefsumme, waehleLagerHex, type Hx,
 } from './logik';
@@ -47,13 +53,22 @@ export interface SpielKontext {
 const NAMEN: Record<string, string> = Object.fromEntries(Object.values(GEBAEUDE).map((t) => [t.id, t.name]));
 /** Kurznamen der Waren (letztes Wort des Anzeigenamens, z. B. „Baumstamm“). */
 const WARE_NAME: string[] = WAREN_NAMEN.map((n) => n.split(' ').slice(1).join(' ') || n);
-/** Zustand fertiger Gebäude in Klartext (die große Oberfläche folgt später). */
-const ZUSTAND_TEXT: Record<string, string> = {
-  getrennt: 'fertig – ohne Verbindung', kein_arbeiter: 'wartet auf einen Bewohner', kein_baum: 'findet keinen Baum', kein_fels: 'findet keinen Fels mehr',
-  kein_platz: 'findet keinen Pflanzplatz', voll: 'Lager voll – wartet auf Abtransport', arbeitet: 'arbeitet', wartet_material: 'wartet auf Material', bereit: 'fertig',
-};
-const BAUPLATZ_NAME = ['kein', 'klein', 'mittel', 'groß'];
-const GEBAEUDE_WERKZEUGE = ['holzfaeller', 'foerster', 'saegewerk', 'steinbruch', 'huette'];
+/** Texte der Waren für Kosten und Bedarf. */
+const WARE_TEXT = wareTexte(WAREN, WAREN_NAMEN);
+/** Alle Gebäudetypen, die man bauen kann (datengetrieben, ohne das Lager), in der Reihenfolge der Daten. */
+const GEBAEUDE_WERKZEUGE = GEBAEUDE_IDS.filter((id) => id !== 'lager');
+
+/** Baumenü aus den Daten: Gruppen und Gebäude wie in data/buildings.json (ohne Lager). */
+function menueDaten(): MenueGruppeDaten[] {
+  return menueGruppen(GEBAEUDE_IDS.map((id) => GEBAEUDE[id])).map((g) => ({
+    gruppe: g.gruppe,
+    eintraege: g.typen.map((t) => ({
+      id: t.id, symbol: t.symbol, name: t.name, spruch: t.spruch,
+      kostenText: kostenAlsText(t.kosten, WARE_TEXT, true), kosten: t.kosten,
+      groesse: t.groesse, groesseText: `Bauplatz ${BAUPLATZ_NAMEN[t.groesse]}`, radius: t.radius,
+    })),
+  }));
+}
 
 const key = (h: Hx) => `${h.q},${h.r}`;
 const gleich = (a: Hx | null, b: Hx | null) => !!a && !!b && a.q === b.q && a.r === b.r;
@@ -70,6 +85,8 @@ export class Spiel {
   private readonly natur: Natur;
   private readonly gebaeude: Gebaeude;
   private readonly markierung: Markierung;
+  private readonly bauplaetze: Bauplaetze;
+  private readonly geist: Geist;
   private readonly leiste: Spielleiste;
   private readonly takt = new TickTakt(TICK_HZ);
   private readonly erkenner = new KlickErkenner();
@@ -100,6 +117,18 @@ export class Spiel {
   private vorschauPfad: Hx[] | null = null;
   private schrittSig = '';
   private schrittHexe: Hx[] = [];
+  /** Gewähltes Gebäude (Gebäudekarte mit Zustand, Bedarf und Priorität). */
+  private gewaehlt: Id | null = null;
+  /** Bauplatz-Anzeige auch ohne Gebäude-Werkzeug (Taste P). */
+  private zeigeBauplaetze = false;
+  /** Hex in der Bildschirmmitte (Zentrum der Bauplatz-Anzeige, solange kein Zeiger da ist). */
+  private mitteHex: Hx | null = null;
+  private mitteTimer = 0;
+  private menueWarOffen = false;
+  private vorschauDatenSig = '';
+  private vorschauDaten: { radius: Hx[]; arbeit: Hx[]; text: string; warn: boolean; ok: boolean } | null = null;
+  /** Text der Bauvorschau, der gerade in der Hinweiszeile steht ('' = keiner). */
+  private vorschauGesetzt = '';
 
   constructor(private ctx: SpielKontext) {
     const { ausschnitt, map, grid, base, ex } = ctx;
@@ -115,9 +144,12 @@ export class Spiel {
     this.arbeiter = new Arbeiter(map, grid, base, ex);
     this.natur = new Natur(map, grid, base, ex, ctx.haken.trees);
     this.markierung = new Markierung(map, grid, base, ex);
+    this.bauplaetze = new Bauplaetze(map, grid, base, ex);
+    this.geist = new Geist(map, grid, base, ex);
     this.wege.wald = ctx.haken.trees ?? null;
     this.fahnen.kamera = ctx.camera; this.traeger.kamera = ctx.camera; this.gebaeude.kamera = ctx.camera; this.arbeiter.kamera = ctx.camera;
-    this.group.add(this.wege.group, this.fahnen.group, this.traeger.group, this.gebaeude.group, this.arbeiter.group, this.natur.group, this.markierung.group);
+    this.group.add(this.wege.group, this.fahnen.group, this.traeger.group, this.gebaeude.group, this.arbeiter.group, this.natur.group,
+      this.bauplaetze.group, this.geist.group, this.markierung.group);
     ctx.scene.add(this.group);
 
     this.zeiger = matchMedia('(pointer: coarse)').matches ? 'touch' : 'mouse';
@@ -127,7 +159,9 @@ export class Spiel {
       onAbbrechen: () => this.abbrechen(),
       onZurueck: () => this.zurueck(),
       onTempo: (t) => (t === 0 ? this.pause(!this.pausiert) : this.setzeTempo(t)),
-    });
+      onPrioritaet: (stufe) => this.setzePrioritaet(stufe),
+      onKarteZu: () => { this.gewaehlt = null; this.karteSetzen(); },
+    }, menueDaten());
     this._sicht = this._sim.sicht();
     this.indizes();
     this.leiste.setTempo(this.tempo, this.pausiert);
@@ -188,6 +222,7 @@ export class Spiel {
     this.wege.setExaggeration(ex); this.fahnen.setExaggeration(ex); this.traeger.setExaggeration(ex);
     this.gebaeude.setExaggeration(ex); this.markierung.setExaggeration(ex);
     this.arbeiter.setExaggeration(ex); this.natur.setExaggeration(ex);
+    this.bauplaetze.setExaggeration(ex); this.geist.setExaggeration(ex);
   }
 
   // ------------------------------------------------------------------ Frame
@@ -213,6 +248,12 @@ export class Spiel {
       const h = this.hexUnter(this.maus.x, this.maus.y);
       if (!gleich(h, this.fokus)) { this.fokus = h; }
     }
+    // Bildschirmmitte als Zentrum der Bauplatz-Anzeige (Touch oder Maus außerhalb), gedrosselt
+    this.mitteTimer -= dt;
+    if (this.mitteTimer <= 0 && this.bauplatzAn() && (this.zeiger === 'touch' || !this.fokus)) {
+      this.mitteTimer = 0.2;
+      this.mitteHex = this.ctx.pick(innerWidth / 2, innerHeight / 2) ? this.hexUnter(innerWidth / 2, innerHeight / 2) : this.mitteHex;
+    }
     this.vorschauUndRinge();
 
     this.statusTimer -= dt;
@@ -223,6 +264,7 @@ export class Spiel {
   private neueSicht(): void {
     this._sicht = this._sim.sicht();
     this.indizes();
+    if (this.gewaehlt !== null) this.karteSetzen();
   }
 
   private indizes(): void {
@@ -254,6 +296,9 @@ export class Spiel {
     c.addEventListener('pointerdown', (e) => {
       this.zeiger = e.pointerType === 'mouse' ? 'mouse' : 'touch';
       if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 2) return;
+      // Ein offenes Baumenü schließt sich beim Tippen auf die Karte; dieser Tipp zählt dann nicht als Aktion
+      this.menueWarOffen = this.leiste.menueOffen;
+      this.leiste.menueZu();
       this.erkenner.runter(e.pointerId, e.clientX, e.clientY, performance.now(), e.button);
       if (this.zeiger === 'touch') this.hinweisSetzen();
     });
@@ -266,7 +311,8 @@ export class Spiel {
     });
     c.addEventListener('pointerup', (e) => {
       const knopf = this.erkenner.hoch(e.pointerId, e.clientX, e.clientY, performance.now());
-      if (knopf === 2) this.abbrechen();
+      if (this.menueWarOffen) { this.menueWarOffen = false; return; }
+      if (knopf === 2) { if (!this.rechtsklickPrioritaet(e.clientX, e.clientY)) this.abbrechen(); }
       else if (knopf === 0) this.klick(e.clientX, e.clientY);
     });
     c.addEventListener('pointercancel', (e) => this.erkenner.abbruch(e.pointerId));
@@ -277,10 +323,18 @@ export class Spiel {
     const t = e.target;
     if (t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
-    const ziffer = /^(?:Digit|Numpad)([1-7])$/.exec(e.code);
-    if (ziffer) { this.waehleWerkzeug(WERKZEUGE[Number(ziffer[1]) - 1].id); return; }
+    // 1 Weg, 2 Fahne, ab 3 die Gebäude in der Reihenfolge des Baumenüs
+    const ziffer = /^(?:Digit|Numpad)([1-9])$/.exec(e.code);
+    if (ziffer) {
+      const n = Number(ziffer[1]);
+      const w = n === 1 ? 'weg' : n === 2 ? 'fahne' : GEBAEUDE_WERKZEUGE[n - 3];
+      if (w) { this.leiste.menueZu(); this.waehleWerkzeug(w); }
+      return;
+    }
     switch (e.code) {
-      case 'Delete': case 'KeyX': this.waehleWerkzeug('abriss'); return;
+      case 'KeyB': this.leiste.menueUmschalten(); return;
+      case 'KeyP': this.zeigeBauplaetze = !this.zeigeBauplaetze; return;
+      case 'Delete': case 'KeyX': this.leiste.menueZu(); this.waehleWerkzeug('abriss'); return;
       case 'Escape': this.abbrechen(); return;
       case 'Backspace': if (this.werkzeug === 'weg') { e.preventDefault(); this.zurueck(); } return;
       case 'Space': e.preventDefault(); this.pause(!this.pausiert); return;
@@ -320,7 +374,7 @@ export class Spiel {
     this.zeiger = touch ? 'touch' : 'mouse';
     this.fokus = h;
     const w = this.werkzeug;
-    if (w === 'keins') return;
+    if (w === 'keins') { this.gewaehlt = this.gebAt.get(key(h))?.id ?? null; this.karteSetzen(); return; }
     if (w === 'fahne') { this.aktion(h); return; }
     if (w === 'weg' && !this.weg.aktiv) {
       if (this.fahneAt.has(key(h))) { this.weg.beginne(h); this.offen = null; this.hinweisSetzen(); }
@@ -409,15 +463,18 @@ export class Spiel {
 
   /** Esc, Rechtsklick, „Abbrechen“: erst das offene Ziel, dann den offenen Weg, dann das Werkzeug. */
   abbrechen(): void {
+    if (this.leiste.menueOffen) { this.leiste.menueZu(); return; }
     if (this.offen) this.offen = null;
     else if (this.weg.aktiv) this.weg.leeren();
     else if (this.werkzeug !== 'keins') this.waehleWerkzeug('keins');
+    else if (this.gewaehlt !== null) { this.gewaehlt = null; this.karteSetzen(); }
     this.meldung = null;
     this.hinweisSetzen();
   }
 
   waehleWerkzeug(w: Werkzeug): void {
     this.werkzeug = w;
+    if (w !== 'keins') { this.gewaehlt = null; this.karteSetzen(); }
     this.weg.leeren();
     this.offen = null;
     this.meldung = null;
@@ -474,7 +531,7 @@ export class Spiel {
     if (f.terrain[i] === 0) return 'Wasser';
     if (f.terrain[i] === 5) return 'Fels';
     if (f.flags[i] & FLAG.bahn) return 'Bahnstrecke';
-    if (k.bebaubar[hi] < need) return `Bauplatz ${BAUPLATZ_NAME[k.bebaubar[hi]]}, nötig: ${BAUPLATZ_NAME[need]}`;
+    if (k.bebaubar[hi] < need) return `Bauplatz ${BAUPLATZ_NAMEN[k.bebaubar[hi]]}, nötig: ${BAUPLATZ_NAMEN[need]}`;
     if (this.gebAt.has(key(h))) return 'hier steht schon ein Gebäude';
     if (this.fahneAt.has(key(h))) return 'hier ist eine Fahne';
     if (this.segAt.has(key(h))) return 'hier läuft ein Weg';
@@ -517,6 +574,7 @@ export class Spiel {
     this.wege.zeigeVorschau(pfad, pfadOk, fest);
     this.markierung.setze(0, ziel && art ? ziel : null, art ?? 'neutral', abst);
     this.markierung.setze(1, this.weg.start, 'gewaehlt', abst);
+    this.bauvorschau(w, ziel, abst);
     // Zwischenpunkte und die möglichen nächsten Schritte (Hex für Hex)
     this.markierung.setzeListe('punkte', wegAktiv ? this.weg.zwischenpunkte : [], 'gewaehlt', abst, 0.6);
     this.markierung.setzeListe('nachbarn', wegAktiv ? this.naechste() : [], 'gut', abst, 0.35);
@@ -532,6 +590,74 @@ export class Spiel {
     }
   }
 
+  private bauplatzAn(): boolean {
+    return this.zeigeBauplaetze || GEBAEUDE_WERKZEUGE.includes(this.werkzeug);
+  }
+
+  /**
+   * Bauplatz-Anzeige, Geistermodell, Arbeitsradius und Hinweistext für das gewählte Gebäude. Nur lesend (kannBauen,
+   * bauplatzGroesse, arbeitsHexe, kosten); die Simulation ändert nur befehl().
+   */
+  private bauvorschau(w: Werkzeug, ziel: Hx | null, abst: number): void {
+    const bauen = GEBAEUDE_WERKZEUGE.includes(w);
+    // Bauplätze: um den Zeiger, den offenen Tipp oder die Bildschirmmitte
+    const zentrum = this.bauplatzAn() ? (ziel ?? this.fokus ?? this.mitteHex) : null;
+    this.bauplaetze.setze(zentrum, bauen ? GEBAEUDE[w].groesse : 0, (q, r) => this._sim.bauplatzGroesse(q, r), this.netzSig, bauen ? ziel : null);
+    if (!bauen || !ziel || this._sim.karte.index(ziel.q, ziel.r) < 0) {
+      this.geist.setze(null, null, false);
+      this.markierung.setzeListe('radius', [], 'neutral', abst);
+      this.markierung.setzeListe('arbeit', [], 'gut', abst);
+      if (this.vorschauGesetzt) { this.vorschauGesetzt = ''; this.hinweisSetzen(); }
+      return;
+    }
+    const v = this.vorschauDatenFuer(w, ziel);
+    this.geist.setze(w, ziel, v.ok);
+    this.markierung.setzeListe('radius', v.radius, 'neutral', abst, 0.97);
+    this.markierung.setzeListe('arbeit', v.arbeit, 'gut', abst, 0.62);
+    if (this.meldung) this.vorschauGesetzt = '';
+    else if (v.text !== this.vorschauGesetzt) { this.vorschauGesetzt = v.text; this.leiste.setHinweis(v.text, v.warn); }
+  }
+
+  /** Radius, Arbeitshexe und Text der Bauvorschau; zwischengespeichert, bis sich Ziel, Natur, Netz oder Lagervorrat ändern. */
+  private vorschauDatenFuer(typ: string, ziel: Hx) {
+    const vorrat = this.lagerVorrat();
+    const sig = `${typ}|${key(ziel)}|${this._sicht.natur.rev}|${this.netzSig}|${vorrat.join(',')}`;
+    if (this.vorschauDaten && sig === this.vorschauDatenSig) return this.vorschauDaten;
+    const t = GEBAEUDE[typ];
+    const ok = this._sim.kannBauen(typ, ziel.q, ziel.r);
+    const imFeld = (h: Hx) => this._sim.karte.index(h.q, h.r) >= 0;
+    let arbeit: Hx[] = [];
+    let text: string, warn = false;
+    if (!ok) {
+      text = `${t.name} geht hier nicht: ${this.grundBauen(typ, ziel)}.`;
+      warn = true;
+    } else {
+      const ar = this._sim.arbeitsHexe(typ, ziel.q, ziel.r);
+      arbeit = ar.hexe;
+      const kosten = this._sim.kosten(typ);
+      const rw = reichweiteText(ar.art, ar.summe);
+      const teile = rw?.warn ? [rw.text] : [t.name, kostenAlsText(kosten, WARE_TEXT)];
+      if (rw && !rw.warn) teile.push(rw.text);
+      warn = !!rw?.warn;
+      const fehlt = fehlmengen(kosten, vorrat);
+      if (fehlt.some((n) => n > 0)) {
+        teile.push(`⚠ Im Lager fehlen ${kostenAlsText(fehlt, WARE_TEXT)} – die Baustelle wartet dann`);
+        warn = true;
+      }
+      text = teile.join(' · ');
+    }
+    this.vorschauDatenSig = sig;
+    this.vorschauDaten = { radius: t.radius > 0 ? hexeImUmkreis(ziel, t.radius).filter(imFeld) : [], arbeit, text, warn, ok };
+    return this.vorschauDaten;
+  }
+
+  /** Vorrat aller Lager je Warenart. */
+  private lagerVorrat(): number[] {
+    const vorrat = new Array<number>(WAREN.length).fill(0);
+    for (const g of this._sicht.gebaeude) if (g.vorrat) for (let i = 0; i < vorrat.length; i++) vorrat[i] += g.vorrat[i] ?? 0;
+    return vorrat;
+  }
+
   /** Nachbarn des letzten Punkts, die als nächster Schritt gelten (zwischengespeichert, solange sich Weg und Netz nicht ändern). */
   private naechste(): Hx[] {
     const sig = `${this.weg.sig}|${this.netzSig}`;
@@ -543,6 +669,56 @@ export class Spiel {
     return this.schrittHexe;
   }
 
+  // ------------------------------------------------------------------ Gebäudekarte und Priorität
+
+  /** Gebäudekarte der Oberfläche aus der Sicht füllen (Zustand in Klartext, Bedarf, Fortschritt, Priorität). */
+  private karteSetzen(): void {
+    const g = this.gewaehlt === null ? undefined : this._sicht.gebaeude.find((x) => x.id === this.gewaehlt);
+    if (!g) { this.gewaehlt = null; this.leiste.setKarte(null); return; }
+    const t = GEBAEUDE[g.typ];
+    const baustelle = g.bau < PROMILLE;
+    const bedarf = g.bedarf ?? [];
+    const zt = zustandsText(g.getrennt ? 'getrennt' : g.zustand, baustelle, bedarfNamen(bedarf, WARE_TEXT));
+    const zeilen: string[] = [];
+    if (baustelle) {
+      const fehlt = kostenAlsText(bedarf, WARE_TEXT);
+      zeilen.push(fehlt === 'nichts' ? 'Material komplett – es wird verbaut.' : `Fehlt noch: ${fehlt}`);
+      zeilen.push(`Phase ${1 + Math.floor((3 * g.bau) / 1001)} von 3 · ${Math.floor(g.bau / 10)} % gebaut`);
+    } else {
+      if (t?.radius) zeilen.push(`Arbeitsradius: ${t.radius} Hexe`);
+      if (g.puffer?.some((n) => n > 0)) zeilen.push(`Eingang: ${kostenAlsText(g.puffer, WARE_TEXT)}`);
+      if (g.ausgang?.some((n) => n > 0)) zeilen.push(`Wartet auf Abholung: ${kostenAlsText(g.ausgang, WARE_TEXT)}`);
+    }
+    const d: KartenDaten = {
+      symbol: t?.symbol ?? '🏠', titel: t?.name ?? g.typ, status: zt.titel, warn: zt.warn,
+      spruch: baustelle || zt.warn || !t ? zt.spruch : t.spruch, zeilen,
+      fortschritt: baustelle ? Math.floor(g.bau / 10) : undefined, prio: baustelle ? g.prioritaet : undefined,
+    };
+    this.leiste.setKarte(d);
+  }
+
+  /** Priorität der gewählten Baustelle setzen (Befehl 'prioritaet'). */
+  private setzePrioritaet(stufe: number): void {
+    const g = this.gewaehlt === null ? undefined : this._sicht.gebaeude.find((x) => x.id === this.gewaehlt);
+    if (!g || g.bau >= PROMILLE) return;
+    this.befehl({ art: 'prioritaet', id: g.id, stufe });
+    this.karteSetzen();
+  }
+
+  /** Rechtsklick auf eine Baustelle schaltet ihre Priorität durch (ohne Werkzeug); true, wenn dort eine Baustelle war. */
+  private rechtsklickPrioritaet(x: number, y: number): boolean {
+    if (this.werkzeug !== 'keins') return false;
+    const h = this.hexUnter(x, y);
+    const g = h ? this.gebAt.get(key(h)) : undefined;
+    if (!g || g.bau >= PROMILLE) return false;
+    const stufe = naechstePrioritaet(g.prioritaet);
+    this.gewaehlt = g.id;
+    this.befehl({ art: 'prioritaet', id: g.id, stufe });
+    this.melde(`${NAMEN[g.typ] ?? g.typ}: Priorität ${PRIO_NAMEN[stufe]}.`, false);
+    this.karteSetzen();
+    return true;
+  }
+
   // ------------------------------------------------------------------ Hinweise, Info, Status
 
   private melde(text: string, warn: boolean): void {
@@ -551,6 +727,7 @@ export class Spiel {
   }
 
   private hinweisSetzen(): void {
+    this.vorschauGesetzt = '';
     if (this.meldung) { this.leiste.setHinweis(this.meldung.text, this.meldung.warn); return; }
     const w = this.werkzeug;
     const touch = this.zeiger === 'touch';
@@ -568,16 +745,14 @@ export class Spiel {
       }
     } else if (w === 'fahne') t = `Fahne: Hex ${tippe}. Auf einem Weg teilt sie ihn.`;
     else if (GEBAEUDE_WERKZEUGE.includes(w)) {
-      t = `${NAMEN[w]} (Bauplatz ${BAUPLATZ_NAME[GEBAEUDE[w].groesse]}): Platz ${tippe}. Kosten: ${this.kostenText(w)}.`;
+      t = `${NAMEN[w]} (Bauplatz ${BAUPLATZ_NAMEN[GEBAEUDE[w].groesse]}): Platz ${tippe}. Kosten: ${this.kostenText(w)}.`;
     } else if (w === 'abriss') t = `Abriss: Gebäude, Fahne oder Weg ${tippe}.`;
     this.leiste.setHinweis(t);
   }
 
   private statusSetzen(): void {
     const s = this._sicht;
-    const vorrat = new Array<number>(WAREN.length).fill(0);
-    for (const g of s.gebaeude) if (g.vorrat) for (let i = 0; i < vorrat.length; i++) vorrat[i] += g.vorrat[i] ?? 0;
-    this.leiste.setStatus({ tick: s.tick, freieTraeger: s.freieTraeger, vorrat, pruefsumme: this._sim.pruefsumme() });
+    this.leiste.setStatus({ tick: s.tick, freieTraeger: s.freieTraeger, vorrat: this.lagerVorrat(), pruefsumme: this._sim.pruefsumme() });
   }
 
   /** Zeilen fürs Info-Feld (HTML) zu einem Hex: Gebäude, Fahne, Weg, Bauplatz-Prüfung. */
@@ -589,8 +764,14 @@ export class Spiel {
     const w = this.werkzeug;
     if (g) {
       const name = NAMEN[g.typ] ?? g.typ;
-      const phase = g.bau >= PROMILLE ? ZUSTAND_TEXT[g.zustand] ?? 'fertig' : `Baustelle ${Math.floor(g.bau / 10)} % (Phase ${1 + Math.floor((3 * g.bau) / 1001)} von 3)`;
-      z.push(`<b class="sim">${name}</b><span>${phase}</span>`);
+      const baustelle = g.bau < PROMILLE;
+      const zt = zustandsText(g.zustand, baustelle, bedarfNamen(g.bedarf ?? [], WARE_TEXT));
+      const phase = baustelle ? `Baustelle ${Math.floor(g.bau / 10)} % (Phase ${1 + Math.floor((3 * g.bau) / 1001)} von 3) – ${zt.titel}` : zt.titel;
+      z.push(`<b class="sim">${name}</b><span class="${zt.warn ? 'warn' : ''}">${phase}</span>`);
+      if (baustelle) {
+        const fehlt = kostenAlsText(g.bedarf ?? [], WARE_TEXT);
+        z.push(`<span>${fehlt === 'nichts' ? 'Material komplett' : `fehlt: ${fehlt}`} · Priorität ${PRIO_NAMEN[g.prioritaet] ?? g.prioritaet}</span>`);
+      }
       if (g.getrennt) z.push('<span class="warn">⚠ keine Verbindung zum Lager</span>');
       if (g.vorrat) z.push(`<span>Vorrat: ${g.vorrat.map((n, i) => `${WARE_NAME[i]} ${n}`).join(' · ')}</span>`);
       const gf = this._sicht.fahnen.find((x) => x.id === g.fahne);
@@ -605,7 +786,7 @@ export class Spiel {
       if (i >= 0) {
         const platz = this._sim.karte.bebaubar[this._sim.karte.index(h.q, h.r)];
         const ok = this._sim.kannBauen(w, h.q, h.r);
-        z.push(`<span class="${ok ? 'gut' : 'warn'}">${NAMEN[w]}: ${ok ? `passt hier (Bauplatz ${BAUPLATZ_NAME[platz]}, nötig ${BAUPLATZ_NAME[GEBAEUDE[w].groesse]})` : 'geht hier nicht – ' + this.grundBauen(w, h)}</span>`);
+        z.push(`<span class="${ok ? 'gut' : 'warn'}">${NAMEN[w]}: ${ok ? `passt hier (Bauplatz ${BAUPLATZ_NAMEN[platz]}, nötig ${BAUPLATZ_NAMEN[GEBAEUDE[w].groesse]})` : 'geht hier nicht – ' + this.grundBauen(w, h)}</span>`);
       }
     } else if (w === 'fahne' && this.ctx.ausschnitt.hex.index(h.q, h.r) >= 0) {
       const ok = this._sim.kannFahne(h.q, h.r);
@@ -616,8 +797,7 @@ export class Spiel {
 
   /** Baukosten als Text, z. B. „2 Bretter, 1 Stein“. */
   private kostenText(typ: string): string {
-    const k = this._sim.kosten(typ);
-    return k.map((n, i) => (n ? `${n} ${WARE_NAME[i]}` : '')).filter(Boolean).join(', ') || 'keine';
+    return kostenAlsText(this._sim.kosten(typ), WARE_TEXT);
   }
 
   private warenText(f: SichtFahne): string {
