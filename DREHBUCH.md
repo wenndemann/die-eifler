@@ -116,7 +116,7 @@ Man wählt seinen **Kartenausschnitt selbst**, irgendwo in der Eifel (siehe 3.1)
 Erste Festlegungen:
 
 - **Gelände von heute, Orte als Kerne:** Gelände, Flüsse, Seen und Talsperren sind die von heute. Die heutigen Häuser fallen weg. Echte Orte gibt es nur als kleine Kerne (Kirche, ein paar Höfe) an der richtigen Stelle, das Land drumherum ist frei. Jeder Kern ist ein **Dorfzentrum**: Der Startort gehört einem, die anderen gewinnt man mit einem Einstand (6.2).
-- **Eine Partie dauert etwa 2 Stunden** (Mehrspieler-Abend, freies Spiel).
+- **Eine Partie dauert etwa 2 Stunden** (Mehrspieler-Abend, freies Spiel). Das ist ein Richtwert, keine Uhr: Die Partie endet, wenn jemand die Zielpunktzahl erreicht (6.4).
 - **Gebäude etwa 3× echte Größe**, damit sie aus der Spielansicht gut lesbar sind (Maßstabs-Probe bei Einruhr).
 - **Bahnlinien ja, Straßen nein (beschlossen):** Die heutigen Bahnstrecken (z. B. Rurtalbahn Düren–Heimbach, Eifelstrecke, Ahrtalbahn) liegen als Gleisbett im Gelände und geben Orientierung. Auf einem Hex mit Gleis wird nicht gebaut, Wege dürfen es kreuzen (Bahnübergang). Stillgelegte Strecken wie die Vennbahn fehlen, die Vennbahn bleibt Spezialität der Ostbelgier (5.3). **Straßen gibt es nicht**, das Wegenetz baut der Spieler selbst (Kapitel 4).
 - **Bauplätze werden planiert**, damit Gebäude am Hang nicht im Boden versinken. An steilen Hängen nur kleine Gebäude.
@@ -307,7 +307,9 @@ Gebäude werden nie zerstört. Wechselt ein Hex mit Gebäude den Besitzer, steht
 
 ### 6.4 Siegbedingungen
 
-- **Standard: Eifel-Punkte.** Nach 2 Stunden gewinnt, wer die meisten Punkte hat. Zwischenstand jederzeit sichtbar. Verteilung (beschlossene Startwerte):
+- **Standard: Eifel-Punkte (beschlossen).** Es gibt **keine feste Spielzeit**. Gewonnen hat, wer zuerst die **Zielpunktzahl** erreicht. Sie wird in der Lobby gewählt, zum Beispiel kurz 600, normal 1000, lang 1500 (Startwerte). „Normal“ wird so eingestellt, dass es grob 2 Stunden dauert. Der Zwischenstand ist jederzeit für alle sichtbar, so kann man dem Führenden gezielt einen Ort wegschnappen. Kein Zeitlimit: Wer uneinholbar vorne liegt, hat ohnehin gewonnen.
+- **Allein im freien Spiel** gibt es zusätzlich **„ohne Ende“**: einfach weiterbauen und feiern.
+- Verteilung der Punkte (beschlossene Startwerte):
 
   | Wofür | Punkte |
   |---|---|
@@ -370,7 +372,7 @@ Lustiger Siedler-Look: übertriebene Proportionen, krummbeinige Figuren, Gebäud
 
 ### 7.4 Jahreszeiten und Wetter
 
-- **Jahreszeiten mit Wirkung:** Eine Partie läuft durch etwa **2 Jahre**. Im Winter liegt Schnee, Felder und Obstwiesen ruhen, man lebt vom Vorrat. Im Frühjahr wird gesät, im Herbst geerntet. Die Kirmes geht jederzeit, die kleinen Feste haben ihre Jahreszeit.
+- **Jahreszeiten mit Wirkung:** Ein Spieljahr dauert als Startwert **60 Minuten**, eine normale Partie also etwa 2 Jahre. Die Länge wird beim Spielen eingestellt (eher kürzer, wenn zu wenig Feste zusammenkommen). Im Winter liegt Schnee, Felder und Obstwiesen ruhen, man lebt vom Vorrat. Im Frühjahr wird gesät, im Herbst geerntet. Die Kirmes geht jederzeit, die kleinen Feste haben ihre Jahreszeit.
 - **Starkes Wetter:** Regen, Talnebel, Venn-Wind, Schnee, Dürre, dazu Ereignisse wie **Missernte** oder **Hochwasser** an Bächen und Flüssen. Gebäude in der Aue können dann ein paar Minuten stillstehen und Waren am Ufer davonschwimmen.
 - **Fair bleibt es trotzdem:**
   - Wetter kündigt sich an, als **Bauernregel** der Erzählfigur (1.4) („Ist der Mai kühl und nass …“). Wer vorsorgt (Vorräte, nicht in die Aue bauen, Hecken), kommt glimpflich davon.

@@ -189,7 +189,7 @@ Später (Feinschliff, nicht jetzt):
 - [ ] **Kleine Feste** zu ihrer Jahreszeit (Maifest, Erntedank, Viehmarkt, Martinsfeuer, Fastelovend, Weinfest): Warenliste, Fest, Punkte, einmal je Spieljahr, Obergrenze (Drehbuch 6 „Feste“)
 - [ ] Kirmes-Stufen **Dorf → Kirchdorf** und **Kirchdorf → Marktflecken**
 - [ ] Beschwipste Boten: querfeldein, torkelnd, verlieren mal Waren (DESIGN §10.3); **Betrunkene sofort erkennbar** (rote Nase, Schlagseite, Hicksen, Drehbuch 7.1)
-- [ ] **Jahreszeiten mit Wirkung:** Partie ≈ 2 Jahre, Winter mit Schnee und Vorratswirtschaft, Saat im Frühjahr, Ernte im Herbst; Kirmes jederzeit, kleine Feste zu ihrer Jahreszeit
+- [ ] **Jahreszeiten mit Wirkung:** Spieljahr Startwert 60 min (beim Spielen einstellen), Winter mit Schnee und Vorratswirtschaft, Saat im Frühjahr, Ernte im Herbst; Kirmes jederzeit, kleine Feste zu ihrer Jahreszeit
 - [ ] **Wetter stark, aber fair:** Regen, Talnebel, Wind, Dürre, Missernte, Hochwasser in der Aue; angekündigt als Bauernregel, nie zerstörerisch, aus der gemeinsamen Saat
 - [ ] Balancing der Startwerte über einen 2-Stunden-Lauf
 
@@ -209,7 +209,7 @@ Später (Feinschliff, nicht jetzt):
 - [ ] Finderhütte, **Finden mit Gegenwehr** (Wachhund, Dorfpolizist), **Ausredenstube** mit Sprüchen, Fundbüro
 - [ ] Zöllner an der Staatsgrenze, Kaffeeschmuggel
 - [ ] **Schützenfest** mit Schützenhaus, Schießstand und **Vogelschuss** (Vorbereitung + etwas Glück), Schützenkönig zahlt die Runde
-- [ ] Siegbedingungen: **Eifel-Punkte** nach 2 Stunden (Standard, Zwischenstand jederzeit), wählbar **Wettlauf** zum Marktflecken und **Der Große Fund**
+- [ ] Siegbedingungen: **Eifel-Punkte** bis zur Zielpunktzahl aus der Lobby (Standard, kein Zeitlimit, Zwischenstand jederzeit), wählbar **Wettlauf** zum Marktflecken und **Der Große Fund**, allein auch **„ohne Ende“**
 - [ ] Abschluss-Bildschirm mit Statistik
 
 **Abnahme:** Vier Testspieler (oder zwei plus Flachländer) spielen eine 2-Stunden-Partie bis zum Ende ohne Abbruch. Danach sagen sie: „Noch eine.“
