@@ -242,7 +242,7 @@ Später (Feinschliff, nicht jetzt):
 - [ ] Wetter- und Jahreszeiten-Optik: Talnebel (Höhennebel im Shader), Regen, Schnee, Wolkenschatten, Tageszeiten
 - [ ] Post-Processing: SSAO, dezentes Bloom, Farb-Grading, Qualitätsstufen (aus M1)
 - [ ] **Volksmusik** (Akkordeon, Blasmusik, Fiedel), Tusch auf den Festen, räumliche Geräusche, spukende Grenzsteinversetzer
-- [ ] **Erzählfigur** (Dorfälteste, siehe Drehbuch 1.3) mit Bauernregeln und kurzer Einführung ins freie Spiel
+- [ ] **Erzählfiguren** der 10 Völkchen (Drehbuch 1.4) mit Bauernregeln und kurzer Einführung ins freie Spiel
 - [ ] Running Gags aus Drehbuch 1.2 durchgehend eingebaut
 - [ ] Startmenü, Credits mit Quellenangaben, Leistungsdurchgang auf echter Hardware
 

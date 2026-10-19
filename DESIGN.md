@@ -24,6 +24,8 @@ Zahlen-Wahrheit sind `data/*.json`; bei Abweichung gewinnt die JSON, diese Datei
 
 ### 2.1 Eifel-Übersicht und Regionen
 
+> Überholt: Maßstab (60-m-Hex) und frei gewählte Ausschnitte stehen in Drehbuch 3 und 3.1.
+
 - **Eifel-Übersicht (Weltkarte):** die ganze Eifel von Aachen über Trier bis Maria Laach (ca. 100 × 120 km) als 3D-Karte mit grobem Raster (~100 m). Hier wählt man Region und Startort, sieht freigeschaltete Regionen und den Fortschritt der Kampagne.
 - **Regionen (Spielkarten):** Ausschnitte von ca. 20–30 km Kantenlänge, Hex-Größe ~156 m (Umkreisradius 90 m), also 20.000–40.000 Hexe pro Karte.
 
@@ -38,6 +40,8 @@ Zahlen-Wahrheit sind `data/*.json`; bei Abweichung gewinnt die JSON, diese Datei
 | Schneifel & Prümer Land | Prüm – Bleialf | Wald, Abtei, rauer Kamm |
 
 ### 2.2 Regionale Völkchen
+
+> Überholt: Die 10 Völkchen stehen in Drehbuch 5.3.
 
 Jede Region bringt eine **Bevölkerungs-Eigenart** mit: einen Bonus, eine Spezialkette, eine Schwäche und Sprüche. Werte stehen in `data/regions.json`.
 
@@ -143,7 +147,7 @@ Lager-Auslieferung (Pull): Ein Abnehmer meldet Bedarf, und das nächste Lager mi
 
 ## 5. Bevölkerung und Nahrung
 
-- **Einwohner** = freie Einwohner + Träger + Spezialisten (Finder, Boten).
+- **Einwohner** = freie Einwohner + Träger + Bauarbeiter und Planierer + Spezialisten (Finder, Boten).
 - **Wohnraum:** Dorfkern 10, Eifeler Hütte 8. Die Bevölkerung wächst nur bis zum Wohnraum.
 - **Wachstum braucht Nahrung.** Eine Hütte mit Nahrung im Input-Puffer (4 Plätze) bringt pro Zyklus einen neuen Einwohner hervor und verbraucht 1 Nahrung. Bessere Nahrung ergibt einen schnelleren Zyklus:
 
@@ -221,6 +225,8 @@ IDs sind ASCII (`hoelzfaeller`, `kaese`), Anzeigenamen mit Umlauten.
 
 ## 7. Gebiet, Hecke, Dörfer
 
+> Teilweise überholt: Gebiet wächst über Einfluss, Hecken sind Spezialität der Monschauer (Drehbuch 6.1). Echte Orte gewinnt man mit einem Einstand (Drehbuch 6.2).
+
 - **Gebiet** ist die Vereinigung der Hex-Kreise um fertige Gebietsgebäude: Dorfkern r = 4, Heckenhof r = 3.
 - **Hecke:** Entlang der Gebietsgrenze entsteht automatisch eine Buchenhecke, typisch fürs Monschauer Heckenland. Sie durchläuft drei Stufen: Setzling (0) → niedrig (1) → hoch (2). Wo ein Weg die Hecke kreuzt, steht ein Gatter.
 - **Gesichert:** Ein Hex ist bebaubar, wenn die Hecke seiner Gebietsquelle mindestens Stufe 1 hat. Altes Land bleibt bebaubar, während neue Hecke wächst.
@@ -274,6 +280,8 @@ IDs sind ASCII (`hoelzfaeller`, `kaese`), Anzeigenamen mit Umlauten.
 
 ### 10.1 Kirmes (Fortschritt)
 
+> Überholt: Warenlisten und Freischaltungen stehen in Drehbuch 5.2, weitere Feste in Drehbuch 6 („Feste“).
+
 Jedes Dorf wächst über **Kirmes-Stufen**. Man baut einen Kirmesplatz und liefert eine Warenliste. Ist sie erfüllt, wird gefeiert: Musik, Fahnen, Feuerwerk, eine neue Dorfstufe und Freischaltungen.
 
 | Stufe | Liefern (Startwerte) | Ergebnis |
@@ -283,6 +291,8 @@ Jedes Dorf wächst über **Kirmes-Stufen**. Man baut einen Kirmesplatz und liefe
 | Kirchdorf → Marktflecken | Regionale Spezialität + Mischkorb | Finderei, Nachbarschaft |
 
 ### 10.2 Finderei und Nachbarn
+
+> Überholt: Flachländer sind Städte außerhalb der Eifel mit Marktposten am Kartenrand (Drehbuch 6.2).
 
 - **Flachländer-Dörfer** (KI-Nachbarn) liegen am Kartenrand, sie sind echte größere Orte. Jedes hat ein Lager und eine Wachsamkeit.
   Beispiel Rureifel: **Düren** am Nordrand ist eine große Flachländer-Stadt mit vollem Lager, aber hoher Wachsamkeit. Kreuzau und Nideggen sind kleinere Nachbarn.
@@ -347,14 +357,14 @@ Jedes Dorf wächst über **Kirmes-Stufen**. Man baut einen Kirmesplatz und liefe
 
 | Konstante | Wert | Ort |
 |---|---|---|
-| Hex-Größe (Umkreisradius) | 90 m | map.json |
+| Hex-Größe (Umkreisradius) | 60 m (Drehbuch 3) | Weltdaten |
 | Höhenraster | 30 m | map.json |
 | Überhöhung (Standard) | 2,5× | map.json / Einstellungen |
 | Simulations-Takt | 20 Ticks/s | sim |
 | FLAG_CAP | 8 (+2 Notplätze) | sim |
 | CARRIER_SPEED | 3 Hex/s (eben) | sim |
-| BUILD_ACTION | 0,4 s | sim |
+| Bauzeit je Ware (Bauarbeiter) | Startwert 2–3 s (Drehbuch 4.5) | sim |
 | TREE_MAX | 3 pro Hex | sim |
-| Start | 12 bretter, 8 stein, 8 kartoffeln, 10 Einwohner | regions.json |
+| Start | 12 bretter, 8 stein, 8 kartoffeln, 10 Einwohner, 4 Bauarbeiter, 2 Planierer | regions.json |
 | HEDGE_GROW / WITHER | 8 s / 6 s pro Stufe | sim |
 | Sichtradius freie Fahne / Gebäude / Ausguck | 1 / 3 / 6 | buildings.json |

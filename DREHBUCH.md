@@ -103,6 +103,7 @@ Man wählt seinen **Kartenausschnitt selbst**, irgendwo in der Eifel (siehe 3.1)
 - **Zwei Varianten, beide erwünscht:**
   1. **Gemeinsame Karte:** Der Gastgeber wählt einen Ausschnitt (3.1), jeder startet in einem anderen Ortskern darin.
   2. **Verbundene Regionen:** Jeder spielt seinen eigenen Ausschnitt (z. B. Rureifel gegen Monschauer Land) und schickt Händler und Finder zum anderen hinüber.
+- **Orte gewinnen:** Wer den Wunsch eines Eifel-Orts zuerst erfüllt, bekommt ihn (Einstand, 6.2).
 - **Gebiet gewinnen ohne Krieg:** alle drei Wege kommen ins Spiel (siehe 6.1):
   - **Grenzsteine versetzen:** Finder verschieben die Grenze Stück für Stück, mit Risiko, erwischt zu werden.
   - **Abwerben:** Die bessere Kirmes und das bessere Essen locken Bewohner der Nachbarn ins eigene Dorf.
@@ -114,7 +115,7 @@ Man wählt seinen **Kartenausschnitt selbst**, irgendwo in der Eifel (siehe 3.1)
 
 Erste Festlegungen:
 
-- **Gelände von heute, Orte als Kerne:** Gelände, Flüsse, Seen und Talsperren sind die von heute. Die heutigen Häuser fallen weg. Echte Orte gibt es nur als kleine Kerne (Kirche, ein paar Höfe) an der richtigen Stelle, das Land drumherum ist frei. Dort kann man sein Dorf gründen und wachsen lassen.
+- **Gelände von heute, Orte als Kerne:** Gelände, Flüsse, Seen und Talsperren sind die von heute. Die heutigen Häuser fallen weg. Echte Orte gibt es nur als kleine Kerne (Kirche, ein paar Höfe) an der richtigen Stelle, das Land drumherum ist frei. Jeder Kern ist ein **Dorfzentrum**: Der Startort gehört einem, die anderen gewinnt man mit einem Einstand (6.2).
 - **Eine Partie dauert etwa 2 Stunden** (Mehrspieler-Abend, freies Spiel).
 - **Gebäude etwa 3× echte Größe**, damit sie aus der Spielansicht gut lesbar sind (Maßstabs-Probe bei Einruhr).
 - **Bahnlinien ja, Straßen nein (beschlossen):** Die heutigen Bahnstrecken (z. B. Rurtalbahn Düren–Heimbach, Eifelstrecke, Ahrtalbahn) liegen als Gleisbett im Gelände und geben Orientierung. Auf einem Hex mit Gleis wird nicht gebaut, Wege dürfen es kreuzen (Bahnübergang). Stillgelegte Strecken wie die Vennbahn fehlen, die Vennbahn bleibt Spezialität der Ostbelgier (5.3). **Straßen gibt es nicht**, das Wegenetz baut der Spieler selbst (Kapitel 4).
@@ -182,11 +183,12 @@ Die Spielschleife folgt bewusst **Siedler 2**: Das Wegenetz ist das Herz des Spi
 - **Feste sind die großen Zwischenziele:**
   - **Kirmes:** Das Dorf steigt eine Stufe auf und schaltet neue Gebäude frei.
   - **Schützenfest:** Kräftemessen mit den Nachbarn um den Königstitel (Kapitel 6).
+  - **Kleine Feste und Einstände** bringen Eifel-Punkte (Kapitel 6, „Feste“).
 - **Notnagel:** Sind kaum noch freie Bewohner da und es gibt nichts zu essen, kommt ab und zu ein Zugezogener. Man kann sich nicht festfahren.
 
 ### 4.4 Die ersten 30 Minuten (Zielbild)
 
-1. Lager steht im Ortskern, Kamera zeigt das Tal. Die Dorfälteste begrüßt mit einem Spruch.
+1. Lager steht im Ortskern, Kamera zeigt das Tal. Die Erzählfigur des Völkchens (1.4) begrüßt mit einem Spruch.
 2. Holzfäller und Förster an den Waldrand, Weg dahin legen, die ersten Stämme laufen ins Lager.
 3. Sägewerk und Steinbruch: Bretter und Steine fließen, die ersten Baustellen wachsen sichtbar in drei Phasen.
 4. Kartoffelfeld und Wohnhaus: Die ersten neuen Bewohner kommen, das Netz wird dichter, an einer Fahne staut es sich, man baut einen zweiten Weg.
@@ -232,6 +234,8 @@ Eisen ist echt Eifel: Im Schleidener Tal und um Gemünd standen jahrhundertelang
 **Grundgebäude (Vorschlag, rund 25):** Lager/Dorfkern, Wohnhaus, Holzfäller, Förster, Sägewerk, Steinbruch, Kartoffelfeld, Küche, Obstwiese, Mostkeller, Schafstall, Käserei, Reifekeller, Bienenstock, Gerstenfeld, Brauerei, Wacholderheide, Brennerei, Schänke, Erzgrube, Köhlerei, Eisenhütte, Schmiede, Kirmesplatz, Schützenhaus mit Schießstand. Dazu kommen Gebäude für Gebiet und Finderei aus Kapitel 6.
 
 ### 5.2 Dorfstufen über die Kirmes
+
+Weiler (Start) → Dorf (Stufe 1) → Kirchdorf (Stufe 2) → Marktflecken (Stufe 3). „Ab Stufe 2“ heißt also ab Kirchdorf.
 
 | Stufe | Kirmes liefert (beschlossene Startwerte) | Ziel in der Partie | Schaltet frei |
 |---|---|---|---|
@@ -368,7 +372,7 @@ Lustiger Siedler-Look: übertriebene Proportionen, krummbeinige Figuren, Gebäud
 - **Jahreszeiten mit Wirkung:** Eine Partie läuft durch etwa **2 Jahre**. Im Winter liegt Schnee, Felder und Obstwiesen ruhen, man lebt vom Vorrat. Im Frühjahr wird gesät, im Herbst geerntet, und dann ist Kirmeszeit.
 - **Starkes Wetter:** Regen, Talnebel, Venn-Wind, Schnee, Dürre, dazu Ereignisse wie **Missernte** oder **Hochwasser** an Bächen und Flüssen. Gebäude in der Aue können dann ein paar Minuten stillstehen und Waren am Ufer davonschwimmen.
 - **Fair bleibt es trotzdem:**
-  - Wetter kündigt sich an, als **Bauernregel** der Dorfältesten („Ist der Mai kühl und nass …“). Wer vorsorgt (Vorräte, nicht in die Aue bauen, Hecken), kommt glimpflich davon.
+  - Wetter kündigt sich an, als **Bauernregel** der Erzählfigur (1.4) („Ist der Mai kühl und nass …“). Wer vorsorgt (Vorräte, nicht in die Aue bauen, Hecken), kommt glimpflich davon.
   - Kein Wetter zerstört Gebäude oder Bewohner, und dank Notnagel fährt man sich nicht fest.
   - Im Mehrspieler kommt das Wetter aus der gemeinsamen Zufallssaat und trifft alle im Ausschnitt gleich.
 - **Feingefühl:** Das Ahr-Hochwasser 2021 ist echt und schmerzhaft. Hochwasser kommt im Spiel vor, aber nie als Witz und nie mit Anspielung darauf.
@@ -433,7 +437,7 @@ Alle Quellen sind weltweit einheitlich, die Landesgrenzen machen technisch keine
 ### 8.2 Plattform
 
 - **Im Browser, PC zuerst.** Volle Bedienung mit Maus und Tastatur. Auf Tablet und Handy spielbar, aber dort nicht der Schwerpunkt.
-- Eine App für Desktop oder Store höchstens später (ROADMAP M10).
+- Eine App für Desktop oder Store höchstens später (ROADMAP, „Danach“).
 
 ### 8.3 Simulation und Mehrspieler
 
