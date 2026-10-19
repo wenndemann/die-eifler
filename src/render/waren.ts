@@ -112,14 +112,14 @@ const FORMEN: Record<string, Form> = {
       paint(new THREE.BoxGeometry(W * 0.02, W * 0.38, W * 0.5).translate(0, W * 0.2, W * 0.25), ton(f, 1.3)),
     ],
   }),
-  // Most: dickbauchiger Steingutkrug mit Henkel und Korken
+  // Most: dickbauchiger grauer Steinzeugkrug mit blauem Band (wie aus dem Westerwald), Henkel und Korken
   krug: (f) => ({
     hoehe: W * 0.95,
     teile: [
       kugel(W * 0.38, 0, W * 0.38, 0, f, 1.05),
       walze(W * 0.16, W * 0.26, W * 0.25, W * 0.62, f, 9),
       walze(W * 0.1, W * 0.1, W * 0.12, W * 0.85, '#d9b57a', 7),
-      walze(W * 0.39, W * 0.39, W * 0.08, W * 0.36, ton(f, 0.7), 10),
+      walze(W * 0.39, W * 0.39, W * 0.08, W * 0.36, '#2f4f9a', 10),
       paint(new THREE.TorusGeometry(W * 0.17, W * 0.05, 5, 8, Math.PI * 1.2).rotateY(Math.PI / 2).translate(0, W * 0.6, W * 0.32), f),
     ],
   }),

@@ -9,7 +9,7 @@
   { "id": "aepfel", "name": "Eifeler Äpfel", "gruppe": "Nahrung (einfach)", "nahrung": 1, "form": "korb", "farbe": "#d0312d" },
   { "id": "kartoffeln", "name": "Eifeler Kartoffeln", "gruppe": "Nahrung (einfach)", "nahrung": 1, "form": "sack", "farbe": "#b08850" },
   { "id": "kaese", "name": "Eifeler Schafkäse", "gruppe": "Nahrung (veredelt)", "nahrung": 2, "form": "rad", "farbe": "#f2c230" },
-  { "id": "most", "name": "Eifeler Most", "gruppe": "Nahrung (veredelt)", "nahrung": 2, "form": "krug", "farbe": "#c98a2a" },
+  { "id": "most", "name": "Eifeler Most", "gruppe": "Nahrung (veredelt)", "nahrung": 2, "form": "krug", "farbe": "#a9b0b8" },
   { "id": "bratkartoffeln", "name": "Eifeler Bratkartoffeln", "gruppe": "Nahrung (veredelt)", "nahrung": 2, "form": "pfanne", "farbe": "#e8a838" },
   { "id": "honig", "name": "Eifeler Waldhonig", "gruppe": "Nahrung (veredelt)", "nahrung": 2, "form": "topf", "farbe": "#e8a020" },
   { "id": "bergkaese", "name": "Eifeler Bergkäse", "gruppe": "Nahrung (edel)", "nahrung": 3, "form": "rad", "farbe": "#d98a1e" }
