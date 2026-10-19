@@ -1021,16 +1021,15 @@ export class Simulation {
       for (let i = 0; i < n; i++) if (f.waren.length < FLAG_CAP) f.waren.push({ art: a, ziel: 0 });
     }
     if (g.ar) { this.frei++; this.reservierungFreigeben(g, t); }
-    // Bauarbeiter und Planierer der Baustelle machen sich auf den Heimweg
-    for (const bid of [g.bauer, g.planierer]) {
-      const b = bid ? this.bauleute.get(bid) : undefined;
-      if (b) this.baumannFertig(b);
-    }
-    g.bauer = 0; g.planierer = 0;
     f.gebaeude = 0;
     this.hexGeb[g.h] = 0;
     this.gebaeude.delete(id);
     this.netzGeaendert();
+    // Bauarbeiter und Planierer der Baustelle suchen sich die nächste oder gehen heim (erst nach dem Löschen, damit sie nicht zurückkommen)
+    for (const bid of [g.bauer, g.planierer]) {
+      const b = bid ? this.bauleute.get(bid) : undefined;
+      if (b) this.baumannFertig(b);
+    }
   }
 
   private reservierungFreigeben(g: Gebaeude, t: GebaeudeTyp): void {

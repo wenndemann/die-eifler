@@ -131,6 +131,9 @@ describe('Planierer und Bauarbeiter (Drehbuch 4.5)', () => {
     tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 3) });
     while (!sim.sicht().bauleute.some((b) => b.tut === 'arbeitet')) sim.schritt();
     tu(sim, { art: 'abriss_gebaeude', id: geb(sim, 'wohnhaus').id });
+    lauf(sim, 1);
+    expect(sim.pruefeInnenzustand().filter((x) => !x.includes('ungültigem Ziel'))).toEqual([]);
+    expect(sim.sicht().bauleute.every((b) => b.ziel === 0)).toBe(true);
     lauf(sim, 1500);
     const s = sim.sicht();
     expect(s.bauleute.length).toBe(0);
