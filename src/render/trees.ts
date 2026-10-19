@@ -26,13 +26,19 @@ interface TreeChunk {
   near: Map<Species, THREE.InstancedMesh>;
   far: Map<Species, THREE.InstancedMesh>;
   data: Map<Species, Float32Array>; // x, Höhe rel. Basis, z, Maßstab, Drehung
+  /** Ursprünglicher Maßstab je Baum (für Aus- und Einblenden durch die Simulation), und die Baum-Id je Platz. */
+  orig: Map<Species, Float32Array>;
+  ids: Map<Species, Int32Array>;
   verbund: Verbund | null;
   istNah: boolean;
 }
-interface Verbund { far: Map<Species, THREE.InstancedMesh>; data: Map<Species, Float32Array>; chunks: TreeChunk[] }
+interface Verbund {
+  far: Map<Species, THREE.InstancedMesh>; data: Map<Species, Float32Array>; chunks: TreeChunk[];
+  orig: Map<Species, Float32Array>; ids: Map<Species, Int32Array>;
+}
 
 /** Reihenfolge der Instanzen deterministisch mischen: ein Anfangsstück ist dann eine gleichmäßige Stichprobe. */
-function mische(a: Float32Array, seed: number) {
+function mische(a: Float32Array, seed: number, ids?: Int32Array) {
   const n = a.length / 5, t = new Float32Array(5);
   for (let i = n - 1; i > 0; i--) {
     const j = Math.floor(hash(i, seed) * (i + 1));
@@ -40,6 +46,7 @@ function mische(a: Float32Array, seed: number) {
     t.set(a.subarray(i * 5, i * 5 + 5));
     a.copyWithin(i * 5, j * 5, j * 5 + 5);
     a.set(t, j * 5);
+    if (ids) { const x = ids[i]; ids[i] = ids[j]; ids[j] = x; }
   }
 }
 
@@ -94,12 +101,24 @@ export class Trees {
   readonly uniforms = { uTime: { value: 0 } };
   private chunks: TreeChunk[] = [];
   private verbuende: Verbund[] = [];
-  private material: THREE.MeshStandardMaterial;
   private qualitaet: Qualitaet = 'mittel';
   count = 0;
   visibleNear = 0;
   private ex = 1;
   private nahDist: number = QUALI.mittel.baumNah;
+  /** Material und Geometrien (Nah, Fern) je Art, auch für die Bäume aus der Simulation (natur.ts). */
+  readonly material: THREE.MeshStandardMaterial;
+  readonly geos: Record<Species, THREE.BufferGeometry[]>;
+  // Zuordnung Kartenbaum → Spielfeld-Hex (einmal berechnet): Baum-Id → Chunk, Art, Platz im Chunk und im Fern-Verbund
+  private bChunk: Int32Array = new Int32Array(0);
+  private bArt: Uint8Array = new Uint8Array(0);
+  private bPos: Int32Array = new Int32Array(0);
+  private bVerbPos: Int32Array = new Int32Array(0);
+  private bSichtbar: Uint8Array = new Uint8Array(0);
+  /** Bäume je Spielfeld-Hex (Baum-Ids in fester, gemischter Reihenfolge) und wie viele davon gerade sichtbar sind. */
+  private hexListen = new Map<number, Int32Array>();
+  private hexSichtbar = new Map<number, number>();
+  private schmutzig = new Set<THREE.InstancedMesh>();
 
   /** maske: Rasterzellen, die frei bleiben (Häuser). */
   constructor(map: MapData, base: number, ex: number, maske?: Uint8Array) {
@@ -129,6 +148,7 @@ diffuseColor.rgb = kGrau(diffuseColor.rgb, vKOut * 0.85);`)
         .replace('#include <fog_fragment>', KULISSE_FOG);
     };
     const geos = buildGeometries();
+    this.geos = geos;
     const { width, height, cell } = map.info;
     const grid = new HexGrid(map.originX, map.originZ, map.ausschnitt.hex);
     const g = map.ground;
@@ -136,9 +156,12 @@ diffuseColor.rgb = kGrau(diffuseColor.rgb, vKOut * 0.85);`)
     const neigung = (i: number, j: number) => Math.atan(Math.hypot(
       g[map.idx(i + 1, j)] - g[map.idx(i - 1, j)], g[map.idx(i, j + 1)] - g[map.idx(i, j - 1)]) / (2 * cell)) * 57.2958;
     const chunkAt = new Map<string, TreeChunk>();
+    // Baum-Ids (laufend) und ihre Daten für die Zuordnung zu den Spielfeld-Hexen
+    const tHex: number[] = [], tChunk: number[] = [], tArt: number[] = [], tPos: number[] = [];
     for (let j0 = 0; j0 < height - 1; j0 += CHUNK) {
       for (let i0 = 0; i0 < width - 1; i0 += CHUNK) {
         const lists: Record<Species, number[]> = { fichte: [], buche: [] };
+        const listIds: Record<Species, number[]> = { fichte: [], buche: [] };
         for (let j = j0; j < Math.min(j0 + CHUNK, height); j++) {
           for (let i = i0; i < Math.min(i0 + CHUNK, width); i++) {
             const k = j * width + i;
@@ -158,18 +181,25 @@ diffuseColor.rgb = kGrau(diffuseColor.rgb, vKOut * 0.85);`)
             const pFichte = Math.min(0.85, Math.max(0.15, (gy - 380) / 250));
             const sp: Species = hash(i + 5, j + 3) < pFichte ? 'fichte' : 'buche';
             lists[sp].push(x, gy - base, z, (0.8 + hash(i + 1, j + 9) * 0.45) * BAUM_SKALE, hash(i + 4, j + 2) * Math.PI * 2);
+            listIds[sp].push(tHex.length);
+            tHex.push(hi);
           }
         }
         const ch: TreeChunk = {
           center: new THREE.Vector3((i0 + CHUNK / 2) * cell, 0, (j0 + CHUNK / 2) * cell),
-          near: new Map(), far: new Map(), data: new Map(), verbund: null, istNah: false,
+          near: new Map(), far: new Map(), data: new Map(), orig: new Map(), ids: new Map(), verbund: null, istNah: false,
         };
         for (const sp of ARTEN) {
           const data = new Float32Array(lists[sp]);
           const n = data.length / 5;
           if (!n) continue;
-          mische(data, i0 * 31 + j0 * 17 + (sp === 'fichte' ? 1 : 2));
+          const ids = Int32Array.from(listIds[sp]);
+          mische(data, i0 * 31 + j0 * 17 + (sp === 'fichte' ? 1 : 2), ids);
           ch.data.set(sp, data);
+          ch.ids.set(sp, ids);
+          const orig = new Float32Array(n);
+          for (let t = 0; t < n; t++) { orig[t] = data[t * 5 + 3]; tChunk[ids[t]] = this.chunks.length; tArt[ids[t]] = ARTEN.indexOf(sp); tPos[ids[t]] = t; }
+          ch.orig.set(sp, orig);
           const near = new THREE.InstancedMesh(geos[sp][0], this.material, n);
           const far = new THREE.InstancedMesh(geos[sp][1], this.material, n);
           far.instanceMatrix = near.instanceMatrix;
@@ -186,6 +216,7 @@ diffuseColor.rgb = kGrau(diffuseColor.rgb, vKOut * 0.85);`)
       }
     }
     // Fern-Verbünde: VERBUND x VERBUND Chunks, ein Netz je Art
+    const vPos: number[] = [];
     for (let vj = 0; vj * VERBUND * CHUNK < height - 1; vj++) {
       for (let vi = 0; vi * VERBUND * CHUNK < width - 1; vi++) {
         const members: TreeChunk[] = [];
@@ -194,16 +225,25 @@ diffuseColor.rgb = kGrau(diffuseColor.rgb, vKOut * 0.85);`)
           if (c) members.push(c);
         }
         if (!members.length) continue;
-        const v: Verbund = { far: new Map(), data: new Map(), chunks: members };
+        const v: Verbund = { far: new Map(), data: new Map(), chunks: members, orig: new Map(), ids: new Map() };
         for (const sp of ARTEN) {
           const parts = members.map((c) => c.data.get(sp)).filter((d): d is Float32Array => !!d);
           const total = parts.reduce((s, d) => s + d.length, 0);
           if (!total) continue;
           const all = new Float32Array(total);
+          const allIds = new Int32Array(total / 5);
           let o = 0;
-          for (const d of parts) { all.set(d, o); o += d.length; }
-          mische(all, vi * 131 + vj * 71 + 5);
+          for (const c of members) {
+            const d = c.data.get(sp);
+            if (!d) continue;
+            all.set(d, o); allIds.set(c.ids.get(sp)!, o / 5); o += d.length;
+          }
+          mische(all, vi * 131 + vj * 71 + 5, allIds);
           v.data.set(sp, all);
+          v.ids.set(sp, allIds);
+          const vOrig = new Float32Array(total / 5);
+          for (let t = 0; t < vOrig.length; t++) { vOrig[t] = all[t * 5 + 3]; vPos[allIds[t]] = t; }
+          v.orig.set(sp, vOrig);
           const far = new THREE.InstancedMesh(geos[sp][1], this.material, total / 5);
           tint(far, total / 5, vi * 5 + vj * 3 + 1);
           far.visible = false;
@@ -214,7 +254,70 @@ diffuseColor.rgb = kGrau(diffuseColor.rgb, vKOut * 0.85);`)
         this.verbuende.push(v);
       }
     }
+    // Bäume je Spielfeld-Hex sammeln, je Hex in fester gemischter Reihenfolge (bestimmt, welche zuerst verschwinden)
+    this.bChunk = Int32Array.from(tChunk); this.bArt = Uint8Array.from(tArt); this.bPos = Int32Array.from(tPos);
+    this.bVerbPos = Int32Array.from(vPos);
+    this.bSichtbar = new Uint8Array(tHex.length).fill(1);
+    const je = new Map<number, number[]>();
+    for (let id = 0; id < tHex.length; id++) {
+      if (tHex[id] < 0) continue;
+      const l = je.get(tHex[id]);
+      if (l) l.push(id); else je.set(tHex[id], [id]);
+    }
+    for (const [h, l] of je) {
+      l.sort((a, b) => hash(a, 17) - hash(b, 17));
+      this.hexListen.set(h, Int32Array.from(l));
+      this.hexSichtbar.set(h, l.length);
+    }
     this.setExaggeration(ex);
+  }
+
+  /** Zahl der Kartenbäume auf dem Spielfeld-Hex (Index wie HexFeld.index). */
+  hexBaeume(hexIndex: number): number {
+    return this.hexListen.get(hexIndex)?.length ?? 0;
+  }
+
+  /** Nur der Anteil (0..1) der Kartenbäume des Hex bleibt sichtbar; welche, steht fest (gemischte Reihenfolge je Hex). Danach uebernehmen() aufrufen. */
+  setzeHexAnteil(hexIndex: number, anteil: number): void {
+    const l = this.hexListen.get(hexIndex);
+    if (!l) return;
+    const soll = Math.max(0, Math.min(l.length, Math.round(l.length * anteil)));
+    const ist = this.hexSichtbar.get(hexIndex)!;
+    if (soll === ist) return;
+    const a = Math.min(soll, ist), b = Math.max(soll, ist);
+    for (let k = a; k < b; k++) this.zeigeBaum(l[k], k < soll);
+    this.hexSichtbar.set(hexIndex, soll);
+  }
+
+  private zeigeBaum(id: number, an: boolean) {
+    this.bSichtbar[id] = an ? 1 : 0;
+    const ch = this.chunks[this.bChunk[id]];
+    const sp = ARTEN[this.bArt[id]];
+    const t = this.bPos[id];
+    const data = ch.data.get(sp)!;
+    const o = ch.orig.get(sp)![t];
+    data[t * 5 + 3] = an ? o : 0;
+    this.schreibe(ch.near.get(sp)!, data, t);
+    this.schmutzig.add(ch.near.get(sp)!);
+    const v = ch.verbund;
+    if (v) {
+      const vt = this.bVerbPos[id], vd = v.data.get(sp)!;
+      vd[vt * 5 + 3] = an ? v.orig.get(sp)![vt] : 0;
+      this.schreibe(v.far.get(sp)!, vd, vt);
+      this.schmutzig.add(v.far.get(sp)!);
+    }
+  }
+
+  private schreibe(mesh: THREE.InstancedMesh, data: Float32Array, t: number) {
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion();
+    q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), data[t * 5 + 4]);
+    mesh.setMatrixAt(t, m.compose(new THREE.Vector3(data[t * 5], data[t * 5 + 1] * this.ex, data[t * 5 + 2]), q, new THREE.Vector3().setScalar(data[t * 5 + 3])));
+  }
+
+  /** Geänderte Netze zur Grafikkarte schicken (nach setzeHexAnteil). */
+  uebernehme(): void {
+    for (const m of this.schmutzig) m.instanceMatrix.needsUpdate = true;
+    this.schmutzig.clear();
   }
 
   private fill(mesh: THREE.InstancedMesh, data: Float32Array, ex: number) {
@@ -247,10 +350,10 @@ diffuseColor.rgb = kGrau(diffuseColor.rgb, vKOut * 0.85);`)
       const l = gitter.get(k);
       if (l) l.push(p); else gitter.set(k, [p]);
     }
-    const raus = (data: Float32Array) => {
+    const raus = (data: Float32Array, orig: Float32Array) => {
       let n = 0;
       for (let t = 0; t < data.length / 5; t++) {
-        if (data[t * 5 + 3] <= 0) continue;
+        if (orig[t] <= 0) continue;
         const x = data[t * 5], z = data[t * 5 + 2];
         const ci = Math.floor(x / zelle), cj = Math.floor(z / zelle);
         let treffer = false;
@@ -258,18 +361,18 @@ diffuseColor.rgb = kGrau(diffuseColor.rgb, vKOut * 0.85);`)
           const l = gitter.get(`${ci + di},${cj + dj}`);
           if (l) for (const p of l) if ((p.x - x) * (p.x - x) + (p.z - z) * (p.z - z) < r2) { treffer = true; break; }
         }
-        if (treffer) { data[t * 5 + 3] = 0; n++; }
+        if (treffer) { data[t * 5 + 3] = 0; orig[t] = 0; n++; }
       }
       return n;
     };
     let gesamt = 0;
     for (const ch of this.chunks) for (const [sp, data] of ch.data) {
-      if (!raus(data)) continue;
+      if (!raus(data, ch.orig.get(sp)!)) continue;
       gesamt++;
       this.fill(ch.near.get(sp)!, data, this.ex);
       ch.far.get(sp)!.boundingSphere = ch.near.get(sp)!.boundingSphere;
     }
-    for (const v of this.verbuende) for (const [sp, data] of v.data) if (raus(data)) this.fill(v.far.get(sp)!, data, this.ex);
+    for (const v of this.verbuende) for (const [sp, data] of v.data) if (raus(data, v.orig.get(sp)!)) this.fill(v.far.get(sp)!, data, this.ex);
     return gesamt;
   }
 

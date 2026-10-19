@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { spieleAb } from '../src/sim/replay';
 import { Simulation } from '../src/sim/sim';
 import { SimKarte } from '../src/sim/karte';
-import { FLAG_CAP } from '../src/sim/daten';
+import { BAUM_WACHSEN, FLAG_CAP, FELS_STEIL, FELS_STEIN, START_VORRAT, TREE_MAX, WARE } from '../src/sim/daten';
 import type { Befehl, Protokoll } from '../src/sim/typen';
-import { baueSzenario30, baueTestKarte, gerade, KARTE_INFO, knoten } from './sim-szenario';
+import { baueSzenario30, baueTestKarte, gerade, KARTE_INFO, knoten, setzeWald, fuegeStartStein } from './sim-szenario';
 
 const START = { q: 0, r: 0 };
 
-function neu(saat = 1, start = START) { return new Simulation(baueTestKarte(), saat, start); }
+function neu(saat = 1, start = START, karte = baueTestKarte()) { return new Simulation(karte, saat, start); }
 function tu(sim: Simulation, b: Befehl) { sim.befehl(sim.tick, 0, b); }
 function lauf(sim: Simulation, n: number) { for (let i = 0; i < n; i++) sim.schritt(); }
 function segZwischen(sim: Simulation, a: { q: number; r: number }, b: { q: number; r: number }) {
@@ -16,6 +16,18 @@ function segZwischen(sim: Simulation, a: { q: number; r: number }, b: { q: numbe
     const p = s.pfad[0], l = s.pfad[s.pfad.length - 1];
     return (p.q === a.q && p.r === a.r && l.q === b.q && l.r === b.r) || (p.q === b.q && p.r === b.r && l.q === a.q && l.r === a.r);
   });
+}
+/** Kahle Testkarte mit Wald (3 Bäume je Hex) im Radius 2 um die Zentren. */
+function karteMitWald(zentren: { q: number; r: number }[]) {
+  const d = baueTestKarte(false), k = new SimKarte(d);
+  for (const z of zentren) {
+    for (let dq = -2; dq <= 2; dq++) for (let dr = -2; dr <= 2; dr++) {
+      if ((dq === 0 && dr === 0) || Math.abs(dq + dr) > 2) continue;
+      const i = k.index(z.q + dq, z.r + dr);
+      if (i >= 0) setzeWald(d, i);
+    }
+  }
+  return d;
 }
 const fahneBei = (sim: Simulation, p: { q: number; r: number }) => sim.sicht().fahnen.find((f) => f.q === p.q && f.r === p.r)!;
 
@@ -102,21 +114,22 @@ describe('Netz und Bau', () => {
 });
 
 describe('Warenfluss', () => {
-  it('Holzfäller liefert Stamm ins Lager, Wohnhaus wird aus dem Lager versorgt', () => {
+  it('Holzfäller liefert Stamm ins Lager, die Hütte wird aus dem Lager gebaut', () => {
     const sim = neu();
-    tu(sim, { art: 'gebaeude', typ: 'holzfaeller', q: 6, r: 0 });
-    tu(sim, { art: 'gebaeude', typ: 'wohnhaus', q: 0, r: 3 });
-    tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 6) });
+    tu(sim, { art: 'gebaeude', typ: 'holzfaeller', q: 9, r: 0 });
+    tu(sim, { art: 'gebaeude', typ: 'huette', q: 0, r: 3 });
+    tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 9) });
     tu(sim, { art: 'weg', pfad: gerade(0, 0, 5, 3) });
-    lauf(sim, 1500);
+    lauf(sim, 3000);
     const s = sim.sicht();
     expect(s.gebaeude.every((g) => !g.getrennt)).toBe(true);
-    expect(s.gebaeude.find((g) => g.typ === 'lager')!.vorrat![0]).toBeGreaterThan(0);
-    expect(sim.statistik().verbraucht).toBeGreaterThan(0);
+    expect(s.gebaeude.every((g) => g.bau === 1000)).toBe(true);
+    expect(s.gebaeude.find((g) => g.typ === 'lager')!.vorrat![WARE.stamm]).toBeGreaterThan(0);
+    expect(sim.statistik().verbaut).toBe(5 + 2);
     expect(sim.pruefeInnenzustand()).toEqual([]);
   });
   it('Gebäude ohne Verbindung ist getrennt und liefert nichts', () => {
-    const sim = neu();
+    const sim = neu(1, START, baueTestKarte(false));
     tu(sim, { art: 'gebaeude', typ: 'holzfaeller', q: 6, r: 0 });
     lauf(sim, 1500);
     const g = sim.sicht().gebaeude.find((x) => x.typ === 'holzfaeller')!;
@@ -146,7 +159,7 @@ describe('Warenfluss', () => {
     expect(sim.pruefeInnenzustand()).toEqual([]);
   });
   it('Ringnetz: Waren nehmen den kürzesten Weg, ohne Kreisfahrt', () => {
-    const sim = neu();
+    const sim = neu(1, START, karteMitWald([{ q: 6, r: 3 }]));
     // Ring um (0,0): Lager L=(0,0); R1=(3,0) R2=(3,3)... Ring mit 6 Knoten, Holzfäller gegenüber, Abkürzung ist die kurze Seite.
     const L = { q: 0, r: 0 }, A = { q: 3, r: 0 }, B = { q: 6, r: 0 }, C = { q: 6, r: 3 }, D = { q: 3, r: 3 }, E = { q: 0, r: 3 };
     tu(sim, { art: 'gebaeude', typ: 'holzfaeller', ...C });
@@ -160,7 +173,7 @@ describe('Warenfluss', () => {
     // kürzester Weg C→L: C-D-A-L oder C-B-A-L (je 9 Schritte) bzw. C-D-E-L (9); alle gleich lang -> Abkürzung zählt nicht. Prüfe: keine Fahne zweimal.
     const besucht: number[] = [];
     let ankunft = 0;
-    for (let i = 0; i < 1500; i++) {
+    for (let i = 0; i < 4000; i++) {
       sim.schritt();
       const s = sim.sicht();
       if (s.fahnen.some((f) => f.waren.includes(0)) || s.traeger.some((t) => t.ware === 0)) {
@@ -191,20 +204,21 @@ describe('Warenfluss', () => {
     expect(s0.segmente.length).toBeGreaterThanOrEqual(5);
     const kurz = [fahneBei(sim, C).id, fahneBei(sim, B).id, fahneBei(sim, A).id, fahneBei(sim, L).id];
     const folge: number[] = [];
-    for (let i = 0; i < 1500; i++) {
+    for (let i = 0; i < 4000; i++) {
       sim.schritt();
       const f = sim.sicht().fahnen.find((x) => x.waren.includes(0));
       if (f && folge[folge.length - 1] !== f.id && !(folge.length && f.id === folge[0])) folge.push(f.id);
       if (sim.sicht().gebaeude.find((g) => g.typ === 'lager')!.vorrat![0] > 0) break;
     }
-    expect(folge.slice(0, 4)).toEqual(kurz);
+    // Auf der Fahne des Holzfällers wird der Stamm manchmal im selben Tick abgeholt; die übrige Folge muss stimmen
+    expect(folge.filter((id) => id !== kurz[0]).slice(0, 3)).toEqual(kurz.slice(1));
   });
   it('Abriss mitten im Transport: keine Ausnahme, Reservierungen stimmen, Waren werden neu geroutet', () => {
     const sim = neu();
     tu(sim, { art: 'gebaeude', typ: 'holzfaeller', q: 9, r: 0 });
     tu(sim, { art: 'gebaeude', typ: 'steinbruch', q: 9, r: 3 });
     tu(sim, { art: 'gebaeude', typ: 'saegewerk', q: 3, r: 3 });
-    tu(sim, { art: 'gebaeude', typ: 'wohnhaus', q: 0, r: 6 });
+    tu(sim, { art: 'gebaeude', typ: 'huette', q: 0, r: 6 });
     for (const p of [{ q: 3, r: 0 }, { q: 6, r: 0 }, { q: 6, r: 3 }, { q: 0, r: 3 }]) tu(sim, { art: 'fahne', ...p });
     const w = (p: { q: number; r: number }, d: number) => tu(sim, { art: 'weg', pfad: gerade(p.q, p.r, d, 3) });
     w({ q: 0, r: 0 }, 0); w({ q: 3, r: 0 }, 0); w({ q: 6, r: 0 }, 0);
@@ -237,6 +251,428 @@ describe('Warenfluss', () => {
     }
     expect(abrisse).toBeGreaterThan(0);
   });
+});
+
+const lagerVorrat = (sim: Simulation) => sim.sicht().gebaeude.find((g) => g.typ === 'lager')!.vorrat!;
+const summe = (a: ArrayLike<number>) => { let n = 0; for (let i = 0; i < a.length; i++) n += a[i]; return n; };
+/** Weg von der Fahne `von` zum Gebäude/Hex `nach` über die Wegsuche der Sim. */
+function verbinde(sim: Simulation, von: { q: number; r: number }, nach: { q: number; r: number }) {
+  const p = sim.wegVorschau(von, nach);
+  if (!p) throw new Error(`kein Weg ${von.q},${von.r} → ${nach.q},${nach.r}`);
+  tu(sim, { art: 'weg', pfad: p });
+}
+function hexeImRadius(sim: Simulation, mitte: { q: number; r: number }, radius: number): number[] {
+  const k = sim.karte, aus: number[] = [];
+  for (let i = 0; i < k.count; i++) if (k.abstand(i, k.index(mitte.q, mitte.r)) <= radius) aus.push(i);
+  return aus;
+}
+
+describe('M4: Bauplatz, Kosten, Natur am Start', () => {
+  it('Bauplatz-Größe und Kosten', () => {
+    const sim = neu();
+    expect(sim.bauplatzGroesse(0, 0)).toBe(0);   // Lager
+    expect(sim.bauplatzGroesse(1, 0)).toBe(0);   // Nachbarregel
+    expect(sim.bauplatzGroesse(2, 0)).toBe(3);
+    expect(sim.bauplatzGroesse(12, 0)).toBe(1);  // Hang
+    expect(sim.bauplatzGroesse(-15, 8)).toBe(0); // Wasser
+    expect(sim.bauplatzGroesse(8, -10)).toBe(0); // Fels
+    expect(sim.bauplatzGroesse(100, 0)).toBe(0); // außerhalb
+    tu(sim, { art: 'gebaeude', typ: 'huette', q: 2, r: 0 });
+    lauf(sim, 1);
+    expect(sim.bauplatzGroesse(2, 0)).toBe(0);
+    expect(sim.bauplatzGroesse(3, 0)).toBe(0);
+    expect(sim.bauplatzGroesse(4, 0)).toBe(3);
+    expect(sim.kosten('huette')[WARE.bretter]).toBe(3);
+    expect(sim.kosten('huette')[WARE.stein]).toBe(2);
+    expect(sim.kosten('saegewerk')).toEqual(sim.kosten('saegewerk').map((_, i) => (i === WARE.bretter ? 2 : i === WARE.stein ? 1 : 0)));
+    expect(sim.kosten('nichts')).toEqual([]);
+    expect(sim.kannBauen('constructor', 5, 5)).toBe(false);
+  });
+  it('Wald → 3 Bäume, Steinfeld → 12, steile Hexe → 4; Belegen räumt die Bäume', () => {
+    const karte = karteMitWald([{ q: 9, r: 0 }]);
+    const k = new SimKarte(karte);
+    karte.terrain[k.index(-10, 4)] = 5;
+    karte.slope[k.index(-10, -4)] = 25;
+    karte.slope[k.index(-10, -5)] = 25; karte.terrain[k.index(-10, -5)] = 0; // Wasser bleibt ohne Fels
+    const sim = neu(1, START, karte);
+    const n = sim.sicht().natur;
+    expect(n.baum[k.index(8, 0)]).toBe(TREE_MAX);
+    expect(n.baum[k.index(9, 0)]).toBe(0);
+    expect(summe(n.baum)).toBe(18 * TREE_MAX);
+    expect(n.fels[k.index(-10, 4)]).toBe(FELS_STEIN);
+    expect(n.fels[k.index(-10, -4)]).toBe(FELS_STEIL);
+    expect(n.fels[k.index(-10, -5)]).toBe(0);
+    expect(n.fels[k.index(0, 0)]).toBe(0);
+    const rev = n.rev;
+    expect(sim.sicht().natur).toBe(n); // unverändert: dieselbe Kopie
+    tu(sim, { art: 'fahne', q: 8, r: 0 });
+    lauf(sim, 1);
+    const n2 = sim.sicht().natur;
+    expect(n2.rev).toBeGreaterThan(rev);
+    expect(n2.baum[k.index(8, 0)]).toBe(0);
+    expect(n.baum[k.index(8, 0)]).toBe(TREE_MAX); // alte Kopie bleibt unverändert
+    expect(sim.pruefeInnenzustand()).toEqual([]);
+  });
+  it('arbeitsHexe zählt Bäume, Felsen und Pflanzplätze im Radius 4 und trennt den inneren Ring „gut“', () => {
+    const karte = karteMitWald([{ q: 9, r: 0 }]);
+    fuegeStartStein(karte);
+    const kk = new SimKarte(karte);
+    for (const [q, r] of [[10, 3], [11, 3], [10, 4]]) { karte.terrain[kk.index(q, r)] = 5; karte.build[kk.index(q, r)] = 0; }
+    const sim = neu(1, START, karte);
+    const b = sim.arbeitsHexe('holzfaeller', 9, 0);
+    expect(b.art).toBe('baum');
+    expect(b.summe).toBe(18 * TREE_MAX);
+    expect(b.hexe.length).toBe(18);
+    // gut = höchstens 2 Hexe vom Mittelpunkt (Gebäude): der Wald-Ring 1..2 ist komplett „gut“
+    expect(b.hexe.every((h) => h.gut)).toBe(true);
+    const f = sim.arbeitsHexe('steinbruch', 9, 3);
+    expect(f.art).toBe('fels');
+    // die drei Fels-Hexe (zusätzlich vielleicht ein Lesesteinhaufen im Wald) – (10,3) ist 1, (11,3) und (10,4) sind 2 Hexe entfernt
+    const felsHexe = f.hexe.filter((h) => h.n === FELS_STEIN);
+    expect(felsHexe.length).toBe(3);
+    expect(felsHexe.every((h) => h.gut)).toBe(true);
+    expect(f.summe).toBe(3 * FELS_STEIN + f.hexe.filter((h) => h.n !== FELS_STEIN).reduce((x, h) => x + h.n, 0));
+    const p = sim.arbeitsHexe('foerster', -3, 0);
+    expect(p.art).toBe('platz');
+    expect(p.hexe.length).toBe(60 - 1); // Radius 4 ohne das Lager-Hex
+    expect(p.summe).toBe(59 * TREE_MAX);
+    expect(p.hexe.filter((h) => h.gut).length).toBe(18); // innerer Ring (Abstand 1..2); das Lager liegt 3 entfernt
+    // Wald ist voll: der Förster am Wald findet dort keinen Platz
+    const fo = sim.arbeitsHexe('foerster', 9, 0);
+    expect(fo.hexe.some((h) => b.hexe.some((x) => x.q === h.q && x.r === h.r))).toBe(false);
+    // Mittelpunkt verschoben: Radius 4 um (9,0) + 6 statt ums Gebäude
+    const v = sim.arbeitsHexe('holzfaeller', 3, 0, { q: 9, r: 0 });
+    expect(v.summe).toBe(18 * TREE_MAX);
+    expect(v.hexe.every((h) => h.gut)).toBe(true);
+    expect(sim.arbeitsHexe('holzfaeller', -3, 0, { q: -3, r: 0 }).summe).toBe(0); // Mittelpunkt = Gebäude: wie ohne
+    expect(sim.arbeitsHexe('huette', 3, 0)).toEqual({ art: 'keine', hexe: [], summe: 0 });
+    expect(sim.arbeitsHexe('holzfaeller', -3, 0).summe).toBe(0);
+  });
+});
+
+describe('M4: Baustellen', () => {
+  it('Material kommt einzeln über das Netz, der Träger verbaut es, dann ist das Gebäude fertig', () => {
+    const sim = neu();
+    tu(sim, { art: 'gebaeude', typ: 'huette', q: 3, r: 0 });
+    tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 3) });
+    lauf(sim, 1);
+    const vor = START_VORRAT;
+    expect(sim.statistik().verbaut).toBe(0);
+    expect(sim.sicht().gebaeude.find((g) => g.typ === 'huette')!.zustand).toMatch(/baustelle|wartet_material/);
+    const stufen = new Set<number>();
+    let letzte = 0, maxSprung = 0, fertigTick = -1;
+    for (let i = 0; i < 3000 && fertigTick < 0; i++) {
+      sim.schritt();
+      const g = sim.sicht().gebaeude.find((x) => x.typ === 'huette')!;
+      stufen.add(g.bau);
+      maxSprung = Math.max(maxSprung, g.bau - letzte);
+      letzte = g.bau;
+      // Bedarf + verbaut = Kosten, solange Baustelle
+      if (g.bau < 1000) {
+        expect(g.bedarf![WARE.bretter]).toBeLessThanOrEqual(3);
+        expect(g.bedarf!.reduce((a, b) => a + b, 0)).toBe(5 - Math.round((g.bau * 5) / 1000));
+      }
+      if (g.bau === 1000) fertigTick = i;
+    }
+    expect(fertigTick).toBeGreaterThan(0);
+    expect(stufen.size).toBe(6);            // 0, 200, 400, 600, 800, 1000: fünf einzelne Lieferungen
+    expect(maxSprung).toBe(200);
+    expect(sim.statistik().verbaut).toBe(5);
+    const g = sim.sicht().gebaeude.find((x) => x.typ === 'huette')!;
+    expect(g.bedarf).toBeUndefined();
+    expect(g.zustand).toBe('bereit');
+    const nach = lagerVorrat(sim);
+    expect(nach[WARE.bretter]).toBe(vor[WARE.bretter] - 3);
+    expect(nach[WARE.stein]).toBe(vor[WARE.stein] - 2);
+    expect(sim.pruefeInnenzustand()).toEqual([]);
+  });
+  it('Priorität bestimmt die Reihenfolge; ungültige Prioritäten sind wirkungslos', () => {
+    const sim = neu();
+    const lager = (sim as any).gebaeude.get(1);
+    const vorrat = lager.vorrat.slice();
+    lager.vorrat.fill(0); // erst nach den Prioritäten gibt es Material – und zwar nur für eine Hütte
+    tu(sim, { art: 'gebaeude', typ: 'huette', q: 3, r: 0 });
+    tu(sim, { art: 'gebaeude', typ: 'huette', q: -3, r: 0 });
+    tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 3) });
+    tu(sim, { art: 'weg', pfad: gerade(0, 0, 3, 3) });
+    lauf(sim, 1);
+    const ost = sim.sicht().gebaeude.find((g) => g.q === 3)!, west = sim.sicht().gebaeude.find((g) => g.q === -3)!;
+    expect(ost.prioritaet).toBe(2);
+    for (const stufe of [0, 4, 2.5, NaN]) tu(sim, { art: 'prioritaet', id: west.id, stufe });
+    tu(sim, { art: 'prioritaet', id: 99999, stufe: 3 });
+    tu(sim, { art: 'prioritaet', id: 1, stufe: 3 }); // Lager ist keine Baustelle
+    lauf(sim, 1);
+    expect(sim.sicht().gebaeude.find((g) => g.q === -3)!.prioritaet).toBe(2);
+    expect(sim.sicht().gebaeude.find((g) => g.typ === 'lager')!.prioritaet).toBe(2);
+    tu(sim, { art: 'prioritaet', id: west.id, stufe: 3 });
+    tu(sim, { art: 'prioritaet', id: ost.id, stufe: 1 });
+    lauf(sim, 1);
+    expect(vorrat[WARE.bretter]).toBe(12);
+    lager.vorrat[WARE.bretter] = 3; lager.vorrat[WARE.stein] = 2;
+    lauf(sim, 3000);
+    const s = sim.sicht();
+    expect(s.gebaeude.find((g) => g.q === -3)!.bau).toBe(1000);
+    expect(s.gebaeude.find((g) => g.q === 3)!.bau).toBe(0);
+    expect(s.gebaeude.find((g) => g.q === 3)!.zustand).toBe('wartet_material');
+    expect(sim.pruefeInnenzustand()).toEqual([]);
+  });
+  it('bei gleicher Priorität wird die ältere Baustelle (kleinere Id) zuerst beliefert', () => {
+    const sim = neu();
+    const lager = (sim as any).gebaeude.get(1);
+    lager.vorrat.fill(0);
+    tu(sim, { art: 'gebaeude', typ: 'huette', q: 6, r: 0 });
+    tu(sim, { art: 'gebaeude', typ: 'huette', q: -3, r: 0 });
+    tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 6) });
+    tu(sim, { art: 'weg', pfad: gerade(0, 0, 3, 3) });
+    lauf(sim, 1);
+    lager.vorrat[WARE.bretter] = 3; lager.vorrat[WARE.stein] = 2;
+    lauf(sim, 3000);
+    const s = sim.sicht();
+    expect(s.gebaeude.find((g) => g.q === 6)!.bau).toBe(1000);
+    expect(s.gebaeude.find((g) => g.q === -3)!.bau).toBe(0);
+  });
+  it('getrennte Baustellen bekommen nichts', () => {
+    const sim = neu();
+    tu(sim, { art: 'gebaeude', typ: 'huette', q: 6, r: 0 });
+    lauf(sim, 1200);
+    const g = sim.sicht().gebaeude.find((x) => x.typ === 'huette')!;
+    expect(g.zustand).toBe('getrennt');
+    expect(g.bau).toBe(0);
+    expect(lagerVorrat(sim).slice(0, 3)).toEqual(START_VORRAT.slice(0, 3));
+    expect(sim.statistik().verbaut).toBe(0);
+  });
+  it('Abriss einer Baustelle: Hälfte (abgerundet) des verbauten Materials liegt an der Fahne, Rest verloren, Fahne bleibt', () => {
+    const sim = neu();
+    tu(sim, { art: 'gebaeude', typ: 'huette', q: 3, r: 0 });
+    tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 3) });
+    lauf(sim, 1);
+    let g = sim.sicht().gebaeude.find((x) => x.typ === 'huette')!;
+    while (g.bau < 600 || sim.tick % 10 === 0) { sim.schritt(); g = sim.sicht().gebaeude.find((x) => x.typ === 'huette')!; }
+    const kosten = sim.kosten('huette');
+    const verbaut = kosten.map((k, a) => k - g.bedarf![a]);
+    expect(summe(verbaut)).toBeGreaterThanOrEqual(3);
+    const fahneId = g.fahne;
+    tu(sim, { art: 'abriss_gebaeude', id: g.id });
+    sim.schritt();
+    const s = sim.sicht();
+    expect(s.gebaeude.find((x) => x.typ === 'huette')).toBeUndefined();
+    const f = s.fahnen.find((x) => x.id === fahneId)!;
+    expect(f).toBeDefined();
+    expect(f.gebaeude).toBe(0);
+    for (const a of [WARE.bretter, WARE.stein]) expect(f.waren.filter((w) => w === a).length).toBe(Math.floor(verbaut[a] / 2));
+    expect(sim.pruefeInnenzustand().filter((x) => !x.includes('ungültigem Ziel'))).toEqual([]);
+    // Es bleiben keine Reservierungen: das Material läuft ins Lager zurück, nichts hängt fest
+    lauf(sim, 1500);
+    expect(sim.pruefeInnenzustand()).toEqual([]);
+    const l = lagerVorrat(sim);
+    for (const a of [WARE.bretter, WARE.stein]) expect(l[a]).toBe(START_VORRAT[a] - verbaut[a] + Math.floor(verbaut[a] / 2));
+  });
+  it('Abriss eines fertigen Gebäudes: Puffer und Output an die Fahne, Arbeiter zurück in den Vorrat', () => {
+    const sim = neu();
+    tu(sim, { art: 'gebaeude', typ: 'saegewerk', q: 3, r: 0 });
+    tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 3) });
+    lauf(sim, 1);
+    (sim as any).gebaeude.get(1).vorrat[WARE.stamm] = 4;
+    let g = sim.sicht().gebaeude.find((x) => x.typ === 'saegewerk')!;
+    while (!(g.bau === 1000 && (g.puffer![WARE.stamm] > 0 || g.ausgang![WARE.bretter] > 0)) || sim.tick % 10 === 0) {
+      sim.schritt(); g = sim.sicht().gebaeude.find((x) => x.typ === 'saegewerk')!;
+      if (sim.tick > 4000) throw new Error('Sägewerk wurde nicht fertig');
+    }
+    const frei = sim.sicht().freieTraeger;
+    tu(sim, { art: 'abriss_gebaeude', id: g.id });
+    sim.schritt();
+    expect(sim.sicht().freieTraeger).toBe(frei + 1);
+    expect(sim.pruefeInnenzustand().filter((x) => !x.includes('ungültigem Ziel'))).toEqual([]);
+  });
+});
+
+describe('M4: Holz', () => {
+  it('Holzfäller fällt nur vorhandene Bäume, genau einmal und nur im Radius; danach „kein Baum“', () => {
+    const sim = neu(1, START, karteMitWald([{ q: 9, r: 0 }, { q: -9, r: 5 }]));
+    const mitte = { q: 9, r: 0 };
+    tu(sim, { art: 'gebaeude', typ: 'holzfaeller', ...mitte });
+    tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 9) });
+    lauf(sim, 1);
+    const vorher = sim.sicht().natur.baum.slice();
+    const imRadius = new Set(hexeImRadius(sim, mitte, 4));
+    let anfang = 0;
+    for (const h of imRadius) anfang += vorher[h];
+    expect(anfang).toBeLessThan(18 * TREE_MAX);   // der Weg hat ein paar Bäume vertrieben
+    expect(anfang).toBeGreaterThan(40);
+    let letzte = summe(vorher), verstoesse = 0;
+    for (let i = 0; i < 25000; i++) {
+      sim.schritt();
+      if (i % 20 === 0) {
+        const n = sim.sicht().natur;
+        const jetzt = summe(n.baum);
+        if (jetzt > letzte) verstoesse++; // ohne Förster nimmt es nur ab
+        letzte = jetzt;
+        for (let h = 0; h < n.baum.length; h++) if (n.baum[h] > vorher[h]) verstoesse++;
+      }
+    }
+    expect(verstoesse).toBe(0);
+    const n = sim.sicht().natur;
+    for (let h = 0; h < n.baum.length; h++) {
+      if (!imRadius.has(h)) { if (n.baum[h] !== vorher[h]) verstoesse++; } else if (n.baum[h] !== 0) verstoesse++;
+    }
+    expect(verstoesse).toBe(0);
+    expect(sim.statistik().erzeugtJe[WARE.stamm]).toBe(anfang);
+    expect(sim.sicht().gebaeude.find((g) => g.typ === 'holzfaeller')!.zustand).toBe('kein_baum');
+    expect(lagerVorrat(sim)[WARE.stamm]).toBe(anfang);
+    expect(sim.pruefeInnenzustand()).toEqual([]);
+  });
+  it('zwei Holzfäller nehmen nie denselben Baum', () => {
+    const karte = karteMitWald([{ q: 6, r: 0 }]);
+    const sim = neu(1, START, karte);
+    tu(sim, { art: 'gebaeude', typ: 'holzfaeller', q: 6, r: -3 });
+    tu(sim, { art: 'gebaeude', typ: 'holzfaeller', q: 6, r: 3 });
+    lauf(sim, 1);
+    verbinde(sim, { q: 0, r: 0 }, { q: 6, r: -3 });
+    lauf(sim, 1);
+    verbinde(sim, { q: 0, r: 0 }, { q: 6, r: 3 });
+    lauf(sim, 1);
+    let gefaellt = 0, verstoesse = 0;
+    const start = summe(sim.sicht().natur.baum);
+    for (let i = 0; i < 9000; i++) {
+      sim.schritt();
+      if (i % 25 === 0) {
+        // prüft u. a.: Baum-Reservierung je Hex = Zahl der Arbeiter mit diesem Ziel
+        const f = sim.pruefeInnenzustand().filter((x) => !x.includes('ungültigem Ziel'));
+        if (f.length) expect(f).toEqual([]);
+        const n = sim.sicht().natur;
+        for (let h = 0; h < n.baum.length; h++) if (n.baum[h] > TREE_MAX) verstoesse++;
+        gefaellt = start - summe(n.baum);
+        if (sim.statistik().erzeugtJe[WARE.stamm] > gefaellt) verstoesse++;
+      }
+    }
+    expect(verstoesse).toBe(0);
+    expect(gefaellt).toBeGreaterThan(10);
+    expect(sim.statistik().erzeugtJe[WARE.stamm]).toBeGreaterThanOrEqual(gefaellt - 2); // höchstens 2 Stämme sind noch unterwegs zum Puffer
+  });
+  it('Förster pflanzt, Jungbäume reifen in drei Stadien zu Bäumen, nie mehr als 3 je Hex und nie auf belegten Hexen', () => {
+    const sim = neu(1, START, baueTestKarte(false));
+    const mitte = { q: 3, r: 0 };
+    tu(sim, { art: 'gebaeude', typ: 'foerster', ...mitte });
+    tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 3) });
+    lauf(sim, 1);
+    const imRadius = new Set(hexeImRadius(sim, mitte, 4));
+    const stadien = new Set<number>();
+    let ersterBaum = -1, erstesJung = -1;
+    let verstoesse = 0;
+    for (let i = 0; i < BAUM_WACHSEN * 3; i++) {
+      sim.schritt();
+      if (i % 10 !== 0) continue;
+      const n = sim.sicht().natur;
+      if (erstesJung < 0 && summe(n.jung) > 0) erstesJung = i;
+      if (ersterBaum < 0 && summe(n.baum) > 0) ersterBaum = i;
+      for (let h = 0; h < n.baum.length; h++) {
+        if (n.baum[h] + n.jung[h] > TREE_MAX) verstoesse++;
+        if (n.jung[h] > 0) { if (n.stufe[h] === 0) verstoesse++; stadien.add(n.stufe[h]); } else if (n.stufe[h] !== 0) verstoesse++;
+        if (!imRadius.has(h) && (n.baum[h] || n.jung[h])) verstoesse++;
+      }
+      if (i % 500 === 0) expect(sim.pruefeInnenzustand()).toEqual([]);
+    }
+    expect(verstoesse).toBe(0);
+    expect(erstesJung).toBeGreaterThan(0);
+    expect(ersterBaum).toBeGreaterThanOrEqual(erstesJung + BAUM_WACHSEN - 20);
+    expect(ersterBaum).toBeLessThanOrEqual(erstesJung + BAUM_WACHSEN + 400);
+    expect([...stadien].sort()).toEqual([1, 2, 3]);
+    const n = sim.sicht().natur;
+    const sicht = sim.sicht();
+    const belegt = new Set<number>();
+    for (const g of sicht.gebaeude) belegt.add(sim.karte.index(g.q, g.r));
+    for (const f of sicht.fahnen) belegt.add(sim.karte.index(f.q, f.r));
+    for (const sg of sicht.segmente) for (const p of sg.pfad) belegt.add(sim.karte.index(p.q, p.r));
+    expect([...belegt].filter((h) => n.baum[h] || n.jung[h])).toEqual([]);
+    expect(summe(n.baum) + summe(n.jung)).toBeGreaterThan(5);
+  });
+  it('Sägewerk macht aus Stämmen Bretter; Pull aus dem Lager beliefert den Input-Puffer (höchstens 2)', () => {
+    const sim = neu();
+    tu(sim, { art: 'gebaeude', typ: 'saegewerk', q: 3, r: 0 });
+    tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 3) });
+    lauf(sim, 1);
+    const lager = (sim as any).gebaeude.get(1);
+    lager.vorrat[WARE.stamm] = 5;
+    let maxPuffer = 0, maxAusgang = 0;
+    for (let i = 0; i < 3500; i++) {
+      sim.schritt();
+      const g = sim.sicht().gebaeude.find((x) => x.typ === 'saegewerk')!;
+      if (g.puffer) maxPuffer = Math.max(maxPuffer, g.puffer[WARE.stamm]);
+      if (g.ausgang) maxAusgang = Math.max(maxAusgang, g.ausgang[WARE.bretter]);
+    }
+    expect(maxPuffer).toBeLessThanOrEqual(2);
+    expect(maxAusgang).toBeGreaterThan(0);
+    expect(maxAusgang).toBeLessThanOrEqual(6);
+    const v = lagerVorrat(sim);
+    expect(v[WARE.stamm]).toBe(0);
+    expect(v[WARE.bretter]).toBe(START_VORRAT[WARE.bretter] - 2 + 5);
+    expect(sim.statistik().erzeugtJe[WARE.bretter]).toBe(5);
+    expect(sim.sicht().gebaeude.find((x) => x.typ === 'saegewerk')!.zustand).toBe('wartet_material');
+    expect(sim.pruefeInnenzustand()).toEqual([]);
+  });
+  it('ohne freien Bewohner wartet der Holzfäller („kein Arbeiter“), mit ihm arbeitet er', () => {
+    const sim = neu();
+    tu(sim, { art: 'gebaeude', typ: 'holzfaeller', q: 9, r: 0 });
+    tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 9) });
+    lauf(sim, 2);
+    (sim as any).freieTraeger = 0;
+    lauf(sim, 3000);
+    const g = sim.sicht().gebaeude.find((x) => x.typ === 'holzfaeller')!;
+    expect(g.bau).toBe(1000);
+    expect(g.zustand).toBe('kein_arbeiter');
+    expect(g.arbeiter).toBeUndefined();
+    expect(sim.statistik().erzeugt).toBe(0);
+    (sim as any).freieTraeger = 1;
+    lauf(sim, 400);
+    const g2 = sim.sicht().gebaeude.find((x) => x.typ === 'holzfaeller')!;
+    expect(g2.arbeiter).toBeDefined();
+    expect(['arbeitet', 'voll']).toContain(g2.zustand);
+    expect(sim.sicht().freieTraeger).toBe(0);
+  });
+  it('Arbeiter-Sicht: geht, arbeitet, trägt, ruht – mit Zielhex im Radius', () => {
+    const sim = neu();
+    tu(sim, { art: 'gebaeude', typ: 'holzfaeller', q: 9, r: 0 });
+    tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 9) });
+    lauf(sim, 1);
+    const tuts = new Set<string>();
+    for (let i = 0; i < 3500; i++) {
+      sim.schritt();
+      const a = sim.sicht().gebaeude.find((x) => x.typ === 'holzfaeller')!.arbeiter;
+      if (!a) continue;
+      tuts.add(a.tut);
+      expect(a.fortschritt).toBeGreaterThanOrEqual(0);
+      expect(a.fortschritt).toBeLessThan(1000);
+      if (a.tut === 'arbeitet') { expect(a.ziel).not.toBeNull(); expect(a.von).toEqual(a.nach); }
+      if (a.tut === 'traegt') expect(a.ware).toBe(WARE.stamm);
+      if (a.ziel) expect(Math.max(Math.abs(a.ziel.q - 9), Math.abs(a.ziel.r), Math.abs(a.ziel.q - 9 + a.ziel.r))).toBeLessThanOrEqual(2);
+    }
+    expect([...tuts].sort()).toEqual(['arbeitet', 'geht', 'ruht', 'traegt']);
+  });
+});
+
+describe('M4: Stein', () => {
+  it('Steinbruch erschöpft den Fels (3 Hexe à 80 Einheiten), liefert genau so viel Stein und ruht dann („kein Fels“)', () => {
+    const karte = baueTestKarte(false);
+    fuegeStartStein(karte);
+    const k = new SimKarte(karte);
+    for (const [q, r] of [[7, 0], [8, 0], [7, -1]]) { karte.terrain[k.index(q, r)] = 5; karte.build[k.index(q, r)] = 0; }
+    const sim = neu(1, START, karte);
+    tu(sim, { art: 'gebaeude', typ: 'steinbruch', q: 6, r: 0 });
+    tu(sim, { art: 'fahne', q: 3, r: 0 });
+    tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 3) });
+    tu(sim, { art: 'weg', pfad: gerade(3, 0, 0, 3) });
+    lauf(sim, 1);
+    expect(sim.arbeitsHexe('steinbruch', 6, 0).summe).toBe(3 * FELS_STEIN);
+    const felsAnfang = summe(sim.sicht().natur.fels);
+    lauf(sim, 90000);
+    const n = sim.sicht().natur;
+    expect(felsAnfang - summe(n.fels)).toBe(3 * FELS_STEIN);
+    for (const [q, r] of [[7, 0], [8, 0], [7, -1]]) expect(n.fels[sim.karte.index(q, r)]).toBe(0);
+    expect(sim.statistik().erzeugtJe[WARE.stein]).toBe(3 * FELS_STEIN);
+    expect(sim.sicht().gebaeude.find((g) => g.typ === 'steinbruch')!.zustand).toBe('kein_fels');
+    expect(lagerVorrat(sim)[WARE.stein]).toBe(START_VORRAT[WARE.stein] + 3 * FELS_STEIN);
+    expect(sim.pruefeInnenzustand()).toEqual([]);
+  }, 30000);
 });
 
 describe('Determinismus', () => {

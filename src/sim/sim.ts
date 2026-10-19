@@ -1,13 +1,21 @@
-// Deterministischer Simulationskern (Drehbuch 4.1, 8.3; DESIGN §3–4): Fahnen, Wege, Träger, Routing, Warenfluss, Abriss.
-// Nur Ganzzahlen, fester Tick, Zufall nur aus der Saat. Intern werden Hexe als Karten-Index geführt.
+// Deterministischer Simulationskern (Drehbuch 4.1, 8.3; DESIGN §3–4): Fahnen, Wege, Träger, Routing, Warenfluss, Baustellen,
+// Bäume und Felsen, Arbeiter, Abriss. Nur Ganzzahlen, fester Tick, Zufall nur aus der Saat. Intern werden Hexe als Karten-Index geführt.
+import { FLAG } from '../welt/format';
 import { Fnv2 } from '../welt/pruefsumme';
 import {
-  BAU_TICKS, FAHNE_MAX_SEGMENTE, FLAG_CAP, GEBAEUDE, NOTPLAETZE, START_VORRAT, TRAEGER_START, UEBERGABE_TICKS, WAREN, WEG_MAX_SCHRITTE,
+  ARBEIT_MITTE_MAX, BAUM_HEIDE_PROZENT, BAUM_MOOR_PROZENT, BAUM_WACHSEN, BAUM_WIESE_PROZENT, BUILD_ACTION, FAHNE_MAX_SEGMENTE,
+  FELS_LESE, FELS_LESE_START, FELS_STEIL, FELS_STEIN, FLAG_CAP, GEBAEUDE, LESE_PROZENT, NOTPLAETZE, PRIO_MAX, PRIO_MIN, PRIO_STANDARD,
+  RODUNG_STAMM_MAX, START_STEIN_ABSTAND_MIN, START_STEIN_MIN, START_STEIN_RADIUS, START_VORRAT, STEIL_GRAD, SUCHE_WARTE, TRAEGER_START,
+  TREE_MAX, UEBERGABE_TICKS, WARE, WAREN, WEG_MAX_SCHRITTE,
 } from './daten';
+import type { GebaeudeTyp } from './daten';
 import { SimKarte } from './karte';
+import { FELS_FELS, FELS_KLIPPE, FELS_LESE as ART_LESE, hashHex, hashHex2, hashHex3 } from './natur';
 import { sucheWeg, ZahlenHeap } from './pfad';
 import { PROMILLE } from './typen';
-import type { Befehl, Id, KarteDaten, Protokoll, ProtokollEintrag, SimSicht } from './typen';
+import type {
+  Befehl, GebaeudeZustand, Id, KarteDaten, Protokoll, ProtokollEintrag, SichtArbeiter, SichtNatur, SimSicht,
+} from './typen';
 
 interface Ware { art: number; ziel: Id }
 
@@ -32,22 +40,40 @@ interface Traeger {
   pos: number; dir: 1 | -1; t: number; dauer: number;
   pause: number;
   art: number; ziel: Id;
+  /** 1 = verbaut die getragene Ware gerade an der Baustelle (Pause = BUILD_ACTION). */
+  baut: 0 | 1;
   /** Ticks, die er mit Ware vor einer vollen Fahne steht. */
   warte: number;
   route: number[]; ri: number; routeSegs: Id[];
 }
 
+/** Phasen des Arbeiters (Holzfäller, Förster, Steinbruch). */
+const PH_SUCHE = 0, PH_HIN = 1, PH_ARBEIT = 2, PH_ZURUECK = 3, PH_RUHE = 4;
+
 interface Gebaeude {
   id: Id; typ: string; h: number; fahne: Id;
-  /** Gebaute Ticks (fertig bei BAU_TICKS). */
-  bt: number;
+  /** 1 = fertig gebaut (Lager von Anfang an). */
+  fertig: 0 | 1;
+  /** Bisher verbautes Material je Warenart und Baustellen-Priorität. */
+  verbaut: number[];
+  prio: number;
   getrennt: boolean;
-  puffer: number[]; incoming: number[];
+  puffer: number[]; incoming: number[]; ausgang: number[];
   zeit: number; arbeit: number;
   vorrat: number[];
+  // Arbeiter: ar = 1, wenn ein Bewohner zugewiesen ist; Phase, Ticks in der Phase und deren Dauer, Schritt auf dem Gehweg,
+  // Zielhex (-1 keiner), Gehweg Hütte → Ziel, getragene Ware (-1 keine), leer = 1: letzte Suche ohne Ergebnis.
+  ar: number; ph: number; pt: number; pd: number; wi: number; zh: number; weg: number[]; traegt: number; leer: number;
+  /** Arbeitsmittelpunkt (Hex-Index) oder -1 = das Gebäude selbst. */
+  mitte: number;
 }
 
 const DIST_K = 1 << 21;
+
+/** Gebäudetyp nach Id; unbekannte Ids (auch Namen wie „constructor“) liefern undefined. */
+function typVon(typ: string): GebaeudeTyp | undefined {
+  return Object.prototype.hasOwnProperty.call(GEBAEUDE, typ) ? GEBAEUDE[typ] : undefined;
+}
 
 export class Simulation {
   readonly karte: SimKarte;
@@ -64,14 +90,33 @@ export class Simulation {
   private hexFahne: Int32Array;
   private hexGeb: Int32Array;
   private hexWeg: Int32Array;
+  // Natur: ausgewachsene Bäume, Jungbäume (mit Reifetick je Platz), Fels-Restmenge, Reservierungen der Arbeiter
+  private baum: Uint8Array;
+  private jung: Uint8Array;
+  private jungReif: Int32Array;
+  private stufe: Uint8Array;
+  private fels: Uint8Array;
+  /** Art des Steins je Hex (statisch) und Baumzahl beim Start (statisch). */
+  private felsArt: Uint8Array;
+  private baumStart!: Uint8Array;
+  private felsArtKopie!: Uint8Array;
+  private baumStartKopie!: Uint8Array;
+  private baumRes: Uint8Array;
+  private felsRes: Uint8Array;
+  /** Hexe mit Jungbäumen (Einfüge-Reihenfolge). */
+  private jungListe: number[] = [];
+  private natRev = 0;
   private log: ProtokollEintrag[] = [];
   private ausstehend: ProtokollEintrag[] = [];
-  private stat = { angekommen: 0, verbraucht: 0, erzeugt: 0, maxWarte: 0 };
+  private stat = { angekommen: 0, verbraucht: 0, erzeugt: 0, maxWarte: 0, verbaut: 0 };
+  private erzeugtJe: number[] = new Array<number>(WAREN.length).fill(0);
   // abgeleitete Zwischenspeicher (nicht Teil der Prüfsumme)
   private distCache = new Map<Id, Map<Id, number>>();
   private verbunden = new Set<Id>();
   private verbundenNeu = true;
   private inb = new Map<Id, number>();
+  private natCache: SichtNatur | null = null;
+  private natHash: { rev: number; hex: string } | null = null;
 
   constructor(karteDaten: KarteDaten, saat: number, start: { q: number; r: number }) {
     this.karte = new SimKarte(karteDaten);
@@ -81,10 +126,71 @@ export class Simulation {
     this.hexFahne = new Int32Array(n);
     this.hexGeb = new Int32Array(n);
     this.hexWeg = new Int32Array(n);
+    this.baum = new Uint8Array(n);
+    this.jung = new Uint8Array(n);
+    this.jungReif = new Int32Array(n * TREE_MAX);
+    this.stufe = new Uint8Array(n);
+    this.fels = new Uint8Array(n);
+    this.felsArt = new Uint8Array(n);
+    this.baumRes = new Uint8Array(n);
+    this.felsRes = new Uint8Array(n);
+    this.natureStart();
     const h = this.karte.index(start.q, start.r);
     if (h < 0 || !this.karte.begehbar[h]) throw new Error('Startlager liegt nicht auf begehbarem Boden');
     const lager = this.gebaeudeErzeugen('lager', h, true);
     lager.vorrat = START_VORRAT.slice();
+    this.fairerStart(h);
+    this.felsArtKopie = this.felsArt.slice();
+    this.baumStartKopie = this.baumStart.slice();
+  }
+
+  /**
+   * Start-Natur nur aus Kartendaten und Welt-Hex-Koordinaten (hashHex, nicht die Saat): Wald 3 Bäume; Wiese, Heide, Moor je 1 Streubaum
+   * auf BAUM_*_PROZENT der Hexe; Steinfeld = Fels (FELS_STEIN), steile begehbare Hexe = Klippe (FELS_STEIL), Wiese/Wald mit
+   * LESE_PROZENT = Lesesteinhaufen (FELS_LESE). Ortskern-, Siedlungs-, Bahn- und Wasser-Hexe tragen keine Bäume.
+   */
+  private natureStart(): void {
+    const k = this.karte, n = k.count;
+    for (let i = 0; i < n; i++) {
+      const t = k.terrain[i], q = k.qs[i], r = k.rs[i];
+      const frei = t !== 0 && t !== 6 && !(k.flags[i] & (FLAG.ortskern | FLAG.bahn));
+      if (frei) {
+        if (t === 2) this.baum[i] = TREE_MAX;
+        else if (t === 1 && hashHex(q, r) % 100 < BAUM_WIESE_PROZENT) this.baum[i] = 1;
+        else if (t === 3 && hashHex(q, r) % 100 < BAUM_HEIDE_PROZENT) this.baum[i] = 1;
+        else if (t === 4 && hashHex(q, r) % 100 < BAUM_MOOR_PROZENT) this.baum[i] = 1;
+      }
+      if (t === 5) { this.fels[i] = FELS_STEIN; this.felsArt[i] = FELS_FELS; }
+      else if (t !== 0 && k.neigung[i] >= STEIL_GRAD) { this.fels[i] = FELS_STEIL; this.felsArt[i] = FELS_KLIPPE; }
+      else if (frei && (t === 1 || t === 2) && hashHex2(q, r) % 100 < LESE_PROZENT) { this.fels[i] = FELS_LESE; this.felsArt[i] = ART_LESE; }
+    }
+    this.baumStart = this.baum.slice();
+  }
+
+  /**
+   * Fairer Start: Liegen im Umkreis START_STEIN_RADIUS ums Lager weniger als START_STEIN_MIN Steine, kommen Lesesteinhaufen
+   * (je FELS_LESE_START) auf freie Wiesen-, Heide- und Wald-Hexe im Abstand START_STEIN_ABSTAND_MIN..START_STEIN_RADIUS dazu – in der
+   * festen Reihenfolge hashHex3, dann Index – bis es reicht.
+   */
+  private fairerStart(lager: number): void {
+    const k = this.karte;
+    let summe = 0;
+    const kand: number[] = [];
+    for (let i = 0; i < k.count; i++) {
+      const d = k.abstand(lager, i);
+      if (d > START_STEIN_RADIUS) continue;
+      summe += this.fels[i];
+      const t = k.terrain[i];
+      if (d >= START_STEIN_ABSTAND_MIN && (t === 1 || t === 2 || t === 3) && !this.fels[i] && !(k.flags[i] & FLAG.bahn) && !this.hexGeb[i]) kand.push(i);
+    }
+    if (summe >= START_STEIN_MIN) return;
+    kand.sort((a, b) => hashHex3(k.qs[a], k.rs[a]) - hashHex3(k.qs[b], k.rs[b]) || a - b);
+    for (const i of kand) {
+      if (summe >= START_STEIN_MIN) break;
+      this.fels[i] = FELS_LESE_START; this.felsArt[i] = ART_LESE;
+      summe += FELS_LESE_START;
+    }
+    this.natRev++;
   }
 
   get tick(): number { return this._tick; }
@@ -121,7 +227,7 @@ export class Simulation {
     if (this.verbundenNeu) this.verbindungenNeu();
     this.inbNeu();
     for (const g of this.gebaeude.values()) this.gebaeudeTick(g);
-    if (t % 10 === 0) this.zielePruefen();
+    if (t % 10 === 0) { this.baeumeWachsen(); this.zielePruefen(); }
     if (t % 4 === 0) this.lagerPull();
     this.traegerPhase();
     if (t % 40 === 0) for (const s of this.segmente.values()) if (s.verkehr > 0) s.verkehr--;
@@ -160,6 +266,19 @@ export class Simulation {
       case 'abriss_fahne': this.fahneAbreissen(b.id); break;
       case 'abriss_weg': if (this.segmente.has(b.id)) this.segmentEntfernen(b.id, 0); break;
       case 'abriss_gebaeude': this.gebaeudeAbreissen(b.id); break;
+      case 'arbeitsbereich': {
+        const g = this.gebaeude.get(b.id);
+        if (!g || !(GEBAEUDE[g.typ].radius > 0) || !Number.isInteger(b.q) || !Number.isInteger(b.r)) break;
+        const m = k.index(b.q, b.r);
+        if (m < 0 || !k.begehbar[m] || k.abstand(g.h, m) > ARBEIT_MITTE_MAX) break;
+        g.mitte = m === g.h ? -1 : m;
+        break;
+      }
+      case 'prioritaet': {
+        const g = this.gebaeude.get(b.id);
+        if (g && !g.fertig && Number.isInteger(b.stufe) && b.stufe >= PRIO_MIN && b.stufe <= PRIO_MAX) g.prio = b.stufe;
+        break;
+      }
     }
   }
 
@@ -173,6 +292,40 @@ export class Simulation {
   kannBauen(typ: string, q: number, r: number): boolean {
     const h = this.karte.index(q, r);
     return h >= 0 && this.hexKannBauen(typ, h);
+  }
+
+  /** Größter Bauplatz, der hier jetzt ginge (0 keiner … 3 groß): Gelände, Belegung (Gebäude, Fahne, Weg) und Nachbarregel. */
+  bauplatzGroesse(q: number, r: number): 0 | 1 | 2 | 3 {
+    const h = this.karte.index(q, r);
+    if (h < 0 || !this.hexFrei(h)) return 0;
+    return this.karte.bebaubar[h] as 0 | 1 | 2 | 3;
+  }
+
+  /** Baukosten eines Gebäudetyps je Warenart (Kopie; leer bei unbekanntem Typ). */
+  kosten(typ: string): number[] {
+    const t = typVon(typ);
+    return t ? t.kosten.slice() : [];
+  }
+
+  /**
+   * Hexe im Arbeitsradius eines Holzfällers (ausgewachsene Bäume), Steinbruchs (Fels-Einheiten) oder Försters (freie Pflanzplätze)
+   * für die Bauvorschau; (q, r) ist das Gebäude, `mitte` der Arbeitsmittelpunkt (ohne: das Gebäude). n = Menge je Hex, gut = im
+   * inneren Ring (Abstand zum Mittelpunkt ≤ radiusGut), summe = Gesamtmenge. art 'keine' bei anderen Typen. Rechnet höchstens ~60 Hexe.
+   */
+  arbeitsHexe(typ: string, q: number, r: number, mitte?: { q: number; r: number }): { art: 'baum' | 'fels' | 'platz' | 'keine'; hexe: { q: number; r: number; n: number; gut: boolean }[]; summe: number } {
+    const t = typVon(typ), geb = this.karte.index(q, r);
+    const art = t?.funktion === 'holzfaeller' ? 'baum' : t?.funktion === 'steinbruch' ? 'fels' : t?.funktion === 'foerster' ? 'platz' : 'keine';
+    const aus: { q: number; r: number; n: number; gut: boolean }[] = [];
+    let summe = 0;
+    if (!t || art === 'keine' || geb < 0) return { art, hexe: aus, summe };
+    const m = mitte ? this.karte.index(mitte.q, mitte.r) : -1;
+    const c = m >= 0 ? m : geb;
+    for (const x of this.hexeImRadius(c, t.radius, c !== geb)) {
+      if (x === geb) continue;
+      const n = art === 'baum' ? this.baum[x] : art === 'fels' ? this.fels[x] : this.pflanzbar(x) ? TREE_MAX - this.baum[x] - this.jung[x] : 0;
+      if (n > 0) { aus.push({ q: this.karte.qs[x], r: this.karte.rs[x], n, gut: this.karte.abstand(c, x) <= t.radiusGut }); summe += n; }
+    }
+    return { art, hexe: aus, summe };
   }
 
   /**
@@ -191,6 +344,30 @@ export class Simulation {
       if (istZiel) return true;
       return !this.hexFahne[h] && !this.hexGeb[h] && !this.hexWeg[h];
     }, WEG_MAX_SCHRITTE);
+    return p ? p.map((h) => ({ q: k.qs[h], r: k.rs[h] })) : null;
+  }
+
+  /**
+   * Teilstück eines selbst geführten Wegs: Pfad von `von` (muss keine Fahne tragen) nach `nach` (Fahne, Weg-Hex oder freier Hex,
+   * der eine Fahne tragen kann). Zwischen den Enden nur freie Hexe, Hexe aus `belegt` (schon benutzte Hexe des offenen Wegs)
+   * sind gesperrt, das Ziel darf nicht darunter sein. Höchstens `maxSchritte` Schritte; null, wenn es keinen gibt.
+   */
+  wegAbschnitt(von: { q: number; r: number }, nach: { q: number; r: number }, belegt: { q: number; r: number }[], maxSchritte: number): { q: number; r: number }[] | null {
+    const k = this.karte;
+    const a = k.index(von.q, von.r), z = k.index(nach.q, nach.r);
+    if (a < 0 || z < 0 || a === z || !k.begehbar[a] || !k.begehbar[z] || maxSchritte < 1) return null;
+    const gesperrt = new Set<number>();
+    for (const b of belegt) { const i = k.index(b.q, b.r); if (i >= 0) gesperrt.add(i); }
+    gesperrt.delete(a);
+    if (gesperrt.has(z)) return null;
+    const fa = this.fahnen.get(this.hexFahne[a]);
+    if (fa && fa.segmente.length >= FAHNE_MAX_SEGMENTE) return null;
+    if (this.hexFahne[z]) { if (this.fahnen.get(this.hexFahne[z])!.segmente.length >= FAHNE_MAX_SEGMENTE) return null; }
+    else if (!this.hexKannFahne(z)) return null;
+    const p = sucheWeg(k, a, z, (h, istZiel) => {
+      if (istZiel) return true;
+      return !this.hexFahne[h] && !this.hexGeb[h] && !this.hexWeg[h] && !gesperrt.has(h);
+    }, Math.min(maxSchritte, WEG_MAX_SCHRITTE));
     return p ? p.map((h) => ({ q: k.qs[h], r: k.rs[h] })) : null;
   }
 
@@ -218,21 +395,92 @@ export class Simulation {
       segmente: [...this.segmente.values()].map((s) => ({ id: s.id, a: s.a, b: s.b, pfad: s.pfad.map(hx), traeger: s.traeger, verkehr: s.verkehr })),
       traeger: tr,
       gebaeude: [...this.gebaeude.values()].map((g) => {
+        const t = GEBAEUDE[g.typ];
         const o: SimSicht['gebaeude'][number] = {
           id: g.id, typ: g.typ, ...hx(g.h), fahne: g.fahne,
-          bau: g.bt >= BAU_TICKS ? PROMILLE : Math.floor((PROMILLE * g.bt) / BAU_TICKS),
-          getrennt: g.getrennt,
+          bau: this.bauStand(g, t),
+          getrennt: g.getrennt, prioritaet: g.prio, zustand: this.zustandVon(g, t),
         };
         if (g.typ === 'lager') o.vorrat = g.vorrat.slice();
+        if (!g.fertig) o.bedarf = t.kosten.map((n, a) => Math.max(0, n - g.verbaut[a]));
+        if (t.pufferSumme > 0) o.puffer = g.puffer.slice();
+        if (t.ausgangMax > 0) o.ausgang = g.ausgang.slice();
+        const ar = this.arbeiterSicht(g, t);
+        if (ar) o.arbeiter = ar;
+        if (g.mitte >= 0) o.mitte = hx(g.mitte);
         return o;
       }),
       freieTraeger: this.freieTraeger,
+      natur: this.naturSicht(),
     };
   }
 
-  /** Zähler für Tests und Statistik: angekommene Waren, verbrauchte, erzeugte, längste Wartezeit mit Ware (Ticks). */
-  statistik(): { angekommen: number; verbraucht: number; erzeugt: number; maxWarte: number } {
-    return { ...this.stat };
+  /** Bäume und Felsen als Kopie; wird nur bei Änderung (rev) neu angelegt. */
+  private naturSicht(): SichtNatur {
+    if (!this.natCache || this.natCache.rev !== this.natRev) {
+      this.natCache = { rev: this.natRev, baum: this.baum.slice(), jung: this.jung.slice(), stufe: this.stufe.slice(), fels: this.fels.slice(), felsArt: this.felsArtKopie, start: this.baumStartKopie };
+    }
+    return this.natCache;
+  }
+
+  private bauStand(g: Gebaeude, t: GebaeudeTyp): number {
+    if (g.fertig || t.kostenSumme === 0) return PROMILLE;
+    let v = 0;
+    for (let a = 0; a < g.verbaut.length; a++) v += Math.min(g.verbaut[a], t.kosten[a]);
+    return Math.min(PROMILLE - 1, Math.floor((PROMILLE * v) / t.kostenSumme));
+  }
+
+  private zustandVon(g: Gebaeude, t: GebaeudeTyp): GebaeudeZustand {
+    if (g.typ === 'lager') return 'bereit';
+    if (g.getrennt) return 'getrennt';
+    if (!g.fertig) {
+      let unterwegs = 0;
+      for (let a = 0; a < g.incoming.length; a++) unterwegs += g.incoming[a];
+      return unterwegs > 0 ? 'baustelle' : 'wartet_material';
+    }
+    if (t.funktion === 'wohnen') return 'bereit';
+    if (t.arbeiter && !g.ar) return 'kein_arbeiter';
+    if (t.funktion === 'saegewerk') {
+      if (g.arbeit) return 'arbeitet';
+      if (g.ausgang[t.ausgangWare] >= t.ausgangMax) return 'voll';
+      return g.puffer[t.wandelt!.ein] > 0 ? 'arbeitet' : 'wartet_material';
+    }
+    if (g.ph === PH_SUCHE) {
+      if (t.ausgangMax > 0 && g.ausgang[t.ausgangWare] >= t.ausgangMax) return 'voll';
+      if (g.leer) return t.funktion === 'holzfaeller' ? 'kein_baum' : t.funktion === 'steinbruch' ? 'kein_fels' : 'kein_platz';
+    }
+    return 'arbeitet';
+  }
+
+  private arbeiterSicht(g: Gebaeude, t: GebaeudeTyp): SichtArbeiter | undefined {
+    if (!g.fertig || !g.ar || t.radius === 0) return undefined;
+    const k = this.karte;
+    const hx = (h: number) => ({ q: k.qs[h], r: k.rs[h] });
+    const heim = hx(g.h);
+    const ziel = g.zh >= 0 && g.ph !== PH_SUCHE && g.ph !== PH_RUHE ? hx(g.zh) : null;
+    const prom = (t0: number, d: number) => (d > 0 ? Math.min(PROMILLE - 1, Math.floor((PROMILLE * t0) / d)) : 0);
+    const schr = (d: number) => (d > 0 ? Math.max(1, Math.floor(PROMILLE / d)) : 0);
+    switch (g.ph) {
+      case PH_HIN:
+        return { von: hx(g.weg[g.wi]), nach: hx(g.weg[g.wi + 1]), fortschritt: prom(g.pt, g.pd), schritt: schr(g.pd), tut: 'geht', ziel, ware: -1 };
+      case PH_ARBEIT:
+        return { von: hx(g.zh), nach: hx(g.zh), fortschritt: prom(g.pt, g.pd), schritt: schr(g.pd), tut: 'arbeitet', ziel, ware: -1 };
+      case PH_ZURUECK:
+        return {
+          von: hx(g.weg[g.wi]), nach: hx(g.weg[g.wi - 1]), fortschritt: prom(g.pt, g.pd), schritt: schr(g.pd),
+          tut: g.traegt >= 0 ? 'traegt' : 'geht', ziel, ware: g.traegt,
+        };
+      default:
+        return { von: heim, nach: heim, fortschritt: 0, schritt: 0, tut: 'ruht', ziel: null, ware: -1 };
+    }
+  }
+
+  /**
+   * Zähler für Tests und Statistik: angekommene Waren (im Lager, Puffer oder verbaut), verbrauchte (M5), erzeugte (in einen
+   * Output-Puffer gelegt), verbaute, längste Wartezeit mit Ware (Ticks); erzeugtJe = erzeugte Waren je Warenart.
+   */
+  statistik(): { angekommen: number; verbraucht: number; erzeugt: number; maxWarte: number; verbaut: number; erzeugtJe: number[] } {
+    return { ...this.stat, erzeugtJe: this.erzeugtJe.slice() };
   }
 
   /** Prüft innere Widersprüche (Reservierungen, Hex-Belegung, Verweise); leer = in Ordnung. */
@@ -251,11 +499,28 @@ export class Simulation {
       const s = this.segmente.get(t.seg);
       if (!s || s.traeger !== t.id) fehler.push(`Träger ${t.id}: Segment ${t.seg}`);
     }
+    let arbeiter = 0;
+    const bRes = new Map<number, number>(), fRes = new Map<number, number>();
     for (const g of this.gebaeude.values()) {
+      const t = GEBAEUDE[g.typ];
       for (let a = 0; a < WAREN.length; a++) {
         const soll = inc.get(`${g.id}:${a}`) ?? 0;
         if (g.incoming[a] !== soll) fehler.push(`Gebäude ${g.id} incoming[${a}] ${g.incoming[a]} statt ${soll}`);
+        if (g.verbaut[a] > t.kosten[a]) fehler.push(`Gebäude ${g.id}: mehr verbaut als nötig (Ware ${a})`);
+        if (g.fertig && g.verbaut[a] < t.kosten[a]) fehler.push(`Gebäude ${g.id}: fertig ohne volles Material (Ware ${a})`);
+        if (g.typ !== 'lager' && g.puffer[a] > t.puffer[a]) fehler.push(`Gebäude ${g.id}: Input-Puffer ${a} über Maximum`);
+        if (g.ausgang[a] > (a === t.ausgangWare ? t.ausgangMax : 0)) fehler.push(`Gebäude ${g.id}: Output-Puffer ${a} über Maximum`);
       }
+      arbeiter += g.ar;
+      if (g.ar && !t.arbeiter) fehler.push(`Gebäude ${g.id}: Arbeiter ohne Bedarf`);
+      if (g.ar && g.zh >= 0 && (g.ph === PH_HIN || g.ph === PH_ARBEIT)) {
+        if (t.funktion === 'holzfaeller') bRes.set(g.zh, (bRes.get(g.zh) ?? 0) + 1);
+        if (t.funktion === 'steinbruch') fRes.set(g.zh, (fRes.get(g.zh) ?? 0) + 1);
+      }
+      if (g.prio < PRIO_MIN || g.prio > PRIO_MAX) fehler.push(`Gebäude ${g.id}: Priorität ${g.prio}`);
+    }
+    if (this.freieTraeger + this.traeger.size + arbeiter !== TRAEGER_START) {
+      fehler.push(`Bewohner: ${this.freieTraeger} frei + ${this.traeger.size} Träger + ${arbeiter} Arbeiter statt ${TRAEGER_START}`);
     }
     for (const key of inc.keys()) {
       const id = Number(key.split(':')[0]);
@@ -265,6 +530,15 @@ export class Simulation {
       if (!this.fahnen.has(s.a) || !this.fahnen.has(s.b)) fehler.push(`Segment ${s.id}: Fahne fehlt`);
       for (let i = 1; i < s.pfad.length - 1; i++) if (this.hexWeg[s.pfad[i]] !== s.id) fehler.push(`Segment ${s.id}: Hex-Belegung`);
       if (s.traeger && !this.traeger.has(s.traeger)) fehler.push(`Segment ${s.id}: Träger fehlt`);
+    }
+    for (let i = 0; i < this.karte.count; i++) {
+      if ((bRes.get(i) ?? 0) !== this.baumRes[i]) fehler.push(`Hex ${i}: Baum-Reservierung ${this.baumRes[i]} statt ${bRes.get(i) ?? 0}`);
+      if ((fRes.get(i) ?? 0) !== this.felsRes[i]) fehler.push(`Hex ${i}: Fels-Reservierung ${this.felsRes[i]} statt ${fRes.get(i) ?? 0}`);
+      if (this.baum[i] + this.jung[i] > TREE_MAX) fehler.push(`Hex ${i}: zu viele Bäume`);
+      if ((this.hexFahne[i] || this.hexGeb[i] || this.hexWeg[i]) && (this.baum[i] || this.jung[i])) fehler.push(`Hex ${i}: Bäume auf belegtem Hex`);
+      let slots = 0;
+      for (let j = 0; j < TREE_MAX; j++) if (this.jungReif[i * TREE_MAX + j] > 0) slots++;
+      if (slots !== this.jung[i]) fehler.push(`Hex ${i}: Jungbaum-Plätze ${slots} statt ${this.jung[i]}`);
     }
     return fehler;
   }
@@ -276,7 +550,8 @@ export class Simulation {
     const w = (v: number) => { v |= 0; f.byte(v); f.byte(v >>> 8); f.byte(v >>> 16); f.byte(v >>> 24); };
     const liste = (a: readonly number[]) => { w(a.length); for (const v of a) w(v); };
     w(this._tick); w(this.rng); w(this.saat); w(this.naechsteId); w(this.freieTraeger); w(this.befehlZahl);
-    w(this.stat.angekommen); w(this.stat.verbraucht); w(this.stat.erzeugt);
+    w(this.stat.angekommen); w(this.stat.verbraucht); w(this.stat.erzeugt); w(this.stat.verbaut);
+    liste(this.erzeugtJe);
     w(this.fahnen.size);
     for (const x of this.fahnen.values()) {
       w(x.id); w(x.h); w(x.gebaeude); liste(x.segmente);
@@ -286,13 +561,28 @@ export class Simulation {
     for (const s of this.segmente.values()) { w(s.id); w(s.a); w(s.b); w(s.traeger); w(s.verkehr); w(s.kab); w(s.kba); liste(s.pfad); }
     w(this.traeger.size);
     for (const t of this.traeger.values()) {
-      w(t.id); w(t.seg); w(t.phase); w(t.ende); w(t.pos); w(t.dir); w(t.t); w(t.dauer); w(t.pause); w(t.art); w(t.ziel); w(t.warte);
+      w(t.id); w(t.seg); w(t.phase); w(t.ende); w(t.pos); w(t.dir); w(t.t); w(t.dauer); w(t.pause); w(t.art); w(t.ziel); w(t.baut); w(t.warte);
       liste(t.route); w(t.ri); liste(t.routeSegs);
     }
     w(this.gebaeude.size);
     for (const g of this.gebaeude.values()) {
-      w(g.id); f.text(g.typ); w(g.h); w(g.fahne); w(g.bt); w(g.getrennt ? 1 : 0); liste(g.puffer); liste(g.incoming); w(g.zeit); w(g.arbeit); liste(g.vorrat);
+      w(g.id); f.text(g.typ); w(g.h); w(g.fahne); w(g.fertig); liste(g.verbaut); w(g.prio); w(g.getrennt ? 1 : 0);
+      liste(g.puffer); liste(g.incoming); liste(g.ausgang); w(g.zeit); w(g.arbeit); liste(g.vorrat);
+      w(g.ar); w(g.ph); w(g.pt); w(g.pd); w(g.wi); w(g.zh); liste(g.weg); w(g.traegt); w(g.leer); w(g.mitte);
     }
+    // Natur: nur bei Änderung neu gehasht
+    w(this.natRev);
+    if (!this.natHash || this.natHash.rev !== this.natRev) {
+      const n = new Fnv2();
+      for (let i = 0; i < this.karte.count; i++) { n.byte(this.baum[i]); n.byte(this.jung[i]); n.byte(this.fels[i]); n.byte(this.felsArt[i]); }
+      for (let i = 0; i < this.jungReif.length; i++) {
+        const v = this.jungReif[i];
+        if (v) { n.byte(i); n.byte(i >>> 8); n.byte(i >>> 16); n.byte(v); n.byte(v >>> 8); n.byte(v >>> 16); }
+      }
+      this.natHash = { rev: this.natRev, hex: n.hex() };
+    }
+    f.text(this.natHash.hex);
+    liste(this.jungListe);
     return f.hex();
   }
 
@@ -307,17 +597,87 @@ export class Simulation {
     return true;
   }
 
-  private hexKannBauen(typ: string, h: number): boolean {
-    const t = GEBAEUDE[typ];
-    if (!t || typ === 'lager') return false;
+  /** Hex ohne Gebäude, Fahne, Weg und ohne Nachbar-Gebäude (Nachbarregel). */
+  private hexFrei(h: number): boolean {
     const k = this.karte;
-    if (!k.begehbar[h] || k.bebaubar[h] < t.groesse) return false;
-    if (this.hexFahne[h] || this.hexWeg[h] || this.hexGeb[h]) return false;
+    if (!k.begehbar[h] || this.hexFahne[h] || this.hexWeg[h] || this.hexGeb[h]) return false;
     for (let i = 0; i < 6; i++) {
       const n = k.nachbarn[h * 6 + i];
       if (n >= 0 && this.hexGeb[n]) return false;
     }
     return true;
+  }
+
+  private hexKannBauen(typ: string, h: number): boolean {
+    const t = typVon(typ);
+    if (!t || typ === 'lager') return false;
+    return this.karte.bebaubar[h] >= t.groesse && this.hexFrei(h);
+  }
+
+  // ------------------------------------------------------------------ Natur: Bäume und Felsen
+
+  /** Hexe im Radius (ohne die Mitte, mit `mitteDazu` einschließlich), Reihenfolge dr, dq aufsteigend (also nach Index). */
+  private hexeImRadius(h: number, radius: number, mitteDazu = false): number[] {
+    const k = this.karte, aus: number[] = [];
+    const q = k.qs[h], r = k.rs[h];
+    for (let dr = -radius; dr <= radius; dr++) {
+      for (let dq = Math.max(-radius, -dr - radius); dq <= Math.min(radius, -dr + radius); dq++) {
+        if (dq === 0 && dr === 0 && !mitteDazu) continue;
+        const x = k.index(q + dq, r + dr);
+        if (x >= 0) aus.push(x);
+      }
+    }
+    return aus;
+  }
+
+  /** Belegen (Gebäude, Fahne, Weg) vertreibt alle Bäume und Jungbäume des Hex (und Klippen-/Lesesteine). */
+  private hexRaeumen(h: number): void {
+    // Klippen und Lesesteine gehen beim Belegen verloren; ein Fels-Hex (Steinfeld) bleibt, wie er ist
+    if (this.fels[h] && this.felsArt[h] !== FELS_FELS) { this.fels[h] = 0; this.natRev++; }
+    if (!this.baum[h] && !this.jung[h]) return;
+    this.baum[h] = 0; this.jung[h] = 0; this.stufe[h] = 0;
+    for (let j = 0; j < TREE_MAX; j++) this.jungReif[h * TREE_MAX + j] = 0;
+    this.natRev++;
+  }
+
+  /** Förster-Platz: begehbare Wiese, Wald oder Heide ohne Belegung und Fels, mit Platz für einen weiteren Baum. */
+  private pflanzbar(x: number): boolean {
+    const k = this.karte, t = k.terrain[x];
+    if (t !== 1 && t !== 2 && t !== 3) return false;
+    if (k.flags[x] & FLAG.bahn) return false;
+    if (this.hexFahne[x] || this.hexGeb[x] || this.hexWeg[x] || this.fels[x]) return false;
+    return this.baum[x] + this.jung[x] < TREE_MAX;
+  }
+
+  private pflanzen(x: number): void {
+    for (let j = 0; j < TREE_MAX; j++) {
+      if (this.jungReif[x * TREE_MAX + j] === 0) {
+        this.jungReif[x * TREE_MAX + j] = this._tick + BAUM_WACHSEN;
+        if (!this.jungListe.includes(x)) this.jungListe.push(x);
+        this.jung[x]++;
+        this.stufe[x] = 1;
+        this.natRev++;
+        return;
+      }
+    }
+  }
+
+  /** Jungbäume altern (alle 10 Ticks): reife werden Bäume, das Stadium (1..3) des ältesten wird nachgeführt. */
+  private baeumeWachsen(): void {
+    if (!this.jungListe.length) return;
+    const t = this._tick;
+    for (const x of this.jungListe) {
+      let aeltester = 0;
+      for (let j = 0; j < TREE_MAX; j++) {
+        const reif = this.jungReif[x * TREE_MAX + j];
+        if (reif === 0) continue;
+        if (reif <= t) { this.jungReif[x * TREE_MAX + j] = 0; this.jung[x]--; this.baum[x]++; this.natRev++; }
+        else if (aeltester === 0 || reif < aeltester) aeltester = reif;
+      }
+      const st = aeltester === 0 ? 0 : Math.min(3, 1 + Math.floor((3 * Math.max(0, BAUM_WACHSEN - (aeltester - t))) / BAUM_WACHSEN));
+      if (st !== this.stufe[x]) { this.stufe[x] = st; this.natRev++; }
+    }
+    this.jungListe = this.jungListe.filter((x) => this.jung[x] > 0);
   }
 
   // ------------------------------------------------------------------ Netz aufbauen
@@ -331,20 +691,31 @@ export class Simulation {
     const f: Fahne = { id: this.naechsteId++, h, gebaeude, waren: [], segmente: [] };
     this.fahnen.set(f.id, f);
     this.hexFahne[h] = f.id;
+    this.hexRaeumen(h);
     this.netzGeaendert();
     return f;
   }
 
   private gebaeudeErzeugen(typ: string, h: number, sofort: boolean): Gebaeude {
+    const t = GEBAEUDE[typ];
+    const nul = () => new Array<number>(WAREN.length).fill(0);
     const g: Gebaeude = {
-      id: this.naechsteId++, typ, h, fahne: 0, bt: sofort ? BAU_TICKS : 0, getrennt: typ !== 'lager',
-      puffer: [0, 0, 0, 0], incoming: [0, 0, 0, 0], zeit: 0, arbeit: 0, vorrat: [0, 0, 0, 0],
+      id: this.naechsteId++, typ, h, fahne: 0, fertig: sofort || t.kostenSumme === 0 ? 1 : 0,
+      verbaut: sofort ? t.kosten.slice() : nul(), prio: PRIO_STANDARD, getrennt: typ !== 'lager',
+      puffer: nul(), incoming: nul(), ausgang: nul(), zeit: 0, arbeit: 0, vorrat: nul(),
+      ar: 0, ph: PH_SUCHE, pt: 0, pd: 0, wi: 0, zh: -1, weg: [], traegt: -1, leer: 0, mitte: -1,
     };
-    if (!sofort) g.zeit = this.zufall(40);
+    // gerodete ausgewachsene Bäume (höchstens RODUNG_STAMM_MAX) werden zu Stämmen an der Gebäudefahne
+    const staemme = sofort ? 0 : Math.min(RODUNG_STAMM_MAX, this.baum[h]);
     const f = this.fahneErzeugen(h, g.id);
     g.fahne = f.id;
+
     this.hexGeb[h] = g.id;
     this.gebaeude.set(g.id, g);
+    for (let i = 0; i < staemme && f.waren.length < FLAG_CAP; i++) {
+      this.wareAufFahne(f, WARE.stamm);
+      this.stat.erzeugt++; this.erzeugtJe[WARE.stamm]++;
+    }
     return g;
   }
 
@@ -442,7 +813,7 @@ export class Simulation {
     const s: Segment = { id: this.naechsteId++, a: fa.id, b: fz.id, pfad: hs.slice(), traeger: 0, verkehr: 0, kab: 0, kba: 0 };
     this.segKosten(s);
     this.segmente.set(s.id, s);
-    for (let i = 1; i < n - 1; i++) this.hexWeg[hs[i]] = s.id;
+    for (let i = 1; i < n - 1; i++) { this.hexWeg[hs[i]] = s.id; this.hexRaeumen(hs[i]); }
     fa.segmente.push(s.id); fa.segmente.sort((x, y) => x - y);
     fz.segmente.push(s.id); fz.segmente.sort((x, y) => x - y);
     this.netzGeaendert();
@@ -497,18 +868,36 @@ export class Simulation {
     this.netzGeaendert();
   }
 
-  /** Gebäude: Die Fahne bleibt frei; der Puffer landet an der Fahne, soweit Platz ist. Das Lager bleibt stehen. */
+  /**
+   * Gebäude oder Baustelle (DESIGN §4.7): Die Fahne bleibt frei; Input-/Output-Puffer, eine getragene Ware des Arbeiters und die Hälfte
+   * (abgerundet) des verbauten Materials landen an der Fahne, soweit Platz ist (FLAG_CAP); der Rest ist verloren. Der Arbeiter geht
+   * zurück in den Vorrat, Reservierungen fallen weg. Das Lager bleibt stehen.
+   */
   private gebaeudeAbreissen(id: Id): void {
     const g = this.gebaeude.get(id);
     if (!g || g.typ === 'lager') return;
     const f = this.fahnen.get(g.fahne)!;
+    const t = GEBAEUDE[g.typ];
     for (let a = 0; a < WAREN.length; a++) {
-      for (let i = 0; i < g.puffer[a]; i++) if (f.waren.length < FLAG_CAP) f.waren.push({ art: a, ziel: 0 });
+      const n = g.puffer[a] + g.ausgang[a] + (g.traegt === a ? 1 : 0) + Math.floor(g.verbaut[a] / 2);
+      for (let i = 0; i < n; i++) if (f.waren.length < FLAG_CAP) f.waren.push({ art: a, ziel: 0 });
+    }
+    if (g.ar) { this.freieTraeger++; this.reservierungFreigeben(g, t); }
+    // Träger, die gerade für diese Baustelle verbauen, behalten die Ware und legen sie an der Fahne ab
+    for (const x of this.traeger.values()) {
+      if (x.baut && x.ziel === id) { x.baut = 0; x.pause = 0; x.ziel = 0; }
     }
     f.gebaeude = 0;
     this.hexGeb[g.h] = 0;
     this.gebaeude.delete(id);
     this.netzGeaendert();
+  }
+
+  private reservierungFreigeben(g: Gebaeude, t: GebaeudeTyp): void {
+    if (g.zh >= 0 && (g.ph === PH_HIN || g.ph === PH_ARBEIT)) {
+      if (t.funktion === 'holzfaeller' && this.baumRes[g.zh] > 0) this.baumRes[g.zh]--;
+      if (t.funktion === 'steinbruch' && this.felsRes[g.zh] > 0) this.felsRes[g.zh]--;
+    }
   }
 
   // ------------------------------------------------------------------ Verbindung, Distanzen, Ziele
@@ -577,13 +966,32 @@ export class Simulation {
 
   private wareVerloren(w: Ware): void { this.wareZielLoesen(w); }
 
-  /** DESIGN §4.5: Verarbeiter/Verbraucher mit Platz im Puffer, sonst nächstes Lager; 0 = kein Ziel erreichbar. */
+  /** Offener Bedarf einer Baustelle an Ware `art`: Kosten − verbaut − unterwegs. */
+  private offen(g: Gebaeude, art: number): number {
+    return GEBAEUDE[g.typ].kosten[art] - g.verbaut[art] - g.incoming[art];
+  }
+
+  /** Freier Platz im Input-Puffer eines fertigen Verarbeiters für Ware `art` (Puffer − vorhanden − unterwegs). */
+  private pufferPlatz(g: Gebaeude, art: number): number {
+    return GEBAEUDE[g.typ].puffer[art] - g.puffer[art] - g.incoming[art];
+  }
+
+  /**
+   * DESIGN §4.5: 1. Baustelle mit offenem Bedarf (höchste Priorität, dann nächste), 2. Verarbeiter mit Platz im Input-Puffer
+   * (nächster), 3. nächstes Lager; 0 = kein Ziel erreichbar. Getrennte Baustellen und Gebäude bekommen nichts.
+   */
   private zielWaehlen(art: number, z: Fahne): Id {
-    let best = 0, bd = Infinity;
+    let best = 0, bp = 0, bd = Infinity;
     for (const g of this.gebaeude.values()) {
-      if (g.typ === 'lager' || g.getrennt || g.bt < BAU_TICKS) continue;
-      const max = GEBAEUDE[g.typ].puffer[art];
-      if (!max || g.puffer[art] + g.incoming[art] >= max) continue;
+      if (g.fertig || g.getrennt || this.offen(g, art) <= 0) continue;
+      const d = this.distZu(g.fahne).get(z.id);
+      if (d === undefined) continue;
+      if (g.prio > bp || (g.prio === bp && d < bd)) { bp = g.prio; bd = d; best = g.id; }
+    }
+    if (best) return best;
+    bd = Infinity;
+    for (const g of this.gebaeude.values()) {
+      if (g.typ === 'lager' || !g.fertig || g.getrennt || this.pufferPlatz(g, art) <= 0) continue;
       const d = this.distZu(g.fahne).get(z.id);
       if (d !== undefined && d < bd) { bd = d; best = g.id; }
     }
@@ -632,7 +1040,7 @@ export class Simulation {
   private inbNeu(): void {
     this.inb.clear();
     for (const t of this.traeger.values()) {
-      if (t.art < 0) continue;
+      if (t.art < 0 || t.baut) continue;
       const s = this.segmente.get(t.seg)!;
       this.inbAdd(t.phase === 2 ? (t.dir > 0 ? s.b : s.a) : (t.ende === 0 ? s.a : s.b), 1);
     }
@@ -640,11 +1048,29 @@ export class Simulation {
 
   private platz(f: Fahne): boolean { return f.waren.length + this.inbGet(f.id) < FLAG_CAP; }
 
-  private wareErzeugen(f: Fahne, art: number): void {
+  /** Ware aus dem Output-Puffer auf die Fahne legen und ein Ziel suchen. */
+  private wareAufFahne(f: Fahne, art: number): void {
     const w: Ware = { art, ziel: 0 };
     this.wareZielSetzen(w, f);
     f.waren.push(w);
+  }
+
+  /** Eine Ware in den Output-Puffer legen (Erzeugung, zählt in der Statistik). */
+  private produziert(g: Gebaeude, art: number): void {
+    g.ausgang[art]++;
     this.stat.erzeugt++;
+    this.erzeugtJe[art]++;
+  }
+
+  /** Ein Stück Material ist verbaut (vom Träger oder von der Fahne genommen). */
+  private verbauen(g: Gebaeude, art: number): void {
+    g.verbaut[art]++;
+    this.stat.angekommen++;
+    this.stat.verbaut++;
+    const t = GEBAEUDE[g.typ];
+    for (let a = 0; a < t.kosten.length; a++) if (g.verbaut[a] < t.kosten[a]) return;
+    g.fertig = 1;
+    g.ph = PH_SUCHE; g.pt = 0; g.leer = 0;
   }
 
   private gebaeudeTick(g: Gebaeude): void {
@@ -655,48 +1081,179 @@ export class Simulation {
       if (w.ziel !== g.id) continue;
       f.waren.splice(i, 1);
       if (g.incoming[w.art] > 0) g.incoming[w.art]--;
-      if (g.typ === 'lager') g.vorrat[w.art]++; else g.puffer[w.art]++;
-      this.stat.angekommen++;
+      if (g.typ === 'lager') { g.vorrat[w.art]++; this.stat.angekommen++; }
+      else if (!g.fertig) this.verbauen(g, w.art);
+      else { g.puffer[w.art]++; this.stat.angekommen++; }
       break;
     }
-    if (g.typ === 'lager') return;
-    if (g.bt < BAU_TICKS) { g.bt++; return; }
-    if (g.getrennt) return;
+    if (g.typ === 'lager' || !g.fertig || g.getrennt) return;
     const t = GEBAEUDE[g.typ];
-    if (t.erzeugt) {
-      if (g.zeit < t.erzeugt.ticks) g.zeit++;
-      if (g.zeit >= t.erzeugt.ticks && this.platz(f)) { this.wareErzeugen(f, t.erzeugt.ware); g.zeit = 0; }
-    } else if (t.wandelt) {
-      if (!g.arbeit) {
-        if (g.puffer[t.wandelt.ein] > 0) { g.puffer[t.wandelt.ein]--; g.arbeit = 1; g.zeit = 0; }
-      } else {
-        g.zeit++;
-        if (g.zeit >= t.wandelt.ticks && this.platz(f)) { this.wareErzeugen(f, t.wandelt.aus); g.arbeit = 0; g.zeit = 0; }
+    // Output-Puffer → Fahne, solange diese Platz hat (Rückstau)
+    if (t.ausgangMax > 0 && g.ausgang[t.ausgangWare] > 0 && this.platz(f)) {
+      g.ausgang[t.ausgangWare]--;
+      this.wareAufFahne(f, t.ausgangWare);
+    }
+    if (t.arbeiter && !g.ar) {
+      if (this.freieTraeger <= 0) return;
+      this.freieTraeger--;
+      g.ar = 1; g.ph = PH_SUCHE; g.pt = 0; g.leer = 0;
+    }
+    switch (t.funktion) {
+      case 'holzfaeller': case 'steinbruch': case 'foerster': this.laeuferTick(g, t); break;
+      case 'saegewerk': {
+        const wd = t.wandelt!;
+        if (!g.arbeit) {
+          if (g.puffer[wd.ein] > 0 && g.ausgang[wd.aus] < t.ausgangMax) { g.puffer[wd.ein]--; g.arbeit = 1; g.zeit = 0; }
+        } else {
+          g.zeit++;
+          if (g.zeit >= wd.ticks) { this.produziert(g, wd.aus); g.arbeit = 0; g.zeit = 0; }
+        }
+        break;
       }
-    } else if (t.verbraucht) {
-      g.zeit++;
-      if (g.zeit >= t.verbraucht.ticks) {
-        g.zeit = 0;
-        for (let a = 0; a < WAREN.length; a++) if (g.puffer[a] > 0) { g.puffer[a]--; this.stat.verbraucht++; }
+      default: break;
+    }
+  }
+
+  // ------------------------------------------------------------------ Arbeiter: Holzfäller, Steinbruch, Förster
+
+  /** Gehweg von Hex `von` nach `nach` (Schritt für Schritt näher, bei Gleichstand billigster Schritt, dann kleinster Index) oder null. */
+  private gehPfad(von: number, nach: number): number[] | null {
+    const k = this.karte, weg = [von];
+    let c = von;
+    while (c !== nach) {
+      const dc = k.abstand(c, nach);
+      let best = -1, bk = 0;
+      for (let d = 0; d < 6; d++) {
+        const n = k.nachbarn[c * 6 + d];
+        if (n < 0 || !k.begehbar[n] || k.abstand(n, nach) !== dc - 1) continue;
+        const kosten = k.schritt(c, n);
+        if (best < 0 || kosten < bk || (kosten === bk && n < best)) { best = n; bk = kosten; }
+      }
+      if (best < 0) return null;
+      weg.push(best);
+      c = best;
+    }
+    return weg;
+  }
+
+  /** Mittelpunkt des Arbeitsbereichs (Hex-Index): der gesetzte oder das Gebäude selbst. */
+  private arbeitsMitte(g: Gebaeude): number { return g.mitte >= 0 ? g.mitte : g.h; }
+
+  /** Hexe des Arbeitsbereichs: Radius um den Mittelpunkt (dieser selbst nur, wenn er nicht das Gebäude ist), ohne das Gebäude-Hex. */
+  private arbeitsHexeVon(g: Gebaeude, t: GebaeudeTyp): number[] {
+    return this.hexeImRadius(this.arbeitsMitte(g), t.radius, g.mitte >= 0).filter((x) => x !== g.h);
+  }
+
+  /** Hex im Arbeitsbereich mit freiem Baum/Fels, der vom Gebäude aus am schnellsten erreichbar ist (Gleichstand: kleinerer Index), samt Gehweg, oder null. */
+  private sucheRessource(g: Gebaeude, t: GebaeudeTyp): number[] | null {
+    const baum = t.funktion === 'holzfaeller';
+    let best: number[] | null = null, bk = Infinity, bi = 0;
+    for (const x of this.arbeitsHexeVon(g, t)) {
+      const frei = baum ? this.baum[x] - this.baumRes[x] : this.fels[x] - this.felsRes[x];
+      if (frei <= 0) continue;
+      const weg = this.gehPfad(g.h, x);
+      if (!weg) continue;
+      const kosten = this.karte.pfadKosten(weg);
+      if (kosten < bk || (kosten === bk && x < bi)) { best = weg; bk = kosten; bi = x; }
+    }
+    return best;
+  }
+
+  /** Förster: zufälliger Pflanzplatz unter allen erreichbaren Kandidaten im Arbeitsbereich, samt Gehweg, oder null. */
+  private suchePflanzplatz(g: Gebaeude, t: GebaeudeTyp): number[] | null {
+    const wege: number[][] = [];
+    for (const x of this.arbeitsHexeVon(g, t)) {
+      if (!this.pflanzbar(x)) continue;
+      const weg = this.gehPfad(g.h, x);
+      if (weg) wege.push(weg);
+    }
+    return wege.length ? wege[this.zufall(wege.length)] : null;
+  }
+
+  private laeuferTick(g: Gebaeude, t: GebaeudeTyp): void {
+    const k = this.karte;
+    switch (g.ph) {
+      case PH_SUCHE: {
+        if (t.ausgangMax > 0 && g.ausgang[t.ausgangWare] >= t.ausgangMax) return; // Rückstau: Arbeit ruht
+        if (g.pt > 0) { g.pt--; return; }
+        const weg = t.funktion === 'foerster' ? this.suchePflanzplatz(g, t) : this.sucheRessource(g, t);
+        if (!weg) { g.leer = 1; g.pt = SUCHE_WARTE; return; }
+        g.leer = 0;
+        g.weg = weg; g.zh = weg[weg.length - 1];
+        if (t.funktion === 'holzfaeller') this.baumRes[g.zh]++;
+        else if (t.funktion === 'steinbruch') this.felsRes[g.zh]++;
+        g.wi = 0; g.pt = 0; g.pd = k.schritt(weg[0], weg[1]); g.ph = PH_HIN;
+        return;
+      }
+      case PH_HIN: {
+        g.pt++;
+        if (g.pt < g.pd) return;
+        g.pt = 0; g.wi++;
+        if (g.wi >= g.weg.length - 1) { g.ph = PH_ARBEIT; g.pd = t.arbeitTicks; } else g.pd = k.schritt(g.weg[g.wi], g.weg[g.wi + 1]);
+        return;
+      }
+      case PH_ARBEIT: {
+        g.pt++;
+        if (g.pt < g.pd) return;
+        const x = g.zh;
+        g.traegt = -1;
+        if (t.funktion === 'holzfaeller') {
+          if (this.baumRes[x] > 0) this.baumRes[x]--;
+          if (this.baum[x] > 0) { this.baum[x]--; this.natRev++; g.traegt = t.ausgangWare; }
+        } else if (t.funktion === 'steinbruch') {
+          if (this.felsRes[x] > 0) this.felsRes[x]--;
+          if (this.fels[x] > 0) { this.fels[x]--; this.natRev++; g.traegt = t.ausgangWare; }
+        } else if (this.pflanzbar(x)) this.pflanzen(x);
+        g.ph = PH_ZURUECK; g.pt = 0; g.wi = g.weg.length - 1; g.pd = k.schritt(g.weg[g.wi], g.weg[g.wi - 1]);
+        return;
+      }
+      case PH_ZURUECK: {
+        g.pt++;
+        if (g.pt < g.pd) return;
+        g.pt = 0; g.wi--;
+        if (g.wi <= 0) {
+          if (g.traegt >= 0) { this.produziert(g, g.traegt); g.traegt = -1; }
+          g.weg = []; g.zh = -1; g.ph = PH_RUHE; g.pd = t.ruheTicks;
+        } else g.pd = k.schritt(g.weg[g.wi], g.weg[g.wi - 1]);
+        return;
+      }
+      default: {
+        g.pt++;
+        if (g.pt >= g.pd) { g.ph = PH_SUCHE; g.pt = 0; }
       }
     }
   }
 
-  /** Lager-Auslieferung als Pull: Bedarf meldet sich, das nächste verbundene Lager mit Vorrat gibt eine Ware an seine Fahne. */
+  /**
+   * Lager-Auslieferung als Pull (DESIGN §4.5): Baustellen (Priorität absteigend, dann Id) und danach Verarbeiter melden Bedarf, das
+   * nächste verbundene Lager mit Vorrat gibt je Durchlauf eine Ware an seine Fahne.
+   */
+  /** Waren an der Lagerfahne, die das Lager verlassen (Ziel nicht das Lager selbst). */
+  private ausgehend(l: Gebaeude): number {
+    let n = 0;
+    for (const w of this.fahnen.get(l.fahne)!.waren) if (w.ziel !== l.id) n++;
+    return n;
+  }
+
   private lagerPull(): void {
     const gezogen = new Set<Id>();
+    const baustellen: Gebaeude[] = [], verarbeiter: Gebaeude[] = [];
     for (const g of this.gebaeude.values()) {
-      if (g.typ === 'lager' || g.getrennt || g.bt < BAU_TICKS) continue;
-      const t = GEBAEUDE[g.typ];
+      if (g.typ === 'lager' || g.getrennt) continue;
+      if (!g.fertig) baustellen.push(g);
+      else if (GEBAEUDE[g.typ].pufferSumme > 0) verarbeiter.push(g);
+    }
+    if (!baustellen.length && !verarbeiter.length) return;
+    baustellen.sort((x, y) => y.prio - x.prio || x.id - y.id);
+    for (const g of baustellen.concat(verarbeiter)) {
       for (let a = 0; a < WAREN.length; a++) {
-        const max = t.puffer[a];
-        if (!max || g.puffer[a] + g.incoming[a] >= max) continue;
+        if ((g.fertig ? this.pufferPlatz(g, a) : this.offen(g, a)) <= 0) continue;
         const dm = this.distZu(g.fahne);
         let best: Gebaeude | null = null, bd = Infinity;
         for (const l of this.gebaeude.values()) {
           if (l.typ !== 'lager' || gezogen.has(l.id) || l.vorrat[a] <= 0) continue;
-          const lf = this.fahnen.get(l.fahne)!;
-          if (lf.waren.length + this.inbGet(lf.id) >= FLAG_CAP / 2) continue;
+          // Nur ausgehende Waren an der Lagerfahne bremsen; was zum Lager unterwegs ist, nimmt das Lager selbst ab
+          if (this.ausgehend(l) >= FLAG_CAP / 2) continue;
           const d = dm.get(l.fahne);
           if (d !== undefined && d < bd) { bd = d; best = l; }
         }
@@ -756,7 +1313,7 @@ export class Simulation {
     const t: Traeger = {
       id: this.naechsteId++, seg: s.id, phase: route.length > 1 ? 0 : 1, ende,
       pos: ende === 0 ? 0 : s.pfad.length - 1, dir: 1, t: 0, dauer: route.length > 1 ? this.karte.schritt(route[0], route[1]) : 0,
-      pause: 0, art: -1, ziel: 0, warte: 0, route: route.length > 1 ? route : [], ri: 0, routeSegs: segs,
+      pause: 0, art: -1, ziel: 0, baut: 0, warte: 0, route: route.length > 1 ? route : [], ri: 0, routeSegs: segs,
     };
     if (route.length <= 1) t.routeSegs = [];
     this.traeger.set(t.id, t);
@@ -766,7 +1323,11 @@ export class Simulation {
 
   private traegerSchritt(t: Traeger): void {
     const s = this.segmente.get(t.seg)!;
-    if (t.pause > 0) { t.pause--; return; }
+    if (t.pause > 0) {
+      t.pause--;
+      if (t.pause === 0 && t.baut) this.traegerVerbaut(t);
+      return;
+    }
     if (t.phase === 0) {
       t.t++;
       if (t.t >= t.dauer) {
@@ -789,6 +1350,17 @@ export class Simulation {
       }
     } else {
       this.bedienen(t, s);
+    }
+  }
+
+  /** Die Bau-Aktion des Trägers ist vorbei: Die getragene Ware ist verbaut. */
+  private traegerVerbaut(t: Traeger): void {
+    const g = this.gebaeude.get(t.ziel);
+    t.baut = 0;
+    if (g && !g.fertig) {
+      if (g.incoming[t.art] > 0) g.incoming[t.art]--;
+      this.verbauen(g, t.art);
+      t.art = -1; t.ziel = 0; t.warte = 0;
     }
   }
 
@@ -816,6 +1388,12 @@ export class Simulation {
     const x = this.fahnen.get(t.ende === 0 ? s.a : s.b)!;
     const y = this.fahnen.get(t.ende === 0 ? s.b : s.a)!;
     if (t.art >= 0) {
+      // Ist die Baustelle erreicht, verbaut der Träger die Ware selbst (BUILD_ACTION), statt sie abzulegen
+      const gz = t.ziel ? this.gebaeude.get(t.ziel) : undefined;
+      if (gz && !gz.fertig && gz.fahne === x.id && this.zielOk({ art: t.art, ziel: t.ziel }, x)) {
+        t.baut = 1; t.pause = BUILD_ACTION;
+        return;
+      }
       if (x.waren.length < FLAG_CAP) {
         const w: Ware = { art: t.art, ziel: t.ziel };
         if (w.ziel && !this.zielOk(w, x)) { this.wareZielLoesen(w); this.wareZielSetzen(w, x); }

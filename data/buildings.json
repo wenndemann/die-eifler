@@ -1,0 +1,44 @@
+{
+ "hinweis": "Gebäude nach DESIGN §6.2 (Startwerte, werden beim Spielen eingestellt). Zeiten in Sekunden, Kosten und Waren über Waren-Ids (goods.json). 'funktion' wählt das Verhalten in der Simulation; 'radius' ist der Arbeitsradius in Hexen um den Arbeitsmittelpunkt (außen „geht noch“), 'radiusGut' der innere Ring „gut“; 'eingang' der Input-Puffer je Ware, 'ausgang' der Output-Puffer.",
+ "gebaeude": [
+  {
+   "id": "lager", "name": "Dorfkern", "gruppe": "Wohnen", "symbol": "🏘️",
+   "spruch": "Hier fängt die Eifel an. Und hört so schnell nicht wieder auf.",
+   "funktion": "lager", "groesse": 3, "kosten": { "bretter": 4, "stein": 3 }, "wohnraum": 10,
+   "vorrat": { "bretter": 12, "stein": 8, "kartoffeln": 8 }
+  },
+  {
+   "id": "holzfaeller", "name": "Holzfällerhütte", "gruppe": "Holz & Stein", "symbol": "🪓",
+   "spruch": "Der Baum lag schon da. Wir haben ihn nur gefunden.",
+   "funktion": "holzfaeller", "groesse": 1, "kosten": { "bretter": 2 }, "radius": 4, "radiusGut": 2, "arbeiter": 1,
+   "ausgang": { "ware": "stamm", "max": 6 },
+   "zeiten": { "arbeit_s": 5, "ruhe_s": 2 }
+  },
+  {
+   "id": "foerster", "name": "Försterei", "gruppe": "Holz & Stein", "symbol": "🌱",
+   "spruch": "Wer pflanzt, braucht Geduld – und einen Hang, den kein Flachländer will.",
+   "funktion": "foerster", "groesse": 1, "kosten": { "bretter": 1 }, "radius": 4, "radiusGut": 2, "arbeiter": 1,
+   "zeiten": { "arbeit_s": 3, "ruhe_s": 3 }
+  },
+  {
+   "id": "saegewerk", "name": "Sägewerk", "gruppe": "Holz & Stein", "symbol": "🪚",
+   "spruch": "Aus einem Stamm werden Bretter, aus Brettern wird Streit um die Hecke.",
+   "funktion": "saegewerk", "groesse": 2, "kosten": { "bretter": 2, "stein": 1 }, "arbeiter": 1,
+   "eingang": { "stamm": 2 },
+   "wandelt": { "ein": "stamm", "aus": "bretter", "dauer_s": 5 },
+   "ausgang": { "ware": "bretter", "max": 6 }
+  },
+  {
+   "id": "steinbruch", "name": "Steinbruch", "gruppe": "Holz & Stein", "symbol": "⛏️",
+   "spruch": "Steine gibt es in der Eifel genug. Man muss sie nur finden – und dann noch tragen.",
+   "funktion": "steinbruch", "groesse": 1, "kosten": { "bretter": 2 }, "radius": 4, "radiusGut": 2, "arbeiter": 1,
+   "ausgang": { "ware": "stein", "max": 6 },
+   "zeiten": { "arbeit_s": 6, "ruhe_s": 2 }
+  },
+  {
+   "id": "huette", "name": "Eifeler Hütte", "gruppe": "Wohnen", "symbol": "🏠",
+   "spruch": "Klein, aber dicht. Der Wind pfeift, das Dach hält. Meistens.",
+   "funktion": "wohnen", "groesse": 1, "kosten": { "bretter": 3, "stein": 2 }, "wohnraum": 8
+  }
+ ]
+}

@@ -40,10 +40,18 @@ export type Befehl =
    */
   | { art: 'weg'; pfad: { q: number; r: number }[] }
   /**
-   * Gebäude bauen (DESIGN §4.1): Die Gebäude-Fahne steht auf dem Gebäude-Hex selbst (optisch vor dem Eingang,
+   * Gebäude bauen (DESIGN §4.1, §4.6): Platzieren kostet nichts, die Baustelle meldet Bedarf. Die Gebäude-Fahne steht auf dem Gebäude-Hex selbst (optisch vor dem Eingang,
    * Richtung Süden). Auf einem Hex mit freier Fahne oder Weg kann nicht gebaut werden.
    */
   | { art: 'gebaeude'; typ: string; q: number; r: number }
+  /** Baustellen-Priorität 1..3 (3 wird zuerst beliefert). Ungültig (keine Baustelle, Stufe außerhalb) → wirkungslos. */
+  | { art: 'prioritaet'; id: Id; stufe: number }
+  /**
+   * Arbeitsmittelpunkt eines Holzfällers, Försters oder Steinbruchs (auch als Baustelle) setzen: Der Arbeiter sucht im Radius um (q, r)
+   * und läuft vom Gebäude dorthin. Hex-Abstand zum Gebäude höchstens ARBEIT_MITTE_MAX, im Spielfeld, begehbar; das Gebäude-Hex selbst
+   * setzt zurück. Ungültig → wirkungslos.
+   */
+  | { art: 'arbeitsbereich'; id: Id; q: number; r: number }
   | { art: 'abriss_fahne'; id: Id }
   | { art: 'abriss_weg'; id: Id }
   | { art: 'abriss_gebaeude'; id: Id };
@@ -94,14 +102,79 @@ export interface SichtTraeger {
   tut: 'wartet' | 'laeuft' | 'uebergibt';
 }
 
+/**
+ * Zustand eines Gebäudes als Code (für „Wartet auf Stämme“ o. Ä. in der Oberfläche):
+ * - 'baustelle'       Baustelle, Material ist unterwegs oder wird verbaut
+ * - 'wartet_material' Baustelle ohne Lieferung unterwegs bzw. Verarbeiter ohne Rohstoff im Input-Puffer
+ * - 'getrennt'        keine Wegverbindung zu einem Lager (⚠)
+ * - 'kein_arbeiter'   fertig, aber kein freier Bewohner im Vorrat
+ * - 'kein_baum'       Holzfäller findet im Radius keinen ausgewachsenen Baum
+ * - 'kein_fels'       Steinbruch findet im Radius keinen Felsen mehr
+ * - 'kein_platz'      Förster findet im Radius keinen freien Pflanzplatz
+ * - 'voll'            Output-Puffer voll (Rückstau), die Arbeit ruht
+ * - 'arbeitet'        arbeitet gerade (auch auf dem Weg zur Arbeit)
+ * - 'bereit'          fertig und nichts zu tun (Lager, Hütte; M5: Wohnhaus)
+ */
+export type GebaeudeZustand =
+  | 'baustelle' | 'wartet_material' | 'getrennt' | 'kein_arbeiter' | 'kein_baum' | 'kein_fels' | 'kein_platz' | 'voll'
+  | 'arbeitet' | 'bereit';
+
+/** Der Arbeiter eines Holzfällers, Försters oder Steinbruchs (Figur in der Welt). */
+export interface SichtArbeiter {
+  /** Er läuft gerade von Hex von nach Hex nach; fortschritt 0..PROMILLE, je Tick um schritt weiter (wie SichtTraeger). */
+  von: { q: number; r: number };
+  nach: { q: number; r: number };
+  fortschritt: number;
+  schritt: number;
+  /** geht (leer) | arbeitet (fällt, pflanzt, haut; von = nach = Zielhex) | traegt (Stamm/Stein zurück) | ruht (an der Hütte). */
+  tut: 'geht' | 'arbeitet' | 'traegt' | 'ruht';
+  /** Zielhex (Baum, Fels, Pflanzplatz) oder null. */
+  ziel: { q: number; r: number } | null;
+  /** Getragene Warenart oder -1. */
+  ware: number;
+}
+
 export interface SichtGebaeude {
   id: Id; typ: string; q: number; r: number; fahne: Id;
-  /** 0..PROMILLE Baufortschritt; Bauphase = 1 + floor(3·bau/1001) (1, 2, 3), fertig bei PROMILLE. */
+  /** 0..PROMILLE Baufortschritt = verbautes Material / Gesamtbedarf; Bauphase = 1 + floor(3·bau/1001) (1, 2, 3), fertig bei PROMILLE. */
   bau: number;
   /** ⚠ keine Wegverbindung zu einem Lager. */
   getrennt: boolean;
   /** Vorrat (nur Lager): Menge je Warenart. */
   vorrat?: number[];
+  /** Offener Bedarf je Warenart = Kosten − verbaut (nur Baustelle). */
+  bedarf?: number[];
+  /** Baustellen-Priorität 1..3 (Standard 2; bei fertigen Gebäuden ohne Bedeutung). */
+  prioritaet: number;
+  /** Input-Puffer je Warenart (nur Gebäude mit Eingang, z. B. Sägewerk). */
+  puffer?: number[];
+  /** Output-Puffer je Warenart (nur Erzeuger/Verarbeiter). */
+  ausgang?: number[];
+  zustand: GebaeudeZustand;
+  /** Arbeiter-Figur (Holzfäller, Förster, Steinbruch), sobald ein Bewohner zugewiesen ist. */
+  arbeiter?: SichtArbeiter;
+  /** Arbeitsmittelpunkt, nur wenn gesetzt und ungleich dem Gebäude-Hex. */
+  mitte?: { q: number; r: number };
+}
+
+/**
+ * Bäume und Felsen als Zustand, je Hex indiziert wie SimKarte (Index = karte.index(q, r)). Die Arrays sind Kopien, werden nur bei
+ * Änderung neu erzeugt (dann steigt `rev`) und sonst unverändert wiederverwendet – nicht beschreiben.
+ */
+export interface SichtNatur {
+  rev: number;
+  /** Ausgewachsene Bäume je Hex (0..TREE_MAX). */
+  baum: Uint8Array;
+  /** Jungbäume je Hex (baum + jung ≤ TREE_MAX). */
+  jung: Uint8Array;
+  /** Alter des ältesten Jungbaums: 0 keiner, 1 Setzling, 2 Schössling, 3 fast ausgewachsen. */
+  stufe: Uint8Array;
+  /** Restmenge Fels (Stein) je Hex. */
+  fels: Uint8Array;
+  /** Art des Steins (statisch, bleibt auch nach dem Abbau): 0 keiner, 1 Fels, 2 Klippe, 3 Lesesteine. */
+  felsArt: Uint8Array;
+  /** Baumzahl je Hex beim Spielstart (statisch). */
+  start?: Uint8Array;
 }
 
 export interface SimSicht {
@@ -112,4 +185,8 @@ export interface SimSicht {
   gebaeude: SichtGebaeude[];
   /** Freie Träger im Vorrat. */
   freieTraeger: number;
+  natur: SichtNatur;
 }
+
+/** Leere Natur (ohne Hexe) für Darstellungen ohne Simulation, z. B. die Demo. */
+export const KEINE_NATUR: SichtNatur = { rev: 0, baum: new Uint8Array(0), jung: new Uint8Array(0), stufe: new Uint8Array(0), fels: new Uint8Array(0), felsArt: new Uint8Array(0) };

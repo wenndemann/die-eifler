@@ -106,18 +106,25 @@ Verschoben:
 
 ---
 
-## M4 – Bauen mit Holz und Stein
+## M4 – Bauen mit Holz und Stein ✅ (erster Stand)
 
 **Ziel:** Bauen kostet Material, Holz und Stein tragen das Wachstum (Drehbuch 4.2, 5.1).
 
-- [ ] Baustellen: Bedarf statt Sofortkosten, Einzel-Lieferung, Bau-Aktion, Priorität (DESIGN §4.6)
-- [ ] Holzkette: Holzfäller, Förster, Sägewerk; Bäume als Zustand, aus dem Kartenwald übernommen
-- [ ] Steinkette: Steinbruch an endlichen Felsen
-- [ ] Input-Puffer, Lager-Auslieferung (Pull), Abriss (DESIGN §4.5, §4.7)
-- [ ] Datengetrieben: `data/goods.json`, `data/buildings.json` (Startwerte aus DESIGN §6)
-- [ ] Erstes Baumenü mit Geistermodell, Bauplatz-Anzeige (klein/mittel/groß) und Bauvorschau
+- [x] Baustellen: Bedarf statt Sofortkosten, Einzel-Lieferung, Bau-Aktion, Priorität (DESIGN §4.6)
+- [x] Holzkette: Holzfäller, Förster, Sägewerk; Bäume als Zustand, aus dem Kartenwald übernommen
+- [x] Steinkette: Steinbruch an endlichen Felsen
+- [x] Input-Puffer, Lager-Auslieferung (Pull), Abriss (DESIGN §4.5, §4.7)
+- [x] Datengetrieben: `data/goods.json`, `data/buildings.json` (Startwerte aus DESIGN §6)
+- [x] Erstes Baumenü mit Geistermodell, Bauplatz-Anzeige (klein/mittel/groß) und Bauvorschau (Taste B, P; Gebäudekarte mit Priorität)
 
 **Abnahme:** Aus 12 Brettern und 8 Steinen entsteht ohne Eingriff eine laufende Holzwirtschaft. Holzfäller und Förster nebeneinander liefern nach 2 Minuten weiter Stämme.
+→ Vitest-Szenario `tests/m4-abnahme.test.ts` (mit Förster zwischen Minute 8 und 12 noch 16 Stämme, ohne Förster nach 4 Minuten keine mehr); Holzwirtschaft auch im Smoke-Test auf der echten Karte, Node = Browser.
+
+Nachgezogen nach dem ersten Anspielen: Im Spielfeld gibt es nur Bäume und Steine, die die Simulation kennt (Wald 3, Wiese/Heide/Moor teils 1 Baum; Fels 80, Klippe 25, Lesesteine 6–8 Steine), Bauen rodet und gibt Stämme, Arbeitsbereich mit setzbarem Mittelpunkt, Radius 4 mit innerem Ring 2, fairer Start (mindestens 150 Steine im Umkreis 8 ums Lager).
+
+Später (Feinschliff, nicht jetzt):
+- Gebäude-Effizienz als Anzeige (Auslastung, Laufwege) – mit den Gebäudefenstern (M7) und dem Balancing (M8)
+- Zahlen: Radien, Gebäudeabstand, Bäume je Hex, Wachstumszeit, Steinmengen
 
 ---
 

@@ -1,0 +1,17 @@
+{
+ "hinweis": "Waren nach DESIGN §6.1. Die Reihenfolge ist die Warenart (Index in der Simulation) und darf nur am Ende ergänzt werden.",
+ "waren": [
+  { "id": "stamm", "name": "Eifeler Baumstamm", "gruppe": "Grundstoff" },
+  { "id": "bretter", "name": "Eifeler Bretterstapel", "gruppe": "Grundstoff" },
+  { "id": "stein", "name": "Eifeler Stein", "gruppe": "Grundstoff" },
+  { "id": "setzling", "name": "Buchensetzling", "gruppe": "Grundstoff" },
+  { "id": "milch", "name": "Eifeler Milch", "gruppe": "Nahrung (einfach)" },
+  { "id": "aepfel", "name": "Eifeler Äpfel", "gruppe": "Nahrung (einfach)" },
+  { "id": "kartoffeln", "name": "Eifeler Kartoffeln", "gruppe": "Nahrung (einfach)" },
+  { "id": "kaese", "name": "Eifeler Schafkäse", "gruppe": "Nahrung (veredelt)" },
+  { "id": "most", "name": "Eifeler Most", "gruppe": "Nahrung (veredelt)" },
+  { "id": "bratkartoffeln", "name": "Eifeler Bratkartoffeln", "gruppe": "Nahrung (veredelt)" },
+  { "id": "honig", "name": "Eifeler Waldhonig", "gruppe": "Nahrung (veredelt)" },
+  { "id": "bergkaese", "name": "Eifeler Bergkäse", "gruppe": "Nahrung (edel)" }
+ ]
+}

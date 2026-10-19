@@ -88,7 +88,7 @@ export class Hud {
       <p class="help">${touch
         ? 'Ein Finger: verschieben · zwei Finger: zoomen und drehen · Antippen: wählen und bauen'
         : '<kbd>WASD</kbd> bewegen · <kbd>Q</kbd><kbd>E</kbd> drehen · Rad zoomen · rechte Maustaste ziehen<br>' +
-          '<kbd>1</kbd>–<kbd>6</kbd> bauen · <kbd>X</kbd> Abriss · <kbd>Esc</kbd> abbrechen · <kbd>Leertaste</kbd> Pause · <kbd>+</kbd><kbd>−</kbd> Tempo'}</p>`;
+          '<kbd>B</kbd> Baumenü · <kbd>1</kbd> Weg · <kbd>2</kbd> Fahne · <kbd>P</kbd> Bauplätze · <kbd>X</kbd> Abriss · <kbd>Esc</kbd> abbrechen · <kbd>Leertaste</kbd> Pause · <kbd>+</kbd><kbd>−</kbd> Tempo<br>Rechtsklick auf Baustelle: Priorität'}</p>`;
     root.append(set);
     set.querySelector('h3')!.addEventListener('click', () => set.classList.toggle('collapsed'));
     const credits = el('div', 'credits');

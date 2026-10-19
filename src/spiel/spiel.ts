@@ -9,17 +9,25 @@ import type { Ausschnitt } from '../welt/ausschnitt';
 import { FLAG, HEX } from '../welt/format';
 import { Simulation } from '../sim/sim';
 import { spieleAb } from '../sim/replay';
-import { FLAG_CAP, GEBAEUDE } from '../sim/daten';
+import { ARBEIT_MITTE_MAX, FLAG_CAP, GEBAEUDE, GEBAEUDE_IDS, WAREN, WAREN_NAMEN } from '../sim/daten';
 import { PROMILLE, TICK_HZ } from '../sim/typen';
-import type { Befehl, Protokoll, SichtFahne, SichtGebaeude, SichtSegment, SimSicht } from '../sim/typen';
+import type { Befehl, Id, Protokoll, SichtFahne, SichtGebaeude, SichtSegment, SimSicht } from '../sim/typen';
 import { Wege } from '../render/wege';
 import { Fahnen } from '../render/fahnen';
 import { Traeger } from '../render/traeger';
+import { Arbeiter } from '../render/arbeiter';
+import { Natur } from '../render/natur';
 import { Gebaeude, type GebaeudeHaken } from '../render/gebaeude';
 import { Markierung, type RingArt } from '../render/markierung';
-import { Spielleiste, WERKZEUGE, type Werkzeug } from '../ui/spielleiste';
+import { Bauplaetze } from '../render/bauplaetze';
+import { Geist } from '../render/geist';
+import { Spielleiste, type KartenDaten, type MenueGruppeDaten, type Werkzeug } from '../ui/spielleiste';
 import {
-  KlickErkenner, TEMPI, TickTakt, hexLinie, saatAusPruefsumme, waehleLagerHex, type Hx,
+  BAUPLATZ_NAMEN, bedarfNamen, fehlmengen, hexeImUmkreis, kostenText as kostenAlsText, menueGruppen, naechstePrioritaet, PRIO_NAMEN,
+  reichweiteText, wareTexte, zustandsText,
+} from './baumenue';
+import {
+  KlickErkenner, OffenerWeg, TEMPI, TickTakt, hexAbstand, hexLinie, naechsteSchritte, saatAusPruefsumme, waehleLagerHex, type Hx,
 } from './logik';
 
 export interface SpielKontext {
@@ -41,13 +49,32 @@ export interface SpielKontext {
   yAt: (x: number, z: number) => number;
 }
 
-const NAMEN: Record<string, string> = {
-  lager: 'Lager', holzfaeller: 'Holzfäller', steinbruch: 'Steinbruch', saegewerk: 'Sägewerk', wohnhaus: 'Wohnhaus',
-};
-const WARE_NAME = ['Stamm', 'Brett', 'Stein', 'Essen'];
-const BAUPLATZ_NAME = ['kein', 'klein', 'mittel', 'groß'];
-const AUF_PUMP = 'Material kommt in M4 – bis dahin baut der Eifeler auf Pump.';
-const GEBAEUDE_WERKZEUGE = ['holzfaeller', 'steinbruch', 'saegewerk', 'wohnhaus'];
+/** Anzeigenamen der Gebäude aus data/buildings.json. */
+const NAMEN: Record<string, string> = Object.fromEntries(Object.values(GEBAEUDE).map((t) => [t.id, t.name]));
+/** Kurznamen der Waren (letztes Wort des Anzeigenamens, z. B. „Baumstamm“). */
+const WARE_NAME: string[] = WAREN_NAMEN.map((n) => n.split(' ').slice(1).join(' ') || n);
+/** Texte der Waren für Kosten und Bedarf. */
+const WARE_TEXT = wareTexte(WAREN, WAREN_NAMEN);
+/** Alle Gebäudetypen, die man bauen kann (datengetrieben, ohne das Lager), in der Reihenfolge der Daten. */
+const GEBAEUDE_WERKZEUGE = GEBAEUDE_IDS.filter((id) => id !== 'lager');
+
+/** Baumenü aus den Daten: Gruppen und Gebäude wie in data/buildings.json (ohne Lager). */
+function menueDaten(): MenueGruppeDaten[] {
+  return menueGruppen(GEBAEUDE_IDS.map((id) => GEBAEUDE[id])).map((g) => ({
+    gruppe: g.gruppe,
+    eintraege: g.typen.map((t) => ({
+      id: t.id, symbol: t.symbol, name: t.name, spruch: t.spruch,
+      kostenText: kostenAlsText(t.kosten, WARE_TEXT, true), kosten: t.kosten,
+      groesse: t.groesse, groesseText: `Bauplatz ${BAUPLATZ_NAMEN[t.groesse]}`, radius: t.radius,
+    })),
+  }));
+}
+
+/** Arbeitsbereich zum Zeigen: Mitte, Außenkante der Ringe (innen „gut“, außen „geht noch“), Arbeitshexe und Zählung. */
+interface RingDaten {
+  mitte: Hx; innen: Hx[]; aussen: Hx[]; gut: Hx[]; fern: Hx[];
+  art: string; summe: number; nah: number;
+}
 
 const key = (h: Hx) => `${h.q},${h.r}`;
 const gleich = (a: Hx | null, b: Hx | null) => !!a && !!b && a.q === b.q && a.r === b.r;
@@ -60,8 +87,12 @@ export class Spiel {
   private readonly wege: Wege;
   private readonly fahnen: Fahnen;
   private readonly traeger: Traeger;
+  private readonly arbeiter: Arbeiter;
+  private readonly natur: Natur;
   private readonly gebaeude: Gebaeude;
   private readonly markierung: Markierung;
+  private readonly bauplaetze: Bauplaetze;
+  private readonly geist: Geist;
   private readonly leiste: Spielleiste;
   private readonly takt = new TickTakt(TICK_HZ);
   private readonly erkenner = new KlickErkenner();
@@ -79,7 +110,8 @@ export class Spiel {
   werkzeug: Werkzeug = 'keins';
   /** Hex unter Maus bzw. zuletzt angetippt (für Info und Markierung). */
   fokus: Hx | null = null;
-  private wegStart: Hx | null = null;
+  /** Offener Weg beim Wegbau von Hand: Start (Fahne) und feste Zwischenpunkte. */
+  private weg = new OffenerWeg();
   /** Touch: angetippter Hex, der noch bestätigt werden muss. */
   private offen: Hx | null = null;
   private zeiger: 'mouse' | 'touch';
@@ -89,6 +121,24 @@ export class Spiel {
   private meldung: { text: string; warn: boolean; bis: number } | null = null;
   private vorschauSig = '';
   private vorschauPfad: Hx[] | null = null;
+  private schrittSig = '';
+  private schrittHexe: Hx[] = [];
+  /** Gewähltes Gebäude (Gebäudekarte mit Zustand, Bedarf und Priorität). */
+  private gewaehlt: Id | null = null;
+  /** Bauplatz-Anzeige auch ohne Gebäude-Werkzeug (Taste P). */
+  private zeigeBauplaetze = false;
+  /** Hex in der Bildschirmmitte (Zentrum der Bauplatz-Anzeige, solange kein Zeiger da ist). */
+  private mitteHex: Hx | null = null;
+  private mitteTimer = 0;
+  private menueWarOffen = false;
+  private vorschauDatenSig = '';
+  private vorschauDaten: { ringe: RingDaten | null; text: string; warn: boolean; ok: boolean } | null = null;
+  /** Arbeitsbereich-Modus: Gebäude, dessen Mittelpunkt gerade gewählt wird (Ringe folgen dem Zeiger). */
+  private bereichId: Id | null = null;
+  private ringSig = '';
+  private ringDaten: RingDaten | null = null;
+  /** Text der Bauvorschau, der gerade in der Hinweiszeile steht ('' = keiner). */
+  private vorschauGesetzt = '';
 
   constructor(private ctx: SpielKontext) {
     const { ausschnitt, map, grid, base, ex } = ctx;
@@ -101,10 +151,15 @@ export class Spiel {
     this.fahnen = new Fahnen(map, grid, base, ex);
     this.traeger = new Traeger(map, grid, base, ex);
     this.gebaeude = new Gebaeude(map, grid, base, ex, ctx.haken);
+    this.arbeiter = new Arbeiter(map, grid, base, ex);
+    this.natur = new Natur(map, grid, base, ex, ctx.haken.trees);
     this.markierung = new Markierung(map, grid, base, ex);
+    this.bauplaetze = new Bauplaetze(map, grid, base, ex);
+    this.geist = new Geist(map, grid, base, ex);
     this.wege.wald = ctx.haken.trees ?? null;
-    this.fahnen.kamera = ctx.camera; this.traeger.kamera = ctx.camera; this.gebaeude.kamera = ctx.camera;
-    this.group.add(this.wege.group, this.fahnen.group, this.traeger.group, this.gebaeude.group, this.markierung.group);
+    this.fahnen.kamera = ctx.camera; this.traeger.kamera = ctx.camera; this.gebaeude.kamera = ctx.camera; this.arbeiter.kamera = ctx.camera;
+    this.group.add(this.wege.group, this.fahnen.group, this.traeger.group, this.gebaeude.group, this.arbeiter.group, this.natur.group,
+      this.bauplaetze.group, this.geist.group, this.markierung.group);
     ctx.scene.add(this.group);
 
     this.zeiger = matchMedia('(pointer: coarse)').matches ? 'touch' : 'mouse';
@@ -112,8 +167,13 @@ export class Spiel {
       onWerkzeug: (w) => this.waehleWerkzeug(w === this.werkzeug ? 'keins' : w),
       onBestaetigen: () => this.bestaetigen(),
       onAbbrechen: () => this.abbrechen(),
+      onZurueck: () => this.zurueck(),
       onTempo: (t) => (t === 0 ? this.pause(!this.pausiert) : this.setzeTempo(t)),
-    });
+      onPrioritaet: (stufe) => this.setzePrioritaet(stufe),
+      onKarteZu: () => { this.gewaehlt = null; this.karteSetzen(); },
+      onBereich: () => this.bereichUmschalten(),
+      onBereichZurueck: () => this.bereichZuruecksetzen(),
+    }, menueDaten());
     this._sicht = this._sim.sicht();
     this.indizes();
     this.leiste.setTempo(this.tempo, this.pausiert);
@@ -173,6 +233,8 @@ export class Spiel {
     this.ctx.ex = ex;
     this.wege.setExaggeration(ex); this.fahnen.setExaggeration(ex); this.traeger.setExaggeration(ex);
     this.gebaeude.setExaggeration(ex); this.markierung.setExaggeration(ex);
+    this.arbeiter.setExaggeration(ex); this.natur.setExaggeration(ex);
+    this.bauplaetze.setExaggeration(ex); this.geist.setExaggeration(ex);
   }
 
   // ------------------------------------------------------------------ Frame
@@ -188,6 +250,8 @@ export class Spiel {
     this.wege.update(this._sicht, a, dt);
     this.fahnen.update(this._sicht, a, dt);
     this.traeger.update(this._sicht, a, dt);
+    this.natur.update(this._sicht);
+    this.arbeiter.update(this._sicht, a, dt);
 
     // Maus: Hex unter dem Zeiger (gedrosselt, folgt auch der bewegten Kamera)
     this.mausTimer -= dt;
@@ -195,6 +259,12 @@ export class Spiel {
       this.mausTimer = 0.05;
       const h = this.hexUnter(this.maus.x, this.maus.y);
       if (!gleich(h, this.fokus)) { this.fokus = h; }
+    }
+    // Bildschirmmitte als Zentrum der Bauplatz-Anzeige (Touch oder Maus außerhalb), gedrosselt
+    this.mitteTimer -= dt;
+    if (this.mitteTimer <= 0 && this.bauplatzAn() && (this.zeiger === 'touch' || !this.fokus)) {
+      this.mitteTimer = 0.2;
+      this.mitteHex = this.ctx.pick(innerWidth / 2, innerHeight / 2) ? this.hexUnter(innerWidth / 2, innerHeight / 2) : this.mitteHex;
     }
     this.vorschauUndRinge();
 
@@ -206,6 +276,7 @@ export class Spiel {
   private neueSicht(): void {
     this._sicht = this._sim.sicht();
     this.indizes();
+    if (this.gewaehlt !== null) this.karteSetzen();
   }
 
   private indizes(): void {
@@ -237,6 +308,9 @@ export class Spiel {
     c.addEventListener('pointerdown', (e) => {
       this.zeiger = e.pointerType === 'mouse' ? 'mouse' : 'touch';
       if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 2) return;
+      // Ein offenes Baumenü schließt sich beim Tippen auf die Karte; dieser Tipp zählt dann nicht als Aktion
+      this.menueWarOffen = this.leiste.menueOffen;
+      this.leiste.menueZu();
       this.erkenner.runter(e.pointerId, e.clientX, e.clientY, performance.now(), e.button);
       if (this.zeiger === 'touch') this.hinweisSetzen();
     });
@@ -249,7 +323,8 @@ export class Spiel {
     });
     c.addEventListener('pointerup', (e) => {
       const knopf = this.erkenner.hoch(e.pointerId, e.clientX, e.clientY, performance.now());
-      if (knopf === 2) this.abbrechen();
+      if (this.menueWarOffen) { this.menueWarOffen = false; return; }
+      if (knopf === 2) { if (!this.rechtsklickPrioritaet(e.clientX, e.clientY)) this.abbrechen(); }
       else if (knopf === 0) this.klick(e.clientX, e.clientY);
     });
     c.addEventListener('pointercancel', (e) => this.erkenner.abbruch(e.pointerId));
@@ -260,11 +335,20 @@ export class Spiel {
     const t = e.target;
     if (t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
-    const ziffer = /^(?:Digit|Numpad)([1-6])$/.exec(e.code);
-    if (ziffer) { this.waehleWerkzeug(WERKZEUGE[Number(ziffer[1]) - 1].id); return; }
+    // 1 Weg, 2 Fahne, ab 3 die Gebäude in der Reihenfolge des Baumenüs
+    const ziffer = /^(?:Digit|Numpad)([1-9])$/.exec(e.code);
+    if (ziffer) {
+      const n = Number(ziffer[1]);
+      const w = n === 1 ? 'weg' : n === 2 ? 'fahne' : GEBAEUDE_WERKZEUGE[n - 3];
+      if (w) { this.leiste.menueZu(); this.waehleWerkzeug(w); }
+      return;
+    }
     switch (e.code) {
-      case 'Delete': case 'KeyX': this.waehleWerkzeug('abriss'); return;
+      case 'KeyB': this.leiste.menueUmschalten(); return;
+      case 'KeyP': this.zeigeBauplaetze = !this.zeigeBauplaetze; return;
+      case 'Delete': case 'KeyX': this.leiste.menueZu(); this.waehleWerkzeug('abriss'); return;
       case 'Escape': this.abbrechen(); return;
+      case 'Backspace': if (this.werkzeug === 'weg') { e.preventDefault(); this.zurueck(); } return;
       case 'Space': e.preventDefault(); this.pause(!this.pausiert); return;
       case 'Enter': case 'NumpadEnter': this.bestaetigen(); return;
       case 'NumpadAdd': this.setzeTempo(this.tempo + 1); return;
@@ -279,7 +363,7 @@ export class Spiel {
     const p = this.ctx.pick(x, y);
     if (!p) return null;
     const h = this.ctx.grid.fromWorld(p.x, p.z);
-    if (this.werkzeug === 'fahne' || GEBAEUDE_WERKZEUGE.includes(this.werkzeug)) return h;
+    if (this.werkzeug === 'fahne' || GEBAEUDE_WERKZEUGE.includes(this.werkzeug) || this.bereichId !== null) return h;
     if (this.gebAt.has(key(h))) return h;
     let best: Hx | null = null, bd = (HEX.R * 0.9) ** 2;
     for (const g of this._sicht.gebaeude) {
@@ -302,14 +386,21 @@ export class Spiel {
     this.zeiger = touch ? 'touch' : 'mouse';
     this.fokus = h;
     const w = this.werkzeug;
-    if (w === 'keins') return;
+    if (this.bereichId !== null) {
+      // Arbeitsbereich: Maus setzt sofort, Touch zeigt erst (zweiter Tipp oder „Setzen“ bestätigt)
+      if (touch && !gleich(this.offen, h)) { this.offen = h; this.hinweisSetzen(); return; }
+      this.offen = null;
+      this.bereichSetzen(h);
+      return;
+    }
+    if (w === 'keins') { this.gewaehlt = this.gebAt.get(key(h))?.id ?? null; this.karteSetzen(); return; }
     if (w === 'fahne') { this.aktion(h); return; }
-    if (w === 'weg' && !this.wegStart) {
-      if (this.fahneAt.has(key(h))) { this.wegStart = h; this.offen = null; this.hinweisSetzen(); }
+    if (w === 'weg' && !this.weg.aktiv) {
+      if (this.fahneAt.has(key(h))) { this.weg.beginne(h); this.offen = null; this.hinweisSetzen(); }
       else this.melde('Ein Weg beginnt an einer Fahne – erst eine Fahne wählen.', true);
       return;
     }
-    if (w === 'weg' && gleich(h, this.wegStart)) { this.wegStart = null; this.offen = null; this.hinweisSetzen(); return; }
+    if (w === 'weg') { this.wegKlick(h); return; }
     if (!touch) { this.aktion(h); return; }
     // Touch: erster Tipp zeigt, zweiter Tipp auf dasselbe Ziel (oder „Bauen“) führt aus
     if (gleich(this.offen, h)) { this.offen = null; this.aktion(h); return; }
@@ -317,26 +408,98 @@ export class Spiel {
     this.hinweisSetzen();
   }
 
+  /** Ist der Hex ein Endziel des Wegs (Fahne oder Weg-Hex), das den Weg sofort baut? */
+  private istEndziel(h: Hx): boolean {
+    return this.fahneAt.has(key(h)) || this.segAt.has(key(h));
+  }
+
+  /** Klick auf einen Hex bei laufendem Wegbau. */
+  private wegKlick(h: Hx): void {
+    const l = this.weg.letzter!;
+    if (gleich(h, l)) {
+      // nochmal auf den letzten Punkt: bis dorthin bauen; auf dem Start ohne Zwischenpunkte: Start verwerfen
+      if (this.weg.zwischenpunkte.length) this.wegBauen();
+      else { this.weg.leeren(); this.offen = null; this.hinweisSetzen(); }
+      return;
+    }
+    if (this.istEndziel(h)) {
+      // Fahne oder Weg baut sofort, auch am Handy: Wege kosten nichts und lassen sich abreißen
+      this.offen = null;
+      this.wegZu(h, true);
+      return;
+    }
+    this.offen = null;
+    this.wegZu(h, false);
+  }
+
+  /** Teilstück vom letzten Punkt nach `h` anhängen; bei `bauen` den ganzen Weg bauen, sonst `h` als Zwischenpunkt behalten. */
+  private wegZu(h: Hx, bauen: boolean): void {
+    const stueck = this._sim.wegAbschnitt(this.weg.letzter!, h, this.weg.pfad, this.weg.rest);
+    if (!stueck) { this.melde(this.weg.rest < 1 ? 'Der Weg ist am Limit (60 Schritte) – bauen oder zurück.' : 'Dorthin führt kein Weg (Hindernis, zu weit oder Fahne voll).', true); return; }
+    if (!this.weg.haengeAn(stueck)) { this.melde('Dorthin führt kein Weg.', true); return; }
+    if (bauen) this.wegBauen();
+    else { this.meldung = null; this.hinweisSetzen(); }
+  }
+
+  /** Den offenen Weg bis zum letzten Punkt bauen. Bei freiem Ende entsteht dort eine Fahne und der Weg geht von dort weiter. */
+  private wegBauen(): void {
+    const pfad = this.weg.pfad;
+    if (pfad.length < 2) return;
+    const ende = pfad[pfad.length - 1];
+    const hatFahne = this.fahneAt.has(key(ende));
+    this.befehl({ art: 'weg', pfad });
+    this.offen = null;
+    this.weg.leeren();
+    if (!hatFahne) this.weg.beginne(ende);
+    this.meldung = null;
+    this.hinweisSetzen();
+  }
+
+  /** Letzten Zwischenpunkt entfernen (Rücktaste, „Zurück“). */
+  zurueck(): void {
+    if (this.werkzeug !== 'weg' || !this.weg.zurueck()) return;
+    this.offen = null;
+    this.meldung = null;
+    this.hinweisSetzen();
+  }
+
   private bestaetigen(): void {
+    if (this.bereichId !== null) {
+      const h = this.offen ?? (this.zeiger === 'mouse' ? this.fokus : null);
+      if (h) { this.offen = null; this.bereichSetzen(h); }
+      return;
+    }
+    if (this.werkzeug === 'keins') return;
+    if (this.werkzeug === 'weg') {
+      if (!this.weg.aktiv) return;
+      if (this.offen) { const h = this.offen; this.offen = null; this.wegZu(h, true); return; }
+      if (this.weg.zwischenpunkte.length) { this.wegBauen(); return; }
+      // ohne Zwischenpunkte: wie ein Klick auf den Hex unter der Maus
+      if (this.zeiger === 'mouse' && this.fokus && !gleich(this.fokus, this.weg.start)) this.wegKlick(this.fokus);
+      return;
+    }
     const h = this.offen ?? (this.zeiger === 'mouse' ? this.fokus : null);
-    if (!h || this.werkzeug === 'keins') return;
-    if (this.werkzeug === 'weg' && !this.wegStart) return;
+    if (!h) return;
     this.offen = null;
     this.aktion(h);
   }
 
-  /** Esc, Rechtsklick, „Abbrechen“: erst das offene Ziel, dann den Wegstart, dann das Werkzeug. */
+  /** Esc, Rechtsklick, „Abbrechen“: erst das offene Ziel, dann den offenen Weg, dann das Werkzeug. */
   abbrechen(): void {
-    if (this.offen) this.offen = null;
-    else if (this.wegStart) this.wegStart = null;
+    if (this.leiste.menueOffen) { this.leiste.menueZu(); return; }
+    if (this.bereichId !== null) { this.bereichId = null; this.offen = null; this.karteSetzen(); }
+    else if (this.offen) this.offen = null;
+    else if (this.weg.aktiv) this.weg.leeren();
     else if (this.werkzeug !== 'keins') this.waehleWerkzeug('keins');
+    else if (this.gewaehlt !== null) { this.gewaehlt = null; this.karteSetzen(); }
     this.meldung = null;
     this.hinweisSetzen();
   }
 
   waehleWerkzeug(w: Werkzeug): void {
     this.werkzeug = w;
-    this.wegStart = null;
+    if (w !== 'keins') { this.bereichId = null; this.gewaehlt = null; this.karteSetzen(); }
+    this.weg.leeren();
     this.offen = null;
     this.meldung = null;
     this.vorschauSig = '';
@@ -355,22 +518,13 @@ export class Spiel {
     } else if (GEBAEUDE_WERKZEUGE.includes(w)) {
       if (this._sim.kannBauen(w, h.q, h.r)) {
         this.befehl({ art: 'gebaeude', typ: w, q: h.q, r: h.r });
-        this.melde(`${NAMEN[w]} wird gebaut. ${AUF_PUMP}`, false);
+        this.melde(`${NAMEN[w]} wird gebaut – Material kommt aus dem Lager (${this.kostenText(w)}).`, false);
       } else this.melde(`${NAMEN[w]} geht hier nicht: ${this.grundBauen(w, h)}.`, true);
     } else if (w === 'abriss') {
       const b = this.abrissBefehl(h);
       if (b === 'lager') this.melde('Das Lager bleibt stehen – ohne Lager geht es nicht.', true);
       else if (b) { this.befehl(b); this.melde('Abgerissen.', false); }
       else this.melde('Hier ist nichts zum Abreißen.', true);
-    } else if (w === 'weg' && this.wegStart) {
-      const pfad = this._sim.wegVorschau(this.wegStart, h);
-      if (!pfad) { this.melde('Dorthin führt kein Weg (Hindernis, zu weit oder Fahne voll).', true); return; }
-      const hatFahne = this.fahneAt.has(key(h));
-      this.befehl({ art: 'weg', pfad });
-      this.offen = null;
-      // Wege verketten: bei freiem Ziel wird dort eine Fahne gesetzt und ist der neue Start
-      this.wegStart = hatFahne ? null : { q: h.q, r: h.r };
-      this.hinweisSetzen();
     }
   }
 
@@ -401,7 +555,7 @@ export class Spiel {
     if (f.terrain[i] === 0) return 'Wasser';
     if (f.terrain[i] === 5) return 'Fels';
     if (f.flags[i] & FLAG.bahn) return 'Bahnstrecke';
-    if (k.bebaubar[hi] < need) return `Bauplatz ${BAUPLATZ_NAME[k.bebaubar[hi]]}, nötig: ${BAUPLATZ_NAME[need]}`;
+    if (k.bebaubar[hi] < need) return `Bauplatz ${BAUPLATZ_NAMEN[k.bebaubar[hi]]}, nötig: ${BAUPLATZ_NAMEN[need]}`;
     if (this.gebAt.has(key(h))) return 'hier steht schon ein Gebäude';
     if (this.fahneAt.has(key(h))) return 'hier ist eine Fahne';
     if (this.segAt.has(key(h))) return 'hier läuft ein Weg';
@@ -416,37 +570,285 @@ export class Spiel {
     const abst = this.ctx.abstand();
     let art: RingArt | null = null;
     let pfad: Hx[] | null = null;
+    let fest: Hx[] | null = null;
     let pfadOk = false;
+    const wegAktiv = w === 'weg' && this.weg.aktiv;
+    if (wegAktiv) fest = this.weg.pfad;
     if (ziel) {
       if (w === 'weg') {
-        if (this.wegStart) {
-          if (!gleich(ziel, this.wegStart)) {
-            const sig = `${key(this.wegStart)}>${key(ziel)}|${this.netzSig}`;
+        if (wegAktiv) {
+          const l = this.weg.letzter!;
+          if (!gleich(ziel, l)) {
+            const sig = `${this.weg.sig}>${key(ziel)}|${this.netzSig}`;
             if (sig !== this.vorschauSig) {
               this.vorschauSig = sig;
-              this.vorschauPfad = this._sim.wegVorschau(this.wegStart, ziel);
+              this.vorschauPfad = this._sim.wegAbschnitt(l, ziel, this.weg.pfad, this.weg.rest);
             }
             pfadOk = !!this.vorschauPfad;
-            pfad = this.vorschauPfad ?? hexLinie(this.wegStart, ziel);
+            pfad = this.vorschauPfad ?? hexLinie(l, ziel, Math.max(1, this.weg.rest));
             art = pfadOk ? 'gut' : 'schlecht';
-          }
+          } else art = 'neutral';
         } else art = this.fahneAt.has(key(ziel)) ? 'gut' : 'neutral';
       } else if (w === 'fahne') art = this._sim.kannFahne(ziel.q, ziel.r) ? 'gut' : 'schlecht';
       else if (GEBAEUDE_WERKZEUGE.includes(w)) art = this._sim.kannBauen(w, ziel.q, ziel.r) ? 'gut' : 'schlecht';
       else if (w === 'abriss') art = this.abrissBefehl(ziel) ? 'schlecht' : 'neutral';
+      else if (this.bereichId !== null) { const g = this.bereichGebaeude(); art = g && this.mitteGueltig(g, ziel) ? 'gut' : 'schlecht'; }
       else if (this.zeiger === 'touch') art = 'neutral';
     }
-    if (w !== 'weg' || !this.wegStart) this.vorschauSig = '';
-    this.wege.zeigeVorschau(pfad, pfadOk);
+    if (!wegAktiv) this.vorschauSig = '';
+    this.wege.zeigeVorschau(pfad, pfadOk, fest);
     this.markierung.setze(0, ziel && art ? ziel : null, art ?? 'neutral', abst);
-    this.markierung.setze(1, this.wegStart, 'gewaehlt', abst);
-    // Knöpfe: „Bauen“ nur, wenn ein Tipp aussteht
-    if (this.offen && w !== 'keins') {
+    this.markierung.setze(1, this.weg.start, 'gewaehlt', abst);
+    this.ringeZeigen(this.bauvorschau(w, ziel) ?? this.bereichRinge(ziel), abst);
+    // Zwischenpunkte und die möglichen nächsten Schritte (Hex für Hex)
+    this.markierung.setzeListe('punkte', wegAktiv ? this.weg.zwischenpunkte : [], 'gewaehlt', abst, 0.6);
+    this.markierung.setzeListe('nachbarn', wegAktiv ? this.naechste() : [], 'gut', abst, 0.35);
+    // Knöpfe: „Bauen“ nur, wenn ein Tipp aussteht (beim Wegführen auch mit Zwischenpunkten)
+    const punkte = wegAktiv ? this.weg.zwischenpunkte.length : 0;
+    if (this.bereichId !== null) {
+      const g = this.bereichGebaeude();
+      this.leiste.setAktionen(this.offen ? 'Setzen' : null, true, !(g && this.offen && this.mitteGueltig(g, this.offen)));
+    } else if (this.offen && w !== 'keins') {
       const ok = w === 'weg' ? pfadOk : art === 'gut' || (w === 'abriss' && art === 'schlecht');
-      this.leiste.setAktionen(w === 'abriss' ? 'Abreißen' : w === 'weg' ? 'Weg bauen' : 'Bauen', true, !ok);
+      this.leiste.setAktionen(w === 'abriss' ? 'Abreißen' : w === 'weg' ? 'Weg bauen' : 'Bauen', true, !ok, punkte > 0);
+    } else if (punkte > 0) {
+      this.leiste.setAktionen('Weg bauen', true, false, true);
     } else {
       this.leiste.setAktionen(null, w !== 'keins');
     }
+  }
+
+  private bauplatzAn(): boolean {
+    return this.zeigeBauplaetze || GEBAEUDE_WERKZEUGE.includes(this.werkzeug);
+  }
+
+  /**
+   * Bauplatz-Anzeige, Geistermodell, Arbeitsbereich und Hinweistext für das gewählte Gebäude. Nur lesend (kannBauen,
+   * bauplatzGroesse, arbeitsHexe, kosten); die Simulation ändert nur befehl(). Liefert die Ringe des Ziels oder null.
+   */
+  private bauvorschau(w: Werkzeug, ziel: Hx | null): RingDaten | null {
+    const bauen = GEBAEUDE_WERKZEUGE.includes(w);
+    // Bauplätze: um den Zeiger, den offenen Tipp oder die Bildschirmmitte
+    const zentrum = this.bauplatzAn() ? (ziel ?? this.fokus ?? this.mitteHex) : null;
+    this.bauplaetze.setze(zentrum, bauen ? GEBAEUDE[w].groesse : 0, (q, r) => this._sim.bauplatzGroesse(q, r), this.netzSig, bauen ? ziel : null);
+    if (!bauen || !ziel || this._sim.karte.index(ziel.q, ziel.r) < 0) {
+      this.geist.setze(null, null, false);
+      if (this.vorschauGesetzt && this.bereichId === null) { this.vorschauGesetzt = ''; this.hinweisSetzen(); }
+      return null;
+    }
+    const v = this.vorschauDatenFuer(w, ziel);
+    this.geist.setze(w, ziel, v.ok);
+    if (this.meldung) this.vorschauGesetzt = '';
+    else if (v.text !== this.vorschauGesetzt) { this.vorschauGesetzt = v.text; this.leiste.setHinweis(v.text, v.warn); }
+    return v.ringe;
+  }
+
+  /** Arbeitsbereich zeigen: innen „gut“ (grün), außen „geht noch“ (gedämpftes Gold), Hexe mit Arbeit als kleine Marken. */
+  private ringeZeigen(r: RingDaten | null, abst: number): void {
+    const m = this.markierung;
+    m.setzeUmriss('aussen', r ? r.aussen : [], '#f3df9a', 0.75, abst, 0.65);
+    m.setzeUmriss('innen', r ? r.innen : [], '#7cf075', 0.95, abst, 1);
+    m.setzeListe('arbeitGut', r ? r.gut : [], 'gut', abst, 0.4, 0.9);
+    m.setzeListe('arbeitFern', r ? r.fern : [], 'neutral', abst, 0.32, 0.7);
+  }
+
+  /** Radien, Arbeitshexe und Zählung für ein Arbeitsgebiet um `mitte` (Typ mit Arbeitsradius), oder null. */
+  private ringeFuer(typ: string, mitte: Hx): RingDaten | null {
+    const t = GEBAEUDE[typ];
+    if (!t || t.radius <= 0) return null;
+    const imFeld = (h: Hx) => this._sim.karte.index(h.q, h.r) >= 0;
+    // arbeitsHexe(typ, q, r) rechnet um (q, r); `gut` liefert die Simulation (sonst hier aus dem Abstand zur Mitte)
+    const ar = this._sim.arbeitsHexe(typ, mitte.q, mitte.r) as { art: string; hexe: { q: number; r: number; n: number; gut?: boolean }[]; summe: number };
+    const gut: Hx[] = [], fern: Hx[] = [];
+    let nah = 0;
+    for (const h of ar.hexe) {
+      const istGut = h.gut ?? hexAbstand(h, mitte) <= t.radiusGut;
+      (istGut ? gut : fern).push({ q: h.q, r: h.r });
+      if (istGut) nah += h.n;
+    }
+    return {
+      mitte, innen: t.radiusGut > 0 ? hexeImUmkreis(mitte, t.radiusGut, true).filter(imFeld) : [], aussen: hexeImUmkreis(mitte, t.radius, true).filter(imFeld),
+      gut, fern, art: ar.art, summe: ar.summe, nah,
+    };
+  }
+
+  /** Ringe, Text und Eignung der Bauvorschau; zwischengespeichert, bis sich Ziel, Natur, Netz oder Lagervorrat ändern. */
+  private vorschauDatenFuer(typ: string, ziel: Hx) {
+    const vorrat = this.lagerVorrat();
+    const sig = `${typ}|${key(ziel)}|${this._sicht.natur.rev}|${this.netzSig}|${vorrat.join(',')}`;
+    if (this.vorschauDaten && sig === this.vorschauDatenSig) return this.vorschauDaten;
+    const t = GEBAEUDE[typ];
+    const ok = this._sim.kannBauen(typ, ziel.q, ziel.r);
+    const ringe = ok ? this.ringeFuer(typ, ziel) : null;
+    let text: string, warn = false;
+    if (!ok) {
+      text = `${t.name} geht hier nicht: ${this.grundBauen(typ, ziel)}.`;
+      warn = true;
+    } else {
+      const kosten = this._sim.kosten(typ);
+      const rw = ringe ? reichweiteText(ringe.art, ringe.summe, ringe.nah) : null;
+      const teile = rw?.warn ? [rw.text] : [t.name, kostenAlsText(kosten, WARE_TEXT)];
+      if (rw && !rw.warn) teile.push(rw.text);
+      warn = !!rw?.warn;
+      const fehlt = fehlmengen(kosten, vorrat);
+      if (fehlt.some((n) => n > 0)) {
+        teile.push(`⚠ Im Lager fehlen ${kostenAlsText(fehlt, WARE_TEXT)} – die Baustelle wartet dann`);
+        warn = true;
+      }
+      text = teile.join(' · ');
+    }
+    this.vorschauDatenSig = sig;
+    this.vorschauDaten = { ringe, text, warn, ok };
+    return this.vorschauDaten;
+  }
+
+  // ------------------------------------------------------------------ Arbeitsbereich (Mittelpunkt setzen)
+
+  /** Gebäude, dessen Arbeitsbereich gerade gewählt wird. */
+  private bereichGebaeude(): SichtGebaeude | undefined {
+    return this.bereichId === null ? undefined : this._sicht.gebaeude.find((x) => x.id === this.bereichId);
+  }
+
+  /** Darf `h` Mittelpunkt für das Gebäude sein (im Spielfeld, begehbar, höchstens ARBEIT_MITTE_MAX entfernt)? */
+  private mitteGueltig(g: SichtGebaeude, h: Hx): boolean {
+    const k = this._sim.karte, i = k.index(h.q, h.r);
+    return i >= 0 && !!k.begehbar[i] && hexAbstand(g, h) <= ARBEIT_MITTE_MAX;
+  }
+
+  /**
+   * Ringe fürs gewählte Gebäude (an seinem Mittelpunkt) bzw. im Modus für den Zeiger; dazu Fähnchen und Linie zum gesetzten
+   * Mittelpunkt und im Modus der Hinweistext. null, wenn nichts zu zeigen ist.
+   */
+  private bereichRinge(ziel: Hx | null): RingDaten | null {
+    const abst = this.ctx.abstand();
+    const g = this.bereichGebaeude() ?? (this.gewaehlt === null ? undefined : this._sicht.gebaeude.find((x) => x.id === this.gewaehlt));
+    if (!g || !(GEBAEUDE[g.typ]?.radius > 0)) {
+      this.markierung.setzeFahne(null, abst); this.markierung.setzeLinie(null, null, abst);
+      return null;
+    }
+    const modus = this.bereichId !== null;
+    const gueltig = !!ziel && this.mitteGueltig(g, ziel);
+    const mitte: Hx = modus && ziel && gueltig ? ziel : (g.mitte ?? g);
+    const sig = `${g.typ}|${key(mitte)}|${this._sicht.natur.rev}`;
+    if (sig !== this.ringSig) { this.ringSig = sig; this.ringDaten = this.ringeFuer(g.typ, mitte); }
+    const verlegt = !gleich(mitte, g);
+    this.markierung.setzeFahne(verlegt ? mitte : null, abst);
+    this.markierung.setzeLinie(verlegt ? g : null, verlegt ? mitte : null, abst);
+    // Hinweistext im Modus: was am Zeiger in Reichweite liegt
+    if (modus && !this.meldung && this.ringDaten) {
+      const rw = reichweiteText(this.ringDaten.art, this.ringDaten.summe, this.ringDaten.nah);
+      const text = ziel && !gueltig ? `Zu weit weg oder unbegehbar – der Mittelpunkt darf höchstens ${ARBEIT_MITTE_MAX} Hexe vom Haus liegen.`
+        : `Arbeitsbereich hier: ${rw ? rw.text : 'nichts zu tun'}${this.zeiger === 'touch' ? ' – nochmal tippen oder „Setzen“' : ' – anklicken setzt'}`;
+      if (text !== this.vorschauGesetzt) { this.vorschauGesetzt = text; this.leiste.setHinweis(text, (!!ziel && !gueltig) || !!rw?.warn); }
+    }
+    return this.ringDaten;
+  }
+
+  private bereichUmschalten(): void {
+    const g = this.gewaehlt === null ? undefined : this._sicht.gebaeude.find((x) => x.id === this.gewaehlt);
+    if (!g || !(GEBAEUDE[g.typ]?.radius > 0)) return;
+    this.bereichId = this.bereichId === null ? g.id : null;
+    this.offen = null;
+    this.meldung = null;
+    this.hinweisSetzen();
+    this.karteSetzen();
+  }
+
+  /** Mittelpunkt auf `h` setzen (Befehl 'arbeitsbereich'); zu weit weg oder unbegehbar → rote Meldung, Modus bleibt. */
+  private bereichSetzen(h: Hx): void {
+    const g = this.bereichGebaeude();
+    if (!g) { this.bereichId = null; return; }
+    if (!this.mitteGueltig(g, h)) {
+      this.melde(hexAbstand(g, h) > ARBEIT_MITTE_MAX ? `Zu weit weg – höchstens ${ARBEIT_MITTE_MAX} Hexe vom Gebäude.` : 'Dorthin kommt keiner – der Mittelpunkt muss begehbar sein.', true);
+      return;
+    }
+    this.befehl({ art: 'arbeitsbereich', id: g.id, q: h.q, r: h.r });
+    this.bereichId = null;
+    this.melde(gleich(h, g) ? 'Arbeitsbereich wieder ums Haus.' : 'Arbeitsbereich verlegt – der Weg dorthin kostet Zeit.', false);
+    this.karteSetzen();
+  }
+
+  private bereichZuruecksetzen(): void {
+    const g = this.gewaehlt === null ? undefined : this._sicht.gebaeude.find((x) => x.id === this.gewaehlt);
+    if (!g || !(GEBAEUDE[g.typ]?.radius > 0)) return;
+    this.bereichId = null;
+    this.befehl({ art: 'arbeitsbereich', id: g.id, q: g.q, r: g.r });
+    this.melde('Arbeitsbereich wieder ums Haus.', false);
+    this.karteSetzen();
+  }
+
+  /** Vorrat aller Lager je Warenart. */
+  private lagerVorrat(): number[] {
+    const vorrat = new Array<number>(WAREN.length).fill(0);
+    for (const g of this._sicht.gebaeude) if (g.vorrat) for (let i = 0; i < vorrat.length; i++) vorrat[i] += g.vorrat[i] ?? 0;
+    return vorrat;
+  }
+
+  /** Nachbarn des letzten Punkts, die als nächster Schritt gelten (zwischengespeichert, solange sich Weg und Netz nicht ändern). */
+  private naechste(): Hx[] {
+    const sig = `${this.weg.sig}|${this.netzSig}`;
+    if (sig !== this.schrittSig) {
+      this.schrittSig = sig;
+      const belegt = this.weg.pfad;
+      this.schrittHexe = naechsteSchritte(this.weg, (von, nach) => this._sim.wegAbschnitt(von, nach, belegt, 1));
+    }
+    return this.schrittHexe;
+  }
+
+  // ------------------------------------------------------------------ Gebäudekarte und Priorität
+
+  /** Gebäudekarte der Oberfläche aus der Sicht füllen (Zustand in Klartext, Bedarf, Fortschritt, Priorität). */
+  private karteSetzen(): void {
+    const g = this.gewaehlt === null ? undefined : this._sicht.gebaeude.find((x) => x.id === this.gewaehlt);
+    if (!g) { this.gewaehlt = null; this.bereichId = null; this.leiste.setKarte(null); return; }
+    const t = GEBAEUDE[g.typ];
+    const baustelle = g.bau < PROMILLE;
+    const bedarf = g.bedarf ?? [];
+    const zt = zustandsText(g.getrennt ? 'getrennt' : g.zustand, baustelle, bedarfNamen(bedarf, WARE_TEXT));
+    const zeilen: string[] = [];
+    if (baustelle) {
+      const fehlt = kostenAlsText(bedarf, WARE_TEXT);
+      zeilen.push(fehlt === 'nichts' ? 'Material komplett – es wird verbaut.' : `Fehlt noch: ${fehlt}`);
+      zeilen.push(`Phase ${1 + Math.floor((3 * g.bau) / 1001)} von 3 · ${Math.floor(g.bau / 10)} % gebaut`);
+    } else {
+      if (t?.radius) {
+        zeilen.push(`Arbeitsbereich: gut bis ${t.radiusGut}, geht noch bis ${t.radius} Hexe${g.mitte ? ' – Mittelpunkt verlegt' : ''}`);
+        const ri = this.ringeFuer(g.typ, g.mitte ?? g);
+        const rw = ri ? reichweiteText(ri.art, ri.summe, ri.nah) : null;
+        if (rw) zeilen.push(rw.text);
+      }
+      if (g.puffer?.some((n) => n > 0)) zeilen.push(`Eingang: ${kostenAlsText(g.puffer, WARE_TEXT)}`);
+      if (g.ausgang?.some((n) => n > 0)) zeilen.push(`Wartet auf Abholung: ${kostenAlsText(g.ausgang, WARE_TEXT)}`);
+    }
+    const d: KartenDaten = {
+      symbol: t?.symbol ?? '🏠', titel: t?.name ?? g.typ, status: zt.titel, warn: zt.warn,
+      spruch: baustelle || zt.warn || !t ? zt.spruch : t.spruch, zeilen,
+      fortschritt: baustelle ? Math.floor(g.bau / 10) : undefined, prio: baustelle ? g.prioritaet : undefined,
+      bereich: t?.radius > 0 ? { modus: this.bereichId === g.id, gesetzt: !!g.mitte } : undefined,
+    };
+    this.leiste.setKarte(d);
+  }
+
+  /** Priorität der gewählten Baustelle setzen (Befehl 'prioritaet'). */
+  private setzePrioritaet(stufe: number): void {
+    const g = this.gewaehlt === null ? undefined : this._sicht.gebaeude.find((x) => x.id === this.gewaehlt);
+    if (!g || g.bau >= PROMILLE) return;
+    this.befehl({ art: 'prioritaet', id: g.id, stufe });
+    this.karteSetzen();
+  }
+
+  /** Rechtsklick auf eine Baustelle schaltet ihre Priorität durch (ohne Werkzeug); true, wenn dort eine Baustelle war. */
+  private rechtsklickPrioritaet(x: number, y: number): boolean {
+    if (this.werkzeug !== 'keins' || this.bereichId !== null) return false;
+    const h = this.hexUnter(x, y);
+    const g = h ? this.gebAt.get(key(h)) : undefined;
+    if (!g || g.bau >= PROMILLE) return false;
+    const stufe = naechstePrioritaet(g.prioritaet);
+    this.gewaehlt = g.id;
+    this.befehl({ art: 'prioritaet', id: g.id, stufe });
+    this.melde(`${NAMEN[g.typ] ?? g.typ}: Priorität ${PRIO_NAMEN[stufe]}.`, false);
+    this.karteSetzen();
+    return true;
   }
 
   // ------------------------------------------------------------------ Hinweise, Info, Status
@@ -457,26 +859,35 @@ export class Spiel {
   }
 
   private hinweisSetzen(): void {
+    this.vorschauGesetzt = '';
     if (this.meldung) { this.leiste.setHinweis(this.meldung.text, this.meldung.warn); return; }
     const w = this.werkzeug;
     const touch = this.zeiger === 'touch';
     const tippe = touch ? 'antippen' : 'anklicken';
     let t: string | null = null;
-    if (w === 'weg') {
-      t = !this.wegStart ? `Weg: eine Fahne als Start ${tippe}.`
-        : touch ? 'Ziel antippen, dann nochmal tippen oder „Weg bauen“.' : 'Ziel anklicken – baut den Weg. Esc beendet.';
+    if (this.bereichId !== null) {
+      t = touch ? `Arbeitsbereich: Mittelpunkt antippen (höchstens ${ARBEIT_MITTE_MAX} Hexe vom Haus), nochmal tippen oder „Setzen“ bestätigt.`
+        : `Arbeitsbereich: Mittelpunkt anklicken (höchstens ${ARBEIT_MITTE_MAX} Hexe vom Haus). Esc bricht ab.`;
+    } else if (w === 'weg') {
+      const n = this.weg.schritte;
+      if (!this.weg.aktiv) t = `Weg: eine Fahne als Start ${tippe}.`;
+      else if (touch) {
+        t = n === 0 ? 'Weg: Hex antippen = Zwischenpunkt, Fahne oder Weg antippen = bauen.'
+          : `Weg: ${n} Schritte – Hex = Zwischenpunkt, Fahne/Weg antippen oder „Weg bauen“ baut, „Zurück“ nimmt den letzten Punkt weg.`;
+      } else {
+        t = n === 0 ? 'Weg: Hex für Hex anklicken (Zwischenpunkte) oder gleich eine Fahne – die baut. Esc bricht ab.'
+          : `Weg: ${n} Schritte – Ziel anklicken (Fahne baut, freier Hex = Zwischenpunkt), letzten Punkt nochmal oder Enter baut, Rücktaste zurück.`;
+      }
     } else if (w === 'fahne') t = `Fahne: Hex ${tippe}. Auf einem Weg teilt sie ihn.`;
     else if (GEBAEUDE_WERKZEUGE.includes(w)) {
-      t = `${NAMEN[w]} (Bauplatz ${BAUPLATZ_NAME[GEBAEUDE[w].groesse]}): Platz ${tippe}. ${AUF_PUMP}`;
+      t = `${NAMEN[w]} (Bauplatz ${BAUPLATZ_NAMEN[GEBAEUDE[w].groesse]}): Platz ${tippe}. Kosten: ${this.kostenText(w)}.`;
     } else if (w === 'abriss') t = `Abriss: Gebäude, Fahne oder Weg ${tippe}.`;
     this.leiste.setHinweis(t);
   }
 
   private statusSetzen(): void {
     const s = this._sicht;
-    const vorrat = [0, 0, 0, 0];
-    for (const g of s.gebaeude) if (g.vorrat) for (let i = 0; i < 4; i++) vorrat[i] += g.vorrat[i] ?? 0;
-    this.leiste.setStatus({ tick: s.tick, freieTraeger: s.freieTraeger, vorrat, pruefsumme: this._sim.pruefsumme() });
+    this.leiste.setStatus({ tick: s.tick, freieTraeger: s.freieTraeger, vorrat: this.lagerVorrat(), pruefsumme: this._sim.pruefsumme() });
   }
 
   /** Zeilen fürs Info-Feld (HTML) zu einem Hex: Gebäude, Fahne, Weg, Bauplatz-Prüfung. */
@@ -488,8 +899,14 @@ export class Spiel {
     const w = this.werkzeug;
     if (g) {
       const name = NAMEN[g.typ] ?? g.typ;
-      const phase = g.bau >= PROMILLE ? 'fertig' : `Baustelle ${Math.floor(g.bau / 10)} % (Phase ${1 + Math.floor((3 * g.bau) / 1001)} von 3)`;
-      z.push(`<b class="sim">${name}</b><span>${phase}</span>`);
+      const baustelle = g.bau < PROMILLE;
+      const zt = zustandsText(g.zustand, baustelle, bedarfNamen(g.bedarf ?? [], WARE_TEXT));
+      const phase = baustelle ? `Baustelle ${Math.floor(g.bau / 10)} % (Phase ${1 + Math.floor((3 * g.bau) / 1001)} von 3) – ${zt.titel}` : zt.titel;
+      z.push(`<b class="sim">${name}</b><span class="${zt.warn ? 'warn' : ''}">${phase}</span>`);
+      if (baustelle) {
+        const fehlt = kostenAlsText(g.bedarf ?? [], WARE_TEXT);
+        z.push(`<span>${fehlt === 'nichts' ? 'Material komplett' : `fehlt: ${fehlt}`} · Priorität ${PRIO_NAMEN[g.prioritaet] ?? g.prioritaet}</span>`);
+      }
       if (g.getrennt) z.push('<span class="warn">⚠ keine Verbindung zum Lager</span>');
       if (g.vorrat) z.push(`<span>Vorrat: ${g.vorrat.map((n, i) => `${WARE_NAME[i]} ${n}`).join(' · ')}</span>`);
       const gf = this._sicht.fahnen.find((x) => x.id === g.fahne);
@@ -504,7 +921,7 @@ export class Spiel {
       if (i >= 0) {
         const platz = this._sim.karte.bebaubar[this._sim.karte.index(h.q, h.r)];
         const ok = this._sim.kannBauen(w, h.q, h.r);
-        z.push(`<span class="${ok ? 'gut' : 'warn'}">${NAMEN[w]}: ${ok ? `passt hier (Bauplatz ${BAUPLATZ_NAME[platz]}, nötig ${BAUPLATZ_NAME[GEBAEUDE[w].groesse]})` : 'geht hier nicht – ' + this.grundBauen(w, h)}</span>`);
+        z.push(`<span class="${ok ? 'gut' : 'warn'}">${NAMEN[w]}: ${ok ? `passt hier (Bauplatz ${BAUPLATZ_NAMEN[platz]}, nötig ${BAUPLATZ_NAMEN[GEBAEUDE[w].groesse]})` : 'geht hier nicht – ' + this.grundBauen(w, h)}</span>`);
       }
     } else if (w === 'fahne' && this.ctx.ausschnitt.hex.index(h.q, h.r) >= 0) {
       const ok = this._sim.kannFahne(h.q, h.r);
@@ -513,8 +930,13 @@ export class Spiel {
     return z;
   }
 
+  /** Baukosten als Text, z. B. „2 Bretter, 1 Stein“. */
+  private kostenText(typ: string): string {
+    return kostenAlsText(this._sim.kosten(typ), WARE_TEXT);
+  }
+
   private warenText(f: SichtFahne): string {
-    const n = [0, 0, 0, 0];
+    const n = new Array<number>(WAREN.length).fill(0);
     for (const x of f.waren) n[x]++;
     return n.map((c, i) => (c ? `${WARE_NAME[i]} ×${c}` : '')).filter(Boolean).join(', ') || 'leer';
   }
