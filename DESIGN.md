@@ -158,6 +158,7 @@ Lager-Auslieferung (Pull): Ein Abnehmer meldet Bedarf, und das nächste Lager mi
 | edel | bergkaese, doeppekooche, regionale Spezialität | 6 s |
 
 - **Notnagel:** Sind weniger als 4 freie Einwohner da und es gibt keine Nahrung, kommt alle 30 s ein Zugezogener. So kann man sich nicht festfahren.
+  Umgesetzt in M5 (`data/dorf.json`): „keine Nahrung“ heißt dort „kein Nachwuchs in Sicht“ (kein Wohnhaus mit Essen oder kein Wohnraum frei), sonst kann man sich mit Essen im Lager, aber ohne freien Träger festfahren.
 - Start: 10 Einwohner, 8 Kartoffeln im Lager.
 
 ---
