@@ -225,7 +225,7 @@ IDs sind ASCII (`hoelzfaeller`, `kaese`), Anzeigenamen mit Umlauten.
 
 ## 7. Gebiet, Hecke, Dörfer
 
-> Teilweise überholt: Gebiet wächst über Einfluss, Hecken sind Spezialität der Monschauer (Drehbuch 6.1). Echte Orte gewinnt man mit einem Einstand (Drehbuch 6.2).
+> Teilweise überholt: Gebiet wächst über Einfluss, Hecken sind Spezialität der Monschauer (Drehbuch 6.1). Echte Orte gewinnt man mit einem Einstand, eine eigene Dorfgründung gibt es nicht, dafür ein Lagerhaus (Drehbuch 6.2).
 
 - **Gebiet** ist die Vereinigung der Hex-Kreise um fertige Gebietsgebäude: Dorfkern r = 4, Heckenhof r = 3.
 - **Hecke:** Entlang der Gebietsgrenze entsteht automatisch eine Buchenhecke, typisch fürs Monschauer Heckenland. Sie durchläuft drei Stufen: Setzling (0) → niedrig (1) → hoch (2). Wo ein Weg die Hecke kreuzt, steht ein Gatter.

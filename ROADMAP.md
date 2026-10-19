@@ -184,12 +184,12 @@ Später (Feinschliff, nicht jetzt):
 
 **Ziel:** alle rund **25 Grundgebäude**, drei Dorfstufen und ein Jahreslauf (Drehbuch 5.1, 5.2, 7.4).
 
-- [ ] Reifekeller (Bergkäse), Bier (Gerstenfeld → Brauerei → Landbier), Schnaps (Wacholderheide → Brennerei), Schänke
+- [ ] Reifekeller (Bergkäse), Bier (Gerstenfeld → Brauerei → Landbier), Schnaps (Wacholderheide → Brennerei), Schänke, Lagerhaus (Drehbuch 6.2)
 - [ ] Eisen schlank ab Stufe 2: Erzgrube, Köhlerei, Eisenhütte, Schmiede → Werkzeug nur für die Fachkräfte der besseren Gebäude und für neue Bauarbeiter und Planierer (Drehbuch 4.5)
 - [ ] **Kleine Feste** zu ihrer Jahreszeit (Maifest, Erntedank, Viehmarkt, Martinsfeuer, Fastelovend, Weinfest): Warenliste, Fest, Punkte, einmal je Spieljahr, Obergrenze (Drehbuch 6 „Feste“)
 - [ ] Kirmes-Stufen **Dorf → Kirchdorf** und **Kirchdorf → Marktflecken**
 - [ ] Beschwipste Boten: querfeldein, torkelnd, verlieren mal Waren (DESIGN §10.3); **Betrunkene sofort erkennbar** (rote Nase, Schlagseite, Hicksen, Drehbuch 7.1)
-- [ ] **Jahreszeiten mit Wirkung:** Partie ≈ 2 Jahre, Winter mit Schnee und Vorratswirtschaft, Saat im Frühjahr, Ernte und Kirmeszeit im Herbst
+- [ ] **Jahreszeiten mit Wirkung:** Partie ≈ 2 Jahre, Winter mit Schnee und Vorratswirtschaft, Saat im Frühjahr, Ernte im Herbst; Kirmes jederzeit, kleine Feste zu ihrer Jahreszeit
 - [ ] **Wetter stark, aber fair:** Regen, Talnebel, Wind, Dürre, Missernte, Hochwasser in der Aue; angekündigt als Bauernregel, nie zerstörerisch, aus der gemeinsamen Saat
 - [ ] Balancing der Startwerte über einen 2-Stunden-Lauf
 
@@ -205,7 +205,7 @@ Später (Feinschliff, nicht jetzt):
 - [ ] Erkundung und Nebel in Kartenpapier-Optik (DESIGN §8, im Drehbuch noch nicht festgelegt)
 - [ ] **Grenzsteine versetzen** (nachts, mit Risiko) und **Abwerben** über Kirmes und Essen; Gebäude werden nie zerstört, sie stehen still
 - [ ] **Orte mit Einstand** (Drehbuch 6.2): Dorfzentrum an jedem Eifel-Ort, Wunschliste je Ort, Einstand-Fest, dann Lager, kleines Gebiet, Bewohner und Fundkiste; danach feiert jeder Ort einmal im Jahr sein Fest; im Mehrspieler gewinnt, wer zuerst liefert
-- [ ] **Flachländer am Kartenrand** (KI): Marktposten mit Wegweiser zur echten Stadt außerhalb der Eifel (Aachen, Düren, Euskirchen, Bonn, Koblenz, Trier, Lüttich); Lager, Wachsamkeit, Handel, keine eigene Bauerei, nicht zu gewinnen
+- [ ] **Flachländer am Kartenrand** (KI): Marktposten mit Wegweiser zur echten Stadt außerhalb der Eifel (Aachen, Düren, Euskirchen, Bonn, Koblenz, Trier, Lüttich); Lager, Wachsamkeit, Handel sofort (ab Marktflecken besser), keine eigene Bauerei, nicht zu gewinnen
 - [ ] Finderhütte, **Finden mit Gegenwehr** (Wachhund, Dorfpolizist), **Ausredenstube** mit Sprüchen, Fundbüro
 - [ ] Zöllner an der Staatsgrenze, Kaffeeschmuggel
 - [ ] **Schützenfest** mit Schützenhaus, Schießstand und **Vogelschuss** (Vorbereitung + etwas Glück), Schützenkönig zahlt die Runde

@@ -38,6 +38,30 @@ donoh widder fott. Ungebroche? Einfach neu starte, et määt do wigger wo et opj
   de Simulationsdate (Koppleist). Jleiche Adress = jleiche Prüfsumm, in jedem Browser.
 - Steuerung: <kbd>WASD</kbd> bewääge, <kbd>Q</kbd>/<kbd>E</kbd> drihe, Rädche zoome, räächte Musdaste trecke;
   <kbd>G</kbd> Hex-Rastel, <kbd>F3</kbd> Leistungsanzäich. Touch: ee Finger verschoove, zwei zoome/drihe.
+- **Weech un Dräjer (M3):** Et Lager steiht em Ochtskään vum Startocht. Bauleiss unge: <kbd>1</kbd> Wääch
+  (Fahn aanklicke, dann dä Wääch selvs führe: frei Hexe sin Zwescheponkte, de Vörschau sök jedes Stöck un zeich
+  de nächste müjjelije Schrette, su jeiht et Hex för Hex; en Fahn oder ene Wääch aanklicke baut dä janze Wääch,
+  dä letzte Zwescheponk nochens aanklicke oder <kbd>Enter</kbd> baut bes dohin, <kbd>Röcktaste</kbd> bzw. „Zeröck“
+  nimmp dä letzte Ponk fott, hüchstens 60 Schrette; Weech looße sich aneinanderhange),
+  <kbd>2</kbd> Fahn (op enem Wääch deilt se en), <kbd>B</kbd> Baumenü, <kbd>X</kbd> Avress, <kbd>Esc</kbd>/Räächsklick
+  avbreche, <kbd>Leertaste</kbd> Paus, <kbd>+</kbd>/<kbd>−</kbd> Tempo 1–3×. Op jedem Wääch pendelt ene Dräjer un
+  dräht sichbar en Wor; lang Weech met Fahne deile, söns stäut et. ⚠ heiß: kei Wäächverbindung nohm Lager.
+  Am Handy jeiht alles met Tippe: Weech baue söfort beim Tipp op en Fahn, Jebäude zeije eets dä Jeis, dann „Baue“.
+- **Baue met Holz un Steen (M4):** Et Lager fängk aan met 12 Brädder, 8 Steen un 8 Ääpel. Et Baumenü
+  (<kbd>B</kbd>, Zeffere av <kbd>3</kbd> tirek) zeich de Jebäude us `data/buildings.json` met Koste un Bauplatzjrööß.
+  Met jewähltem Jebäude zeich de Kaat de Bauplätz (kleen/mittel/jroß, <kbd>P</kbd> och söns), e Jeistermodell am Ziel
+  un dä Arbeitsradius („36 Bäum en Reichwigg“). Platziere koss nix: De Baustell meld Bedarf, Dräjer bränge Brädder un
+  Steen einzel un verbaue se, et Huus wääß en drei Phase. Jebäude aanklicke maht en Kaat op met Zostand
+  („Waat op Brädder“, „Kei Baum mieh en Reichwigg“), Bedarf un Priorität 1–3 (Räächsklick op en Baustell schalt se
+  reihöm). Dä Holzfäller fällt Bäum em Arbeitsbereich (wat mer em Spillfeld süht, dat jitt et och), dä Förster planz
+  noh, Jungbäum wahße en drei Stufe, et Sägewerk määt us Stämm Brädder, dä Steenbroch hau endlije Steen av:
+  Felsjrupp (vill), Klipp (mittel), Lesesteenhaufe (winnich). Et Lager liefert op Avrof, Avress jitt de Hälfde vum
+  verbaute Material zeröck. **Arbeitsbereich:** zwei Ringe, enne „jot“ (koote Weech), usse „jeiht noch“. En d'r
+  Jebäudekaat vun Holzfäller, Förster un Steenbroch setz „Arbeitsbereich“ ene Meddeponk (hüchstens 6 Hexe vum Huus),
+  „Zeröcksetze“ läät en widder op et Huus.
+- **Simulation** (`src/sim/`): faste Tick (20/s), nur janze Zahle, jede Aktion es ene Befehl met Tick-Nummer,
+  Prüfsumm övver dä Zostand, Befehlsprotokoll zom Avspille. Dä Smoke-Test pröf, dat Node un Browser de selve
+  Prüfsumm krije.
 
 ## Befehle
 
@@ -49,6 +73,7 @@ donoh widder fott. Ungebroche? Einfach neu starte, et määt do wigger wo et opj
 | `npm run test:smoke` | Browser-Test: Kaatewahl → Usschnitt lade → Screenshots, Prüfsumm |
 | `npm run setup -- [Optione]` | Weltdate rechne (luur bovve) |
 | `npm run build:share` | eijeständije Deile-Version mit enem Deil der Weltdate (z. B. als Artifact-Sigg fürs Handy) |
+| `npm run build:share -- --gebiet nordeifel` | Deile-Version och met alle Kachele vun enem Jebiet (`nordeifel`, `nideggen`, `alle`); wenn et ze jroß weed, hööt et op, ussem met `--trotzdem` |
 
 Weltdate lieje för en Veröffentlichung als statische Dateie nevven d'm Spill (`VITE_WELT_URL`).
 

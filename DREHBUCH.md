@@ -231,7 +231,7 @@ Die Zahlen (Raten, Kosten, Puffer) aus [DESIGN.md §6](DESIGN.md) gelten als Sta
 
 Eisen ist echt Eifel: Im Schleidener Tal und um Gemünd standen jahrhundertelang Eisenhütten.
 
-**Grundgebäude (Vorschlag, rund 25):** Lager/Dorfkern, Wohnhaus, Holzfäller, Förster, Sägewerk, Steinbruch, Kartoffelfeld, Küche, Obstwiese, Mostkeller, Schafstall, Käserei, Reifekeller, Bienenstock, Gerstenfeld, Brauerei, Wacholderheide, Brennerei, Schänke, Erzgrube, Köhlerei, Eisenhütte, Schmiede, Kirmesplatz, Schützenhaus mit Schießstand. Dazu kommen Gebäude für Gebiet und Finderei aus Kapitel 6.
+**Grundgebäude (Vorschlag, rund 25):** Lager/Dorfkern, Wohnhaus, Holzfäller, Förster, Sägewerk, Steinbruch, Kartoffelfeld, Küche, Obstwiese, Mostkeller, Schafstall, Käserei, Reifekeller, Bienenstock, Gerstenfeld, Brauerei, Wacholderheide, Brennerei, Schänke, Erzgrube, Köhlerei, Eisenhütte, Schmiede, Kirmesplatz, Schützenhaus mit Schießstand, Lagerhaus. Dazu kommen Gebäude für Gebiet und Finderei aus Kapitel 6.
 
 ### 5.2 Dorfstufen über die Kirmes
 
@@ -239,9 +239,9 @@ Weiler (Start) → Dorf (Stufe 1) → Kirchdorf (Stufe 2) → Marktflecken (Stuf
 
 | Stufe | Kirmes liefert (beschlossene Startwerte) | Ziel in der Partie | Schaltet frei |
 |---|---|---|---|
-| Weiler → Dorf | 10 Bratkartoffeln, 10 Most, 6 Käse | nach ~30–45 min | Reifekeller, Brauerei, Brennerei, Schänke, Schützenhaus |
+| Weiler → Dorf | 10 Bratkartoffeln, 10 Most, 6 Käse | nach ~30–45 min | Reifekeller, Brauerei, Brennerei, Schänke, Schützenhaus, Lagerhaus |
 | Dorf → Kirchdorf | 10 Bergkäse, 12 Honig, 15 Landbier, 5 Schnaps | nach ~75 min | Eisenkette und Werkzeug, **Spezialkette des Völkchens** |
-| Kirchdorf → Marktflecken | 10 Spezialität des Völkchens, 10 Werkzeug, Mischkorb aus 20 beliebigen veredelten Waren | nach ~110 min | Edle Spezialität, Handel mit Nachbarn |
+| Kirchdorf → Marktflecken | 10 Spezialität des Völkchens, 10 Werkzeug, Mischkorb aus 20 beliebigen veredelten Waren | nach ~110 min | Edle Spezialität, besserer Handel (mehr Waren, bessere Preise) |
 
 Die Mengen werden beim Spielen eingestellt, die Zeitziele bleiben.
 
@@ -289,11 +289,12 @@ Gebäude werden nie zerstört. Wechselt ein Hex mit Gebäude den Besitzer, steht
 3. **Einstand:** Ist alles geliefert, wird ein kleines Fest gefeiert, und der Ort gehört dazu. Man bekommt ein **zusätzliches Lager**, ein kleines Gebiet um den Ortskern, ein paar Bewohner und eine **Fundkiste** mit Waren, die man dort „gefunden“ hat. Manchmal ist ein **besonderer Fund** dabei (Werkzeug, Sonderware; mehr dazu mit der Kampagne).
 - **Größe zählt:** Je größer der Ort, desto größer der Wunsch und desto mehr bekommt man. Ein Städtchen wie Monschau will vielleicht 10 Käse, 5 Most und 3 Werkzeug, das schafft man erst spät.
 - **Im Mehrspieler** ist das ein Wettlauf: Wer den Wunsch zuerst erfüllt, gewinnt den Ort. Wer zu spät kommt, hat umsonst geliefert, die Waren sind „verschwunden“.
+- **Keine eigene Dorfgründung:** Auf freiem Land baut man keine neuen Dorfkerne. Neue Dörfer kommen nur über Orte. Für lange Wege gibt es ab Dorfstufe 1 ein einfaches **Lagerhaus** (Lager, kein Gebiet, keine Bewohner).
 
 **Flachländer sind die Städte außerhalb der Eifel:** Aachen, Düren, Euskirchen, Bonn, Koblenz, Trier, Lüttich. („Euskirchen? Dat es noch kein Eifel.“)
 
 - Sie liegen fast nie im Ausschnitt. Man erreicht sie über einen **Marktposten am Kartenrand**: Ein Wegweiser zeigt in die Richtung, in der die Stadt wirklich liegt („Nach Düren, 18 km“). Jede Karte hat so ein bis drei Flachländer, auch wenn man mitten in der Eifel startet.
-- Wer einen Weg zum Marktposten baut, kann dort **handeln und finden**. Flachländer haben ein Lager, eine Wachsamkeit und Waren, bauen aber nicht selbst. Je weiter die echte Stadt weg ist, desto länger brauchen Händler und Finder.
+- Wer einen Weg zum Marktposten baut, kann dort sofort **handeln und finden**. Ab Marktflecken wird der Handel besser (mehr Waren, bessere Preise). Flachländer haben ein Lager, eine Wachsamkeit und Waren, bauen aber nicht selbst. Je weiter die echte Stadt weg ist, desto länger brauchen Händler und Finder.
 - **Flachländer kann man nicht gewinnen.** Ist ja keine Eifel.
 - Volle KI-Gegner, die selbst bauen, kommen höchstens später.
 - **Im Mehrspieler** sind die Mitspieler die Nachbarn. Orte und Flachländer gibt es zusätzlich.
@@ -369,7 +370,7 @@ Lustiger Siedler-Look: übertriebene Proportionen, krummbeinige Figuren, Gebäud
 
 ### 7.4 Jahreszeiten und Wetter
 
-- **Jahreszeiten mit Wirkung:** Eine Partie läuft durch etwa **2 Jahre**. Im Winter liegt Schnee, Felder und Obstwiesen ruhen, man lebt vom Vorrat. Im Frühjahr wird gesät, im Herbst geerntet, und dann ist Kirmeszeit.
+- **Jahreszeiten mit Wirkung:** Eine Partie läuft durch etwa **2 Jahre**. Im Winter liegt Schnee, Felder und Obstwiesen ruhen, man lebt vom Vorrat. Im Frühjahr wird gesät, im Herbst geerntet. Die Kirmes geht jederzeit, die kleinen Feste haben ihre Jahreszeit.
 - **Starkes Wetter:** Regen, Talnebel, Venn-Wind, Schnee, Dürre, dazu Ereignisse wie **Missernte** oder **Hochwasser** an Bächen und Flüssen. Gebäude in der Aue können dann ein paar Minuten stillstehen und Waren am Ufer davonschwimmen.
 - **Fair bleibt es trotzdem:**
   - Wetter kündigt sich an, als **Bauernregel** der Erzählfigur (1.4) („Ist der Mai kühl und nass …“). Wer vorsorgt (Vorräte, nicht in die Aue bauen, Hecken), kommt glimpflich davon.
