@@ -288,7 +288,7 @@ try {
         if (fg) sp.befehl({ art: 'arbeitsbereich', id: fg.id, q: hf.q, r: hf.r });
       }
     }
-    for (const [typ, wert] of [['saegewerk', null], ['steinbruch', felsen], ['huette', null]]) {
+    for (const [typ, wert] of [['saegewerk', null], ['steinbruch', felsen], ['wohnhaus', null]]) {
       sp.schritte(2);
       const c = beste(typ, null, wert);
       if (c && (typ !== 'steinbruch' || felsen(c) > 0)) nutzen(typ, c);

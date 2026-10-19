@@ -86,14 +86,14 @@ export function gebaeudeId(sim: Simulation, typ: string, h: { q: number; r: numb
  */
 export function baueSzenario30(): { karte: KarteDaten; protokoll: Protokoll } {
   const karte = baueTestKarte();
-  const start = knoten(1, 1);
+  const start = { ...knoten(1, 1), bewohner: 40 };
   const be: ProtokollEintrag[] = [];
   const bau = (typ: string, i: number, j: number) => be.push(eintrag(0, { art: 'gebaeude', typ, ...knoten(i, j) }));
   const wichtig: [string, number, number][] = [['holzfaeller', 0, 0], ['holzfaeller', 3, 0], ['holzfaeller', 3, 1], ['steinbruch', 0, 3], ['saegewerk', 2, 2]];
   const huetten: [number, number][] = [[2, 1], [0, 1], [3, 2], [1, 2], [3, 3]];
   for (const [typ, i, j] of wichtig) bau(typ, i, j);
   bau('foerster', 2, 0);
-  for (const [i, j] of huetten) bau('huette', i, j);
+  for (const [i, j] of huetten) bau('wohnhaus', i, j);
   for (const [i, j] of [[1, 0], [0, 2], [1, 3], [2, 3]]) be.push(eintrag(0, { art: 'fahne', ...knoten(i, j) }));
   const weg = (a: { q: number; r: number }, d: number) => be.push(eintrag(0, { art: 'weg', pfad: gerade(a.q, a.r, d, 3) }));
   for (let j = 0; j < 4; j++) for (let i = 0; i < 3; i++) weg(knoten(i, j), 0);
@@ -106,7 +106,7 @@ export function baueSzenario30(): { karte: KarteDaten; protokoll: Protokoll } {
   for (const e of be) probe0.befehl(e.tick, e.spieler, e.befehl);
   probe0.schritt(); probe0.schritt();
   for (const [typ, i, j] of wichtig) be.push(eintrag(2, { art: 'prioritaet', id: gebaeudeId(probe0, typ, knoten(i, j)), stufe: 3 }));
-  for (const [i, j] of huetten) be.push(eintrag(2, { art: 'prioritaet', id: gebaeudeId(probe0, 'huette', knoten(i, j)), stufe: 1 }));
+  for (const [i, j] of huetten) be.push(eintrag(2, { art: 'prioritaet', id: gebaeudeId(probe0, 'wohnhaus', knoten(i, j)), stufe: 1 }));
   // Teilung eines Weges bei Tick 2500 (Fahne mitten auf Segment (0,0)-(1,0)).
   be.push(eintrag(2500, { art: 'fahne', q: knoten(0, 0).q + 1, r: knoten(0, 0).r }));
   // Abriss eines senkrechten Segments bei 4000, Wiederaufbau bei 4300. Die Segment-Id kommt aus einem Probelauf.
@@ -128,7 +128,7 @@ export const M4_WALD = [{ q: 7, r: -1 }, { q: 7, r: 0 }, { q: 7, r: 1 }, { q: 8,
 /** Felsen der M4-Abnahme am Steinbruch bei (-6,0). */
 export const M4_FELS = [{ q: -7, r: 0 }, { q: -8, r: 0 }, { q: -7, r: 1 }];
 export const M4_ORTE = {
-  lager: { q: 0, r: 0 }, holzfaeller: { q: 6, r: 0 }, foerster: { q: 6, r: 2 }, saegewerk: { q: 3, r: 3 }, steinbruch: { q: -6, r: 0 },
+  lager: { q: 0, r: 0, bewohner: 40 }, holzfaeller: { q: 6, r: 0 }, foerster: { q: 6, r: 2 }, saegewerk: { q: 3, r: 3 }, steinbruch: { q: -6, r: 0 },
   huette: { q: 0, r: 3 },
 };
 
@@ -152,7 +152,7 @@ export function baueM4Befehle(ohneFoerster = false): ProtokollEintrag[] {
   if (!ohneFoerster) bau('foerster', o.foerster);
   bau('saegewerk', o.saegewerk);
   bau('steinbruch', o.steinbruch);
-  bau('huette', o.huette);
+  bau('wohnhaus', o.huette);
   for (const h of [{ q: 3, r: 0 }, { q: -3, r: 0 }]) be.push(eintrag(0, { art: 'fahne', ...h }));
   const weg = (a: { q: number; r: number }, d: number, n: number) => be.push(eintrag(0, { art: 'weg', pfad: gerade(a.q, a.r, d, n) }));
   weg({ q: 0, r: 0 }, 0, 3); weg({ q: 3, r: 0 }, 0, 3);   // Lager – (3,0) – Holzfäller
@@ -172,12 +172,12 @@ export function baueSzenarioM4(): { karte: KarteDaten; protokoll: Protokoll } {
   const probe = new Simulation(karte, protokoll.saat, o.lager);
   for (const e of be) probe.befehl(e.tick, e.spieler, e.befehl);
   probe.schritt(); probe.schritt();
-  be.push(eintrag(2, { art: 'prioritaet', id: gebaeudeId(probe, 'huette', o.huette), stufe: 1 }));
+  be.push(eintrag(2, { art: 'prioritaet', id: gebaeudeId(probe, 'wohnhaus', o.huette), stufe: 1 }));
   be.push(eintrag(2, { art: 'prioritaet', id: gebaeudeId(probe, 'saegewerk', o.saegewerk), stufe: 3 }));
   // Bei 5000 wird der Steinbruch abgerissen (die Fahne bleibt), bei 5400 entsteht eine zweite Hütte samt Weg, bei 7000 fällt der Förster
   while (probe.tick < 5000) probe.schritt();
   be.push(eintrag(5000, { art: 'abriss_gebaeude', id: gebaeudeId(probe, 'steinbruch', o.steinbruch) }));
-  be.push(eintrag(5400, { art: 'gebaeude', typ: 'huette', q: 0, r: -3 }));
+  be.push(eintrag(5400, { art: 'gebaeude', typ: 'wohnhaus', q: 0, r: -3 }));
   be.push(eintrag(5400, { art: 'weg', pfad: gerade(0, 0, 2, 3) }));
   while (probe.tick < 7000) probe.schritt();
   be.push(eintrag(7000, { art: 'abriss_gebaeude', id: gebaeudeId(probe, 'foerster', o.foerster) }));

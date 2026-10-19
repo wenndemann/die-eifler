@@ -31,7 +31,7 @@ describe('Kostentexte', () => {
   it('Fehlmengen und Bedarf', () => {
     const vorrat = new Array(WAREN.length).fill(0);
     vorrat[1] = 1;
-    const f = fehlmengen(kosten('huette'), vorrat);
+    const f = fehlmengen(kosten('wohnhaus'), vorrat);
     expect(kostenText(f, W)).toBe('2 Bretter, 2 Steine');
     expect(fehlmengen(kosten('foerster'), vorrat).every((n) => n === 0)).toBe(true);
     expect(bedarfNamen(f, W)).toBe('Bretter, Steine');

@@ -4,7 +4,7 @@ import { OffenerWeg, WEG_MAX, naechsteSchritte, nachbarn, type Hx } from '../src
 import { Simulation } from '../src/sim/sim';
 import { baueTestKarte, gerade } from './sim-szenario';
 
-const neuSim = () => new Simulation(baueTestKarte(), 1, { q: 0, r: 0 });
+const neuSim = () => new Simulation(baueTestKarte(), 1, { q: 0, r: 0, bewohner: 40 });
 const lauf = (sim: Simulation, n: number) => { for (let i = 0; i < n; i++) sim.schritt(); };
 
 describe('OffenerWeg', () => {
