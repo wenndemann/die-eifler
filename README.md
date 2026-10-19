@@ -19,6 +19,13 @@ Voraussetzungen: Node.js ≥ 20, Python ≥ 3.10, Internet (die Geodaten werden 
     npm run setup -- --gebiet nideggen      # Testgebiet Nideggen–Heimbach, ~10 Minuten
     npm run dev                              # http://localhost:5173
 
+**Schneller:** fertig gerechnete Weltdaten aus dem GitHub-Release laden, statt sie selbst zu rechnen:
+
+    tools/welt-laden.sh nideggen            # oder nordeifel
+
+Die Releases rechnet der Workflow „Weltdaten“ (`.github/workflows/weltdaten.yml`) auf GitHub: im Tab „Actions“
+starten oder einen Branch `weltdaten/<gebiet>` pushen.
+
 `npm run setup` ruft `tools/map/setup.py` auf und legt eine Datenversion unter `welt-daten/` ab (nicht in Git).
 Ohne `--gebiet` wird die **ganze Welt** gerechnet (Aachen – Trier – Maria Laach, mit Ostbelgien und
 Nord-Luxemburg): das dauert viele Stunden, lädt rund 25 GB amtliche Höhendaten kachelweise und löscht sie

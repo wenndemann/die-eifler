@@ -17,6 +17,13 @@ Wat mer bruche deit: Node.js ≥ 20, Python ≥ 3.10, Internet (de Jeodate weede
     npm run setup -- --gebiet nideggen      # Testjebiet Nideggen–Heimbach, ~10 Minütche
     npm run dev                              # http://localhost:5173
 
+**Flotter:** fäädich jerechnete Weltdate usem GitHub-Release lade, statt se selvs ze rechne:
+
+    tools/welt-laden.sh nideggen            # oder nordeifel
+
+De Releases rechnet dä Workflow „Weltdaten“ (`.github/workflows/weltdaten.yml`) op GitHub: em Tab „Actions“
+starte oder ene Branch `weltdaten/<jebiet>` pushe.
+
 `npm run setup` rööf `tools/map/setup.py` op un läät en Dateversion unger `welt-daten/` aaf (nit in Git).
 Ohne `--gebiet` weed de **janze Welt** jerechnet (Oche – Trier – Maria Laach, mit Ostbeljie un
 Nord-Luxemburch): dat duurt etliche Stündche, lädt rund 25 GB amtlische Höhendate kachelwies un schmießt se
