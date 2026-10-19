@@ -160,6 +160,7 @@ export class Spiel {
   private readonly meldungen: Meldungen;
   private readonly filter: MeldungsFilter;
   private tipps = new Set<number>();
+  private begruesst = false;
   private gesperrtSig = '';
 
   constructor(private ctx: SpielKontext) {
@@ -210,7 +211,6 @@ export class Spiel {
     this.erzaehler = erzaehlerFuer(map.info.start, ausschnitt.kerne.map((k) => k.name));
     this.meldungen = new Meldungen(ctx.root);
     this.filter = new MeldungsFilter(this.erzaehler, ort);
-    this.zeigeMeldung(this.filter.begruessung(KIRMES[0] ? listeText(KIRMES[0].liste) : ''));
     this.leiste.setTempo(this.tempo, this.pausiert);
     this.leiste.setWerkzeug(this.werkzeug);
     this.hinweisSetzen();
@@ -329,6 +329,11 @@ export class Spiel {
     const liste = k ? listeText(k.liste.map((n, a) => Math.max(0, n - k.geliefert[a]))) : '';
     const name = (id: number) => { const g = s.gebaeude.find((x) => x.id === id); return g ? { typ: g.typ, name: NAMEN[g.typ] ?? g.typ } : null; };
     for (const m of this.filter.neue(s.ereignisse, s.dorf, name, (a) => WARE_TEXT[a]?.mehr ?? '', (n) => DORFSTUFEN[n] ?? '', FREI_TEXT, liste)) this.zeigeMeldung(m);
+    // Begrüßung erst, wenn das Spiel läuft (beim Laden wäre sie schon wieder weg)
+    if (!this.begruesst && s.tick >= 20) {
+      this.begruesst = true;
+      this.zeigeMeldung(this.filter.begruessung(KIRMES[0] ? listeText(KIRMES[0].liste) : ''));
+    }
     const hat = (typ: string) => s.gebaeude.some((g) => g.typ === typ);
     const min = s.tick / (60 * 20);
     const tipp = (i: number, wann: boolean) => {
