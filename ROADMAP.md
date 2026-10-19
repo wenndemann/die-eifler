@@ -56,7 +56,7 @@ Verschoben:
 
 ---
 
-## M2 – Eifel-Weltkarte und freie Kartenwahl
+## M2 – Eifel-Weltkarte und freie Kartenwahl ✅
 
 **Ziel:** die ganze Eifel (Aachen – Trier – Maria Laach, mit Ostbelgien und Nord-Luxemburg) als Weltkarte. Man wählt Größe und Ort und spielt genau dort (Drehbuch 3.1 und 8.1).
 
