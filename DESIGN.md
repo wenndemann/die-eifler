@@ -128,7 +128,7 @@ Lager-Auslieferung (Pull): Ein Abnehmer meldet Bedarf, und das nächste Lager mi
 ### 4.6 Baustellen
 
 - Beim Platzieren wird nichts abgezogen. Die Baustelle meldet Bedarf, und die Waren kommen einzeln.
-- Der liefernde Träger verbaut die Ware selbst (**BUILD_ACTION = 0,4 s**).
+- ~~Der liefernde Träger verbaut die Ware selbst (BUILD_ACTION = 0,4 s).~~ Ersetzt durch Planierer und Bauarbeiter, siehe [Drehbuch 4.5](DREHBUCH.md).
 - Fortschritt = verbautes Material / Gesamtbedarf und steuert die Bauphasen-Modelle (§11.4).
 - Priorität 1–3 (Rechtsklick oder Gebäudefenster). Höher wird zuerst beliefert.
 - Auf Fahnen-Hexen kann nicht gebaut werden.

@@ -124,7 +124,8 @@ Nachgezogen nach dem ersten Anspielen: Im Spielfeld gibt es nur Bäume und Stein
 
 Später (Feinschliff, nicht jetzt):
 - Gebäude-Effizienz als Anzeige (Auslastung, Laufwege) – mit den Gebäudefenstern (M7) und dem Balancing (M8)
-- Zahlen: Radien, Gebäudeabstand, Bäume je Hex, Wachstumszeit, Steinmengen
+- Zahlen: Radien, Gebäudeabstand, Bäume je Hex, Wachstumszeit, Steinmengen → im M5-Spieltest
+- Bauarbeiter als eigener Beruf statt „Träger verbaut selbst“ → M5 (Drehbuch 4.5)
 
 ---
 
@@ -133,10 +134,13 @@ Später (Feinschliff, nicht jetzt):
 **Ziel:** die erste **spaßige Spielschleife** – Nahrung lässt das Dorf wachsen, die Kirmes gibt ein Ziel (Drehbuch 4.3, 4.4, 5.2).
 
 - [ ] Wohnhaus mit Wohnraum, Bewohner aus Nahrung (3 Stufen), Notnagel (DESIGN §5)
+- [ ] **Planierer und Bauarbeiter** (Drehbuch 4.5): Träger liefern nur ab, Planierer ebnen Plätze am Hang, ein Bauarbeiter je Baustelle hämmert Stück für Stück; Start mit 4 Bauarbeitern und 2 Planierern
+- [ ] **Waren lesbar** (Drehbuch 7.6): jede Ware mit klarer Form und Farbe, auch die neuen Nahrungswaren
 - [ ] Ketten der Stufe Weiler: Kartoffel → Küche → Bratkartoffeln, Obstwiese → Mostkeller → Most, Schafstall → Käserei → Käse, Bienenstock → Honig
 - [ ] Kirmesplatz, Warenliste, Fest mit Animation, Dorfstufe **Weiler → Dorf** und Freischaltungen
 - [ ] Meldungen und Zustand in Klartext über Gebäuden („Wartet auf Stämme“), erste Sprüche
 - [ ] Ablauf „Die ersten 30 Minuten“ aus Drehbuch 4.4 als Spieltest-Drehbuch
+- [ ] Zahlen im Spieltest einstellen (aus M4 nachgezogen): Radien, Gebäudeabstand, Bäume je Hex, Wachstumszeit, Steinmengen, Bauzeit je Ware
 
 **Abnahme:** Ein Testspieler erreicht in 30–45 Minuten die erste Kirmes, ohne die Regeln erklärt zu bekommen, und will danach weiterspielen.
 
@@ -181,7 +185,8 @@ Später (Feinschliff, nicht jetzt):
 **Ziel:** alle rund **25 Grundgebäude**, drei Dorfstufen und ein Jahreslauf (Drehbuch 5.1, 5.2, 7.4).
 
 - [ ] Reifekeller (Bergkäse), Bier (Gerstenfeld → Brauerei → Landbier), Schnaps (Wacholderheide → Brennerei), Schänke
-- [ ] Eisen schlank ab Stufe 2: Erzgrube, Köhlerei, Eisenhütte, Schmiede → Werkzeug nur für die Fachkräfte der besseren Gebäude
+- [ ] Eisen schlank ab Stufe 2: Erzgrube, Köhlerei, Eisenhütte, Schmiede → Werkzeug nur für die Fachkräfte der besseren Gebäude und für neue Bauarbeiter und Planierer (Drehbuch 4.5)
+- [ ] **Kleine Feste** zu ihrer Jahreszeit (Maifest, Erntedank, Viehmarkt, Martinsfeuer, Fastelovend, Weinfest): Warenliste, Fest, Punkte, einmal je Spieljahr, Obergrenze (Drehbuch 6 „Feste“)
 - [ ] Kirmes-Stufen **Dorf → Kirchdorf** und **Kirchdorf → Marktflecken**
 - [ ] Beschwipste Boten: querfeldein, torkelnd, verlieren mal Waren (DESIGN §10.3); **Betrunkene sofort erkennbar** (rote Nase, Schlagseite, Hicksen, Drehbuch 7.1)
 - [ ] **Jahreszeiten mit Wirkung:** Partie ≈ 2 Jahre, Winter mit Schnee und Vorratswirtschaft, Saat im Frühjahr, Ernte und Kirmeszeit im Herbst
@@ -199,7 +204,8 @@ Später (Feinschliff, nicht jetzt):
 - [ ] **Einfluss:** Lager, Höfe, Kirche und Festplätze strahlen aus, gut versorgt weiter; Grenzen wachsen wie in Siedler
 - [ ] Erkundung und Nebel in Kartenpapier-Optik (DESIGN §8, im Drehbuch noch nicht festgelegt)
 - [ ] **Grenzsteine versetzen** (nachts, mit Risiko) und **Abwerben** über Kirmes und Essen; Gebäude werden nie zerstört, sie stehen still
-- [ ] **Flachländer-Dörfer** (KI) an größeren echten Orten im Ausschnitt: Lager, Wachsamkeit, Handel, keine eigene Bauerei
+- [ ] **Orte mit Einstand** (Drehbuch 6.2): Dorfzentrum an jedem Eifel-Ort, Wunschliste je Ort, Einstand-Fest, dann Lager, kleines Gebiet, Bewohner und Fundkiste; danach feiert jeder Ort einmal im Jahr sein Fest; im Mehrspieler gewinnt, wer zuerst liefert
+- [ ] **Flachländer am Kartenrand** (KI): Marktposten mit Wegweiser zur echten Stadt außerhalb der Eifel (Aachen, Düren, Euskirchen, Bonn, Koblenz, Trier, Lüttich); Lager, Wachsamkeit, Handel, keine eigene Bauerei, nicht zu gewinnen
 - [ ] Finderhütte, **Finden mit Gegenwehr** (Wachhund, Dorfpolizist), **Ausredenstube** mit Sprüchen, Fundbüro
 - [ ] Zöllner an der Staatsgrenze, Kaffeeschmuggel
 - [ ] **Schützenfest** mit Schützenhaus, Schießstand und **Vogelschuss** (Vorbereitung + etwas Glück), Schützenkönig zahlt die Runde
@@ -231,6 +237,7 @@ Später (Feinschliff, nicht jetzt):
 **Ziel:** Charme und Fertigstellung. Freies Spiel und Mehrspieler sind fertig (Drehbuch 1, 7).
 
 - [ ] Figuren fertig im Siedler-Comic-Stil: Mimik, übertriebene Gesten, alle Berufe
+- [ ] **Waren schön** (Drehbuch 7.6): feine Modelle, Holzmaserung, Steine mit Moos, Wackeln beim Tragen
 - [ ] **Gebrabbel** mit Eifeler Klang statt Sprecher, Betrunkene singen (Drehbuch 7.2)
 - [ ] Wetter- und Jahreszeiten-Optik: Talnebel (Höhennebel im Shader), Regen, Schnee, Wolkenschatten, Tageszeiten
 - [ ] Post-Processing: SSAO, dezentes Bloom, Farb-Grading, Qualitätsstufen (aus M1)

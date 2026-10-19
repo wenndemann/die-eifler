@@ -8,10 +8,10 @@ Ein Kapitel gilt als **beschlossen**, wenn wir es gemeinsam durchgesprochen habe
 | 1. Idee und Ton | ✅ beschlossen (Grundzüge), Erzählfiguren für alle 10 Völkchen, „Mer renne nit.“ |
 | 2. Spielmodi | ✅ beschlossen (Grundzüge) |
 | 3. Welt und Maßstab | ✅ beschlossen (Grundzüge) |
-| 4. Kern-Spielschleife | ✅ beschlossen (Grundzüge) |
+| 4. Kern-Spielschleife | ✅ beschlossen (Grundzüge), Planierer und Bauarbeiter |
 | 5. Wirtschaft und Gebäude | ✅ beschlossen (Grundzüge), Grenzvölkchen und Kirmes-Warenlisten fest, Einzelwerte beim Spielen |
-| 6. Finden, Nachbarn, Ziele | ✅ beschlossen (Grundzüge), Eifel-Punkte verteilt |
-| 7. Stil und Figuren | ✅ beschlossen (Grundzüge) |
+| 6. Finden, Nachbarn, Ziele | ✅ beschlossen (Grundzüge), Eifel-Punkte verteilt, Orte mit Einstand, Flachländer am Kartenrand, viele Feste |
+| 7. Stil und Figuren | ✅ beschlossen (Grundzüge), Waren erst lesbar, dann schön |
 | 8. Technik und Mehrspieler | ✅ beschlossen (Grundzüge) |
 
 ---
@@ -172,7 +172,8 @@ Die Spielschleife folgt bewusst **Siedler 2**: Das Wegenetz ist das Herz des Spi
 
 ### 4.2 Start
 
-- Man beginnt mit einem **Lager in einem echten Ortskern**, zum Beispiel Einruhr, mit ein paar Bewohnern und einem kleinen Vorrat an Brettern, Steinen und Essen.
+- Man beginnt mit einem **Lager in einem echten Ortskern**, zum Beispiel Einruhr, mit ein paar Bewohnern und einem kleinen Vorrat an Brettern, Steinen und Essen. Der Startort gehört einem von Anfang an.
+- Zum Start gehören **4 Bauarbeiter und 2 Planierer** (4.5).
 - Von dort baut man Wege ins Land, setzt Holzfäller und Steinbruch und wächst Schritt für Schritt.
 
 ### 4.3 Wachstum
@@ -191,13 +192,23 @@ Die Spielschleife folgt bewusst **Siedler 2**: Das Wegenetz ist das Herz des Spi
 4. Kartoffelfeld und Wohnhaus: Die ersten neuen Bewohner kommen, das Netz wird dichter, an einer Fahne staut es sich, man baut einen zweiten Weg.
 5. Kirmesplatz steht, die Warenliste füllt sich. Ziel für die nächste halbe Stunde ist klar.
 
+### 4.5 Bauen: Planierer und Bauarbeiter (beschlossen)
+
+Wie in Siedler bauen eigene Berufe, nicht die Träger.
+
+- **Träger liefern nur.** Sie legen die Ware auf einen kleinen Stapel an der Baustelle und gehen zurück an ihren Weg. Der Vorentwurf (DESIGN §4.6, „Träger verbaut selbst“) gilt nicht mehr.
+- **Planierer** gehen nur zu Bauplätzen am Hang. Sie ebnen den Platz, man sieht die Erde glatt werden. Flache Plätze brauchen keinen Planierer. Erst planieren, dann bauen.
+- **Bauarbeiter:** einer je Baustelle. Er läuft über die Wege hin, sobald die erste Ware da ist, und verbaut sie Stück für Stück (Startwert 2–3 s je Ware, mit Hämmern). Danach geht er zur nächsten Baustelle oder zurück ins Lager.
+- **Fester Vorrat:** Zum Start gibt es **4 Bauarbeiter und 2 Planierer**. Das reicht bis Dorfstufe 2. Mehr Baustellen gleichzeitig heißt warten, Priorität entscheidet, wer zuerst drankommt.
+- **Neue Bauarbeiter und Planierer brauchen Werkzeug** (Hammer bzw. Schaufel) und einen freien Bewohner. Werkzeug macht die Schmiede ab Dorfstufe 2 (5.1). Vorher gibt es höchstens mal ein Stück als Fund (6.3).
+
 ## 5. Wirtschaft und Gebäude
 
 Beschlossen:
 
 - **Umfang wie Siedler 2:** rund **25 Grundgebäude**, dazu **2–3 Spezialgebäude je Völkchen**.
 - **Das Völkchen ergibt sich aus dem Startort.** Wer in Gerolstein startet, spielt Vulkaneifeler. Liegt ein Ausschnitt über zwei Gegenden, haben die Spieler verschiedene Völkchen.
-- **Eisen und Werkzeug schlank, ab Dorfstufe 2.** Nicht jeder Beruf braucht Werkzeug, nur die Fachkräfte der besseren Gebäude.
+- **Eisen und Werkzeug schlank, ab Dorfstufe 2.** Nicht jeder Beruf braucht Werkzeug, nur die Fachkräfte der besseren Gebäude sowie neue Bauarbeiter und Planierer (4.5).
 - **10 Völkchen:** die 8 aus dem Vorentwurf und zwei Grenzvölkchen, weil die Welt jetzt nach Belgien und Luxemburg reicht.
 
 Die Zahlen (Raten, Kosten, Puffer) aus [DESIGN.md §6](DESIGN.md) gelten als Startwerte und werden beim Spielen eingestellt.
@@ -265,11 +276,23 @@ Gebäude werden nie zerstört. Wechselt ein Hex mit Gebäude den Besitzer, steht
 
 **Hecken (beschlossen):** Die hohen Buchenhecken um die Höfe in Höfen und im Monschauer Land werden **Spezialität der Monschauer & Venner**, keine Regel für alle. Sie schützen vor dem Venn-Wind (Gebäude dahinter arbeiten im Winter schneller) und sind eine **lebende Grenze**: Grenzsteine hinter einer Hecke lassen sich kaum versetzen. Sie brauchen Setzlinge und Jahre zum Wachsen. In anderen Gegenden gibt es Hecken nur als Kulisse.
 
-### 6.2 Nachbarn
+### 6.2 Orte und Nachbarn (beschlossen)
 
-- **Im freien Spiel ohne Mitspieler** sind **größere echte Orte im Ausschnitt Flachländer-Dörfer** (KI). Sie haben ein Lager, eine Wachsamkeit und Waren zum Handeln. Man findet bei ihnen und handelt mit ihnen, sie bauen aber nicht selbst. Beispiel: Düren mit vollem Lager und hoher Wachsamkeit.
+**Eifel-Orte gewinnt man mit einem Einstand.** Jeder echte Ort in der Eifel hat ein Dorfzentrum, vom Weiler bis zum Städtchen wie Monschau, Gerolstein, Daun oder Prüm. Der Startort gehört einem von Anfang an, alle anderen muss man gewinnen:
+
+1. **Erreichen:** Ein Weg führt bis an die Fahne des Dorfzentrums. Der Ort ist entdeckt, gehört aber noch niemandem.
+2. **Wunsch:** Die Leute sind misstrauisch gegen Fremde. Der Ortsvorsteher äußert eine kleine Warenliste, je Ort anders, mit Spruch („Wer seid ihr denn? Kommt mal mit was zu essen wieder.“). Beispiel: Höfen will 4 Käse und 2 Most, Rurberg 5 Bratkartoffeln.
+3. **Einstand:** Ist alles geliefert, wird ein kleines Fest gefeiert, und der Ort gehört dazu. Man bekommt ein **zusätzliches Lager**, ein kleines Gebiet um den Ortskern, ein paar Bewohner und eine **Fundkiste** mit Waren, die man dort „gefunden“ hat. Manchmal ist ein **besonderer Fund** dabei (Werkzeug, Sonderware; mehr dazu mit der Kampagne).
+- **Größe zählt:** Je größer der Ort, desto größer der Wunsch und desto mehr bekommt man. Ein Städtchen wie Monschau will vielleicht 10 Käse, 5 Most und 3 Werkzeug, das schafft man erst spät.
+- **Im Mehrspieler** ist das ein Wettlauf: Wer den Wunsch zuerst erfüllt, gewinnt den Ort. Wer zu spät kommt, hat umsonst geliefert, die Waren sind „verschwunden“.
+
+**Flachländer sind die Städte außerhalb der Eifel:** Aachen, Düren, Euskirchen, Bonn, Koblenz, Trier, Lüttich. („Euskirchen? Dat es noch kein Eifel.“)
+
+- Sie liegen fast nie im Ausschnitt. Man erreicht sie über einen **Marktposten am Kartenrand**: Ein Wegweiser zeigt in die Richtung, in der die Stadt wirklich liegt („Nach Düren, 18 km“). Jede Karte hat so ein bis drei Flachländer, auch wenn man mitten in der Eifel startet.
+- Wer einen Weg zum Marktposten baut, kann dort **handeln und finden**. Flachländer haben ein Lager, eine Wachsamkeit und Waren, bauen aber nicht selbst. Je weiter die echte Stadt weg ist, desto länger brauchen Händler und Finder.
+- **Flachländer kann man nicht gewinnen.** Ist ja keine Eifel.
 - Volle KI-Gegner, die selbst bauen, kommen höchstens später.
-- **Im Mehrspieler** sind die Mitspieler die Nachbarn. Flachländer-Dörfer gibt es zusätzlich.
+- **Im Mehrspieler** sind die Mitspieler die Nachbarn. Orte und Flachländer gibt es zusätzlich.
 
 ### 6.3 Finden
 
@@ -284,7 +307,8 @@ Gebäude werden nie zerstört. Wechselt ein Hex mit Gebäude den Besitzer, steht
   | Wofür | Punkte |
   |---|---|
   | Dorfstufe Dorf / Kirchdorf / Marktflecken | 100 / 250 / 450 (insgesamt, nicht zusätzlich) |
-  | jedes gefeierte Fest (Kirmes, Schützenfest) | 50 |
+  | jede Kirmes, jedes Schützenfest | 50 |
+  | jedes kleine Fest, jeder Einstand | 10–30 je nach Fest und Ortsgröße |
   | Schützenkönig | 150 je Titel |
   | Bewohner | 1 je Bewohner |
   | Gebiet | 1 je 10 Hexe |
@@ -297,9 +321,16 @@ Gebäude werden nie zerstört. Wechselt ein Hex mit Gebäude den Besitzer, steht
   - **Der Große Fund:** Teile eines seltenen Schatzes bei verschiedenen Nachbarn finden und im Fundbüro zusammensetzen.
 - **Kampagne:** Jede Etappe hat ihr eigenes Ziel (Kapitel 2.1).
 
-### Feste: Kirmes und Schützenfest
+### Feste
 
-Beide Feste funktionieren ähnlich: Man baut einen Festplatz, liefert eine Warenliste, dann wird gefeiert. Vorschlag zur Abgrenzung:
+**Viele Feste (beschlossen):** Neben Kirmes und Schützenfest gibt es viele kleine Feste. Alle funktionieren gleich: Warenliste liefern, feiern, Punkte bekommen. Je mehr Feste man schafft, desto mehr Eifel-Punkte.
+
+- **Kleine Feste**, jedes zu seiner Jahreszeit (7.4): Maifest, Erntedank, Viehmarkt, Martinsfeuer, Fastelovend, Weinfest (an Mosel und Ahr) und mehr. Kurze Warenliste, 10–30 Punkte.
+- **Einstand:** Jeder gewonnene Ort feiert seinen Einstand (6.2). Danach feiert jeder angeschlossene Ort einmal im Jahr **sein eigenes Fest**. Mehr Orte heißt mehr Feste.
+- **Kein Dauerfeiern:** Jedes kleine Fest gibt es höchstens einmal je Spieljahr und Ort, dazu eine Obergrenze für die Punkte aus kleinen Festen (Startwert beim Spielen). Kein Bereich allein reicht zum Sieg (6.4).
+- **Die Kirmes bleibt das Tor zur nächsten Dorfstufe**, das Schützenfest das Kräftemessen. Kleine Feste schalten nichts frei.
+
+**Kirmes und Schützenfest** funktionieren ähnlich: Man baut einen Festplatz, liefert eine Warenliste, dann wird gefeiert. Vorschlag zur Abgrenzung:
 
 | | Kirmes | Schützenfest |
 |---|---|---|
@@ -346,6 +377,13 @@ Lustiger Siedler-Look: übertriebene Proportionen, krummbeinige Figuren, Gebäud
 
 - **Volksmusik-Anklang:** Akkordeon, Blasmusik und Fiedel, leicht schräg und verspielt. Auf Kirmes und Schützenfest gibt es richtig Tusch.
 - Räumliche Geräusche: Säge, Hämmern, Schafe, Bach, Wind über dem Venn, nachts spukende Grenzsteinversetzer.
+
+### 7.6 Waren (beschlossen)
+
+Alle Waren sind sichtbar unterwegs (4.1). Ihre Optik kommt in zwei Schritten:
+
+- **Erst lesbar (M5):** Jede Ware hat eine klare Form und Farbe und ist auf Wegen, an Fahnen und in Warenlisten sofort zu erkennen. Der Stamm ist ein Stamm, das Brett ein Brett, der Käse ein gelbes Rad. Aus diesen Modellen entstehen auch die Icons (M7).
+- **Dann schön (M11):** feine Modelle, Holzmaserung, Steine mit Moos, Wackeln beim Tragen.
 
 ## 8. Technik und Mehrspieler
 
