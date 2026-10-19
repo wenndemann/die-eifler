@@ -9,7 +9,7 @@ import type { Ausschnitt } from '../welt/ausschnitt';
 import { FLAG, HEX } from '../welt/format';
 import { Simulation } from '../sim/sim';
 import { spieleAb } from '../sim/replay';
-import { ARBEIT_MITTE_MAX, FLAG_CAP, GEBAEUDE, GEBAEUDE_IDS, WAREN, WAREN_NAMEN } from '../sim/daten';
+import { ARBEIT_MITTE_MAX, DORFSTUFEN, FLAG_CAP, GEBAEUDE, GEBAEUDE_IDS, KIRMES, WAREN, WAREN_NAMEN } from '../sim/daten';
 import { PROMILLE, TICK_HZ } from '../sim/typen';
 import type { Befehl, Id, Protokoll, SichtFahne, SichtGebaeude, SichtSegment, SimSicht } from '../sim/typen';
 import { Wege } from '../render/wege';
@@ -21,7 +21,9 @@ import { Gebaeude, type GebaeudeHaken } from '../render/gebaeude';
 import { Markierung, type RingArt } from '../render/markierung';
 import { Bauplaetze } from '../render/bauplaetze';
 import { Geist } from '../render/geist';
-import { Spielleiste, type KartenDaten, type MenueGruppeDaten, type Werkzeug } from '../ui/spielleiste';
+import { Spielleiste, type KartenDaten, type MenueGruppeDaten, type StatusDaten, type Werkzeug } from '../ui/spielleiste';
+import { Meldungen } from '../ui/meldungen';
+import { erzaehlerFuer, MeldungsFilter, type Erzaehler, type Meldung } from './meldungen';
 import {
   BAUPLATZ_NAMEN, bedarfNamen, fehlmengen, hexeImUmkreis, kostenText as kostenAlsText, menueGruppen, naechstePrioritaet, PRIO_NAMEN,
   reichweiteText, wareTexte, zustandsText,
@@ -57,6 +59,20 @@ const WARE_NAME: string[] = WAREN_NAMEN.map((n) => n.split(' ').slice(1).join(' 
 const WARE_TEXT = wareTexte(WAREN, WAREN_NAMEN);
 /** Alle Gebäudetypen, die man bauen kann (datengetrieben, ohne das Lager), in der Reihenfolge der Daten. */
 const GEBAEUDE_WERKZEUGE = GEBAEUDE_IDS.filter((id) => id !== 'lager');
+
+/** Warenliste als Text: „10 Bratkartoffeln, 10 Most, 6 Käse“. */
+const listeText = (liste: readonly number[]) => kostenAlsText(liste, WARE_TEXT);
+/** Was die Kirmes Weiler → Dorf freischaltet (Text). */
+const FREI_TEXT = KIRMES[0] ? KIRMES[0].schaltetFrei.join(', ') : '';
+
+/** Namen der Waren, auf die ein fertiges Gebäude wartet (Eingang laut Daten), für „Wartet auf Milch“. */
+function eingangNamen(g: SichtGebaeude): string {
+  const t = GEBAEUDE[g.typ];
+  if (!t || g.bau < PROMILLE) return bedarfNamen(g.bedarf ?? [], WARE_TEXT);
+  if (t.funktion === 'wohnen') return 'Essen';
+  if (t.funktion === 'kirmes') return 'die Warenliste';
+  return bedarfNamen(t.puffer.map((n, a) => (n > 0 && (g.puffer?.[a] ?? 0) < (t.wandelt?.menge ?? 1) ? 1 : 0)), WARE_TEXT);
+}
 
 /** Baumenü aus den Daten: Gruppen und Gebäude wie in data/buildings.json (ohne Lager). */
 function menueDaten(): MenueGruppeDaten[] {
@@ -139,6 +155,12 @@ export class Spiel {
   private ringDaten: RingDaten | null = null;
   /** Text der Bauvorschau, der gerade in der Hinweiszeile steht ('' = keiner). */
   private vorschauGesetzt = '';
+  /** Erzählfigur des Völkchens und ihre Meldungen (Drehbuch 1.4, 4.4). */
+  readonly erzaehler: Erzaehler;
+  private readonly meldungen: Meldungen;
+  private readonly filter: MeldungsFilter;
+  private tipps = new Set<number>();
+  private gesperrtSig = '';
 
   constructor(private ctx: SpielKontext) {
     const { ausschnitt, map, grid, base, ex } = ctx;
@@ -176,6 +198,19 @@ export class Spiel {
     }, menueDaten());
     this._sicht = this._sim.sicht();
     this.indizes();
+    // Zustand in Klartext über den Gebäuden (nur, wenn etwas fehlt oder wartet)
+    this.gebaeude.schild = (g) => {
+      const z = g.getrennt ? 'getrennt' : g.zustand;
+      if (z === 'arbeitet' || z === 'bereit' || z === 'baustelle' || z === 'wohnraum_voll' || g.typ === 'lager') return null;
+      const zt = zustandsText(z, g.bau < PROMILLE, eingangNamen(g), GEBAEUDE[g.typ]?.funktion);
+      return { text: zt.titel, warn: zt.warn };
+    };
+    // Erzählfigur des Völkchens zum Startort, Begrüßung
+    const ort = map.info.start ?? ausschnitt.kerne[0]?.name ?? 'der Eifel';
+    this.erzaehler = erzaehlerFuer(map.info.start, ausschnitt.kerne.map((k) => k.name));
+    this.meldungen = new Meldungen(ctx.root);
+    this.filter = new MeldungsFilter(this.erzaehler, ort);
+    this.zeigeMeldung(this.filter.begruessung(KIRMES[0] ? listeText(KIRMES[0].liste) : ''));
     this.leiste.setTempo(this.tempo, this.pausiert);
     this.leiste.setWerkzeug(this.werkzeug);
     this.hinweisSetzen();
@@ -277,6 +312,35 @@ export class Spiel {
     this._sicht = this._sim.sicht();
     this.indizes();
     if (this.gewaehlt !== null) this.karteSetzen();
+    this.meldungenPruefen();
+  }
+
+  private zeigeMeldung(m: Meldung): void {
+    this.meldungen.zeige({ wer: this.erzaehler.name, text: m.text, platt: m.platt, gross: m.gross });
+  }
+
+  /** Verlauf der Meldungen (Tests). */
+  get meldungsVerlauf(): readonly string[] { return this.meldungen.verlauf; }
+
+  /** Neue Ereignisse als Meldungen der Erzählfigur, dazu Tipps, wenn es in den ersten Minuten hakt (Drehbuch 4.4). */
+  private meldungenPruefen(): void {
+    const s = this._sicht;
+    const k = s.dorf.kirmes;
+    const liste = k ? listeText(k.liste.map((n, a) => Math.max(0, n - k.geliefert[a]))) : '';
+    const name = (id: number) => { const g = s.gebaeude.find((x) => x.id === id); return g ? { typ: g.typ, name: NAMEN[g.typ] ?? g.typ } : null; };
+    for (const m of this.filter.neue(s.ereignisse, s.dorf, name, (a) => WARE_TEXT[a]?.mehr ?? '', (n) => DORFSTUFEN[n] ?? '', FREI_TEXT, liste)) this.zeigeMeldung(m);
+    const hat = (typ: string) => s.gebaeude.some((g) => g.typ === typ);
+    const min = s.tick / (60 * 20);
+    const tipp = (i: number, wann: boolean) => {
+      if (!wann || this.tipps.has(i)) return;
+      this.tipps.add(i);
+      const m = this.filter.tipp(i, liste);
+      if (m) this.zeigeMeldung(m);
+    };
+    tipp(0, min > 1 && !hat('holzfaeller'));
+    tipp(1, min > 4 && hat('holzfaeller') && !hat('saegewerk'));
+    tipp(2, min > 8 && (!hat('kartoffelfeld') || !hat('wohnhaus')));
+    tipp(3, min > 14 && !hat('kirmesplatz') && s.dorf.stufe === 0);
   }
 
   private indizes(): void {
@@ -804,12 +868,14 @@ export class Spiel {
     const t = GEBAEUDE[g.typ];
     const baustelle = g.bau < PROMILLE;
     const bedarf = g.bedarf ?? [];
-    const zt = zustandsText(g.getrennt ? 'getrennt' : g.zustand, baustelle, bedarfNamen(bedarf, WARE_TEXT));
+    const zt = zustandsText(g.getrennt ? 'getrennt' : g.zustand, baustelle, eingangNamen(g), t?.funktion);
     const zeilen: string[] = [];
     if (baustelle) {
       const fehlt = kostenAlsText(bedarf, WARE_TEXT);
       zeilen.push(fehlt === 'nichts' ? 'Material komplett – es wird verbaut.' : `Fehlt noch: ${fehlt}`);
       zeilen.push(`Phase ${1 + Math.floor((3 * g.bau) / 1001)} von 3 · ${Math.floor(g.bau / 10)} % gebaut`);
+      if (g.planiert !== undefined) zeilen.push(g.planiert < PROMILLE ? `Am Hang: erst planieren (${Math.floor(g.planiert / 10)} %)` : 'Planiert.');
+      if (g.stapel?.some((n) => n > 0)) zeilen.push(`Liegt bereit: ${kostenAlsText(g.stapel, WARE_TEXT)}`);
     } else {
       if (t?.radius) {
         zeilen.push(`Arbeitsbereich: gut bis ${t.radiusGut}, geht noch bis ${t.radius} Hexe${g.mitte ? ' – Mittelpunkt verlegt' : ''}`);
@@ -817,7 +883,17 @@ export class Spiel {
         const rw = ri ? reichweiteText(ri.art, ri.summe, ri.nah) : null;
         if (rw) zeilen.push(rw.text);
       }
-      if (g.puffer?.some((n) => n > 0)) zeilen.push(`Eingang: ${kostenAlsText(g.puffer, WARE_TEXT)}`);
+      if (t?.funktion === 'kirmes') {
+        const k = this._sicht.dorf.kirmes;
+        if (k) {
+          zeilen.push(`Warenliste: ${k.liste.map((n, a) => (n > 0 ? `${WARE_TEXT[a].icon} ${Math.min(n, k.geliefert[a])}/${n} ${WARE_TEXT[a].mehr}` : '')).filter(Boolean).join(' · ')}`);
+          zeilen.push(`Schaltet frei: ${FREI_TEXT}`);
+        } else zeilen.push(`Das Dorf ist jetzt ${DORFSTUFEN[this._sicht.dorf.stufe]}. Die nächste Kirmes kommt mit M8.`);
+      } else if (t?.funktion === 'wohnen') {
+        const d = this._sicht.dorf;
+        zeilen.push(`Essen im Haus: ${g.puffer?.some((n) => n > 0) ? kostenAlsText(g.puffer, WARE_TEXT) : 'nichts'}`);
+        zeilen.push(`Bewohner im Dorf: ${d.bewohner} von ${d.wohnraum} Plätzen · besseres Essen geht schneller`);
+      } else if (g.puffer?.some((n) => n > 0)) zeilen.push(`Eingang: ${kostenAlsText(g.puffer, WARE_TEXT)}`);
       if (g.ausgang?.some((n) => n > 0)) zeilen.push(`Wartet auf Abholung: ${kostenAlsText(g.ausgang, WARE_TEXT)}`);
     }
     const d: KartenDaten = {
@@ -886,8 +962,40 @@ export class Spiel {
   }
 
   private statusSetzen(): void {
-    const s = this._sicht;
-    this.leiste.setStatus({ tick: s.tick, freieTraeger: s.freieTraeger, vorrat: this.lagerVorrat(), pruefsumme: this._sim.pruefsumme() });
+    const s = this._sicht, d = s.dorf;
+    const k = d.kirmes;
+    let kirmes: NonNullable<StatusDaten['dorf']>['kirmes'] = null;
+    if (k) {
+      const soll = k.liste.reduce((a, b) => a + b, 0);
+      const ist = k.liste.reduce((a, n, i) => a + Math.min(n, k.geliefert[i]), 0);
+      const teile = k.liste.map((n, a) => (n > 0 ? `${WARE_TEXT[a].icon} ${Math.min(n, k.geliefert[a])}/${n}` : '')).filter(Boolean).join(' · ');
+      if (k.fest > 0) kirmes = { text: `🎡 Kirmes! Noch ${Math.ceil(k.fest / 20)} s – dann wird aus dem ${DORFSTUFEN[d.stufe]} ein ${DORFSTUFEN[d.stufe + 1]}`, prozent: 100, fest: true };
+      else if (!k.platz) kirmes = { text: `🎡 Kirmes ${DORFSTUFEN[d.stufe]} → ${DORFSTUFEN[d.stufe + 1]}: Kirmesplatz bauen, dann ${listeText(k.liste)} liefern`, prozent: 0, fest: false };
+      else kirmes = { text: `🎡 Kirmes: ${teile}`, prozent: soll ? (100 * ist) / soll : 0, fest: false };
+    } else if (d.stufe > 0) {
+      kirmes = { text: `🎡 ${DORFSTUFEN[d.stufe]}! Die nächste Kirmes kommt mit M8.`, prozent: 100, fest: false };
+    }
+    const zeigen = [0, 1, 2, 6, 5, 4, 9, 8, 7, 10, 11].map((a) => ({ art: a, icon: WARE_TEXT[a]?.icon ?? '', name: WARE_TEXT[a]?.mehr ?? '' }));
+    this.leiste.setStatus({
+      tick: s.tick, freieTraeger: s.freieTraeger, vorrat: this.lagerVorrat(), pruefsumme: this._sim.pruefsumme(), lagerZeigen: zeigen,
+      dorf: {
+        stufe: DORFSTUFEN[d.stufe] ?? '', bewohner: d.bewohner, wohnraum: d.wohnraum, frei: d.frei,
+        bauarbeiter: [d.bauarbeiter.frei, d.bauarbeiter.gesamt], planierer: [d.planierer.frei, d.planierer.gesamt], kirmes,
+      },
+    });
+    // Baumenü: noch nicht freigeschaltete und schon gebaute einmalige Gebäude sperren
+    const gesperrt: Record<string, string> = {};
+    for (const id of GEBAEUDE_WERKZEUGE) {
+      const g = this._sim.sperrGrund(id);
+      if (g === 'stufe') gesperrt[id] = `ab ${DORFSTUFEN[GEBAEUDE[id].abStufe] ?? 'später'}`;
+      else if (g === 'einmalig') gesperrt[id] = 'steht schon';
+    }
+    const sig = JSON.stringify(gesperrt);
+    if (sig !== this.gesperrtSig) {
+      this.gesperrtSig = sig;
+      this.leiste.setGesperrt(gesperrt);
+      if (gesperrt[this.werkzeug]) this.waehleWerkzeug('keins');
+    }
   }
 
   /** Zeilen fürs Info-Feld (HTML) zu einem Hex: Gebäude, Fahne, Weg, Bauplatz-Prüfung. */
@@ -900,7 +1008,7 @@ export class Spiel {
     if (g) {
       const name = NAMEN[g.typ] ?? g.typ;
       const baustelle = g.bau < PROMILLE;
-      const zt = zustandsText(g.zustand, baustelle, bedarfNamen(g.bedarf ?? [], WARE_TEXT));
+      const zt = zustandsText(g.zustand, baustelle, eingangNamen(g), GEBAEUDE[g.typ]?.funktion);
       const phase = baustelle ? `Baustelle ${Math.floor(g.bau / 10)} % (Phase ${1 + Math.floor((3 * g.bau) / 1001)} von 3) – ${zt.titel}` : zt.titel;
       z.push(`<b class="sim">${name}</b><span class="${zt.warn ? 'warn' : ''}">${phase}</span>`);
       if (baustelle) {

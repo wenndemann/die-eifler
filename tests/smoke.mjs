@@ -1,6 +1,6 @@
 // Rauchtest im echten Browser: Kartenwahl -> Vorschlag -> „Hier siedeln!“ -> Ausschnitt lädt, keine Seitenfehler,
 // Screenshots aus drei festen Kamerapositionen, Prüfsumme nach Neuladen gleich, Gegenprobe mit tools/map/pruefsumme.py.
-// Dazu (M3/M4): Determinismus Node = Browser (30-Segment-Szenario und Holzwirtschaft M4), Spiel auf der echten Karte
+// Dazu (M3–M5): Determinismus Node = Browser (30-Segment-Szenario, Holzwirtschaft M4, Spieltest-Bot M5), Spiel auf der echten Karte
 // (Aufbau per Befehle mit Holz und Stein, 5 Spielminuten, Screenshot nah am Lager) und Replay des Protokolls in einem
 // zweiten Browser-Kontext. Dazu die Bedienung (tests/bedienung.mjs): Baumenü, Geist, Bauplätze, Klick-Bau, Priorität, Handy.
 //
@@ -48,10 +48,10 @@ export { VORSCHLAEGE } from './src/map/presets.ts';`,
 }
 
 // Szenario-Replay als Bündel: einmal für Node (ESM), einmal für den Browser (IIFE, window.szenario.pruefsumme()).
-async function szenarioBuendel(format, plattform, name = 'baueSzenario30') {
+async function szenarioBuendel(format, plattform, name = 'baueSzenario30', modul = './tests/sim-szenario.ts') {
   const b = await build({
     stdin: {
-      contents: `import { ${name} } from './tests/sim-szenario.ts';
+      contents: `import { ${name} } from '${modul}';
 import { spieleAb } from './src/sim/replay.ts';
 export function pruefsumme() { const { karte, protokoll } = ${name}(); return spieleAb(karte, protokoll).pruefsumme(); }`,
       resolveDir: WURZEL, loader: 'ts',
@@ -185,15 +185,16 @@ try {
     }
   } else info('Gegenprobe Python übersprungen (Skript oder Daten fehlen)');
 
-  // ---- M3 a) Determinismus Node = Browser: das 30-Segment-Szenario und die Holzwirtschaft M4 (je 12000 Ticks) in beiden Umgebungen
-  for (const name of ['baueSzenario30', 'baueSzenarioM4']) {
-    const nodeCode = await szenarioBuendel('esm', 'node', name);
+  // ---- M3 a) Determinismus Node = Browser: das 30-Segment-Szenario, die Holzwirtschaft M4 (je 12000 Ticks) und 12 Minuten des
+  //      M5-Spieltest-Bots (Bewohner, Bauleute, Essens-Ketten) in beiden Umgebungen
+  for (const [name, modul] of [['baueSzenario30'], ['baueSzenarioM4'], ['baueSzenarioM5', './tests/m5-szenario.ts']]) {
+    const nodeCode = await szenarioBuendel('esm', 'node', name, modul);
     const nodeMod = await import(`data:text/javascript;base64,${Buffer.from(nodeCode).toString('base64')}`);
     const t1 = Date.now();
     const sumNode = nodeMod.pruefsumme();
     const msNode = Date.now() - t1;
     const leer = await browser.newPage();
-    await leer.addScriptTag({ content: await szenarioBuendel('iife', 'browser', name) });
+    await leer.addScriptTag({ content: await szenarioBuendel('iife', 'browser', name, modul) });
     const t2 = Date.now();
     const sumBrowser = await leer.evaluate(() => window.szenario.pruefsumme());
     const msBrowser = Date.now() - t2;

@@ -461,7 +461,7 @@ export class Simulation {
           o.stapel = g.stapel.map((n, a) => n + (g.haende === a ? 1 : 0));
           if (g.planSoll > 0) o.planiert = Math.min(PROMILLE, Math.floor((PROMILLE * g.planIst) / g.planSoll));
         }
-        if (t.pufferSumme > 0) o.puffer = g.puffer.slice();
+        if (this.hatEingang(t)) o.puffer = g.puffer.slice();
         if (t.ausgangMax > 0) o.ausgang = g.ausgang.slice();
         const ar = this.arbeiterSicht(g, t);
         if (ar) o.arbeiter = ar;

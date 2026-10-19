@@ -1,63 +1,162 @@
-// Waren als kleine Modelle (Drehbuch 4.1: alle Waren sind sichtbar unterwegs). Gemeinsam für Warenstapel an Fahnen
-// (fahnen.ts) und getragene Ware (traeger.ts). Unten bei y = 0, in der Mitte bei x/z = 0, Größe um WARE_M.
+// Waren als kleine Modelle (Drehbuch 4.1: alle Waren sind sichtbar unterwegs; 7.6: erst lesbar, dann schön). Jede Ware hat
+// eine klare Form und Hauptfarbe aus data/goods.json ('form', 'farbe'): der Stamm ist ein Stamm, das Brett ein Brett, der Käse
+// ein gelbes Rad, der Most ein Krug, die Bratkartoffeln eine Pfanne. Gemeinsam für Warenstapel an Fahnen (fahnen.ts), getragene
+// Ware (traeger.ts, arbeiter.ts) und Stapel an Baustellen und am Kirmesplatz (gebaeude.ts). Unten bei y = 0, in der Mitte bei
+// x/z = 0, Größe um WARE_M. Aus denselben Modellen sollen später die Icons entstehen (M7).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { paint } from './mockup';
 import { WARE_M } from './massstab';
-import { WAREN } from '../sim/daten';
+import { WAREN, WAREN_FARBE, WAREN_FORM } from '../sim/daten';
 
-/** Warenarten wie in der Simulation (data/goods.json); bis es eigene Modelle gibt, sehen alle Nahrungswaren wie der Laib aus. */
+/** Warenarten wie in der Simulation (data/goods.json). */
 export const WAREN_ANZAHL = WAREN.length;
 
 const W = WARE_M;
 
-function stamm(): THREE.BufferGeometry[] {
-  const l = W * 1.5, r = W * 0.2;
-  return [
-    paint(new THREE.CylinderGeometry(r, r, l, 7).rotateZ(Math.PI / 2).translate(0, r, 0), '#8a6340'),
-    // helle Schnittflächen an den Enden
-    paint(new THREE.CylinderGeometry(r * 0.86, r * 0.86, l + 0.12, 7).rotateZ(Math.PI / 2).translate(0, r, 0), '#e0bf86'),
-    paint(new THREE.CylinderGeometry(r * 1.03, r * 1.03, l - 0.5, 7).rotateZ(Math.PI / 2).translate(0, r, 0), '#8a6340'),
-  ];
+/** Farbe heller (f > 1) oder dunkler (f < 1). */
+function ton(farbe: string, f: number): string {
+  const c = new THREE.Color(farbe);
+  if (f >= 1) c.lerp(new THREE.Color('#ffffff'), Math.min(1, f - 1));
+  else c.multiplyScalar(f);
+  return `#${c.getHexString()}`;
 }
+const walze = (r1: number, r2: number, h: number, y: number, farbe: string, seg = 9) =>
+  paint(new THREE.CylinderGeometry(r1, r2, h, seg).translate(0, y + h / 2, 0), farbe);
+const kugel = (r: number, x: number, y: number, z: number, farbe: string, sy = 1) =>
+  paint(new THREE.SphereGeometry(r, 7, 5).scale(1, sy, 1).translate(x, y, z), farbe);
 
-function brett(): THREE.BufferGeometry[] {
-  const out: THREE.BufferGeometry[] = [];
-  for (let i = 0; i < 4; i++) {
-    out.push(paint(new THREE.BoxGeometry(W * 1.45, W * 0.12, W * 0.62).translate((i % 2 - 0.5) * 0.18, W * 0.12 + i * W * 0.13, 0), i % 2 ? '#e4c690' : '#d6b27a'));
-  }
-  // quer liegende Hölzer darunter
-  out.push(paint(new THREE.BoxGeometry(W * 0.12, W * 0.1, W * 0.7).translate(-W * 0.45, W * 0.05, 0), '#7a5636'));
-  out.push(paint(new THREE.BoxGeometry(W * 0.12, W * 0.1, W * 0.7).translate(W * 0.45, W * 0.05, 0), '#7a5636'));
-  return out;
+type Form = (farbe: string) => { teile: THREE.BufferGeometry[]; hoehe: number };
+
+const FORMEN: Record<string, Form> = {
+  stamm: (f) => {
+    const l = W * 1.5, r = W * 0.2;
+    return {
+      hoehe: W * 0.4,
+      teile: [
+        paint(new THREE.CylinderGeometry(r, r, l, 7).rotateZ(Math.PI / 2).translate(0, r, 0), f),
+        // helle Schnittflächen an den Enden
+        paint(new THREE.CylinderGeometry(r * 0.86, r * 0.86, l + 0.12, 7).rotateZ(Math.PI / 2).translate(0, r, 0), '#e0bf86'),
+        paint(new THREE.CylinderGeometry(r * 1.03, r * 1.03, l - 0.5, 7).rotateZ(Math.PI / 2).translate(0, r, 0), f),
+      ],
+    };
+  },
+  bretter: (f) => {
+    const out: THREE.BufferGeometry[] = [];
+    for (let i = 0; i < 4; i++) {
+      out.push(paint(new THREE.BoxGeometry(W * 1.45, W * 0.12, W * 0.62).translate((i % 2 - 0.5) * 0.18, W * 0.12 + i * W * 0.13, 0), i % 2 ? ton(f, 1.15) : f));
+    }
+    // quer liegende Hölzer darunter
+    out.push(paint(new THREE.BoxGeometry(W * 0.12, W * 0.1, W * 0.7).translate(-W * 0.45, W * 0.05, 0), '#7a5636'));
+    out.push(paint(new THREE.BoxGeometry(W * 0.12, W * 0.1, W * 0.7).translate(W * 0.45, W * 0.05, 0), '#7a5636'));
+    return { hoehe: W * 0.62, teile: out };
+  },
+  stein: (f) => {
+    const s = W * 0.82;
+    return {
+      hoehe: W * 0.82,
+      teile: [
+        paint(new THREE.BoxGeometry(s, s * 0.8, s * 0.9).rotateY(0.3).translate(0, s * 0.4, 0), f),
+        paint(new THREE.BoxGeometry(s * 0.9, s * 0.1, s * 0.8).rotateY(0.3).translate(0, s * 0.82, 0), ton(f, 1.25)),
+      ],
+    };
+  },
+  setzling: (f) => ({
+    hoehe: W * 1.0,
+    teile: [
+      walze(W * 0.28, W * 0.22, W * 0.35, 0, '#a0603a', 8),                         // Tontopf
+      walze(W * 0.27, W * 0.27, W * 0.04, W * 0.33, '#5a3a22', 8),                  // Erde
+      paint(new THREE.BoxGeometry(W * 0.05, W * 0.45, W * 0.05).translate(0, W * 0.55, 0), '#6b4a2e'),
+      paint(new THREE.ConeGeometry(W * 0.28, W * 0.55, 6).translate(0, W * 0.85, 0), f),
+    ],
+  }),
+  // Milchkanne: weiß mit blauem Band, Deckel und Henkel
+  kanne: (f) => ({
+    hoehe: W * 0.95,
+    teile: [
+      walze(W * 0.34, W * 0.36, W * 0.55, 0, f, 10),
+      walze(W * 0.2, W * 0.34, W * 0.18, W * 0.55, f, 10),
+      walze(W * 0.15, W * 0.15, W * 0.12, W * 0.73, f, 10),
+      walze(W * 0.18, W * 0.18, W * 0.05, W * 0.85, '#8f969c', 10),
+      walze(W * 0.37, W * 0.37, W * 0.09, W * 0.2, '#2f6db5', 10),
+      paint(new THREE.TorusGeometry(W * 0.13, W * 0.03, 4, 8, Math.PI).translate(0, W * 0.9, 0), '#8f969c'),
+    ],
+  }),
+  // Korb voller Äpfel: brauner Korb, rote Kugeln obendrauf
+  korb: (f) => {
+    const out = [walze(W * 0.48, W * 0.36, W * 0.38, 0, '#b0844e', 10), walze(W * 0.5, W * 0.5, W * 0.06, W * 0.36, '#8a6038', 10)];
+    const pos = [[0, 0], [0.24, 0.1], [-0.22, 0.12], [0.05, -0.25], [-0.12, -0.15], [0.2, -0.18]];
+    pos.forEach(([x, z], i) => out.push(kugel(W * 0.17, x * W, W * (0.48 + (i === 0 ? 0.1 : 0)), z * W, i % 3 === 2 ? ton(f, 0.8) : f)));
+    out.push(paint(new THREE.TorusGeometry(W * 0.42, W * 0.035, 4, 10, Math.PI).translate(0, W * 0.4, 0), '#8a6038'));
+    return { hoehe: W * 0.62, teile: out };
+  },
+  // Sack mit zugebundenem Zipfel, ein paar Kartoffeln liegen davor
+  sack: (f) => ({
+    hoehe: W * 0.8,
+    teile: [
+      kugel(W * 0.42, 0, W * 0.36, 0, '#d8c08a', 0.9),
+      paint(new THREE.ConeGeometry(W * 0.22, W * 0.3, 7).translate(0, W * 0.78, 0), '#cfb57c'),
+      walze(W * 0.12, W * 0.12, W * 0.06, W * 0.66, '#7a5636', 7),
+      kugel(W * 0.16, W * 0.38, W * 0.1, W * 0.25, f, 0.75),
+      kugel(W * 0.14, W * 0.12, W * 0.09, W * 0.42, ton(f, 0.85), 0.75),
+      kugel(W * 0.13, -W * 0.3, W * 0.08, W * 0.33, f, 0.75),
+    ],
+  }),
+  // Käse: gelbes Rad mit dunklerer Rinde und herausgeschnittenem Keil (helle Schnittfläche)
+  rad: (f) => ({
+    hoehe: W * 0.42,
+    teile: [
+      paint(new THREE.CylinderGeometry(W * 0.55, W * 0.55, W * 0.4, 14, 1, false, 0.6, Math.PI * 2 - 0.6).translate(0, W * 0.2, 0), f),
+      paint(new THREE.CylinderGeometry(W * 0.56, W * 0.56, W * 0.08, 14, 1, false, 0.6, Math.PI * 2 - 0.6).translate(0, W * 0.38, 0), ton(f, 0.82)),
+      paint(new THREE.BoxGeometry(W * 0.5, W * 0.38, W * 0.02).rotateY(-0.6 + Math.PI / 2).translate(Math.sin(0.6) * W * 0.25, W * 0.2, Math.cos(0.6) * W * 0.25), ton(f, 1.3)),
+      paint(new THREE.BoxGeometry(W * 0.02, W * 0.38, W * 0.5).translate(0, W * 0.2, W * 0.25), ton(f, 1.3)),
+    ],
+  }),
+  // Most: dickbauchiger Steingutkrug mit Henkel und Korken
+  krug: (f) => ({
+    hoehe: W * 0.95,
+    teile: [
+      kugel(W * 0.38, 0, W * 0.38, 0, f, 1.05),
+      walze(W * 0.16, W * 0.26, W * 0.25, W * 0.62, f, 9),
+      walze(W * 0.1, W * 0.1, W * 0.12, W * 0.85, '#d9b57a', 7),
+      walze(W * 0.39, W * 0.39, W * 0.08, W * 0.36, ton(f, 0.7), 10),
+      paint(new THREE.TorusGeometry(W * 0.17, W * 0.05, 5, 8, Math.PI * 1.2).rotateY(Math.PI / 2).translate(0, W * 0.6, W * 0.32), f),
+    ],
+  }),
+  // Bratkartoffeln: schwarze Pfanne mit Stiel, goldbraune Würfel darin
+  pfanne: (f) => {
+    const out = [
+      walze(W * 0.55, W * 0.45, W * 0.16, 0, '#2a2a2a', 12),
+      paint(new THREE.BoxGeometry(W * 0.7, W * 0.07, W * 0.12).translate(W * 0.85, W * 0.12, 0), '#2a2a2a'),
+      paint(new THREE.BoxGeometry(W * 0.3, W * 0.09, W * 0.16).translate(W * 1.15, W * 0.12, 0), '#6b4a2e'),
+    ];
+    const pos = [[0, 0], [0.22, 0.12], [-0.2, 0.15], [0.1, -0.24], [-0.18, -0.18], [0.3, -0.08], [-0.32, 0]];
+    pos.forEach(([x, z], i) => out.push(paint(new THREE.BoxGeometry(W * 0.17, W * 0.13, W * 0.17).rotateY(i * 0.7).translate(x * W, W * 0.2, z * W), i % 2 ? f : ton(f, 0.78))));
+    return { hoehe: W * 0.3, teile: out };
+  },
+  // Honigtopf: goldener Topf, Stoffdeckel mit Schnur, Holzlöffel
+  topf: (f) => ({
+    hoehe: W * 0.8,
+    teile: [
+      walze(W * 0.36, W * 0.3, W * 0.5, 0, f, 10),
+      walze(W * 0.4, W * 0.38, W * 0.1, W * 0.5, ton(f, 0.75), 10),
+      kugel(W * 0.36, 0, W * 0.6, 0, '#e8dcc0', 0.35),
+      walze(W * 0.38, W * 0.38, W * 0.04, W * 0.55, '#c0392b', 10),
+      paint(new THREE.BoxGeometry(W * 0.06, W * 0.55, W * 0.06).rotateZ(0.35).translate(W * 0.12, W * 0.8, 0), '#8a6340'),
+    ],
+  }),
+};
+
+function form(art: number) {
+  return (FORMEN[WAREN_FORM[art]] ?? FORMEN.sack)(WAREN_FARBE[art] ?? '#b08850');
 }
-
-function stein(): THREE.BufferGeometry[] {
-  const s = W * 0.82;
-  return [
-    paint(new THREE.BoxGeometry(s, s * 0.8, s * 0.9).rotateY(0.3).translate(0, s * 0.4, 0), '#a7a49c'),
-    paint(new THREE.BoxGeometry(s * 0.9, s * 0.1, s * 0.8).rotateY(0.3).translate(0, s * 0.82, 0), '#c8c5bb'),
-  ];
-}
-
-function essen(): THREE.BufferGeometry[] {
-  const r = W * 0.5;
-  return [
-    paint(new THREE.CylinderGeometry(r, r * 0.78, W * 0.5, 9).translate(0, W * 0.25, 0), '#8b5f33'),
-    paint(new THREE.CylinderGeometry(r * 1.02, r * 1.02, W * 0.07, 9).translate(0, W * 0.46, 0), '#6e4826'),
-    paint(new THREE.SphereGeometry(r * 0.92, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.6, 1).translate(0, W * 0.5, 0), '#e3b94b'),
-    paint(new THREE.SphereGeometry(r * 0.22, 5, 4).translate(r * 0.3, W * 0.78, 0), '#c8402e'),
-  ];
-}
-
-const BAU = [stamm, brett, stein, essen];
 
 /** Geometrie einer Ware (Farben als Vertexfarben). */
 export function warenGeometrie(art: number): THREE.BufferGeometry {
-  const g = mergeGeometries((BAU[art] ?? essen)())!;
+  const g = mergeGeometries(form(art).teile)!;
   g.computeVertexNormals();
   return g;
 }
 
 /** Höhe einer Ware in Metern (grob, zum Stapeln). */
-export const WARE_HOEHE: readonly number[] = [W * 0.4, W * 0.62, W * 0.82, W * 0.8];
+export const WARE_HOEHE: readonly number[] = WAREN.map((_, a) => form(a).hoehe);
