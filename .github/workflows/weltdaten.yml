@@ -35,8 +35,18 @@ jobs:
       - name: Python-Pakete
         run: pip install -r tools/map/requirements.txt
       - name: Weltdaten rechnen
-        # OSM aus den Geofabrik-Auszügen: zuverlässiger als die oft überlasteten Overpass-Server
-        run: python3 tools/map/setup.py --gebiet "$GEBIET" --osm geofabrik
+        # OSM aus den Geofabrik-Auszügen: zuverlässiger als die oft überlasteten Overpass-Server. Die amtlichen Höhenserver brechen
+        # von GitHub aus gern Verbindungen ab: wenige parallele Downloads, viele Wiederholungen, und das Setup setzt bei einem
+        # neuen Start dort fort, wo es aufgehört hat (bis zu 5 Durchgänge).
+        env:
+          WELT_VERSUCHE: '10'
+        run: |
+          for n in 1 2 3 4 5; do
+            echo "== Durchgang $n"
+            if python3 tools/map/setup.py --gebiet "$GEBIET" --osm geofabrik --jobs 2; then exit 0; fi
+            sleep 30
+          done
+          exit 1
       - name: Packen
         run: |
           V=$(python3 -c "import json;print(json.load(open('welt-daten/versions.json'))['aktuell'])")
