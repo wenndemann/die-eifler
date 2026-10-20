@@ -13,7 +13,13 @@ import { Houses } from './render/houses';
 import { RtsCamera } from './render/camera';
 import { setzeKulisse } from './render/kulisse';
 import { Hud } from './ui/hud';
-import { zeigeKartenwahl } from './ui/kartenwahl';
+import { zeigeKartenwahl, type KartenwahlErgebnis } from './ui/kartenwahl';
+import { frageName, Lobby, zeigeHinweis, type LobbyEinstellungen, type StartInfo } from './ui/lobby';
+import { NAME_SPEICHER, speicher, Vermittlung, type RaumSicht } from './netz/vermittlung';
+import { startePartie } from './netz/mehrspieler';
+import { orteAus } from './netz/startplaetze';
+import { ausschnittVon, leseSpielstand, type Spielstand } from './spiel/spielstand';
+import { saatAusPruefsumme, waehleLagerHex } from './spiel/logik';
 import { buildMockup } from './render/mockup';
 import { gespeicherteQualitaet } from './render/qualitaet';
 import { Bench, zeigeErgebnis, type BenchErgebnis } from './bench';
@@ -21,7 +27,7 @@ import { ladeWelt, type Welt } from './welt/laden';
 import { ladeAusschnitt } from './welt/ausschnitt';
 import { GROESSEN, type AusschnittParam, type Groesse } from './welt/format';
 import { SimDemo } from './render/simdemo';
-import { Spiel } from './spiel/spiel';
+import { Spiel, type SpielKontext } from './spiel/spiel';
 import { hexToWorld } from './welt/hexwelt';
 
 const TERRAIN_NAMES: Record<string, string> = {
@@ -29,7 +35,10 @@ const TERRAIN_NAMES: Record<string, string> = {
 };
 const LAENDER: Record<string, string> = { DE: 'Deutschland', BE: 'Belgien', LU: 'Luxemburg', NL: 'Niederlande' };
 
-interface HashParam { version?: string; q?: number; r?: number; size?: Groesse; vorschlag?: string; bench?: boolean; simdemo?: boolean }
+interface HashParam { version?: string; q?: number; r?: number; size?: Groesse; vorschlag?: string; bench?: boolean; simdemo?: boolean; raum?: string; freunde?: boolean }
+
+/** Spielstand, der nach dem Neuladen geladen werden soll (Laden aus dem laufenden Spiel auf eine andere Karte). */
+const LADEN_SPEICHER = 'eifeler.laden';
 
 /** URL-Hash: #v=<version>&q=..&r=..&g=klein|mittel|gross oder #<vorschlag-id>. */
 function leseHash(): HashParam {
@@ -38,7 +47,7 @@ function leseHash(): HashParam {
   if (!h.includes('=')) return { vorschlag: decodeURIComponent(h) };
   const sp = new URLSearchParams(h);
   const g = sp.get('g') as Groesse | null;
-  const out: HashParam = { version: sp.get('v') ?? undefined, bench: sp.get('bench') === '1', simdemo: sp.get('simdemo') === '1' };
+  const out: HashParam = { version: sp.get('v') ?? undefined, bench: sp.get('bench') === '1', simdemo: sp.get('simdemo') === '1', raum: sp.get('raum') ?? undefined, freunde: sp.get('freunde') === '1' };
   if (sp.has('q') && sp.has('r') && g && g in GROESSEN) { out.q = Number(sp.get('q')); out.r = Number(sp.get('r')); out.size = g; }
   return out;
 }
@@ -68,18 +77,39 @@ async function main() {
     throw new Error(`Weltdaten nicht erreichbar (${(e as Error).message}). Läuft der Server mit welt-daten/?`);
   }
 
-  // 2. Ausschnitt-Parameter: aus der URL, aus einem Vorschlag oder per Kartenwahl
+  // 2. Ausschnitt-Parameter: aus der URL, aus einem Vorschlag, per Kartenwahl, aus einem Spielstand oder (Mehrspieler-Gast) vom Gastgeber
   let param: AusschnittParam;
-  if (hp.q !== undefined && hp.size) param = { version: welt.version, q: hp.q, r: hp.r!, size: hp.size };
+  let wahl: KartenwahlErgebnis | null = null;
+  let gast: Vermittlung | null = null;
+  let spielstand: Spielstand | null = null;
+  try {
+    const t = sessionStorage.getItem(LADEN_SPEICHER);
+    if (t) { sessionStorage.removeItem(LADEN_SPEICHER); spielstand = leseSpielstand(t); }
+  } catch { spielstand = null; }
+  if (hp.raum) {
+    loading.style.display = 'none';
+    const r = await raumBeitreten(hp.raum);
+    gast = r.v;
+    param = r.param;
+    loading.style.display = '';
+  } else if (spielstand) param = ausschnittVon(spielstand);
+  else if (hp.q !== undefined && hp.size) param = { version: welt.version, q: hp.q, r: hp.r!, size: hp.size };
   else if (preset) param = { version: welt.version, q: preset.q, r: preset.r, size: preset.size };
   else {
     loading.style.display = 'none';
-    param = await zeigeKartenwahl(document.body, welt);
+    wahl = await zeigeKartenwahl(document.body, welt);
     loading.style.display = '';
+    if (wahl.art === 'laden') { spielstand = wahl.spielstand; param = ausschnittVon(spielstand); } else param = wahl.param;
   }
+  if (param.version !== welt.version) welt = await ladeWelt(param.version);
+  // Mehrspieler: als Gast, als Gastgeber („Mit Freunden spielen“) oder mit einem Spielstand mehrerer Spieler
+  const mehrspieler = !!gast || wahl?.art === 'freunde' || !!hp.freunde || (!!spielstand && spielstand.spieler.length > 1);
   const t0 = performance.now();
   const ausschnitt = await ladeAusschnitt(welt, param, fortschritt);
-  schreibeHash(ausschnitt.param);
+  if (spielstand && spielstand.karte.pruefsumme !== ausschnitt.pruefsumme) {
+    throw new Error('Der Spielstand passt nicht zu diesen Kartendaten (Prüfsumme weicht ab) – ist die Datenversion noch vorhanden?');
+  }
+  if (!mehrspieler) schreibeHash(ausschnitt.param);
   const ladezeit = performance.now() - t0;
   fortschritt('Gelände wird aufgebaut', 1);
   await new Promise((r) => setTimeout(r, 30));
@@ -141,7 +171,7 @@ async function main() {
   cam.maxDistance = Math.max(16000, breite * 1.4);
 
   // Das Spiel: Simulation, Darstellung von Wegen/Fahnen/Trägern/Gebäuden und Bauleiste (nicht in der Demo ohne Simulation)
-  const spiel = simdemo ? null : new Spiel({
+  const spielKontext = (extra: Partial<SpielKontext>): SpielKontext => ({
     map, grid, ausschnitt, base, ex, haken, scene: stage.scene, camera: cam.camera, abstand: () => cam.distance,
     canvas: stage.renderer.domElement, root: document.body,
     pick: (x, y) => {
@@ -149,7 +179,15 @@ async function main() {
       return p ? { x: p.x, z: p.z } : null;
     },
     yAt,
+    // Spielstand aus dem laufenden Spiel laden: Seite mit dessen Karte neu laden und dort fortsetzen
+    onLaden: (st) => {
+      try { sessionStorage.setItem(LADEN_SPEICHER, JSON.stringify(st)); } catch { alert('Der Spielstand ist zu groß für diesen Browser.'); return; }
+      history.replaceState(null, '', location.pathname + location.search);
+      location.reload();
+    },
+    ...extra,
   });
+  let spiel = simdemo || mehrspieler ? null : new Spiel(spielKontext({ laden: spielstand?.stand }));
   const lagerW = spiel ? grid.toWorld(spiel.lagerHex) : null;
   const start = lagerW ?? map.info.places.find((p) => p.name === map.info.start) ?? { x: cx, z: cz };
 
@@ -360,6 +398,80 @@ async function main() {
   (window as unknown as { eifeler: unknown }).eifeler = api;
   frame();
   if (hp.bench) setTimeout(startBench, 1500);
+
+  // 3. Mehrspieler: Raum eröffnen (Gastgeber), Lobby, Start, Partie im Gleichschritt
+  if (mehrspieler && !simdemo) {
+    try {
+      const v = gast ?? await raumEroeffnen();
+      api.vermittlung = v;
+      const raum = v.raum!;
+      const e0 = raum.einstellungen as LobbyEinstellungen | null;
+      let start: StartInfo;
+      if (raum.gestartet) start = { du: v.du, raum, einstellungen: e0!, startorte: [], spielstand: null };
+      else {
+        const lobby = new Lobby(document.body, {
+          v, kartenName: name, param: ausschnitt.param, kartePruef: ausschnitt.pruefsumme, orte: orteAus(ausschnitt.kerne),
+          mitte: { q: ausschnitt.param.q, r: ausschnitt.param.r }, erster: map.info.start, spielstand: gast ? null : spielstand,
+          lagerFuer: (n) => (n ? waehleLagerHex(ausschnitt.hex, ausschnitt.kerne, n) : null),
+        });
+        api.lobby = lobby;
+        start = await lobby.warteAufStart();
+      }
+      const neu = !raum.gestartet && start.du === start.raum.taktgeber ? {
+        starts: start.startorte.map((n) => waehleLagerHex(ausschnitt.hex, ausschnitt.kerne, n)),
+        saat: saatAusPruefsumme(ausschnitt.pruefsumme), tempo: start.einstellungen.tempo, spielstand: start.spielstand,
+      } : undefined;
+      const lauf = await startePartie({ v, du: start.du, raum: start.raum, karte: ausschnitt.hex, kartePruef: ausschnitt.pruefsumme, neu });
+      spiel = new Spiel(spielKontext({ mehrspieler: { partie: lauf.partie, namen: lauf.namen, anwesend: (sp) => lauf.netz.istOffen(sp) } }));
+      Object.assign(api, { spiel, partie: lauf.partie, netz: lauf.netz });
+      intro = null; api.ready = true;
+      const w = grid.toWorld(spiel.lagerHex);
+      cam.lookAt(...clamp(w.x, w.z + 350));
+    } catch (e) {
+      zeigeHinweis(document.body, 'Mehrspieler geht gerade nicht', (e as Error).message, 'Allein spielen', () => {
+        history.replaceState(null, '', location.pathname + location.search);
+        location.reload();
+      });
+    }
+  }
+
+  /** Gastgeber: Name fragen, Raum anlegen, Einladungslink in die Adresse (Neuladen bringt einen zurück). */
+  async function raumEroeffnen(): Promise<Vermittlung> {
+    const n = await frageName(document.body, 'Raum eröffnen', 'Raum eröffnen', 'Du lädst deine Freunde per Link ein. Kein Konto nötig, nur ein Name.');
+    const v = new Vermittlung();
+    await v.anlegen(n);
+    history.replaceState(null, '', `${location.pathname}${location.search}#raum=${v.raumCode}${schlechtTeil()}`);
+    return v;
+  }
+}
+
+/** Testaufbau: „&netz=schlecht“ in der Adresse behalten. */
+function schlechtTeil(): string {
+  return new URLSearchParams(location.hash.slice(1)).get('netz') === 'schlecht' ? '&netz=schlecht' : '';
+}
+
+/**
+ * Mehrspieler-Gast (Einladungslink #raum=CODE): Name fragen (beim Wiederkommen mit gemerktem Platz nicht), beitreten und warten,
+ * bis der Gastgeber die Karte gewählt hat.
+ */
+async function raumBeitreten(code: string): Promise<{ v: Vermittlung; param: AusschnittParam }> {
+  const gemerkt = speicher(`eifeler.raum.${code.toUpperCase()}`) && speicher(NAME_SPEICHER);
+  const n = gemerkt || await frageName(document.body, 'Mit Freunden spielen', 'Beitreten', `Du bist eingeladen (Raum ${code.toUpperCase()}).`);
+  const v = new Vermittlung();
+  let raum: RaumSicht;
+  try { raum = await v.beitreten(code, n); } catch (e) {
+    await new Promise<void>(() => zeigeHinweis(document.body, 'Beitreten ging nicht', (e as Error).message, 'Allein spielen', () => {
+      history.replaceState(null, '', location.pathname + location.search);
+      location.reload();
+    }));
+    throw e;
+  }
+  const e = await new Promise<LobbyEinstellungen>((ok) => {
+    const da = raum.einstellungen as LobbyEinstellungen | null;
+    if (da?.param) { ok(da); return; }
+    v.onRaum = (r) => { const x = r.einstellungen as LobbyEinstellungen | null; if (x?.param) ok(x); };
+  });
+  return { v, param: { version: e.param.version, q: e.param.q, r: e.param.r, size: e.param.size as Groesse } };
 }
 
 main().catch((e) => {

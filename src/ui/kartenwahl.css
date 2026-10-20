@@ -141,3 +141,16 @@
   .kw-zoom { flex-direction: row; right: 8px; top: 8px; }
   .kw-toast { top: 60px; max-width: calc(100% - 24px); }
 }
+
+/* Mehrspieler und Spielstand (M6) */
+.kw-extra { display: flex; gap: 6px; flex-wrap: wrap; }
+.kw-freunde {
+  flex: 1; min-height: 40px; padding: 0 10px; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+  font: 600 15px 'Alegreya Sans', sans-serif; color: var(--ink); background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(231, 194, 122, 0.5);
+}
+.kw-freunde:hover:not(:disabled) { filter: brightness(1.2); }
+.kw-freunde:disabled { opacity: 0.5; cursor: not-allowed; }
+@media (max-width: 699px) {
+  .kw-fuss { flex-wrap: wrap; }
+  .kw-extra { flex-basis: 100%; }
+}

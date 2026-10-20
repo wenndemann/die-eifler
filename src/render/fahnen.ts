@@ -11,6 +11,7 @@ import { Instanzen } from './instanzen';
 import { FAHNE_H, WARE_M, fernFaktor } from './massstab';
 import { WAREN_ANZAHL, warenGeometrie } from './waren';
 import { hash } from './terrain';
+import mp from '../../data/mehrspieler.json';
 
 /** Tuchmaße (m): Breite, Höhe. */
 const TUCH_B = 10.5, TUCH_H = 6.6;
@@ -18,6 +19,8 @@ const TUCH_B = 10.5, TUCH_H = 6.6;
 const FARBE_WEG = new THREE.Color('#d6402c');
 const FARBE_GEB = new THREE.Color('#f0b429');
 const WEISS = new THREE.Color('#ffffff');
+/** Fahnentuch der Mitspieler in ihrer Farbe (data/mehrspieler.json); die eigenen bleiben rot und gold. */
+const SPIELER_FARBEN = mp.farben.liste.map((c) => new THREE.Color(c));
 
 /** Sitze im Stapel: [Spalte, Zeile, Lage]. Platz 0–7 Pyramide, 8–9 Notplätze daneben. */
 const SITZE: readonly (readonly [number, number, number])[] = [
@@ -107,7 +110,8 @@ transformed.y += sin(ph * 0.7 + 1.0) * 0.3 * fx - fx * fx * 0.5;`);
       s.set(k, k, k);
       m.compose(p.set(w.x, y, w.z), q.identity(), s);
       this.stangen.fuege(m);
-      this.tuecher.fuege(m, f.gebaeude ? FARBE_GEB : (hash(f.q * 31 + 7, f.r) < 0.15 ? WEISS : FARBE_WEG));
+      const fremd = f.sp !== sicht.ich ? SPIELER_FARBEN[f.sp % SPIELER_FARBEN.length] : null;
+      this.tuecher.fuege(m, fremd ?? (f.gebaeude ? FARBE_GEB : (hash(f.q * 31 + 7, f.r) < 0.15 ? WEISS : FARBE_WEG)));
       // Warenstapel
       const n = Math.min(f.waren.length, SITZE.length);
       for (let i = 0; i < n; i++) {

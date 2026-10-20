@@ -1,5 +1,7 @@
 // Deterministischer Simulationskern (Drehbuch 4.1, 8.3; DESIGN §3–4): Fahnen, Wege, Träger, Routing, Warenfluss, Baustellen,
 // Bäume und Felsen, Arbeiter, Abriss. Nur Ganzzahlen, fester Tick, Zufall nur aus der Saat. Intern werden Hexe als Karten-Index geführt.
+// Mehrspieler (Drehbuch 2.3, 8.3): Jeder Spieler hat sein Dorf (Bewohner, Bauleute, Stufe, Kirmes) und sein eigenes Wegenetz. Fahnen,
+// Wege, Träger, Gebäude und Bauleute gehören einem Spieler (sp); Netze verschiedener Spieler berühren sich nie. Natur ist gemeinsam.
 import { FLAG } from '../welt/format';
 import { Fnv2 } from '../welt/pruefsumme';
 import {
@@ -18,13 +20,15 @@ import type {
   Befehl, GebaeudeZustand, Id, KarteDaten, Protokoll, ProtokollEintrag, SichtArbeiter, SichtBaumann, SichtEreignis, SichtNatur, SimSicht,
   StartDaten,
 } from './typen';
+import { ausBase64, inBase64, kopie, STAND_ZAHLEN } from './stand';
+import type { SimStand } from './stand';
 
 interface Ware { art: number; ziel: Id }
 
-interface Fahne { id: Id; h: number; gebaeude: Id; waren: Ware[]; segmente: Id[] }
+interface Fahne { id: Id; sp: number; h: number; gebaeude: Id; waren: Ware[]; segmente: Id[] }
 
 interface Segment {
-  id: Id; a: Id; b: Id;
+  id: Id; sp: number; a: Id; b: Id;
   /** Hex-Indizes von Fahne a bis Fahne b. */
   pfad: number[];
   traeger: Id;
@@ -35,7 +39,7 @@ interface Segment {
 
 /** phase 0 = Anmarsch vom Lager, 1 = wartet an einem Ende, 2 = läuft auf dem Segment. */
 interface Traeger {
-  id: Id; seg: Id; phase: 0 | 1 | 2;
+  id: Id; sp: number; seg: Id; phase: 0 | 1 | 2;
   /** Ende (0 = a, 1 = b), an dem er wartet bzw. zuletzt war. */
   ende: 0 | 1;
   /** Position im Segment-Pfad (Index) und Richtung, Ticks im aktuellen Schritt und dessen Dauer. */
@@ -51,7 +55,7 @@ interface Traeger {
 const PH_SUCHE = 0, PH_HIN = 1, PH_ARBEIT = 2, PH_ZURUECK = 3, PH_RUHE = 4;
 
 interface Gebaeude {
-  id: Id; typ: string; h: number; fahne: Id;
+  id: Id; sp: number; typ: string; h: number; fahne: Id;
   /** 1 = fertig gebaut (Lager von Anfang an). */
   fertig: 0 | 1;
   /** Bisher verbautes Material je Warenart und Baustellen-Priorität. */
@@ -76,13 +80,38 @@ const BM_GEHT = 0, BM_ARBEIT = 1, BM_WARTET = 2;
 
 /** Bauarbeiter (beruf 0) oder Planierer (beruf 1), Drehbuch 4.5. */
 interface Baumann {
-  id: Id; beruf: 0 | 1;
+  id: Id; sp: number; beruf: 0 | 1;
   /** Ziel-Baustelle (0 = Heimweg ins Lager). */
   ziel: Id;
   phase: number;
   /** Gehweg als Hex-Indizes, Position, Ticks im Schritt und dessen Dauer; beim Arbeiten t/dauer der Arbeit. */
   route: number[]; ri: number; t: number; dauer: number;
 }
+
+/** Dorf eines Spielers (Drehbuch 4.3, 4.5, 5.2; DESIGN §5). */
+interface Dorf {
+  /** Bewohner gesamt (frei + Träger + Arbeiter) und davon frei im Vorrat. */
+  bewohner: number; frei: number;
+  /** Bauleute: Gesamtzahl und frei im Lager, je Bauarbeiter und Planierer. */
+  bauGesamt: number; bauFrei: number; planGesamt: number; planFrei: number;
+  /** Dorfstufe (0 Weiler …), laufendes Fest (Restticks), Notnagel-Uhr. */
+  stufe: number; fest: number; notnagelT: number;
+  /** 1 = der Verwalter führt das Dorf (Drehbuch 8.3). */
+  verwalter: number;
+  ereignisse: SichtEreignis[];
+  /** Freier Wohnraum zu Beginn des Ticks (abgeleitet, nicht Teil der Prüfsumme). */
+  wohnFrei: number;
+}
+
+function neuesDorf(bewohner: number): Dorf {
+  return {
+    bewohner, frei: bewohner, bauGesamt: START_BAUARBEITER, bauFrei: START_BAUARBEITER, planGesamt: START_PLANIERER, planFrei: START_PLANIERER,
+    stufe: 0, fest: 0, notnagelT: 0, verwalter: 0, ereignisse: [], wohnFrei: 0,
+  };
+}
+
+/** Höchstzahl Spieler einer Partie. */
+export const SPIELER_MAX = 8;
 
 const EREIGNISSE_MAX = 32;
 
@@ -108,25 +137,14 @@ function typVon(typ: string): GebaeudeTyp | undefined {
 export class Simulation {
   readonly karte: SimKarte;
   private readonly saat: number;
-  /** Abweichende Startbewohner (nur fürs Protokoll). */
-  private readonly startBewohner: number | undefined;
+  /** Startdaten je Spieler, wie übergeben (fürs Protokoll). */
+  private readonly starts: StartDaten[];
   private _tick = 0;
   private rng: number;
   private naechsteId = 1;
-  /** Bewohner gesamt (frei + Träger + Arbeiter) und davon frei im Vorrat (DESIGN §5). */
-  private bewohner: number;
-  private frei: number;
-  /** Bauleute (Drehbuch 4.5): Gesamtzahl und frei im Lager, je Bauarbeiter und Planierer. */
-  private bauGesamt = START_BAUARBEITER;
-  private bauFrei = START_BAUARBEITER;
-  private planGesamt = START_PLANIERER;
-  private planFrei = START_PLANIERER;
+  /** Dorf je Spieler (Index = Spieler). */
+  private doerfer: Dorf[];
   private bauleute = new Map<Id, Baumann>();
-  /** Dorfstufe (0 Weiler …), laufendes Fest (Restticks), Notnagel-Uhr. */
-  private dorfStufe = 0;
-  private fest = 0;
-  private notnagelT = 0;
-  private ereignisse: SichtEreignis[] = [];
   private ereignisNr = 0;
   private befehlZahl = 0;
   private fahnen = new Map<Id, Fahne>();
@@ -163,14 +181,15 @@ export class Simulation {
   private inb = new Map<Id, number>();
   private natCache: SichtNatur | null = null;
   private natHash: { rev: number; hex: string } | null = null;
-  /** Freier Wohnraum zu Beginn des Ticks (abgeleitet). */
-  private wohnFrei = 0;
 
-  constructor(karteDaten: KarteDaten, saat: number, start: StartDaten) {
+  /** `start`: ein Dorf (Einzelspiel) oder eins je Spieler; Spieler i startet am Lager-Hex start[i]. */
+  constructor(karteDaten: KarteDaten, saat: number, start: StartDaten | readonly StartDaten[]) {
     this.karte = new SimKarte(karteDaten);
     this.saat = saat | 0;
-    this.startBewohner = start.bewohner;
-    this.bewohner = this.frei = Math.max(0, Math.floor(start.bewohner ?? START_BEWOHNER));
+    const starts = Array.isArray(start) ? start : [start as StartDaten];
+    if (!starts.length || starts.length > SPIELER_MAX) throw new Error(`1 bis ${SPIELER_MAX} Spieler, nicht ${starts.length}`);
+    this.starts = starts.map((x) => (x.bewohner === undefined ? { q: x.q, r: x.r } : { q: x.q, r: x.r, bewohner: x.bewohner }));
+    this.doerfer = this.starts.map((x) => neuesDorf(Math.max(0, Math.floor(x.bewohner ?? START_BEWOHNER))));
     this.rng = (Math.imul(this.saat, 0x9e3779b1) ^ 0x85ebca6b) | 0;
     const n = this.karte.count;
     this.hexFahne = new Int32Array(n);
@@ -185,11 +204,15 @@ export class Simulation {
     this.baumRes = new Uint8Array(n);
     this.felsRes = new Uint8Array(n);
     this.natureStart();
-    const h = this.karte.index(start.q, start.r);
-    if (h < 0 || !this.karte.begehbar[h]) throw new Error('Startlager liegt nicht auf begehbarem Boden');
-    const lager = this.gebaeudeErzeugen('lager', h, true);
-    lager.vorrat = START_VORRAT.slice();
-    this.fairerStart(h);
+    this.starts.forEach((st, sp) => {
+      const h = this.karte.index(st.q, st.r);
+      if (h < 0 || !this.karte.begehbar[h]) throw new Error(`Startlager von Spieler ${sp} liegt nicht auf begehbarem Boden`);
+      if (this.hexGeb[h] || this.hexFahne[h]) throw new Error(`Startlager von Spieler ${sp} liegt auf einem anderen Lager`);
+      const lager = this.gebaeudeErzeugen('lager', h, true, sp);
+      lager.vorrat = START_VORRAT.slice();
+    });
+    // fairer Start erst, wenn alle Lager stehen (keine Lesesteine auf ein anderes Lager)
+    this.starts.forEach((st) => this.fairerStart(this.karte.index(st.q, st.r)));
     this.felsArtKopie = this.felsArt.slice();
     this.baumStartKopie = this.baumStart.slice();
   }
@@ -245,6 +268,9 @@ export class Simulation {
 
   get tick(): number { return this._tick; }
 
+  /** Zahl der Spieler (Dörfer). */
+  get spielerZahl(): number { return this.doerfer.length; }
+
   // ------------------------------------------------------------------ Zufall (mulberry32)
 
   private zufall(n: number): number {
@@ -271,16 +297,16 @@ export class Simulation {
       const jetzt = this.ausstehend.filter((e) => e.tick === t);
       if (jetzt.length) {
         this.ausstehend = this.ausstehend.filter((e) => e.tick !== t);
-        for (const e of jetzt) { this.fuehreAus(e.befehl); this.befehlZahl++; }
+        for (const e of jetzt) { this.fuehreAus(e.befehl, e.spieler); this.befehlZahl++; }
       }
     }
     if (this.verbundenNeu) this.verbindungenNeu();
     this.inbNeu();
-    this.wohnFrei = this.wohnraumFrei();
+    for (let sp = 0; sp < this.doerfer.length; sp++) this.doerfer[sp].wohnFrei = this.wohnraumFrei(sp);
     for (const g of this.gebaeude.values()) this.gebaeudeTick(g);
-    this.dorfTick();
+    for (let sp = 0; sp < this.doerfer.length; sp++) this.dorfTick(sp);
     if (t % 10 === 0) { this.baeumeWachsen(); this.zielePruefen(); }
-    if (t % 4 === 0) { this.lagerPull(); this.bauleuteSchicken(); }
+    if (t % 4 === 0) { this.lagerPull(); for (let sp = 0; sp < this.doerfer.length; sp++) this.bauleuteSchicken(sp); }
     for (const b of [...this.bauleute.values()]) this.baumannSchritt(b);
     this.traegerPhase();
     if (t % 40 === 0) for (const s of this.segmente.values()) if (s.verkehr > 0) s.verkehr--;
@@ -288,41 +314,112 @@ export class Simulation {
   }
 
   protokoll(karteInfo: Protokoll['karte']): Protokoll {
-    const l = this.lagerGebaeude();
-    return {
-      format: 1, karte: { ...karteInfo }, saat: this.saat,
-      start: this.startBewohner === undefined ? { q: this.karte.qs[l.h], r: this.karte.rs[l.h] }
-        : { q: this.karte.qs[l.h], r: this.karte.rs[l.h], bewohner: this.startBewohner },
+    const p: Protokoll = {
+      format: 1, karte: { ...karteInfo }, saat: this.saat, start: { ...this.starts[0] },
       befehle: this.log.map((e) => ({ tick: e.tick, spieler: e.spieler, befehl: JSON.parse(JSON.stringify(e.befehl)) as Befehl })),
       ticks: this._tick,
     };
+    if (this.starts.length > 1) p.mitspieler = this.starts.slice(1).map((x) => ({ ...x }));
+    return p;
   }
 
-  private lagerGebaeude(): Gebaeude {
-    for (const g of this.gebaeude.values()) if (g.typ === 'lager') return g;
-    throw new Error('kein Lager');
+  /** Startdaten aller Spieler (Kopie). */
+  startDaten(): StartDaten[] { return this.starts.map((x) => ({ ...x })); }
+
+  // ------------------------------------------------------------------ Spielstand (Speichern, Laden, Wiederbeitritt)
+
+  /** Der ganze Zustand als JSON-fähiges Objekt (Kopie). Simulation.ausStand(karte, stand) setzt genau hier fort. */
+  stand(): SimStand {
+    const jr: number[] = [];
+    for (let i = 0; i < this.jungReif.length; i++) if (this.jungReif[i]) jr.push(i, this.jungReif[i]);
+    const zahl: Record<(typeof STAND_ZAHLEN)[number], number> = {
+      tick: this._tick, rng: this.rng, naechsteId: this.naechsteId, ereignisNr: this.ereignisNr, befehlZahl: this.befehlZahl, natRev: this.natRev,
+    };
+    return kopie({
+      format: 1 as const, saat: this.saat, starts: this.starts, zahlen: STAND_ZAHLEN.map((k) => zahl[k]),
+      doerfer: this.doerfer as unknown as Record<string, unknown>[],
+      fahnen: [...this.fahnen.values()] as unknown as Record<string, unknown>[],
+      segmente: [...this.segmente.values()] as unknown as Record<string, unknown>[],
+      traeger: [...this.traeger.values()] as unknown as Record<string, unknown>[],
+      gebaeude: [...this.gebaeude.values()] as unknown as Record<string, unknown>[],
+      bauleute: [...this.bauleute.values()] as unknown as Record<string, unknown>[],
+      natur: {
+        baum: inBase64(this.baum), jung: inBase64(this.jung), stufe: inBase64(this.stufe), fels: inBase64(this.fels), felsArt: inBase64(this.felsArt),
+        baumRes: inBase64(this.baumRes), felsRes: inBase64(this.felsRes), jungReif: jr, jungListe: this.jungListe,
+      },
+      log: this.log, ausstehend: this.ausstehend, stat: this.stat, erzeugtJe: this.erzeugtJe,
+    });
   }
 
-  private fuehreAus(b: Befehl): void {
+  /** Simulation aus einem Spielstand auf derselben Karte (Prüfsumme danach wie beim Speichern). */
+  static ausStand(karteDaten: KarteDaten, st: SimStand): Simulation {
+    if (!st || st.format !== 1) throw new Error('Unbekanntes Spielstand-Format');
+    const sim = new Simulation(karteDaten, st.saat, st.starts);
+    sim.setzeStand(kopie(st));
+    return sim;
+  }
+
+  private setzeStand(st: SimStand): void {
+    const z = (k: (typeof STAND_ZAHLEN)[number]) => st.zahlen[STAND_ZAHLEN.indexOf(k)] | 0;
+    this._tick = z('tick'); this.rng = z('rng'); this.naechsteId = z('naechsteId'); this.ereignisNr = z('ereignisNr');
+    this.befehlZahl = z('befehlZahl'); this.natRev = z('natRev');
+    if (st.doerfer.length !== this.doerfer.length) throw new Error('Spielstand: Zahl der Dörfer passt nicht');
+    this.doerfer = st.doerfer as unknown as Dorf[];
+    const map = <T extends { id: Id }>(a: Record<string, unknown>[]) => new Map((a as unknown as T[]).map((x) => [x.id, x] as [Id, T]));
+    this.fahnen = map<Fahne>(st.fahnen);
+    this.segmente = map<Segment>(st.segmente);
+    this.traeger = map<Traeger>(st.traeger);
+    this.gebaeude = map<Gebaeude>(st.gebaeude);
+    this.bauleute = map<Baumann>(st.bauleute);
+    const n = this.karte.count, nat = st.natur;
+    this.baum = ausBase64(nat.baum, n); this.jung = ausBase64(nat.jung, n); this.stufe = ausBase64(nat.stufe, n);
+    this.fels = ausBase64(nat.fels, n); this.felsArt = ausBase64(nat.felsArt, n);
+    this.baumRes = ausBase64(nat.baumRes, n); this.felsRes = ausBase64(nat.felsRes, n);
+    this.jungReif.fill(0);
+    for (let i = 0; i + 1 < nat.jungReif.length; i += 2) this.jungReif[nat.jungReif[i]] = nat.jungReif[i + 1];
+    this.jungListe = nat.jungListe;
+    this.felsArtKopie = this.felsArt.slice();
+    this.log = st.log; this.ausstehend = st.ausstehend; this.stat = st.stat; this.erzeugtJe = st.erzeugtJe;
+    // Abgeleitetes neu
+    this.hexFahne.fill(0); this.hexGeb.fill(0); this.hexWeg.fill(0);
+    for (const f of this.fahnen.values()) this.hexFahne[f.h] = f.id;
+    for (const g of this.gebaeude.values()) this.hexGeb[g.h] = g.id;
+    for (const s of this.segmente.values()) for (let i = 1; i < s.pfad.length - 1; i++) this.hexWeg[s.pfad[i]] = s.id;
+    this.natCache = null; this.natHash = null;
+    this.netzGeaendert();
+  }
+
+  /**
+   * Führt einen Befehl von Spieler `sp` aus. Befehle eines unbekannten Spielers und solche, die fremde Fahnen, Wege oder Gebäude
+   * betreffen, sind wirkungslos. Führt der Verwalter das Dorf, gilt nur noch der Verwalter-Befehl.
+   */
+  private fuehreAus(b: Befehl, sp: number): void {
     const k = this.karte;
+    if (!Number.isInteger(sp) || sp < 0 || sp >= this.doerfer.length || !b || typeof b !== 'object') return;
+    if (b.art === 'verwalter') {
+      const d = Number.isInteger(b.spieler) ? this.doerfer[b.spieler] : undefined;
+      if (d) d.verwalter = b.an ? 1 : 0;
+      return;
+    }
+    if (this.doerfer[sp].verwalter) return;
     switch (b.art) {
-      case 'fahne': { const h = k.index(b.q, b.r); if (h >= 0 && this.hexKannFahne(h)) this.fahneSetzen(h); break; }
+      case 'fahne': { const h = k.index(b.q, b.r); if (h >= 0 && this.hexKannFahne(h, sp)) this.fahneSetzen(h, sp); break; }
       case 'weg': {
         if (!Array.isArray(b.pfad)) break;
-        this.wegBauen(b.pfad.map((p) => k.index(p.q, p.r)));
+        this.wegBauen(b.pfad.map((p) => k.index(p.q, p.r)), sp);
         break;
       }
       case 'gebaeude': {
         const h = k.index(b.q, b.r);
-        if (h >= 0 && this.hexKannBauen(b.typ, h)) this.gebaeudeErzeugen(b.typ, h, false);
+        if (h >= 0 && this.hexKannBauen(b.typ, h, sp)) this.gebaeudeErzeugen(b.typ, h, false, sp);
         break;
       }
-      case 'abriss_fahne': this.fahneAbreissen(b.id); break;
-      case 'abriss_weg': if (this.segmente.has(b.id)) this.segmentEntfernen(b.id, 0); break;
-      case 'abriss_gebaeude': this.gebaeudeAbreissen(b.id); break;
+      case 'abriss_fahne': if (this.fahnen.get(b.id)?.sp === sp) this.fahneAbreissen(b.id); break;
+      case 'abriss_weg': if (this.segmente.get(b.id)?.sp === sp) this.segmentEntfernen(b.id, 0); break;
+      case 'abriss_gebaeude': if (this.gebaeude.get(b.id)?.sp === sp) this.gebaeudeAbreissen(b.id); break;
       case 'arbeitsbereich': {
         const g = this.gebaeude.get(b.id);
-        if (!g || !(GEBAEUDE[g.typ].radius > 0) || !Number.isInteger(b.q) || !Number.isInteger(b.r)) break;
+        if (!g || g.sp !== sp || !(GEBAEUDE[g.typ].radius > 0) || !Number.isInteger(b.q) || !Number.isInteger(b.r)) break;
         const m = k.index(b.q, b.r);
         if (m < 0 || !k.begehbar[m] || k.abstand(g.h, m) > ARBEIT_MITTE_MAX) break;
         g.mitte = m === g.h ? -1 : m;
@@ -330,7 +427,7 @@ export class Simulation {
       }
       case 'prioritaet': {
         const g = this.gebaeude.get(b.id);
-        if (g && !g.fertig && Number.isInteger(b.stufe) && b.stufe >= PRIO_MIN && b.stufe <= PRIO_MAX) g.prio = b.stufe;
+        if (g && g.sp === sp && !g.fertig && Number.isInteger(b.stufe) && b.stufe >= PRIO_MIN && b.stufe <= PRIO_MAX) g.prio = b.stufe;
         break;
       }
     }
@@ -338,14 +435,14 @@ export class Simulation {
 
   // ------------------------------------------------------------------ Abfragen für die Oberfläche
 
-  kannFahne(q: number, r: number): boolean {
+  kannFahne(q: number, r: number, sp = 0): boolean {
     const h = this.karte.index(q, r);
-    return h >= 0 && this.hexKannFahne(h);
+    return h >= 0 && this.hexKannFahne(h, sp);
   }
 
-  kannBauen(typ: string, q: number, r: number): boolean {
+  kannBauen(typ: string, q: number, r: number, sp = 0): boolean {
     const h = this.karte.index(q, r);
-    return h >= 0 && this.hexKannBauen(typ, h);
+    return h >= 0 && this.hexKannBauen(typ, h, sp);
   }
 
   /** Größter Bauplatz, der hier jetzt ginge (0 keiner … 3 groß): Gelände, Belegung (Gebäude, Fahne, Weg) und Nachbarregel. */
@@ -386,14 +483,13 @@ export class Simulation {
    * Pfad von einer bestehenden Fahne zu einem Ziel-Hex (Fahne, freier Hex oder Weg-Hex). Nicht durch Gebäude, Fahnen oder Wege
    * außer am Ziel. Höchstens WEG_MAX_SCHRITTE Schritte; null, wenn es keinen gibt.
    */
-  wegVorschau(von: { q: number; r: number }, nach: { q: number; r: number }): { q: number; r: number }[] | null {
+  wegVorschau(von: { q: number; r: number }, nach: { q: number; r: number }, sp = 0): { q: number; r: number }[] | null {
     const k = this.karte;
     const a = k.index(von.q, von.r), z = k.index(nach.q, nach.r);
     if (a < 0 || z < 0 || a === z || !k.begehbar[a] || !k.begehbar[z]) return null;
     const fa = this.fahnen.get(this.hexFahne[a]);
-    if (!fa || fa.segmente.length >= FAHNE_MAX_SEGMENTE) return null;
-    if (this.hexFahne[z]) { if (this.fahnen.get(this.hexFahne[z])!.segmente.length >= FAHNE_MAX_SEGMENTE) return null; }
-    else if (!this.hexKannFahne(z)) return null;
+    if (!fa || fa.sp !== sp || fa.segmente.length >= FAHNE_MAX_SEGMENTE) return null;
+    if (!this.zielFahneOk(z, sp)) return null;
     const p = sucheWeg(k, a, z, (h, istZiel) => {
       if (istZiel) return true;
       return !this.hexFahne[h] && !this.hexGeb[h] && !this.hexWeg[h];
@@ -406,7 +502,7 @@ export class Simulation {
    * der eine Fahne tragen kann). Zwischen den Enden nur freie Hexe, Hexe aus `belegt` (schon benutzte Hexe des offenen Wegs)
    * sind gesperrt, das Ziel darf nicht darunter sein. Höchstens `maxSchritte` Schritte; null, wenn es keinen gibt.
    */
-  wegAbschnitt(von: { q: number; r: number }, nach: { q: number; r: number }, belegt: { q: number; r: number }[], maxSchritte: number): { q: number; r: number }[] | null {
+  wegAbschnitt(von: { q: number; r: number }, nach: { q: number; r: number }, belegt: { q: number; r: number }[], maxSchritte: number, sp = 0): { q: number; r: number }[] | null {
     const k = this.karte;
     const a = k.index(von.q, von.r), z = k.index(nach.q, nach.r);
     if (a < 0 || z < 0 || a === z || !k.begehbar[a] || !k.begehbar[z] || maxSchritte < 1) return null;
@@ -415,9 +511,8 @@ export class Simulation {
     gesperrt.delete(a);
     if (gesperrt.has(z)) return null;
     const fa = this.fahnen.get(this.hexFahne[a]);
-    if (fa && fa.segmente.length >= FAHNE_MAX_SEGMENTE) return null;
-    if (this.hexFahne[z]) { if (this.fahnen.get(this.hexFahne[z])!.segmente.length >= FAHNE_MAX_SEGMENTE) return null; }
-    else if (!this.hexKannFahne(z)) return null;
+    if (fa && (fa.sp !== sp || fa.segmente.length >= FAHNE_MAX_SEGMENTE)) return null;
+    if (!this.zielFahneOk(z, sp)) return null;
     const p = sucheWeg(k, a, z, (h, istZiel) => {
       if (istZiel) return true;
       return !this.hexFahne[h] && !this.hexGeb[h] && !this.hexWeg[h] && !gesperrt.has(h);
@@ -425,8 +520,11 @@ export class Simulation {
     return p ? p.map((h) => ({ q: k.qs[h], r: k.rs[h] })) : null;
   }
 
-  sicht(): SimSicht {
+  /** Sicht für Spieler `ich`: die ganze Welt, dazu Dorf, freie Bewohner und Ereignisse dieses Spielers. */
+  sicht(ich = 0): SimSicht {
     const k = this.karte;
+    const dorf = this.doerfer[ich];
+    if (!dorf) throw new Error(`Spieler ${ich} gibt es nicht`);
     const hx = (h: number) => ({ q: k.qs[h], r: k.rs[h] });
     const tr = [...this.traeger.values()].map((t) => {
       const s = this.segmente.get(t.seg)!;
@@ -437,7 +535,7 @@ export class Simulation {
       if (t.pause > 0) tut = 'uebergibt';
       const bewegt = von !== nach && t.dauer > 0;
       return {
-        id: t.id, von: hx(von), nach: hx(nach),
+        id: t.id, sp: t.sp, von: hx(von), nach: hx(nach),
         fortschritt: bewegt ? Math.floor((PROMILLE * t.t) / t.dauer) : 0,
         schritt: bewegt ? Math.max(1, Math.floor(PROMILLE / t.dauer)) : 0,
         ware: t.art, tut,
@@ -445,13 +543,15 @@ export class Simulation {
     });
     return {
       tick: this._tick,
-      fahnen: [...this.fahnen.values()].map((f) => ({ id: f.id, ...hx(f.h), waren: f.waren.map((w) => w.art), gebaeude: f.gebaeude })),
-      segmente: [...this.segmente.values()].map((s) => ({ id: s.id, a: s.a, b: s.b, pfad: s.pfad.map(hx), traeger: s.traeger, verkehr: s.verkehr })),
+      ich,
+      spieler: this.doerfer.map((d) => ({ stufe: d.stufe, bewohner: d.bewohner, verwalter: d.verwalter === 1 })),
+      fahnen: [...this.fahnen.values()].map((f) => ({ id: f.id, sp: f.sp, ...hx(f.h), waren: f.waren.map((w) => w.art), gebaeude: f.gebaeude })),
+      segmente: [...this.segmente.values()].map((s) => ({ id: s.id, sp: s.sp, a: s.a, b: s.b, pfad: s.pfad.map(hx), traeger: s.traeger, verkehr: s.verkehr })),
       traeger: tr,
       gebaeude: [...this.gebaeude.values()].map((g) => {
         const t = GEBAEUDE[g.typ];
         const o: SimSicht['gebaeude'][number] = {
-          id: g.id, typ: g.typ, ...hx(g.h), fahne: g.fahne,
+          id: g.id, sp: g.sp, typ: g.typ, ...hx(g.h), fahne: g.fahne,
           bau: this.bauStand(g, t),
           getrennt: g.getrennt, prioritaet: g.prio, zustand: this.zustandVon(g, t),
         };
@@ -468,11 +568,11 @@ export class Simulation {
         if (g.mitte >= 0) o.mitte = hx(g.mitte);
         return o;
       }),
-      freieTraeger: this.frei,
+      freieTraeger: dorf.frei,
       natur: this.naturSicht(),
       bauleute: [...this.bauleute.values()].map((b) => this.baumannSicht(b)),
-      dorf: this.dorfSicht(),
-      ereignisse: this.ereignisse.map((e) => ({ ...e })),
+      dorf: this.dorfSicht(ich),
+      ereignisse: dorf.ereignisse.map((e) => ({ ...e })),
     };
   }
 
@@ -482,28 +582,30 @@ export class Simulation {
     const beruf = b.beruf === 0 ? 'bauarbeiter' : 'planierer';
     if (b.phase === BM_GEHT && b.ri + 1 < b.route.length) {
       return {
-        id: b.id, beruf, von: hx(b.route[b.ri]), nach: hx(b.route[b.ri + 1]), ziel: b.ziel, tut: 'geht',
+        id: b.id, sp: b.sp, beruf, von: hx(b.route[b.ri]), nach: hx(b.route[b.ri + 1]), ziel: b.ziel, tut: 'geht',
         fortschritt: b.dauer > 0 ? Math.min(PROMILLE - 1, Math.floor((PROMILLE * b.t) / b.dauer)) : 0,
         schritt: b.dauer > 0 ? Math.max(1, Math.floor(PROMILLE / b.dauer)) : 0,
       };
     }
     const h = hx(b.route[b.route.length - 1]);
-    return { id: b.id, beruf, von: h, nach: h, ziel: b.ziel, tut: b.phase === BM_ARBEIT ? 'arbeitet' : 'wartet', fortschritt: 0, schritt: 0 };
+    return { id: b.id, sp: b.sp, beruf, von: h, nach: h, ziel: b.ziel, tut: b.phase === BM_ARBEIT ? 'arbeitet' : 'wartet', fortschritt: 0, schritt: 0 };
   }
 
-  private dorfSicht(): SimSicht['dorf'] {
-    let arbeiter = 0, wohnraum = 0;
-    for (const g of this.gebaeude.values()) { arbeiter += g.ar; if (g.fertig) wohnraum += GEBAEUDE[g.typ].wohnraum; }
-    const ks = KIRMES[this.dorfStufe];
-    const platz = this.kirmesPlatz();
+  private dorfSicht(sp: number): SimSicht['dorf'] {
+    const d = this.doerfer[sp];
+    let arbeiter = 0, wohnraum = 0, traeger = 0;
+    for (const g of this.gebaeude.values()) if (g.sp === sp) { arbeiter += g.ar; if (g.fertig) wohnraum += GEBAEUDE[g.typ].wohnraum; }
+    for (const t of this.traeger.values()) if (t.sp === sp) traeger++;
+    const ks = KIRMES[d.stufe];
+    const platz = this.kirmesPlatz(sp);
     return {
-      stufe: this.dorfStufe, bewohner: this.bewohner, frei: this.frei, traeger: this.traeger.size, arbeiter, wohnraum,
-      bauarbeiter: { gesamt: this.bauGesamt, frei: this.bauFrei }, planierer: { gesamt: this.planGesamt, frei: this.planFrei },
+      stufe: d.stufe, bewohner: d.bewohner, frei: d.frei, traeger, arbeiter, wohnraum,
+      bauarbeiter: { gesamt: d.bauGesamt, frei: d.bauFrei }, planierer: { gesamt: d.planGesamt, frei: d.planFrei },
       kirmes: ks ? {
         liste: ks.liste.slice(), geliefert: platz && platz.fertig ? platz.puffer.slice() : ks.liste.map(() => 0),
-        platz: platz ? platz.id : 0, fest: this.fest, festDauer: ks.festTicks,
+        platz: platz ? platz.id : 0, fest: d.fest, festDauer: ks.festTicks,
       } : null,
-      notnagel: this.notnagelGreift() ? NOTNAGEL_TICKS - this.notnagelT : -1,
+      notnagel: this.notnagelGreift(sp) ? NOTNAGEL_TICKS - d.notnagelT : -1,
     };
   }
 
@@ -537,8 +639,9 @@ export class Simulation {
       return 'wohnraum_voll';
     }
     if (t.funktion === 'kirmes') {
-      if (this.fest > 0) return 'fest';
-      return KIRMES[this.dorfStufe] ? 'wartet_material' : 'bereit';
+      const d = this.doerfer[g.sp];
+      if (d.fest > 0) return 'fest';
+      return KIRMES[d.stufe] ? 'wartet_material' : 'bereit';
     }
     if (t.arbeiter && !g.ar) return 'kein_arbeiter';
     if (t.funktion === 'verarbeiter') {
@@ -601,7 +704,11 @@ export class Simulation {
       const s = this.segmente.get(t.seg);
       if (!s || s.traeger !== t.id) fehler.push(`Träger ${t.id}: Segment ${t.seg}`);
     }
-    let arbeiter = 0;
+    const arbeiter = this.doerfer.map(() => 0), traegerJe = this.doerfer.map(() => 0);
+    for (const t of this.traeger.values()) {
+      traegerJe[t.sp]++;
+      if (this.segmente.get(t.seg)?.sp !== t.sp) fehler.push(`Träger ${t.id}: Segment eines anderen Spielers`);
+    }
     const bRes = new Map<number, number>(), fRes = new Map<number, number>();
     for (const g of this.gebaeude.values()) {
       const t = GEBAEUDE[g.typ];
@@ -613,7 +720,8 @@ export class Simulation {
         if (g.typ !== 'lager' && g.puffer[a] > this.pufferMax(g, t, a)) fehler.push(`Gebäude ${g.id}: Input-Puffer ${a} über Maximum`);
         if (g.ausgang[a] > (a === t.ausgangWare ? t.ausgangMax : 0)) fehler.push(`Gebäude ${g.id}: Output-Puffer ${a} über Maximum`);
       }
-      arbeiter += g.ar;
+      arbeiter[g.sp] += g.ar;
+      if (this.fahnen.get(g.fahne)?.sp !== g.sp) fehler.push(`Gebäude ${g.id}: Fahne eines anderen Spielers`);
       if (g.ar && !t.arbeiter) fehler.push(`Gebäude ${g.id}: Arbeiter ohne Bedarf`);
       if (g.ar && g.zh >= 0 && (g.ph === PH_HIN || g.ph === PH_ARBEIT)) {
         if (t.funktion === 'holzfaeller') bRes.set(g.zh, (bRes.get(g.zh) ?? 0) + 1);
@@ -625,23 +733,27 @@ export class Simulation {
       if (g.planierer && this.bauleute.get(g.planierer)?.ziel !== g.id) fehler.push(`Gebäude ${g.id}: Planierer ${g.planierer}`);
       if (g.fertig && (g.bauer || g.planierer || summe(g.stapel) || g.haende >= 0)) fehler.push(`Gebäude ${g.id}: fertig mit Baustellenresten`);
     }
-    if (this.frei < 0 || this.frei + this.traeger.size + arbeiter !== this.bewohner) {
-      fehler.push(`Bewohner: ${this.frei} frei + ${this.traeger.size} Träger + ${arbeiter} Arbeiter statt ${this.bewohner}`);
-    }
-    let bau = 0, plan = 0;
+    const bau = this.doerfer.map(() => 0), plan = this.doerfer.map(() => 0);
     for (const b of this.bauleute.values()) {
-      if (b.beruf === 0) bau++; else plan++;
+      if (b.beruf === 0) bau[b.sp]++; else plan[b.sp]++;
       const g = b.ziel ? this.gebaeude.get(b.ziel) : undefined;
-      if (b.ziel && (!g || (b.beruf === 0 ? g.bauer : g.planierer) !== b.id)) fehler.push(`Baumann ${b.id}: Ziel ${b.ziel}`);
+      if (b.ziel && (!g || g.sp !== b.sp || (b.beruf === 0 ? g.bauer : g.planierer) !== b.id)) fehler.push(`Baumann ${b.id}: Ziel ${b.ziel}`);
     }
-    if (this.bauFrei < 0 || this.bauFrei + bau !== this.bauGesamt) fehler.push(`Bauarbeiter: ${this.bauFrei} frei + ${bau} unterwegs statt ${this.bauGesamt}`);
-    if (this.planFrei < 0 || this.planFrei + plan !== this.planGesamt) fehler.push(`Planierer: ${this.planFrei} frei + ${plan} unterwegs statt ${this.planGesamt}`);
+    this.doerfer.forEach((d, sp) => {
+      const v = this.doerfer.length > 1 ? `Spieler ${sp}: ` : '';
+      if (d.frei < 0 || d.frei + traegerJe[sp] + arbeiter[sp] !== d.bewohner) {
+        fehler.push(`${v}Bewohner: ${d.frei} frei + ${traegerJe[sp]} Träger + ${arbeiter[sp]} Arbeiter statt ${d.bewohner}`);
+      }
+      if (d.bauFrei < 0 || d.bauFrei + bau[sp] !== d.bauGesamt) fehler.push(`${v}Bauarbeiter: ${d.bauFrei} frei + ${bau[sp]} unterwegs statt ${d.bauGesamt}`);
+      if (d.planFrei < 0 || d.planFrei + plan[sp] !== d.planGesamt) fehler.push(`${v}Planierer: ${d.planFrei} frei + ${plan[sp]} unterwegs statt ${d.planGesamt}`);
+    });
     for (const key of inc.keys()) {
       const id = Number(key.split(':')[0]);
       if (!this.gebaeude.has(id)) fehler.push(`Ware mit ungültigem Ziel ${id} (wird neu geroutet)`);
     }
     for (const s of this.segmente.values()) {
       if (!this.fahnen.has(s.a) || !this.fahnen.has(s.b)) fehler.push(`Segment ${s.id}: Fahne fehlt`);
+      else if (this.fahnen.get(s.a)!.sp !== s.sp || this.fahnen.get(s.b)!.sp !== s.sp) fehler.push(`Segment ${s.id}: verbindet fremde Fahnen`);
       for (let i = 1; i < s.pfad.length - 1; i++) if (this.hexWeg[s.pfad[i]] !== s.id) fehler.push(`Segment ${s.id}: Hex-Belegung`);
       if (s.traeger && !this.traeger.has(s.traeger)) fehler.push(`Segment ${s.id}: Träger fehlt`);
     }
@@ -663,32 +775,34 @@ export class Simulation {
     const f = new Fnv2();
     const w = (v: number) => { v |= 0; f.byte(v); f.byte(v >>> 8); f.byte(v >>> 16); f.byte(v >>> 24); };
     const liste = (a: readonly number[]) => { w(a.length); for (const v of a) w(v); };
-    w(this._tick); w(this.rng); w(this.saat); w(this.naechsteId); w(this.frei); w(this.befehlZahl);
-    w(this.bewohner); w(this.bauGesamt); w(this.bauFrei); w(this.planGesamt); w(this.planFrei);
-    w(this.dorfStufe); w(this.fest); w(this.notnagelT); w(this.ereignisNr);
+    w(this._tick); w(this.rng); w(this.saat); w(this.naechsteId); w(this.befehlZahl); w(this.ereignisNr);
+    w(this.doerfer.length);
+    for (const d of this.doerfer) {
+      w(d.bewohner); w(d.frei); w(d.bauGesamt); w(d.bauFrei); w(d.planGesamt); w(d.planFrei); w(d.stufe); w(d.fest); w(d.notnagelT); w(d.verwalter);
+    }
     w(this.stat.angekommen); w(this.stat.verbraucht); w(this.stat.erzeugt); w(this.stat.verbaut);
     liste(this.erzeugtJe);
     w(this.fahnen.size);
     for (const x of this.fahnen.values()) {
-      w(x.id); w(x.h); w(x.gebaeude); liste(x.segmente);
+      w(x.id); w(x.sp); w(x.h); w(x.gebaeude); liste(x.segmente);
       w(x.waren.length); for (const v of x.waren) { w(v.art); w(v.ziel); }
     }
     w(this.segmente.size);
-    for (const s of this.segmente.values()) { w(s.id); w(s.a); w(s.b); w(s.traeger); w(s.verkehr); w(s.kab); w(s.kba); liste(s.pfad); }
+    for (const s of this.segmente.values()) { w(s.id); w(s.sp); w(s.a); w(s.b); w(s.traeger); w(s.verkehr); w(s.kab); w(s.kba); liste(s.pfad); }
     w(this.traeger.size);
     for (const t of this.traeger.values()) {
-      w(t.id); w(t.seg); w(t.phase); w(t.ende); w(t.pos); w(t.dir); w(t.t); w(t.dauer); w(t.pause); w(t.art); w(t.ziel); w(t.warte);
+      w(t.id); w(t.sp); w(t.seg); w(t.phase); w(t.ende); w(t.pos); w(t.dir); w(t.t); w(t.dauer); w(t.pause); w(t.art); w(t.ziel); w(t.warte);
       liste(t.route); w(t.ri); liste(t.routeSegs);
     }
     w(this.gebaeude.size);
     for (const g of this.gebaeude.values()) {
-      w(g.id); f.text(g.typ); w(g.h); w(g.fahne); w(g.fertig); liste(g.verbaut); w(g.prio); w(g.getrennt ? 1 : 0);
+      w(g.id); w(g.sp); f.text(g.typ); w(g.h); w(g.fahne); w(g.fertig); liste(g.verbaut); w(g.prio); w(g.getrennt ? 1 : 0);
       liste(g.puffer); liste(g.incoming); liste(g.ausgang); w(g.zeit); w(g.arbeit); liste(g.vorrat);
       w(g.ar); w(g.ph); w(g.pt); w(g.pd); w(g.wi); w(g.zh); liste(g.weg); w(g.traegt); w(g.leer); w(g.mitte);
       liste(g.stapel); w(g.haende); w(g.planSoll); w(g.planIst); w(g.bauer); w(g.planierer);
     }
     w(this.bauleute.size);
-    for (const b of this.bauleute.values()) { w(b.id); w(b.beruf); w(b.ziel); w(b.phase); liste(b.route); w(b.ri); w(b.t); w(b.dauer); }
+    for (const b of this.bauleute.values()) { w(b.id); w(b.sp); w(b.beruf); w(b.ziel); w(b.phase); liste(b.route); w(b.ri); w(b.t); w(b.dauer); }
     // Natur: nur bei Änderung neu gehasht
     w(this.natRev);
     if (!this.natHash || this.natHash.rev !== this.natRev) {
@@ -707,13 +821,21 @@ export class Simulation {
 
   // ------------------------------------------------------------------ Hex-Prüfungen
 
-  private hexKannFahne(h: number): boolean {
+  /** Freie Fahne möglich: begehbar, frei oder auf einem eigenen Weg (teilt ihn). */
+  private hexKannFahne(h: number, sp: number): boolean {
     if (!this.karte.begehbar[h] || this.hexFahne[h] || this.hexGeb[h]) return false;
     if (this.hexWeg[h]) {
       const s = this.segmente.get(this.hexWeg[h]);
-      return !!s && s.pfad.indexOf(h) > 0;
+      return !!s && s.sp === sp && s.pfad.indexOf(h) > 0;
     }
     return true;
+  }
+
+  /** Ende eines Wegs: eigene Fahne mit freiem Anschluss oder ein Hex, auf dem eine eigene Fahne stehen kann. */
+  private zielFahneOk(z: number, sp: number): boolean {
+    if (!this.hexFahne[z]) return this.hexKannFahne(z, sp);
+    const f = this.fahnen.get(this.hexFahne[z])!;
+    return f.sp === sp && f.segmente.length < FAHNE_MAX_SEGMENTE;
   }
 
   /** Hex ohne Gebäude, Fahne, Weg und ohne Nachbar-Gebäude (Nachbarregel). */
@@ -727,25 +849,25 @@ export class Simulation {
     return true;
   }
 
-  private hexKannBauen(typ: string, h: number): boolean {
+  private hexKannBauen(typ: string, h: number, sp: number): boolean {
     const t = typVon(typ);
-    if (!t || typ === 'lager' || !this.typFrei(t)) return false;
+    if (!t || typ === 'lager' || !this.doerfer[sp] || !this.typFrei(t, sp)) return false;
     return this.karte.bebaubar[h] >= t.groesse && this.hexFrei(h);
   }
 
-  /** Typ ist schon freigeschaltet (Dorfstufe) und, wenn einmalig, noch nicht gebaut (auch nicht als Baustelle). */
-  private typFrei(t: GebaeudeTyp): boolean {
-    if (t.abStufe > this.dorfStufe) return false;
-    if (t.einmalig) for (const g of this.gebaeude.values()) if (g.typ === t.id) return false;
+  /** Typ ist im Dorf von `sp` schon freigeschaltet (Dorfstufe) und, wenn einmalig, dort noch nicht gebaut (auch nicht als Baustelle). */
+  private typFrei(t: GebaeudeTyp, sp: number): boolean {
+    if (t.abStufe > this.doerfer[sp].stufe) return false;
+    if (t.einmalig) for (const g of this.gebaeude.values()) if (g.sp === sp && g.typ === t.id) return false;
     return true;
   }
 
-  /** Dorfstufe und einmalige Gebäude: Darf man den Typ jetzt bauen (unabhängig vom Platz)? Grund in Klartext oder ''. */
-  sperrGrund(typ: string): '' | 'stufe' | 'einmalig' | 'unbekannt' {
+  /** Dorfstufe und einmalige Gebäude: Darf Spieler `sp` den Typ jetzt bauen (unabhängig vom Platz)? Grund in Klartext oder ''. */
+  sperrGrund(typ: string, sp = 0): '' | 'stufe' | 'einmalig' | 'unbekannt' {
     const t = typVon(typ);
-    if (!t || typ === 'lager') return 'unbekannt';
-    if (t.abStufe > this.dorfStufe) return 'stufe';
-    if (!this.typFrei(t)) return 'einmalig';
+    if (!t || typ === 'lager' || !this.doerfer[sp]) return 'unbekannt';
+    if (t.abStufe > this.doerfer[sp].stufe) return 'stufe';
+    if (!this.typFrei(t, sp)) return 'einmalig';
     return '';
   }
 
@@ -822,8 +944,8 @@ export class Simulation {
     this.verbundenNeu = true;
   }
 
-  private fahneErzeugen(h: number, gebaeude: Id): Fahne {
-    const f: Fahne = { id: this.naechsteId++, h, gebaeude, waren: [], segmente: [] };
+  private fahneErzeugen(h: number, gebaeude: Id, sp: number): Fahne {
+    const f: Fahne = { id: this.naechsteId++, sp, h, gebaeude, waren: [], segmente: [] };
     this.fahnen.set(f.id, f);
     this.hexFahne[h] = f.id;
     this.hexRaeumen(h);
@@ -831,11 +953,11 @@ export class Simulation {
     return f;
   }
 
-  private gebaeudeErzeugen(typ: string, h: number, sofort: boolean): Gebaeude {
+  private gebaeudeErzeugen(typ: string, h: number, sofort: boolean, sp: number): Gebaeude {
     const t = GEBAEUDE[typ];
     const nul = () => new Array<number>(WAREN.length).fill(0);
     const g: Gebaeude = {
-      id: this.naechsteId++, typ, h, fahne: 0, fertig: sofort || t.kostenSumme === 0 ? 1 : 0,
+      id: this.naechsteId++, sp, typ, h, fahne: 0, fertig: sofort || t.kostenSumme === 0 ? 1 : 0,
       verbaut: sofort ? t.kosten.slice() : nul(), prio: PRIO_STANDARD, getrennt: typ !== 'lager',
       puffer: nul(), incoming: nul(), ausgang: nul(), zeit: 0, arbeit: 0, vorrat: nul(),
       ar: 0, ph: PH_SUCHE, pt: 0, pd: 0, wi: 0, zh: -1, weg: [], traegt: -1, leer: 0, mitte: -1,
@@ -845,7 +967,7 @@ export class Simulation {
     if (!g.fertig) g.planSoll = planierTicks(this.karte.neigung[h]);
     // gerodete ausgewachsene Bäume (höchstens RODUNG_STAMM_MAX) werden zu Stämmen an der Gebäudefahne
     const staemme = sofort ? 0 : Math.min(RODUNG_STAMM_MAX, this.baum[h]);
-    const f = this.fahneErzeugen(h, g.id);
+    const f = this.fahneErzeugen(h, g.id, sp);
     g.fahne = f.id;
 
     this.hexGeb[h] = g.id;
@@ -866,13 +988,13 @@ export class Simulation {
     s.kab = ab; s.kba = ba;
   }
 
-  /** Setzt eine freie Fahne; liegt der Hex auf einem Weg, wird das Segment geteilt. */
-  private fahneSetzen(h: number): Fahne {
+  /** Setzt eine freie Fahne von `sp`; liegt der Hex auf einem (eigenen) Weg, wird das Segment geteilt. */
+  private fahneSetzen(h: number, sp: number): Fahne {
     const sid = this.hexWeg[h];
-    if (!sid) return this.fahneErzeugen(h, 0);
+    if (!sid) return this.fahneErzeugen(h, 0, sp);
     const s = this.segmente.get(sid)!;
     const k = s.pfad.indexOf(h);
-    const f = this.fahneErzeugen(h, 0);
+    const f = this.fahneErzeugen(h, 0, s.sp);
     this.hexWeg[h] = 0;
     const links = s.pfad.slice(0, k + 1), rechts = s.pfad.slice(k);
     const tr = s.traeger ? this.traeger.get(s.traeger)! : null;
@@ -881,7 +1003,7 @@ export class Simulation {
     if (tr && tr.phase !== 0) {
       traegerLinks = tr.phase === 1 ? tr.ende === 0 : Math.max(tr.pos, tr.pos + tr.dir) <= k;
     }
-    const neu: Segment = { id: this.naechsteId++, a: 0, b: 0, pfad: [], traeger: 0, verkehr: s.verkehr, kab: 0, kba: 0 };
+    const neu: Segment = { id: this.naechsteId++, sp: s.sp, a: 0, b: 0, pfad: [], traeger: 0, verkehr: s.verkehr, kab: 0, kba: 0 };
     const altA = s.a, altB = s.b;
     if (traegerLinks) {
       s.b = f.id; s.pfad = links;
@@ -917,12 +1039,12 @@ export class Simulation {
         const s = this.segmente.get(t.seg);
         if (s && s.traeger === t.id) s.traeger = 0;
         this.traeger.delete(t.id);
-        this.frei++;
+        this.doerfer[t.sp].frei++;
       }
     }
   }
 
-  private wegBauen(hs: number[]): void {
+  private wegBauen(hs: number[], sp: number): void {
     const n = hs.length;
     if (n < 2 || n - 1 > WEG_MAX_SCHRITTE) return;
     const k = this.karte;
@@ -938,17 +1060,15 @@ export class Simulation {
       }
     }
     const fa = this.fahnen.get(this.hexFahne[hs[0]]);
-    if (!fa || fa.segmente.length >= FAHNE_MAX_SEGMENTE) return;
+    if (!fa || fa.sp !== sp || fa.segmente.length >= FAHNE_MAX_SEGMENTE) return;
     for (let i = 1; i < n - 1; i++) {
       const h = hs[i];
       if (this.hexFahne[h] || this.hexGeb[h] || this.hexWeg[h]) return;
     }
     const letzter = hs[n - 1];
-    if (this.hexFahne[letzter]) {
-      if (this.fahnen.get(this.hexFahne[letzter])!.segmente.length >= FAHNE_MAX_SEGMENTE) return;
-    } else if (!this.hexKannFahne(letzter)) return;
-    const fz = this.hexFahne[letzter] ? this.fahnen.get(this.hexFahne[letzter])! : this.fahneSetzen(letzter);
-    const s: Segment = { id: this.naechsteId++, a: fa.id, b: fz.id, pfad: hs.slice(), traeger: 0, verkehr: 0, kab: 0, kba: 0 };
+    if (!this.zielFahneOk(letzter, sp)) return;
+    const fz = this.hexFahne[letzter] ? this.fahnen.get(this.hexFahne[letzter])! : this.fahneSetzen(letzter, sp);
+    const s: Segment = { id: this.naechsteId++, sp, a: fa.id, b: fz.id, pfad: hs.slice(), traeger: 0, verkehr: 0, kab: 0, kba: 0 };
     this.segKosten(s);
     this.segmente.set(s.id, s);
     for (let i = 1; i < n - 1; i++) { this.hexWeg[hs[i]] = s.id; this.hexRaeumen(hs[i]); }
@@ -976,7 +1096,7 @@ export class Simulation {
         else this.wareVerloren(w);
       }
       this.traeger.delete(t.id);
-      this.frei++;
+      this.doerfer[t.sp].frei++;
     }
     for (let i = 1; i < s.pfad.length - 1; i++) this.hexWeg[s.pfad[i]] = 0;
     for (const fid of [s.a, s.b]) {
@@ -989,7 +1109,7 @@ export class Simulation {
         const sx = this.segmente.get(x.seg);
         if (sx && sx.traeger === x.id) sx.traeger = 0;
         this.traeger.delete(x.id);
-        this.frei++;
+        this.doerfer[x.sp].frei++;
       }
     }
     this.netzGeaendert();
@@ -1020,7 +1140,7 @@ export class Simulation {
       const n = g.puffer[a] + g.ausgang[a] + g.stapel[a] + (g.haende === a ? 1 : 0) + (g.traegt === a ? 1 : 0) + Math.floor(g.verbaut[a] / 2);
       for (let i = 0; i < n; i++) if (f.waren.length < FLAG_CAP) f.waren.push({ art: a, ziel: 0 });
     }
-    if (g.ar) { this.frei++; this.reservierungFreigeben(g, t); }
+    if (g.ar) { this.doerfer[g.sp].frei++; this.reservierungFreigeben(g, t); }
     f.gebaeude = 0;
     this.hexGeb[g.h] = 0;
     this.gebaeude.delete(id);
@@ -1114,24 +1234,24 @@ export class Simulation {
    * Größe des Input-Puffers für Ware `art`: Verarbeiter laut Daten; Wohnhaus alle Nahrungsplätze (zusammen begrenzt, siehe pufferPlatz);
    * Kirmesplatz die Warenliste der aktuellen Stufe (während des Fests nichts).
    */
-  private pufferMax(_g: Gebaeude, t: GebaeudeTyp, art: number): number {
+  private pufferMax(g: Gebaeude, t: GebaeudeTyp, art: number): number {
     if (t.funktion === 'wohnen') return NAHRUNG[art] > 0 ? t.nahrungPlaetze : 0;
-    if (t.funktion === 'kirmes') { const k = KIRMES[this.dorfStufe]; return k ? k.liste[art] : 0; }
+    if (t.funktion === 'kirmes') { const k = KIRMES[this.doerfer[g.sp].stufe]; return k ? k.liste[art] : 0; }
     return t.puffer[art];
   }
 
   /** Freier Platz im Input-Puffer eines fertigen Gebäudes für Ware `art` (Puffer − vorhanden − unterwegs). */
   private pufferPlatz(g: Gebaeude, art: number): number {
-    const t = GEBAEUDE[g.typ];
-    if (t.funktion === 'kirmes' && this.fest > 0) return 0;
+    const t = GEBAEUDE[g.typ], d = this.doerfer[g.sp];
+    if (t.funktion === 'kirmes' && d.fest > 0) return 0;
     const p = this.pufferMax(g, t, art) - g.puffer[art] - g.incoming[art];
     if (t.funktion !== 'wohnen' || p <= 0) return p;
     // was die Kirmes noch braucht, isst keiner weg (nur der Überschuss im Lager)
-    if (this.kirmesBraucht(art) > 0) return 0;
+    if (this.kirmesBraucht(g.sp, art) > 0) return 0;
     let belegt = 0;
     for (const a of NAHRUNG_REIHE) belegt += g.puffer[a] + g.incoming[a];
     // ohne freien Wohnraum hält das Wohnhaus nur einen Bissen vor, der Rest bleibt für Küche, Käserei und Kirmes
-    if (this.wohnFrei <= 0 && belegt >= 1) return 0;
+    if (d.wohnFrei <= 0 && belegt >= 1) return 0;
     return t.nahrungPlaetze - belegt;
   }
 
@@ -1142,12 +1262,12 @@ export class Simulation {
 
   /**
    * DESIGN §4.5: 1. Baustelle mit offenem Bedarf (höchste Priorität, dann nächste), 2. Verarbeiter mit Platz im Input-Puffer
-   * (nächster), 3. nächstes Lager; 0 = kein Ziel erreichbar. Getrennte Baustellen und Gebäude bekommen nichts.
+   * (nächster), 3. nächstes Lager; 0 = kein Ziel erreichbar. Getrennte Baustellen und Gebäude bekommen nichts, fremde auch nicht.
    */
   private zielWaehlen(art: number, z: Fahne): Id {
     let best = 0, bp = 0, bd = Infinity;
     for (const g of this.gebaeude.values()) {
-      if (g.fertig || g.getrennt || this.offen(g, art) <= 0) continue;
+      if (g.sp !== z.sp || g.fertig || g.getrennt || this.offen(g, art) <= 0) continue;
       const d = this.distZu(g.fahne).get(z.id);
       if (d === undefined) continue;
       if (g.prio > bp || (g.prio === bp && d < bd)) { bp = g.prio; bd = d; best = g.id; }
@@ -1157,14 +1277,14 @@ export class Simulation {
     for (const rang of [0, 1, 2]) {
       bd = Infinity;
       for (const g of this.gebaeude.values()) {
-        if (g.typ === 'lager' || !g.fertig || g.getrennt || abnehmerRang(GEBAEUDE[g.typ]) !== rang || this.pufferPlatz(g, art) <= 0) continue;
+        if (g.sp !== z.sp || g.typ === 'lager' || !g.fertig || g.getrennt || abnehmerRang(GEBAEUDE[g.typ]) !== rang || this.pufferPlatz(g, art) <= 0) continue;
         const d = this.distZu(g.fahne).get(z.id);
         if (d !== undefined && d < bd) { bd = d; best = g.id; }
       }
       if (best) return best;
     }
     for (const g of this.gebaeude.values()) {
-      if (g.typ !== 'lager') continue;
+      if (g.sp !== z.sp || g.typ !== 'lager') continue;
       const d = this.distZu(g.fahne).get(z.id);
       if (d !== undefined && d < bd) { bd = d; best = g.id; }
     }
@@ -1237,7 +1357,7 @@ export class Simulation {
     for (let a = 0; a < t.kosten.length; a++) if (g.verbaut[a] < t.kosten[a]) return;
     g.fertig = 1;
     g.ph = PH_SUCHE; g.pt = 0; g.leer = 0;
-    this.ereignis('fertig', g.id, 0);
+    this.ereignis(g.sp, 'fertig', g.id, 0);
   }
 
   private gebaeudeTick(g: Gebaeude): void {
@@ -1262,8 +1382,9 @@ export class Simulation {
       this.wareAufFahne(f, t.ausgangWare);
     }
     if (t.arbeiter && !g.ar) {
-      if (this.frei <= 0) return;
-      this.frei--;
+      const d = this.doerfer[g.sp];
+      if (d.frei <= 0) return;
+      d.frei--;
       g.ar = 1; g.ph = PH_SUCHE; g.pt = 0; g.leer = 0;
     }
     switch (t.funktion) {
@@ -1435,7 +1556,7 @@ export class Simulation {
         const dm = this.distZu(g.fahne);
         let best: Gebaeude | null = null, bd = Infinity;
         for (const l of this.gebaeude.values()) {
-          if (l.typ !== 'lager' || gezogen.has(l.id) || l.vorrat[a] <= 0) continue;
+          if (l.sp !== g.sp || l.typ !== 'lager' || gezogen.has(l.id) || l.vorrat[a] <= 0) continue;
           // Nur ausgehende Waren an der Lagerfahne bremsen; was zum Lager unterwegs ist, nimmt das Lager selbst ab
           if (this.ausgehend(l) >= FLAG_CAP / 2) continue;
           const d = dm.get(l.fahne);
@@ -1452,25 +1573,26 @@ export class Simulation {
 
   // ------------------------------------------------------------------ Bewohner, Wohnhaus, Notnagel, Kirmes (Drehbuch 4.3, 5.2; DESIGN §5)
 
-  private ereignis(art: SichtEreignis['art'], gebaeude: Id, wert: number): void {
+  private ereignis(sp: number, art: SichtEreignis['art'], gebaeude: Id, wert: number): void {
     this.ereignisNr++;
-    this.ereignisse.push({ nr: this.ereignisNr, tick: this._tick, art, gebaeude, wert });
-    if (this.ereignisse.length > EREIGNISSE_MAX) this.ereignisse.shift();
+    const e = this.doerfer[sp].ereignisse;
+    e.push({ nr: this.ereignisNr, tick: this._tick, art, gebaeude, wert });
+    if (e.length > EREIGNISSE_MAX) e.shift();
   }
 
-  /** Ein Bewohner kommt dazu (frei im Vorrat). */
-  private neuerBewohner(n = 1): void { this.bewohner += n; this.frei += n; }
+  /** Ein Bewohner kommt ins Dorf von `sp` (frei im Vorrat). */
+  private neuerBewohner(sp: number, n = 1): void { const d = this.doerfer[sp]; d.bewohner += n; d.frei += n; }
 
   private nahrungIn(g: Gebaeude): boolean {
     for (const a of NAHRUNG_REIHE) if (g.puffer[a] > 0) return true;
     return false;
   }
 
-  /** Freier Wohnraum: Wohnraum fertiger Gebäude − Bewohner − laufende Wohnhaus-Zyklen. */
-  private wohnraumFrei(): number {
-    let n = -this.bewohner;
+  /** Freier Wohnraum im Dorf von `sp`: Wohnraum fertiger Gebäude − Bewohner − laufende Wohnhaus-Zyklen. */
+  private wohnraumFrei(sp: number): number {
+    let n = -this.doerfer[sp].bewohner;
     for (const g of this.gebaeude.values()) {
-      if (!g.fertig) continue;
+      if (!g.fertig || g.sp !== sp) continue;
       const t = GEBAEUDE[g.typ];
       n += t.wohnraum;
       if (t.funktion === 'wohnen' && g.arbeit) n--;
@@ -1485,11 +1607,11 @@ export class Simulation {
       g.zeit++;
       if (g.zeit < NAHRUNG_ZYKLUS[NAHRUNG[ware]]) return;
       g.arbeit = 0; g.zeit = 0;
-      this.neuerBewohner();
-      this.ereignis('bewohner', g.id, ware);
+      this.neuerBewohner(g.sp);
+      this.ereignis(g.sp, 'bewohner', g.id, ware);
       // gleich weiter mit dem nächsten Bissen
     }
-    if (!this.nahrungIn(g) || this.wohnraumFrei() <= 0) return;
+    if (!this.nahrungIn(g) || this.wohnraumFrei(g.sp) <= 0) return;
     for (const a of NAHRUNG_REIHE) {
       if (g.puffer[a] <= 0) continue;
       g.puffer[a]--; g.arbeit = a + 1; g.zeit = 0; this.stat.verbraucht++;
@@ -1501,36 +1623,38 @@ export class Simulation {
    * Wie viel von Ware `art` die Kirmes der aktuellen Stufe noch braucht, über das hinaus, was schon geliefert, unterwegs oder im Lager
    * ist (> 0: die Wohnhäuser lassen die Ware liegen). Ohne Kirmesplatz zählt nur die Liste gegen den Lagervorrat.
    */
-  private kirmesBraucht(art: number): number {
-    const k = KIRMES[this.dorfStufe];
-    if (!k || !k.liste[art] || this.fest > 0) return 0;
+  private kirmesBraucht(sp: number, art: number): number {
+    const d = this.doerfer[sp];
+    const k = KIRMES[d.stufe];
+    if (!k || !k.liste[art] || d.fest > 0) return 0;
     let n = k.liste[art];
-    const p = this.kirmesPlatz();
+    const p = this.kirmesPlatz(sp);
     if (p && p.fertig) n -= p.puffer[art] + p.incoming[art];
     if (n <= 0) return 0;
-    for (const l of this.gebaeude.values()) if (l.typ === 'lager') n -= l.vorrat[art];
+    for (const l of this.gebaeude.values()) if (l.sp === sp && l.typ === 'lager') n -= l.vorrat[art];
     // 0 = es liegt mehr im Lager, als noch fehlt
     return Math.max(0, n + 1);
   }
 
-  private kirmesPlatz(): Gebaeude | undefined {
-    for (const g of this.gebaeude.values()) if (GEBAEUDE[g.typ].funktion === 'kirmes') return g;
+  private kirmesPlatz(sp: number): Gebaeude | undefined {
+    for (const g of this.gebaeude.values()) if (g.sp === sp && GEBAEUDE[g.typ].funktion === 'kirmes') return g;
     return undefined;
   }
 
   /** Kirmesplatz: Ist die Warenliste geliefert, wird sie verbraucht und das Fest beginnt. */
   private kirmesTick(g: Gebaeude): void {
-    const k = KIRMES[this.dorfStufe];
-    if (!k || this.fest > 0) return;
+    const d = this.doerfer[g.sp];
+    const k = KIRMES[d.stufe];
+    if (!k || d.fest > 0) return;
     for (let a = 0; a < k.liste.length; a++) if (g.puffer[a] < k.liste[a]) return;
     for (let a = 0; a < k.liste.length; a++) { g.puffer[a] -= k.liste[a]; this.stat.verbraucht += k.liste[a]; }
-    this.fest = Math.max(1, k.festTicks);
-    this.ereignis('kirmes', g.id, this.dorfStufe);
+    d.fest = Math.max(1, k.festTicks);
+    this.ereignis(g.sp, 'kirmes', g.id, d.stufe);
   }
 
-  /** Bringt gerade ein Wohnhaus Nachwuchs (Zyklus läuft)? */
-  private nachwuchs(): boolean {
-    for (const g of this.gebaeude.values()) if (g.arbeit && g.fertig && GEBAEUDE[g.typ].funktion === 'wohnen') return true;
+  /** Bringt gerade ein Wohnhaus im Dorf von `sp` Nachwuchs (Zyklus läuft)? */
+  private nachwuchs(sp: number): boolean {
+    for (const g of this.gebaeude.values()) if (g.sp === sp && g.arbeit && g.fertig && GEBAEUDE[g.typ].funktion === 'wohnen') return true;
     return false;
   }
 
@@ -1538,30 +1662,31 @@ export class Simulation {
    * Notnagel (Drehbuch 4.3): kaum freie Bewohner und kein Nachwuchs in Sicht – weil kein Wohnhaus Essen hat oder weil kein Wohnraum frei
    * ist. Essen nur im Lager zählt nicht, solange kein Wohnhaus es bekommt (keins gebaut, kein Träger frei): sonst könnte man sich festfahren.
    */
-  private notnagelGreift(): boolean {
-    return this.frei < NOTNAGEL_FREI_UNTER && !this.nachwuchs();
+  private notnagelGreift(sp: number): boolean {
+    return this.doerfer[sp].frei < NOTNAGEL_FREI_UNTER && !this.nachwuchs(sp);
   }
 
-  /** Fest und Dorfstufe, Notnagel (Drehbuch 4.3: man kann sich nicht festfahren). */
-  private dorfTick(): void {
-    if (this.fest > 0) {
-      this.fest--;
-      if (this.fest === 0) {
-        const k = KIRMES[this.dorfStufe];
-        this.dorfStufe++;
-        this.ereignis('stufe', 0, this.dorfStufe);
-        if (k && k.zuzug > 0) { this.neuerBewohner(k.zuzug); this.ereignis('zuzug', 0, k.zuzug); }
+  /** Fest und Dorfstufe, Notnagel (Drehbuch 4.3: man kann sich nicht festfahren) im Dorf von `sp`. */
+  private dorfTick(sp: number): void {
+    const d = this.doerfer[sp];
+    if (d.fest > 0) {
+      d.fest--;
+      if (d.fest === 0) {
+        const k = KIRMES[d.stufe];
+        d.stufe++;
+        this.ereignis(sp, 'stufe', 0, d.stufe);
+        if (k && k.zuzug > 0) { this.neuerBewohner(sp, k.zuzug); this.ereignis(sp, 'zuzug', 0, k.zuzug); }
       }
     }
-    if (this.notnagelGreift()) {
-      this.notnagelT++;
-      if (this.notnagelT >= NOTNAGEL_TICKS) { this.notnagelT = 0; this.neuerBewohner(); this.ereignis('notnagel', 0, 1); }
-    } else this.notnagelT = 0;
+    if (this.notnagelGreift(sp)) {
+      d.notnagelT++;
+      if (d.notnagelT >= NOTNAGEL_TICKS) { d.notnagelT = 0; this.neuerBewohner(sp); this.ereignis(sp, 'notnagel', 0, 1); }
+    } else d.notnagelT = 0;
   }
 
   // ------------------------------------------------------------------ Bauarbeiter und Planierer (Drehbuch 4.5)
 
-  /** Nächstes verbundenes Lager zur Fahne `f` (Laufzeit), oder undefined. */
+  /** Nächstes verbundenes Lager zur Fahne `f` (Laufzeit), oder undefined. Netze verschiedener Spieler sind getrennt. */
   private naechstesLager(f: Id): Gebaeude | undefined {
     let best: Gebaeude | undefined, bd = Infinity;
     for (const l of this.gebaeude.values()) {
@@ -1579,22 +1704,23 @@ export class Simulation {
     return g.planIst >= g.planSoll && !g.bauer && summe(g.stapel) > 0;
   }
 
-  /** Freie Bauleute aus dem Lager zu Baustellen schicken (Priorität absteigend, dann Id). */
-  private bauleuteSchicken(): void {
-    if (this.bauFrei <= 0 && this.planFrei <= 0) return;
+  /** Freie Bauleute aus dem Lager von `sp` zu dessen Baustellen schicken (Priorität absteigend, dann Id). */
+  private bauleuteSchicken(sp: number): void {
+    const d = this.doerfer[sp];
+    if (d.bauFrei <= 0 && d.planFrei <= 0) return;
     const baustellen: Gebaeude[] = [];
-    for (const g of this.gebaeude.values()) if (!g.fertig && !g.getrennt) baustellen.push(g);
+    for (const g of this.gebaeude.values()) if (g.sp === sp && !g.fertig && !g.getrennt) baustellen.push(g);
     if (!baustellen.length) return;
     baustellen.sort((x, y) => y.prio - x.prio || x.id - y.id);
     for (const g of baustellen) {
       for (const beruf of [1, 0] as const) {
-        if ((beruf === 0 ? this.bauFrei : this.planFrei) <= 0 || !this.brauchtBaumann(g, beruf)) continue;
+        if ((beruf === 0 ? d.bauFrei : d.planFrei) <= 0 || !this.brauchtBaumann(g, beruf)) continue;
         const l = this.naechstesLager(g.fahne);
         const r = l ? this.fahnenRoute(l.fahne, g.fahne) : null;
         if (!r || r.hexe.length < 2) continue;
-        const b: Baumann = { id: this.naechsteId++, beruf, ziel: g.id, phase: BM_GEHT, route: r.hexe, ri: 0, t: 0, dauer: this.karte.schritt(r.hexe[0], r.hexe[1]) };
+        const b: Baumann = { id: this.naechsteId++, sp, beruf, ziel: g.id, phase: BM_GEHT, route: r.hexe, ri: 0, t: 0, dauer: this.karte.schritt(r.hexe[0], r.hexe[1]) };
         this.bauleute.set(b.id, b);
-        if (beruf === 0) { this.bauFrei--; g.bauer = b.id; } else { this.planFrei--; g.planierer = b.id; }
+        if (beruf === 0) { d.bauFrei--; g.bauer = b.id; } else { d.planFrei--; g.planierer = b.id; }
       }
     }
   }
@@ -1602,7 +1728,8 @@ export class Simulation {
   /** Baumann ist zurück im Lager (Vorrat). */
   private baumannHeim(b: Baumann): void {
     this.bauleute.delete(b.id);
-    if (b.beruf === 0) this.bauFrei++; else this.planFrei++;
+    const d = this.doerfer[b.sp];
+    if (b.beruf === 0) d.bauFrei++; else d.planFrei++;
   }
 
   /**
@@ -1612,7 +1739,7 @@ export class Simulation {
   private baumannWeiter(b: Baumann, f: Id): void {
     let ziel: Gebaeude | undefined, bp = 0, bd = Infinity;
     for (const g of this.gebaeude.values()) {
-      if (!this.brauchtBaumann(g, b.beruf)) continue;
+      if (g.sp !== b.sp || !this.brauchtBaumann(g, b.beruf)) continue;
       const d = this.distZu(g.fahne).get(f);
       if (d === undefined) continue;
       if (g.prio > bp || (g.prio === bp && d < bd)) { bp = g.prio; bd = d; ziel = g; }
@@ -1710,10 +1837,11 @@ export class Simulation {
   // ------------------------------------------------------------------ Träger
 
   private traegerPhase(): void {
-    if (this.frei > 0) {
+    let frei = 0;
+    for (const d of this.doerfer) frei += d.frei;
+    if (frei > 0) {
       for (const s of this.segmente.values()) {
-        if (this.frei <= 0) break;
-        if (s.traeger === 0 && this.verbunden.has(s.a)) this.traegerAnfordern(s);
+        if (s.traeger === 0 && this.doerfer[s.sp].frei > 0 && this.verbunden.has(s.a)) this.traegerAnfordern(s);
       }
     }
     for (const t of this.traeger.values()) this.traegerSchritt(t);
@@ -1724,7 +1852,7 @@ export class Simulation {
     for (const e of [s.a, s.b]) {
       const dm = this.distZu(e);
       for (const l of this.gebaeude.values()) {
-        if (l.typ !== 'lager') continue;
+        if (l.sp !== s.sp || l.typ !== 'lager') continue;
         const d = dm.get(l.fahne);
         if (d !== undefined && (!best || d < best.d)) best = { l, e, d };
       }
@@ -1735,14 +1863,14 @@ export class Simulation {
     const route = r.hexe, segs = r.segs;
     const ende: 0 | 1 = best.e === s.a ? 0 : 1;
     const t: Traeger = {
-      id: this.naechsteId++, seg: s.id, phase: route.length > 1 ? 0 : 1, ende,
+      id: this.naechsteId++, sp: s.sp, seg: s.id, phase: route.length > 1 ? 0 : 1, ende,
       pos: ende === 0 ? 0 : s.pfad.length - 1, dir: 1, t: 0, dauer: route.length > 1 ? this.karte.schritt(route[0], route[1]) : 0,
       pause: 0, art: -1, ziel: 0, warte: 0, route: route.length > 1 ? route : [], ri: 0, routeSegs: segs,
     };
     if (route.length <= 1) t.routeSegs = [];
     this.traeger.set(t.id, t);
     s.traeger = t.id;
-    this.frei--;
+    this.doerfer[s.sp].frei--;
   }
 
   /** Weg über das Netz von Fahne `von` zu Fahne `nach` entlang des Gradienten der Distanz: Hex-Indizes (beide Fahnen eingeschlossen) und Segmente; null ohne Verbindung. */

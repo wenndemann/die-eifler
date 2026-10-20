@@ -141,7 +141,7 @@ describe('Warenfluss', () => {
     const a = { q: -6, r: 0 }, b = { q: 0, r: 0 };
     // zweites Lager an B (nur über die Innenfunktion, kein Spieler-Befehl)
     const intern = sim as any;
-    const lb = intern.gebaeudeErzeugen('lager', intern.karte.index(b.q, b.r), true);
+    const lb = intern.gebaeudeErzeugen('lager', intern.karte.index(b.q, b.r), true, 0);
     tu(sim, { art: 'weg', pfad: gerade(a.q, a.r, 0, 6) });
     lauf(sim, 400);
     const la = [...intern.gebaeude.values()].find((g: any) => g.typ === 'lager' && g.id !== lb.id);
@@ -615,15 +615,16 @@ describe('M4: Holz', () => {
     tu(sim, { art: 'gebaeude', typ: 'holzfaeller', q: 9, r: 0 });
     tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 9) });
     lauf(sim, 2);
-    (sim as any).bewohner -= (sim as any).frei; (sim as any).frei = 0;
-    (sim as any).notnagelT = -1e6; // kein Zugezogener (Notnagel) in diesem Test
+    const dorf = (sim as any).doerfer[0];
+    dorf.bewohner -= dorf.frei; dorf.frei = 0;
+    dorf.notnagelT = -1e6; // kein Zugezogener (Notnagel) in diesem Test
     lauf(sim, 3000);
     const g = sim.sicht().gebaeude.find((x) => x.typ === 'holzfaeller')!;
     expect(g.bau).toBe(1000);
     expect(g.zustand).toBe('kein_arbeiter');
     expect(g.arbeiter).toBeUndefined();
     expect(sim.statistik().erzeugt).toBe(0);
-    (sim as any).frei = 1; (sim as any).bewohner++;
+    dorf.frei = 1; dorf.bewohner++;
     lauf(sim, 400);
     const g2 = sim.sicht().gebaeude.find((x) => x.typ === 'holzfaeller')!;
     expect(g2.arbeiter).toBeDefined();

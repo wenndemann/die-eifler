@@ -150,21 +150,26 @@ Nachgezogen beim Einstellen: Zwei volle Fahnen, die sich gegenseitig blockieren,
 
 ---
 
-## M6 – Mehrspieler-Grundgerüst
+## M6 – Mehrspieler-Grundgerüst ✅ (erster Stand) → 🔨 Test mit Menschen über echtes Internet
 
 **Ziel:** Zwei bis vier Spieler bauen in einem Ausschnitt nebeneinander. Ab jetzt wird jeder neue Inhalt automatisch auch im Mehrspieler getestet (Drehbuch 2.3, 8.3).
 
-- [ ] Vermittlungs-Server, klein und ohne Konto: Lobby, Einladungslink, Spielername, Verbindungsaufbau
-- [ ] Verbindung direkt zwischen den Browsern (**WebRTC**), Notfall-**Relais (TURN)** für Firmen- und Handynetze
-- [ ] **Gleichschritt (Lockstep):** Befehle mit Verzögerung um einige Ticks, alle rechnen dasselbe
-- [ ] Start erst, wenn die Prüfsumme der Kartendaten bei allen gleich ist (M2), danach laufend **Abgleich-Prüfsummen** über den Spielstand; bei Auseinanderlaufen Meldung und Neuverteilung vom Gastgeber
-- [ ] Lobby: Ausschnitt wählen (M2), Startplätze in verschiedenen Ortskernen, Tempo **1–3×**
-- [ ] Pause für jeden, begrenzt (z. B. dreimal je Partie)
-- [ ] **Speichern und Laden** (Zustand + Datenversion der Karte), auch für Mehrspieler
-- [ ] **Rausgeflogen:** Spiel pausiert, Wiederbeitritt über den Link mit Stand vom Mitspieler; nach **5 Minuten** übernimmt ein einfacher **Verwalter** das Dorf
-- [ ] Testaufbau: zwei Browser-Fenster auf einem Rechner, simuliertes schlechtes Netz
+- [x] Vermittlungs-Server, klein und ohne Konto: Lobby, Einladungslink, Spielername, Verbindungsaufbau (`server/vermittlung.mjs`, `npm run vermittlung`; Platz per Token zurück)
+- [x] Verbindung direkt zwischen den Browsern (**WebRTC**, jeder mit jedem), Notfall-**Relais (TURN)** für Firmen- und Handynetze: eigener coturn (`server/coturn/turnserver.conf`), der Server vergibt kurzlebige Zugangsdaten
+- [x] **Gleichschritt (Lockstep):** Ein Taktgeber (anfangs der Gastgeber) verteilt Züge; Befehle wirken 200 ms Spielzeit später bei allen am selben Tick (`src/netz/partie.ts`)
+- [x] Start erst, wenn die Prüfsumme der Kartendaten bei allen gleich ist (Lobby und Server prüfen), danach alle 5 Spielsekunden **Abgleich-Prüfsummen**; bei Auseinanderlaufen Meldung und Neuverteilung vom Taktgeber
+- [x] Lobby: Ausschnitt aus der Kartenwahl, Startplätze in verschiedenen Ortskernen (möglichst weit auseinander, änderbar), Tempo **1–3×** (nur der Gastgeber)
+- [x] Pause für jeden, begrenzt: dreimal je Spieler und Partie, höchstens 2 Minuten; weiter darf, wer pausiert hat, und der Gastgeber
+- [x] **Speichern und Laden** (Zustand + Datenversion und Prüfsumme der Karte), auch für Mehrspieler (Stand mehrerer Spieler → Lobby)
+- [x] **Rausgeflogen:** Spiel wartet, Wiederbeitritt über den Link mit Stand vom Mitspieler (auch wenn der Taktgeber selbst neu lädt); nach **5 Minuten** übernimmt ein einfacher **Verwalter** das Dorf (Wirtschaft läuft, keine neuen Bauten), fehlt der Taktgeber so lange, gibt der nächste den Takt
+- [x] Testaufbau: zwei Browser-Fenster auf einem Rechner, simuliertes schlechtes Netz (`tests/mehrspieler.mjs` im Smoke-Test, `#…&netz=schlecht`); ohne Browser dasselbe über ein simuliertes Netz (`tests/partie.test.ts`)
+- [x] Simulation für mehrere Spieler umgebaut: Dorf je Spieler, Besitz an Fahnen, Wegen, Gebäuden und Bauleuten, getrennte Wegenetze, Befehl `verwalter`, Spielstand `stand()`/`ausStand()` (`tests/mehrspieler-sim.test.ts`)
 
 **Abnahme:** Zwei Spieler an verschiedenen Orten bauen 30 Minuten lang jeder ein Dorf bis zur ersten Kirmes, ohne Auseinanderlaufen. Einer lädt die Seite neu und ist in unter 30 Sekunden wieder drin.
+→ Automatisch: `tests/m6.test.ts` (zwei Spieltest-Bots über schlechtes Netz, beide Kirmes nach rund 22 Spielminuten, Neuladen nach 12 Minuten, keine Abweichung, Replay gleich) und im Browser `tests/mehrspieler.mjs` (zwei Fenster, Neuladen in rund 20 s selbst mit Software-Grafik, Prüfsummen gleich). Node = Browser auch für zwei Dörfer im Smoke-Test.
+Offen: eine Partie zwischen zwei Menschen an verschiedenen Orten über das echte Internet mit eingerichtetem coturn.
+
+Noch nicht drin (kommt später): Gebiet und Grenzen zwischen den Dörfern (M9) – bis dahin darf jeder überall bauen, nur nichts Fremdes anfassen; Variante „Verbundene Regionen“ (Drehbuch 2.3); Wechsel des Gastgebers.
 
 ---
 
