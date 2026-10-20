@@ -124,7 +124,8 @@ export async function bedienungsTest({ browser, url, aus, info, fail }) {
   }));
   info(`Bedienung: Gebäudefenster „${karte.status}“ ${karte.zeilen.join(' / ')}; Priorität an: ${karte.an}`);
   if (karte.an !== '3') fail(`Bedienung: Prioritätsknopf zeigt ${karte.an} statt 3`);
-  // Rechtsklick schaltet weiter: 3 → 1
+  // Rechtsklick schaltet weiter: 3 → 1 (erst das Fenster schließen, es liegt über der Mitte)
+  await page.keyboard.press('Escape');
   await page.mouse.click(pos2.x, pos2.y, { button: 'right' });
   await page.waitForFunction((h) => window.eifeler.spiel.sicht.gebaeude.find((g) => g.q === h.q && g.r === h.r)?.prioritaet === 1, ziel.hex, { timeout: 30000, polling: 200 });
   await page.keyboard.press('Escape');
