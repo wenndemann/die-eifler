@@ -12,7 +12,7 @@ TMP="$(mktemp)"
 trap 'rm -f "$TMP"' EXIT
 echo "Lade $URL"
 curl -fL --retry 4 --retry-delay 2 -o "$TMP" "$URL"
-VERSION="$(tar -tzf "$TMP" | head -1 | cut -d/ -f1)"
+VERSION="$(tar -tzf "$TMP" | awk -F/ 'NR == 1 { print $1 }')"
 tar -xzf "$TMP" -C "$ZIEL"
 # versions.json ergänzen (mehrere Gebiete können nebeneinander liegen; das zuletzt geladene ist „aktuell“)
 python3 - "$ZIEL" "$VERSION" <<'PY'
