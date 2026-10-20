@@ -194,20 +194,26 @@ Noch nicht drin (kommt später): „nicht einlagern/auslagern“ je Ware im Lage
 
 ---
 
-## M8 – Volle Grundwirtschaft und Jahreszeiten
+## M8 – Volle Grundwirtschaft und Jahreszeiten ✅ (erster Stand) → 🔨 Spieltest mit Menschen
 
 **Ziel:** alle rund **25 Grundgebäude**, drei Dorfstufen und ein Jahreslauf (Drehbuch 5.1, 5.2, 7.4).
 
-- [ ] Reifekeller (Bergkäse; Gebäude schon in M5 als Freischaltung der ersten Kirmes), Bier (Gerstenfeld → Brauerei → Landbier), Schnaps (Wacholderheide → Brennerei), Schänke, Lagerhaus (Drehbuch 6.2)
-- [ ] Eisen schlank ab Stufe 2: Erzgrube, Köhlerei, Eisenhütte, Schmiede → Werkzeug nur für die Fachkräfte der besseren Gebäude und für neue Bauarbeiter und Planierer (Drehbuch 4.5)
-- [ ] **Kleine Feste** zu ihrer Jahreszeit (Maifest, Erntedank, Viehmarkt, Martinsfeuer, Fastelovend, Weinfest): Warenliste, Fest, Punkte, einmal je Spieljahr, Obergrenze (Drehbuch 6 „Feste“)
-- [ ] Kirmes-Stufen **Dorf → Kirchdorf** und **Kirchdorf → Marktflecken**
-- [ ] Beschwipste Boten: querfeldein, torkelnd, verlieren mal Waren (DESIGN §10.3); **Betrunkene sofort erkennbar** (rote Nase, Schlagseite, Hicksen, Drehbuch 7.1)
-- [ ] **Jahreszeiten mit Wirkung:** Spieljahr Startwert 60 min (beim Spielen einstellen), Winter mit Schnee und Vorratswirtschaft, Saat im Frühjahr, Ernte im Herbst; Kirmes jederzeit, kleine Feste zu ihrer Jahreszeit
-- [ ] **Wetter stark, aber fair:** Regen, Talnebel, Wind, Dürre, Missernte, Hochwasser in der Aue; angekündigt als Bauernregel, nie zerstörerisch, aus der gemeinsamen Saat
-- [ ] Balancing der Startwerte über einen 2-Stunden-Lauf
+- [x] Reifekeller (Bergkäse), Bier (Gerstenfeld → Brauerei → Landbier), Schnaps (Wacholderheide → Brennerei), Schänke, Lagerhaus (Drehbuch 6.2); neue Waren Gerste, Landbier (veredelte Nahrung), Wacholder, Schnaps (zählt im Mischkorb), Erz, Holzkohle, Eisen, Werkzeug, jede mit eigenem Modell
+- [x] **Lagerhaus und Lagerregeln** (wie Siedler 2, je Lager): normal / nicht einlagern / auslagern je Ware (Befehl `lagerregel`, Lagerfenster); Abriss trägt den Bestand ins nächste Lager
+- [x] Eisen schlank ab Stufe 2: Erzgrube, Köhlerei, Eisenhütte (zwei Zutaten), Schmiede → Werkzeug; Fachkräfte von Erzgrube und Eisenhütte brauchen Werkzeug, die Kirchdorf-Kirmes schenkt 2; neue Bauarbeiter und Planierer über die **Wunschzahl** im Lagerfenster (Befehl `bauleute`, je 1 Werkzeug und 1 Bewohner); Werkzeug geht zuerst an Fachkräfte, an die Kirmes erst, wenn das Dorf selbst schmiedet (sonst Verklemmung)
+- [x] **Kleine Feste** am Kirmesplatz zu ihrer Jahreszeit (Maifest, Viehmarkt, Erntedank, Martinsfeuer, Fastelovend; Weinfest mit M10): Warenliste, Fest, 15–25 Punkte, einmal je Spieljahr, Obergrenze 200 (`data/feste.json`); Waren, die die Kirmes braucht, gehen erst an die Kirmes
+- [x] Kirmes-Stufen **Dorf → Kirchdorf** und **Kirchdorf → Marktflecken** mit Mischkorb (Bergkäse als Platzhalter für die Spezialität bis M10)
+- [x] Beschwipste Boten: Schänke macht aus Schnaps Boten (3 min), die weite Lieferungen querfeldein tragen, torkeln und jede zehnte Ware verlieren (liest nach 2 min einer auf); **sofort erkennbar** (rote Nase, Flasche, schiefe Mütze, Schlagseite, Hicks-Bläschen; Pegel 1–3)
+- [x] **Jahreszeiten mit Wirkung:** Spieljahr 60 min ab Frühjahr; Felder ruhen im Winter, säen im Frühjahr, ernten im Herbst schneller; Winter mit Schnee (Gelände und Wald), langsameren Wegen und Wintervorrat (frieren statt sterben); alles aus dem Tick
+- [x] **Wetter stark, aber fair:** Regen, Talnebel, Venn-Wind, Dürre, Missernte, Hochwasser in der Aue; aus der gemeinsamen Saat, 2 Minuten vorher als Bauernregel der Erzählfigur, nie zerstörerisch (`data/jahr.json`)
+- [x] Oberfläche: Jahreszeit und Wetter in der Statuszeile, Zeile fürs kleine Fest, Festpunkte, „friert“; Gebäudefenster zeigt Lagerregeln, Bauleute, Mischkorb, Fest, Boten, Feld- und Werkzeugregeln aus den Daten; neue Zustände (Winter, Saat, Hochwasser, Werkzeug) mit Symbol
+- [x] Balancing der Startwerte über einen 2-Stunden-Lauf (`tests/m8-szenario.ts`): Kirchdorf-Liste auf 15/20/25/10 gehoben, Marktflecken bei 10/10/20
 
 **Abnahme:** Ein Dorf erreicht in einer Partie allein den Marktflecken. Der erste Winter ist spürbar, aber wer vorsorgt, kommt gut durch. Im Mehrspieler trifft das Wetter alle gleich.
+→ Automatisch: `tests/m8.test.ts` (Bot allein: Dorf nach 27, Kirchdorf nach 52, Marktflecken nach 75 Spielminuten, 95 Festpunkte, mit Vorrat 2 Minuten gefroren; dasselbe Dorf ohne Vorrat friert den ganzen Winter und schafft rund 30 % weniger; Replay gleich), `tests/m8-sim.test.ts` (Ketten, Lagerregeln, Bauleute, Kirmes-Stufen, Feste, Jahreszeiten, Winter, Wetterplan, Hochwasser, Boten, alte Spielstände), `tests/partie.test.ts` (Lagerregel, Bauleute, Jahreszeit und Wetter über schlechtes Netz, nach Neuladen gleich), im Browser `tests/mehrspieler.mjs` (Lagerregel und Bauleute per Klick, Jahreszeit gleich) und Node = Browser für 55 Minuten Bot im Smoke-Test.
+Offen: Spieltest mit Menschen (Zeitziele ~30–45 / ~75 / ~110 min; der Bot ist wie in M5 schneller).
+
+Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M9), Regler Boten/Finder in der Schänke (mit den Findern, M9), Spezialität der Völkchen (M10), Regen-, Nebel- und Hochwasser-Optik (M11).
 
 ---
 

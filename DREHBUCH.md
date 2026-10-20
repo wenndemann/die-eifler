@@ -9,7 +9,7 @@ Ein Kapitel gilt als **beschlossen**, wenn wir es gemeinsam durchgesprochen habe
 | 2. Spielmodi | ✅ beschlossen (Grundzüge) |
 | 3. Welt und Maßstab | ✅ beschlossen (Grundzüge) |
 | 4. Kern-Spielschleife | ✅ beschlossen (Grundzüge), Planierer und Bauarbeiter |
-| 5. Wirtschaft und Gebäude | ✅ beschlossen (Grundzüge), Grenzvölkchen und Kirmes-Warenlisten fest, Einzelwerte beim Spielen |
+| 5. Wirtschaft und Gebäude | ✅ beschlossen (Grundzüge), Grenzvölkchen und Kirmes-Warenlisten fest, Einzelwerte beim Spielen; M8: Werkzeug, Lagerhaus, Boten |
 | 6. Finden, Nachbarn, Ziele | ✅ beschlossen (Grundzüge), Eifel-Punkte verteilt, Orte mit Einstand, Flachländer am Kartenrand, viele Feste |
 | 7. Stil und Figuren | ✅ beschlossen (Grundzüge), Waren erst lesbar, dann schön |
 | 8. Technik und Mehrspieler | ✅ beschlossen (Grundzüge) |
@@ -245,6 +245,15 @@ Weiler (Start) → Dorf (Stufe 1) → Kirchdorf (Stufe 2) → Marktflecken (Stuf
 
 Die Mengen werden beim Spielen eingestellt, die Zeitziele bleiben.
 
+**Beschlossen in M8:**
+
+- **Werkzeug:** eine Ware „Werkzeug“. Es brauchen die Fachkräfte von Erzgrube und Eisenhütte (später die Spezialketten), Schmiede und Köhlerei nicht. Die Kirchdorf-Kirmes schenkt 2 Werkzeug. Neue Bauarbeiter und Planierer: Wunschzahl im Lagerfenster, je 1 Werkzeug und 1 freier Bewohner.
+- **Lagerhaus:** Regeln je Lager wie in Siedler 2: normal / nicht einlagern / auslagern je Ware.
+- **Landbier** ist veredelte Nahrung, **Schnaps** keine Nahrung, zählt aber im Mischkorb.
+- **Marktflecken bis M10:** Bergkäse steht als Platzhalter für die Spezialität des Völkchens.
+- **Schänke und Boten:** 1 Schnaps macht einen freien Bewohner für 3 Spielminuten zum Boten; Boten tragen querfeldein zu Abnehmern weiter als 8 Hexe, torkeln (30 % Umweg), verlieren jede zehnte Ware (liegt, bis sie einer aufliest), höchstens 4 je Schänke.
+- Mengen nach dem 2-Stunden-Lauf: Dorf → Kirchdorf 15 Bergkäse, 20 Honig, 25 Landbier, 10 Schnaps; Kirchdorf → Marktflecken 10 Bergkäse, 10 Werkzeug, Mischkorb 20.
+
 ### 5.3 Völkchen
 
 Jedes Völkchen hat einen **Bonus**, eine **Spezialkette** (2–3 Gebäude, ab Stufe 2), eine **augenzwinkernde Schwäche** und eigene Sprüche (Platt nördlich ripuarisch, südlich moselfränkisch).
@@ -337,6 +346,8 @@ Gebäude werden nie zerstört. Wechselt ein Hex mit Gebäude den Besitzer, steht
 - **Kein Dauerfeiern:** Jedes kleine Fest gibt es höchstens einmal je Spieljahr und Ort, dazu eine Obergrenze für die Punkte aus kleinen Festen (Startwert beim Spielen). Kein Bereich allein reicht zum Sieg (6.4).
 - **Die Kirmes bleibt das Tor zur nächsten Dorfstufe**, das Schützenfest das Kräftemessen. Kleine Feste schalten nichts frei.
 
+**Beschlossen in M8 (Startwerte):** gefeiert am Kirmesplatz, nur in der eigenen Jahreszeit, einmal je Spieljahr; Maifest (Frühjahr: 8 Landbier, 6 Bratkartoffeln, 20 P.), Viehmarkt (Sommer: 6 Käse, 6 Milch, 4 Honig, 15 P.), Erntedank (Herbst: 8 Kartoffeln, 8 Äpfel, 4 Gerste, 20 P.), Martinsfeuer (Herbst: 6 Bratkartoffeln, 4 Schnaps, 2 Holzkohle, 25 P.), Fastelovend (Winter: 6 Most, 4 Schnaps, 15 P.); Obergrenze 200 Punkte. Waren, die die Kirmes braucht, gehen zuerst an die Kirmes. Weinfest mit den Ahrtalern (M10).
+
 **Kirmes und Schützenfest** funktionieren ähnlich: Man baut einen Festplatz, liefert eine Warenliste, dann wird gefeiert. Vorschlag zur Abgrenzung:
 
 | | Kirmes | Schützenfest |
@@ -378,6 +389,7 @@ Lustiger Siedler-Look: übertriebene Proportionen, krummbeinige Figuren, Gebäud
   - Wetter kündigt sich an, als **Bauernregel** der Erzählfigur (1.4) („Ist der Mai kühl und nass …“). Wer vorsorgt (Vorräte, nicht in die Aue bauen, Hecken), kommt glimpflich davon.
   - Kein Wetter zerstört Gebäude oder Bewohner, und dank Notnagel fährt man sich nicht fest.
   - Im Mehrspieler kommt das Wetter aus der gemeinsamen Zufallssaat und trifft alle im Ausschnitt gleich.
+- **Beschlossen in M8 (Startwerte):** Jahr 60 min ab Frühjahr, je Jahreszeit 15 min. Winter: Felder, Obstwiesen und Bienen ruhen, Schnee macht Wege 25 % langsamer, das Dorf isst je 10 Bewohner jede Minute 1 Essen aus dem Lager; fehlt es, frieren die Leute (Gebäude halb so schnell, kein Nachwuchs). Frühjahr: 2 min Aussaat. Herbst: Ernte 50 % schneller. Wetter: 1–2 Ereignisse je Jahreszeit, 3–5 min, 2 min vorher als Bauernregel; Regen (Wege −20 %, Felder +20 %), Talnebel (Täler −30 %), Venn-Wind (Höhen −25 %), Dürre und Missernte (Felder halb so schnell), Hochwasser (Aue steht still, bis zu 2 Waren je Ufer-Fahne schwimmen weg); im ersten Frühjahr kein Wetter.
 - **Feingefühl:** Das Ahr-Hochwasser 2021 ist echt und schmerzhaft. Hochwasser kommt im Spiel vor, aber nie als Witz und nie mit Anspielung darauf.
 
 ### 7.5 Musik und Klang
