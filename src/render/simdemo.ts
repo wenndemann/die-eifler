@@ -112,7 +112,7 @@ export class SimDemo {
   // ------------------------------------------------------------ Fake-Welt
 
   private neueFahne(h: H, gebaeude = 0): SichtFahne {
-    const f: SichtFahne = { id: this.nextId++, sp: 0, q: h.q, r: h.r, waren: [], gebaeude };
+    const f: SichtFahne = { id: this.nextId++, sp: 0, q: h.q, r: h.r, waren: [], ziele: [], gebaeude };
     this.sicht.fahnen.push(f);
     return f;
   }
@@ -151,7 +151,7 @@ export class SimDemo {
     const typen: [string, number, boolean][] = [['holzfaeller', PROMILLE, false], ['steinbruch', 500, false], ['saegewerk', 150, false], ['wohnhaus', PROMILLE, true]];
     const lagerF = this.neueFahne(L, 1);
     const gb = (typ: string, h: H, f: SichtFahne, bau: number, getrennt: boolean): SichtGebaeude => {
-      const g: SichtGebaeude = { id: this.nextId++, sp: 0, typ, q: h.q, r: h.r, fahne: f.id, bau, getrennt, prioritaet: 2, zustand: 'bereit' };
+      const g: SichtGebaeude = { id: this.nextId++, sp: 0, typ, q: h.q, r: h.r, fahne: f.id, bau, getrennt, prioritaet: 2, ruht: false, erzeugt: 0, zustand: 'bereit' };
       f.gebaeude = g.id;
       this.sicht.gebaeude.push(g);
       return g;

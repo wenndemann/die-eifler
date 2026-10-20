@@ -56,6 +56,9 @@ const dorf = dorfJson as {
   bauen: { je_ware_s: number; planieren_ab_grad: number; planieren_s: number; planieren_je_grad_s: number };
   stufen: string[];
   kirmes: { liste: Record<string, number>; fest_s: number; zuzug: number; schaltet_frei: string[] }[];
+  verteilung: { abnehmer: { id: string; name: string; symbol: string }[]; standard: string[] };
+  statistik: { takt_s: number; max_punkte: number };
+  autosave: { takt_min: number };
 };
 const sek = (s: number) => Math.round(s * TICK_HZ);
 
@@ -146,6 +149,8 @@ export interface GebaeudeTyp {
   einmalig: boolean;
   /** Startvorrat je Warenart (nur Lager). */
   vorrat: readonly number[];
+  /** Kann ruhen (Befehl 'ruhen'): Gebäude mit Arbeiter und Wohnhäuser. */
+  pausierbar: boolean;
 }
 
 const ticks = (s: number | undefined) => Math.round((s ?? 0) * TICK_HZ);
@@ -184,6 +189,7 @@ function baue(j: GebaeudeJson): GebaeudeTyp {
     abStufe: j.ab_stufe ?? 0,
     einmalig: !!j.einmalig,
     vorrat: jeWare(j.vorrat),
+    pausierbar: (j.arbeiter ?? 0) > 0 || j.funktion === 'wohnen',
   };
 }
 
@@ -201,3 +207,23 @@ export const START_VORRAT: readonly number[] = GEBAEUDE.lager.vorrat;
 export const KIRMES: readonly KirmesStufe[] = dorf.kirmes.map((k) => ({
   liste: jeWare(k.liste), festTicks: sek(k.fest_s), zuzug: k.zuzug, schaltetFrei: k.schaltet_frei.slice(),
 }));
+
+/**
+ * Warenverteilung (ROADMAP M7, wie Siedler 2): Abnehmer-Arten in der Reihenfolge von data/dorf.json (Index = Art: 0 Baustellen,
+ * 1 Kirmesplatz, 2 Verarbeiter, 3 Wohnhäuser). Je Ware und Dorf gilt eine Rangfolge dieser Arten; das Lager nimmt immer zuletzt.
+ */
+export const ABNEHMER: readonly { id: string; name: string; symbol: string }[] = dorf.verteilung.abnehmer.map((a) => ({ ...a }));
+export const ABNEHMER_ZAHL = ABNEHMER.length;
+/** Standard-Rangfolge (Abnehmer-Indizes), für jede Ware gleich: die feste Reihenfolge aus M5. */
+export const VERTEILUNG_STANDARD: readonly number[] = dorf.verteilung.standard.map((id) => {
+  const i = ABNEHMER.findIndex((a) => a.id === id);
+  if (i < 0) throw new Error(`Unbekannter Abnehmer "${id}" in data/dorf.json`);
+  return i;
+});
+if (new Set(VERTEILUNG_STANDARD).size !== ABNEHMER_ZAHL) throw new Error('data/dorf.json: verteilung.standard muss jeden Abnehmer genau einmal nennen');
+
+/** Statistik (ROADMAP M7): Messpunkt alle STAT_TAKT Ticks je Dorf, höchstens STAT_MAX Punkte (dann wird ausgedünnt). */
+export const STAT_TAKT = sek(dorf.statistik.takt_s);
+export const STAT_MAX = Math.max(4, dorf.statistik.max_punkte);
+/** Autosave alle so viele Spielminuten (Oberfläche, nicht Simulation). */
+export const AUTOSAVE_MIN = dorf.autosave.takt_min;

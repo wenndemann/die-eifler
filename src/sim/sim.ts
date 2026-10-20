@@ -9,7 +9,7 @@ import {
   FELS_LESE, FELS_LESE_START, FELS_STEIL, FELS_STEIN, FLAG_CAP, GEBAEUDE, KIRMES, LESE_PROZENT, NAHRUNG, NAHRUNG_REIHE, NAHRUNG_ZYKLUS,
   NOTNAGEL_FREI_UNTER, NOTNAGEL_TICKS, NOTPLAETZE, planierTicks, PRIO_MAX, PRIO_MIN, PRIO_STANDARD,
   RODUNG_STAMM_MAX, START_BAUARBEITER, START_BEWOHNER, START_PLANIERER, START_STEIN_ABSTAND_MIN, START_STEIN_MIN, START_STEIN_RADIUS,
-  START_VORRAT, STEIL_GRAD, SUCHE_WARTE, TREE_MAX, UEBERGABE_TICKS, WARE, WAREN, WEG_MAX_SCHRITTE,
+  START_VORRAT, STAT_MAX, STAT_TAKT, STEIL_GRAD, ABNEHMER_ZAHL, VERTEILUNG_STANDARD, SUCHE_WARTE, TREE_MAX, UEBERGABE_TICKS, WARE, WAREN, WEG_MAX_SCHRITTE,
 } from './daten';
 import type { GebaeudeTyp } from './daten';
 import { SimKarte } from './karte';
@@ -17,8 +17,8 @@ import { FELS_FELS, FELS_KLIPPE, FELS_LESE as ART_LESE, hashHex, hashHex2, hashH
 import { sucheWeg, ZahlenHeap } from './pfad';
 import { PROMILLE } from './typen';
 import type {
-  Befehl, GebaeudeZustand, Id, KarteDaten, Protokoll, ProtokollEintrag, SichtArbeiter, SichtBaumann, SichtEreignis, SichtNatur, SimSicht,
-  StartDaten,
+  Befehl, GebaeudeZustand, Id, KarteDaten, Protokoll, ProtokollEintrag, SichtArbeiter, SichtBaumann, SichtEreignis, SichtNatur, SichtStatistik,
+  SimSicht, StartDaten,
 } from './typen';
 import { ausBase64, inBase64, kopie, STAND_ZAHLEN } from './stand';
 import type { SimStand } from './stand';
@@ -62,6 +62,8 @@ interface Gebaeude {
   verbaut: number[];
   prio: number;
   getrennt: boolean;
+  /** 1 = vom Spieler angehalten (Befehl 'ruhen'); erzeugt = bisher hier erzeugte Waren. */
+  ruht: number; erzeugt: number;
   puffer: number[]; incoming: number[]; ausgang: number[];
   zeit: number; arbeit: number;
   vorrat: number[];
@@ -98,6 +100,12 @@ interface Dorf {
   stufe: number; fest: number; notnagelT: number;
   /** 1 = der Verwalter führt das Dorf (Drehbuch 8.3). */
   verwalter: number;
+  /** Warenverteilung (ROADMAP M7): je Warenart ABNEHMER_ZAHL Abnehmer-Arten in Rangfolge, hintereinander (Ware a ab a·ABNEHMER_ZAHL). */
+  vert: number[];
+  /** Erzeugte Waren je Warenart in diesem Dorf. */
+  erzeugt: number[];
+  /** Statistik: Messpunkte (SichtStatistik), aktueller Takt in Ticks und Tick des nächsten Punkts. */
+  statPunkte: number[][]; statTakt: number; statNaechst: number;
   ereignisse: SichtEreignis[];
   /** Freier Wohnraum zu Beginn des Ticks (abgeleitet, nicht Teil der Prüfsumme). */
   wohnFrei: number;
@@ -107,7 +115,23 @@ function neuesDorf(bewohner: number): Dorf {
   return {
     bewohner, frei: bewohner, bauGesamt: START_BAUARBEITER, bauFrei: START_BAUARBEITER, planGesamt: START_PLANIERER, planFrei: START_PLANIERER,
     stufe: 0, fest: 0, notnagelT: 0, verwalter: 0, ereignisse: [], wohnFrei: 0,
+    vert: standardVerteilung(), erzeugt: new Array<number>(WAREN.length).fill(0), statPunkte: [], statTakt: STAT_TAKT, statNaechst: 0,
   };
+}
+
+/** Standard-Verteilung für alle Waren (data/dorf.json). */
+function standardVerteilung(): number[] {
+  const v: number[] = [];
+  for (let a = 0; a < WAREN.length; a++) v.push(...VERTEILUNG_STANDARD);
+  return v;
+}
+
+/** Abnehmer-Art eines Gebäudes (ABNEHMER): 0 Baustelle, 1 Kirmesplatz, 2 Verarbeiter, 3 Wohnhaus; -1 Lager. */
+function abnehmerArt(g: { typ: string; fertig: number }): number {
+  if (g.typ === 'lager') return -1;
+  if (!g.fertig) return 0;
+  const f = GEBAEUDE[g.typ].funktion;
+  return f === 'kirmes' ? 1 : f === 'wohnen' ? 3 : 2;
 }
 
 /** Höchstzahl Spieler einer Partie. */
@@ -117,11 +141,6 @@ const EREIGNISSE_MAX = 32;
 
 const DIST_K = 1 << 21;
 const ALLE_WAREN: readonly number[] = WAREN.map((_, i) => i);
-
-/** Reihenfolge der fertigen Abnehmer: 0 Kirmesplatz, 1 Verarbeiter, 2 Wohnhaus. */
-function abnehmerRang(t: GebaeudeTyp): number {
-  return t.funktion === 'kirmes' ? 0 : t.funktion === 'wohnen' ? 2 : 1;
-}
 
 function summe(a: readonly number[]): number {
   let n = 0;
@@ -365,12 +384,19 @@ export class Simulation {
     this.befehlZahl = z('befehlZahl'); this.natRev = z('natRev');
     if (st.doerfer.length !== this.doerfer.length) throw new Error('Spielstand: Zahl der Dörfer passt nicht');
     this.doerfer = st.doerfer as unknown as Dorf[];
+    // Spielstände von vor M7: Verteilung, Statistik und Pause mit Standardwerten
+    for (const d of this.doerfer) {
+      if (!Array.isArray(d.vert) || d.vert.length !== WAREN.length * ABNEHMER_ZAHL) d.vert = standardVerteilung();
+      if (!Array.isArray(d.erzeugt) || d.erzeugt.length !== WAREN.length) d.erzeugt = new Array<number>(WAREN.length).fill(0);
+      if (!Array.isArray(d.statPunkte)) { d.statPunkte = []; d.statTakt = STAT_TAKT; d.statNaechst = this._tick; }
+    }
     const map = <T extends { id: Id }>(a: Record<string, unknown>[]) => new Map((a as unknown as T[]).map((x) => [x.id, x] as [Id, T]));
     this.fahnen = map<Fahne>(st.fahnen);
     this.segmente = map<Segment>(st.segmente);
     this.traeger = map<Traeger>(st.traeger);
     this.gebaeude = map<Gebaeude>(st.gebaeude);
     this.bauleute = map<Baumann>(st.bauleute);
+    for (const g of this.gebaeude.values()) { g.ruht ??= 0; g.erzeugt ??= 0; }
     const n = this.karte.count, nat = st.natur;
     this.baum = ausBase64(nat.baum, n); this.jung = ausBase64(nat.jung, n); this.stufe = ausBase64(nat.stufe, n);
     this.fels = ausBase64(nat.fels, n); this.felsArt = ausBase64(nat.felsArt, n);
@@ -428,6 +454,20 @@ export class Simulation {
       case 'prioritaet': {
         const g = this.gebaeude.get(b.id);
         if (g && g.sp === sp && !g.fertig && Number.isInteger(b.stufe) && b.stufe >= PRIO_MIN && b.stufe <= PRIO_MAX) g.prio = b.stufe;
+        break;
+      }
+      case 'verteilung': {
+        const r = b.reihe;
+        if (!Number.isInteger(b.ware) || b.ware < 0 || b.ware >= WAREN.length || !Array.isArray(r) || r.length !== ABNEHMER_ZAHL) break;
+        const gesehen = new Set<number>();
+        for (const x of r) if (Number.isInteger(x) && x >= 0 && x < ABNEHMER_ZAHL) gesehen.add(x);
+        if (gesehen.size !== ABNEHMER_ZAHL) break;
+        for (let i = 0; i < ABNEHMER_ZAHL; i++) this.doerfer[sp].vert[b.ware * ABNEHMER_ZAHL + i] = r[i];
+        break;
+      }
+      case 'ruhen': {
+        const g = this.gebaeude.get(b.id);
+        if (g && g.sp === sp && GEBAEUDE[g.typ].pausierbar && typeof b.an === 'boolean') g.ruht = b.an ? 1 : 0;
         break;
       }
     }
@@ -545,7 +585,7 @@ export class Simulation {
       tick: this._tick,
       ich,
       spieler: this.doerfer.map((d) => ({ stufe: d.stufe, bewohner: d.bewohner, verwalter: d.verwalter === 1 })),
-      fahnen: [...this.fahnen.values()].map((f) => ({ id: f.id, sp: f.sp, ...hx(f.h), waren: f.waren.map((w) => w.art), gebaeude: f.gebaeude })),
+      fahnen: [...this.fahnen.values()].map((f) => ({ id: f.id, sp: f.sp, ...hx(f.h), waren: f.waren.map((w) => w.art), ziele: f.waren.map((w) => w.ziel), gebaeude: f.gebaeude })),
       segmente: [...this.segmente.values()].map((s) => ({ id: s.id, sp: s.sp, a: s.a, b: s.b, pfad: s.pfad.map(hx), traeger: s.traeger, verkehr: s.verkehr })),
       traeger: tr,
       gebaeude: [...this.gebaeude.values()].map((g) => {
@@ -553,7 +593,7 @@ export class Simulation {
         const o: SimSicht['gebaeude'][number] = {
           id: g.id, sp: g.sp, typ: g.typ, ...hx(g.h), fahne: g.fahne,
           bau: this.bauStand(g, t),
-          getrennt: g.getrennt, prioritaet: g.prio, zustand: this.zustandVon(g, t),
+          getrennt: g.getrennt, prioritaet: g.prio, ruht: g.ruht === 1, erzeugt: g.erzeugt, zustand: this.zustandVon(g, t),
         };
         if (g.typ === 'lager') o.vorrat = g.vorrat.slice();
         if (!g.fertig) {
@@ -606,6 +646,8 @@ export class Simulation {
         platz: platz ? platz.id : 0, fest: d.fest, festDauer: ks.festTicks,
       } : null,
       notnagel: this.notnagelGreift(sp) ? NOTNAGEL_TICKS - d.notnagelT : -1,
+      verteilung: WAREN.map((_, a) => d.vert.slice(a * ABNEHMER_ZAHL, (a + 1) * ABNEHMER_ZAHL)),
+      erzeugt: d.erzeugt.slice(),
     };
   }
 
@@ -633,6 +675,7 @@ export class Simulation {
       if (summe(g.stapel) > 0) return 'kein_bauarbeiter';
       return summe(g.incoming) > 0 ? 'baustelle' : 'wartet_material';
     }
+    if (g.ruht && !g.arbeit && (t.radius === 0 || g.ph === PH_SUCHE)) return 'ruht';
     if (t.funktion === 'wohnen') {
       if (g.arbeit) return 'arbeitet';
       if (!this.nahrungIn(g)) return 'hunger';
@@ -745,6 +788,9 @@ export class Simulation {
         fehler.push(`${v}Bewohner: ${d.frei} frei + ${traegerJe[sp]} Träger + ${arbeiter[sp]} Arbeiter statt ${d.bewohner}`);
       }
       if (d.bauFrei < 0 || d.bauFrei + bau[sp] !== d.bauGesamt) fehler.push(`${v}Bauarbeiter: ${d.bauFrei} frei + ${bau[sp]} unterwegs statt ${d.bauGesamt}`);
+      for (let a = 0; a < WAREN.length; a++) {
+        if (new Set(d.vert.slice(a * ABNEHMER_ZAHL, (a + 1) * ABNEHMER_ZAHL)).size !== ABNEHMER_ZAHL) fehler.push(`${v}Verteilung der Ware ${a} kaputt`);
+      }
       if (d.planFrei < 0 || d.planFrei + plan[sp] !== d.planGesamt) fehler.push(`${v}Planierer: ${d.planFrei} frei + ${plan[sp]} unterwegs statt ${d.planGesamt}`);
     });
     for (const key of inc.keys()) {
@@ -779,6 +825,8 @@ export class Simulation {
     w(this.doerfer.length);
     for (const d of this.doerfer) {
       w(d.bewohner); w(d.frei); w(d.bauGesamt); w(d.bauFrei); w(d.planGesamt); w(d.planFrei); w(d.stufe); w(d.fest); w(d.notnagelT); w(d.verwalter);
+      liste(d.vert); liste(d.erzeugt); w(d.statTakt); w(d.statNaechst); w(d.statPunkte.length);
+      for (const p of d.statPunkte) liste(p);
     }
     w(this.stat.angekommen); w(this.stat.verbraucht); w(this.stat.erzeugt); w(this.stat.verbaut);
     liste(this.erzeugtJe);
@@ -796,7 +844,7 @@ export class Simulation {
     }
     w(this.gebaeude.size);
     for (const g of this.gebaeude.values()) {
-      w(g.id); w(g.sp); f.text(g.typ); w(g.h); w(g.fahne); w(g.fertig); liste(g.verbaut); w(g.prio); w(g.getrennt ? 1 : 0);
+      w(g.id); w(g.sp); f.text(g.typ); w(g.h); w(g.fahne); w(g.fertig); liste(g.verbaut); w(g.prio); w(g.getrennt ? 1 : 0); w(g.ruht); w(g.erzeugt);
       liste(g.puffer); liste(g.incoming); liste(g.ausgang); w(g.zeit); w(g.arbeit); liste(g.vorrat);
       w(g.ar); w(g.ph); w(g.pt); w(g.pd); w(g.wi); w(g.zh); liste(g.weg); w(g.traegt); w(g.leer); w(g.mitte);
       liste(g.stapel); w(g.haende); w(g.planSoll); w(g.planIst); w(g.bauer); w(g.planierer);
@@ -958,7 +1006,7 @@ export class Simulation {
     const nul = () => new Array<number>(WAREN.length).fill(0);
     const g: Gebaeude = {
       id: this.naechsteId++, sp, typ, h, fahne: 0, fertig: sofort || t.kostenSumme === 0 ? 1 : 0,
-      verbaut: sofort ? t.kosten.slice() : nul(), prio: PRIO_STANDARD, getrennt: typ !== 'lager',
+      verbaut: sofort ? t.kosten.slice() : nul(), prio: PRIO_STANDARD, getrennt: typ !== 'lager', ruht: 0, erzeugt: 0,
       puffer: nul(), incoming: nul(), ausgang: nul(), zeit: 0, arbeit: 0, vorrat: nul(),
       ar: 0, ph: PH_SUCHE, pt: 0, pd: 0, wi: 0, zh: -1, weg: [], traegt: -1, leer: 0, mitte: -1,
       stapel: nul(), haende: -1, planSoll: 0, planIst: 0, bauer: 0, planierer: 0,
@@ -974,7 +1022,7 @@ export class Simulation {
     this.gebaeude.set(g.id, g);
     for (let i = 0; i < staemme && f.waren.length < FLAG_CAP; i++) {
       this.wareAufFahne(f, WARE.stamm);
-      this.stat.erzeugt++; this.erzeugtJe[WARE.stamm]++;
+      this.stat.erzeugt++; this.erzeugtJe[WARE.stamm]++; this.doerfer[sp].erzeugt[WARE.stamm]++;
     }
     return g;
   }
@@ -1226,6 +1274,16 @@ export class Simulation {
   private wareVerloren(w: Ware): void { this.wareZielLoesen(w); }
 
   /** Offener Bedarf einer Baustelle an Ware `art`: Kosten − verbaut − am Stapel − in der Hand − unterwegs. */
+  /** Steht Abnehmer-Art `x` für Ware `art` im Dorf von `sp` vor Art `y`? */
+  private vorDran(sp: number, art: number, x: number, y: number): boolean {
+    const v = this.doerfer[sp].vert, o = art * ABNEHMER_ZAHL;
+    for (let i = 0; i < ABNEHMER_ZAHL; i++) {
+      if (v[o + i] === x) return true;
+      if (v[o + i] === y) return false;
+    }
+    return false;
+  }
+
   private offen(g: Gebaeude, art: number): number {
     return GEBAEUDE[g.typ].kosten[art] - g.verbaut[art] - g.stapel[art] - (g.haende === art ? 1 : 0) - g.incoming[art];
   }
@@ -1246,8 +1304,8 @@ export class Simulation {
     if (t.funktion === 'kirmes' && d.fest > 0) return 0;
     const p = this.pufferMax(g, t, art) - g.puffer[art] - g.incoming[art];
     if (t.funktion !== 'wohnen' || p <= 0) return p;
-    // was die Kirmes noch braucht, isst keiner weg (nur der Überschuss im Lager)
-    if (this.kirmesBraucht(g.sp, art) > 0) return 0;
+    // was die Kirmes noch braucht, isst keiner weg (nur der Überschuss im Lager) – solange der Kirmesplatz in der Verteilung vorgeht
+    if (this.vorDran(g.sp, art, 1, 3) && this.kirmesBraucht(g.sp, art) > 0) return 0;
     let belegt = 0;
     for (const a of NAHRUNG_REIHE) belegt += g.puffer[a] + g.incoming[a];
     // ohne freien Wohnraum hält das Wohnhaus nur einen Bissen vor, der Rest bleibt für Küche, Käserei und Kirmes
@@ -1261,28 +1319,27 @@ export class Simulation {
   }
 
   /**
-   * DESIGN §4.5: 1. Baustelle mit offenem Bedarf (höchste Priorität, dann nächste), 2. Verarbeiter mit Platz im Input-Puffer
-   * (nächster), 3. nächstes Lager; 0 = kein Ziel erreichbar. Getrennte Baustellen und Gebäude bekommen nichts, fremde auch nicht.
+   * DESIGN §4.5 mit der Warenverteilung des Dorfs (ROADMAP M7): die Abnehmer-Arten in der Rangfolge für diese Ware – Baustellen mit
+   * offenem Bedarf (höchste Priorität, dann nächste), sonst der nächste Abnehmer der Art mit Platz im Input-Puffer –, zuletzt das
+   * nächste Lager; 0 = kein Ziel erreichbar. Getrennte Baustellen und Gebäude bekommen nichts, fremde auch nicht.
    */
   private zielWaehlen(art: number, z: Fahne): Id {
-    let best = 0, bp = 0, bd = Infinity;
-    for (const g of this.gebaeude.values()) {
-      if (g.sp !== z.sp || g.fertig || g.getrennt || this.offen(g, art) <= 0) continue;
-      const d = this.distZu(g.fahne).get(z.id);
-      if (d === undefined) continue;
-      if (g.prio > bp || (g.prio === bp && d < bd)) { bp = g.prio; bd = d; best = g.id; }
-    }
-    if (best) return best;
-    // 2. der Kirmesplatz (die Warenliste geht vor), dann Verarbeiter, dann Wohnhäuser mit Platz
-    for (const rang of [0, 1, 2]) {
+    let best = 0, bd = Infinity;
+    const vert = this.doerfer[z.sp].vert;
+    for (let i = 0; i < ABNEHMER_ZAHL; i++) {
+      const wer = vert[art * ABNEHMER_ZAHL + i];
+      let bp = 0;
       bd = Infinity;
       for (const g of this.gebaeude.values()) {
-        if (g.sp !== z.sp || g.typ === 'lager' || !g.fertig || g.getrennt || abnehmerRang(GEBAEUDE[g.typ]) !== rang || this.pufferPlatz(g, art) <= 0) continue;
+        if (g.sp !== z.sp || g.getrennt || abnehmerArt(g) !== wer) continue;
+        if ((wer === 0 ? this.offen(g, art) : this.pufferPlatz(g, art)) <= 0) continue;
         const d = this.distZu(g.fahne).get(z.id);
-        if (d !== undefined && d < bd) { bd = d; best = g.id; }
+        if (d === undefined) continue;
+        if (wer === 0 ? g.prio > bp || (g.prio === bp && d < bd) : d < bd) { bp = g.prio; bd = d; best = g.id; }
       }
       if (best) return best;
     }
+    bd = Infinity;
     for (const g of this.gebaeude.values()) {
       if (g.sp !== z.sp || g.typ !== 'lager') continue;
       const d = this.distZu(g.fahne).get(z.id);
@@ -1345,8 +1402,10 @@ export class Simulation {
   /** Eine Ware in den Output-Puffer legen (Erzeugung, zählt in der Statistik). */
   private produziert(g: Gebaeude, art: number): void {
     g.ausgang[art]++;
+    g.erzeugt++;
     this.stat.erzeugt++;
     this.erzeugtJe[art]++;
+    this.doerfer[g.sp].erzeugt[art]++;
   }
 
   /** Ein Stück Material ist verbaut (vom Bauarbeiter). */
@@ -1392,6 +1451,7 @@ export class Simulation {
       case 'verarbeiter': {
         const wd = t.wandelt!;
         if (!g.arbeit) {
+          if (g.ruht) break;
           if (g.puffer[wd.ein] >= wd.menge && g.ausgang[wd.aus] < t.ausgangMax) {
             g.puffer[wd.ein] -= wd.menge; g.arbeit = 1; g.zeit = 0; this.stat.verbraucht += wd.menge;
           }
@@ -1403,7 +1463,7 @@ export class Simulation {
       }
       case 'erzeuger': {
         // Feld, Wiese, Stall, Bienenstock: alle arbeitTicks eine Ware, solange der Output-Puffer Platz hat
-        if (g.ausgang[t.ausgangWare] >= t.ausgangMax) { g.arbeit = 0; break; }
+        if (g.ausgang[t.ausgangWare] >= t.ausgangMax || g.ruht) { g.arbeit = 0; break; }
         g.arbeit = 1;
         g.zeit++;
         if (g.zeit >= t.arbeitTicks) { this.produziert(g, t.ausgangWare); g.zeit = 0; }
@@ -1476,6 +1536,7 @@ export class Simulation {
     switch (g.ph) {
       case PH_SUCHE: {
         if (t.ausgangMax > 0 && g.ausgang[t.ausgangWare] >= t.ausgangMax) return; // Rückstau: Arbeit ruht
+        if (g.ruht) return; // angehalten: der Arbeiter bleibt an der Hütte
         if (g.pt > 0) { g.pt--; return; }
         const weg = t.funktion === 'foerster' ? this.suchePflanzplatz(g, t) : this.sucheRessource(g, t);
         if (!weg) { g.leer = 1; g.pt = SUCHE_WARTE; return; }
@@ -1538,36 +1599,41 @@ export class Simulation {
 
   private lagerPull(): void {
     const gezogen = new Set<Id>();
-    const baustellen: Gebaeude[] = [], verarbeiter: Gebaeude[] = [];
+    // Wünsche (Gebäude, Ware) in der Reihenfolge der Warenverteilung des Dorfs: Rang der Abnehmer-Art für diese Ware, Baustellen nach
+    // Priorität, dann Id; Wohnhäuser wollen das beste Essen zuerst. Mit der Standard-Verteilung genau die feste Reihenfolge aus M5.
+    const wunsch: { g: Gebaeude; a: number; rang: number; prio: number; i: number }[] = [];
     for (const g of this.gebaeude.values()) {
       if (g.typ === 'lager' || g.getrennt) continue;
-      if (!g.fertig) baustellen.push(g);
-      else if (this.hatEingang(GEBAEUDE[g.typ])) verarbeiter.push(g);
-    }
-    if (!baustellen.length && !verarbeiter.length) return;
-    baustellen.sort((x, y) => y.prio - x.prio || x.id - y.id);
-    // der Kirmesplatz vor den Verarbeitern, die vor den Wohnhäusern (sonst nach Id)
-    verarbeiter.sort((x, y) => abnehmerRang(GEBAEUDE[x.typ]) - abnehmerRang(GEBAEUDE[y.typ]) || x.id - y.id);
-    for (const g of baustellen.concat(verarbeiter)) {
-      // Wohnhäuser holen das beste Essen zuerst
-      const reihe = g.fertig && GEBAEUDE[g.typ].funktion === 'wohnen' ? NAHRUNG_REIHE : ALLE_WAREN;
-      for (const a of reihe) {
-        if ((g.fertig ? this.pufferPlatz(g, a) : this.offen(g, a)) <= 0) continue;
-        const dm = this.distZu(g.fahne);
-        let best: Gebaeude | null = null, bd = Infinity;
-        for (const l of this.gebaeude.values()) {
-          if (l.sp !== g.sp || l.typ !== 'lager' || gezogen.has(l.id) || l.vorrat[a] <= 0) continue;
-          // Nur ausgehende Waren an der Lagerfahne bremsen; was zum Lager unterwegs ist, nimmt das Lager selbst ab
-          if (this.ausgehend(l) >= FLAG_CAP / 2) continue;
-          const d = dm.get(l.fahne);
-          if (d !== undefined && d < bd) { bd = d; best = l; }
-        }
-        if (!best) continue;
-        best.vorrat[a]--;
-        g.incoming[a]++;
-        this.fahnen.get(best.fahne)!.waren.push({ art: a, ziel: g.id });
-        gezogen.add(best.id);
+      const t = GEBAEUDE[g.typ];
+      if (g.fertig && !this.hatEingang(t)) continue;
+      const art = abnehmerArt(g), v = this.doerfer[g.sp].vert;
+      const reihe = g.fertig && t.funktion === 'wohnen' ? NAHRUNG_REIHE : ALLE_WAREN;
+      for (let i = 0; i < reihe.length; i++) {
+        const a = reihe[i];
+        if ((g.fertig ? this.pufferMax(g, t, a) : t.kosten[a]) <= 0) continue;
+        let rang = 0;
+        while (rang < ABNEHMER_ZAHL && v[a * ABNEHMER_ZAHL + rang] !== art) rang++;
+        wunsch.push({ g, a, rang, prio: g.fertig ? 0 : g.prio, i });
       }
+    }
+    if (!wunsch.length) return;
+    wunsch.sort((x, y) => x.rang - y.rang || y.prio - x.prio || x.g.id - y.g.id || x.i - y.i);
+    for (const { g, a } of wunsch) {
+      if ((g.fertig ? this.pufferPlatz(g, a) : this.offen(g, a)) <= 0) continue;
+      const dm = this.distZu(g.fahne);
+      let best: Gebaeude | null = null, bd = Infinity;
+      for (const l of this.gebaeude.values()) {
+        if (l.sp !== g.sp || l.typ !== 'lager' || gezogen.has(l.id) || l.vorrat[a] <= 0) continue;
+        // Nur ausgehende Waren an der Lagerfahne bremsen; was zum Lager unterwegs ist, nimmt das Lager selbst ab
+        if (this.ausgehend(l) >= FLAG_CAP / 2) continue;
+        const d = dm.get(l.fahne);
+        if (d !== undefined && d < bd) { bd = d; best = l; }
+      }
+      if (!best) continue;
+      best.vorrat[a]--;
+      g.incoming[a]++;
+      this.fahnen.get(best.fahne)!.waren.push({ art: a, ziel: g.id });
+      gezogen.add(best.id);
     }
   }
 
@@ -1611,7 +1677,7 @@ export class Simulation {
       this.ereignis(g.sp, 'bewohner', g.id, ware);
       // gleich weiter mit dem nächsten Bissen
     }
-    if (!this.nahrungIn(g) || this.wohnraumFrei(g.sp) <= 0) return;
+    if (g.ruht || !this.nahrungIn(g) || this.wohnraumFrei(g.sp) <= 0) return;
     for (const a of NAHRUNG_REIHE) {
       if (g.puffer[a] <= 0) continue;
       g.puffer[a]--; g.arbeit = a + 1; g.zeit = 0; this.stat.verbraucht++;
@@ -1678,10 +1744,36 @@ export class Simulation {
         if (k && k.zuzug > 0) { this.neuerBewohner(sp, k.zuzug); this.ereignis(sp, 'zuzug', 0, k.zuzug); }
       }
     }
+    if (this._tick >= d.statNaechst) this.statPunkt(sp);
     if (this.notnagelGreift(sp)) {
       d.notnagelT++;
       if (d.notnagelT >= NOTNAGEL_TICKS) { d.notnagelT = 0; this.neuerBewohner(sp); this.ereignis(sp, 'notnagel', 0, 1); }
     } else d.notnagelT = 0;
+  }
+
+  /** Statistik: Messpunkt für das Dorf von `sp` (SichtStatistik); über STAT_MAX jeder zweite alte Punkt weg und doppelter Takt. */
+  private statPunkt(sp: number): void {
+    const d = this.doerfer[sp];
+    const vorrat = new Array<number>(WAREN.length).fill(0);
+    let gebaeude = 0;
+    for (const g of this.gebaeude.values()) {
+      if (g.sp !== sp) continue;
+      if (g.typ === 'lager') for (let a = 0; a < WAREN.length; a++) vorrat[a] += g.vorrat[a];
+      else if (g.fertig) gebaeude++;
+    }
+    d.statPunkte.push([this._tick, d.bewohner, d.stufe, gebaeude, ...vorrat, ...d.erzeugt]);
+    if (d.statPunkte.length > STAT_MAX) {
+      d.statPunkte = d.statPunkte.filter((_, i) => i % 2 === 0);
+      d.statTakt *= 2;
+    }
+    d.statNaechst = this._tick + d.statTakt;
+  }
+
+  /** Statistik des Dorfs von `sp` (Kopie). Punkte wie SichtStatistik: Kopf (STAT_KOPF Werte), Vorrat und Erzeugtes je Ware. */
+  statistikVon(sp: number): SichtStatistik {
+    const d = this.doerfer[sp];
+    if (!d) throw new Error(`Spieler ${sp} gibt es nicht`);
+    return { takt: d.statTakt, punkte: d.statPunkte.map((p) => p.slice()) };
   }
 
   // ------------------------------------------------------------------ Bauarbeiter und Planierer (Drehbuch 4.5)

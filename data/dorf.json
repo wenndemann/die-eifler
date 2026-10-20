@@ -26,5 +26,24 @@
    "zuzug": 15,
    "schaltet_frei": ["Reifekeller", "Brauerei (M8)", "Brennerei (M8)", "Schänke (M8)", "Schützenhaus (M8)", "Lagerhaus (M8)"]
   }
- ]
+ ],
+ "verteilung": {
+  "hinweis": "Warenverteilung wie in Siedler 2 (ROADMAP M7): Für jede Ware eine Rangfolge der Abnehmer, wer sie zuerst bekommt. Die Spieler stellen sie im Fenster „Verteilung“ um (Befehl verteilung, je Dorf). Standard ist die feste Reihenfolge aus M5. Das Lager nimmt immer zuletzt.",
+  "abnehmer": [
+   { "id": "baustelle", "name": "Baustellen", "symbol": "🏗️" },
+   { "id": "kirmes", "name": "Kirmesplatz", "symbol": "🎡" },
+   { "id": "verarbeiter", "name": "Verarbeiter", "symbol": "⚙️" },
+   { "id": "wohnen", "name": "Wohnhäuser", "symbol": "🏠" }
+  ],
+  "standard": ["baustelle", "kirmes", "verarbeiter", "wohnen"]
+ },
+ "statistik": {
+  "hinweis": "Statistik (ROADMAP M7): Die Simulation schreibt alle 'takt_s' Spielsekunden je Dorf einen Messpunkt (Bewohner, Gebäude, Lagerbestand und erzeugte Waren je Ware); er ist Teil des Spielstands. Ab 'max_punkte' wird jeder zweite alte Punkt gestrichen und der Takt verdoppelt.",
+  "takt_s": 60,
+  "max_punkte": 240
+ },
+ "autosave": {
+  "hinweis": "Autosave (ROADMAP M7): alle 'takt_min' Spielminuten in den Browser-Speicher, ein Platz (der letzte Stand). Im Mehrspieler speichert jeder für sich.",
+  "takt_min": 10
+ }
 }
