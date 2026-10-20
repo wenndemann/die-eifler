@@ -154,7 +154,7 @@ describe('Kirmes bis zum Marktflecken (Drehbuch 5.2)', () => {
     fertig(sim, 'kirmesplatz', -4, 0);
     tu(sim, { art: 'weg', pfad: gerade(0, 0, 3, 4) });
     const v = vorrat(sim);
-    Object.assign(v, { [WARE.bergkaese]: 10, [WARE.honig]: 12, [WARE.landbier]: 15, [WARE.schnaps]: 5 });
+    KIRMES[1].liste.forEach((n, a) => { v[a] += n; });
     expect(sim.sperrGrund('erzgrube')).toBe('stufe');
     let s = sim.sicht();
     for (let i = 0; i < 15 * MIN && s.dorf.stufe < 2; i++) { sim.schritt(); if (i % 20 === 0) s = sim.sicht(); }
@@ -163,9 +163,14 @@ describe('Kirmes bis zum Marktflecken (Drehbuch 5.2)', () => {
     expect(s.dorf.stufe).toBe(2);
     expect(alleWaren(sim, WARE.werkzeug)).toBe(2); // Geschenk; der Kirmesplatz holt es schon für den Marktflecken
     expect(sim.sperrGrund('erzgrube')).toBe('');
-    // Marktflecken: 10 Bergkäse (Platzhalter für die Spezialität), 10 Werkzeug, Mischkorb aus 20 veredelten Waren
+    // Marktflecken: Bergkäse (Platzhalter für die Spezialität), Werkzeug, Mischkorb aus 20 veredelten Waren. Werkzeug holt der Platz
+    // erst, wenn das Dorf selbst welches geschmiedet hat
     expect(s.dorf.kirmes!.mischkorb.soll).toBe(20);
-    Object.assign(vorrat(sim), { [WARE.bergkaese]: 10, [WARE.werkzeug]: 10, [WARE.most]: 12, [WARE.schnaps]: 6, [WARE.kartoffeln]: 30 });
+    KIRMES[2].liste.forEach((n, a) => { vorrat(sim)[a] += n; });
+    Object.assign(vorrat(sim), { [WARE.most]: 12, [WARE.schnaps]: 6, [WARE.kartoffeln]: 30 });
+    lauf(sim, 3 * MIN);
+    expect(alleWaren(sim, WARE.werkzeug) - vorrat(sim)[WARE.werkzeug]).toBe(0);
+    innen(sim).doerfer[0].erzeugt[WARE.werkzeug] = 1;
     let gesehen = 0;
     for (let i = 0; i < 12 * MIN && sim.sicht().dorf.stufe < 3; i++) {
       sim.schritt();
