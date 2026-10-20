@@ -85,9 +85,43 @@ nach Gebrauch wieder. Unterbrochen? Einfach neu starten, es setzt fort. Details 
   Bewohner/Wohnraum, Bauleute und die Warenliste. Über Gebäuden steht in Klartext, was fehlt („Wartet auf Milch“),
   die Erzählfigur des Völkchens meldet sich mit Sprüchen (Platt mit Übersetzung im Tooltip). Waren haben klare Formen
   und Farben (Käserad, Mostkrug, Pfanne …). Spieltest-Drehbuch: [SPIELTEST.md](SPIELTEST.md).
+- **Mit Freunden spielen (M6):** In der Kartenwahl „👥 Mit Freunden spielen“, Namen eingeben, den Einladungslink
+  (`…#raum=CODE`) verschicken. Kein Konto, nur ein Name. Die Lobby zeigt, wer da ist und ob alle dieselbe Karte haben
+  (Prüfsumme); der Gastgeber verteilt die Startorte (verschiedene Ortskerne, möglichst weit auseinander), wählt Tempo 1–3×
+  und startet erst, wenn alle Prüfsummen gleich sind. Jeder baut sein eigenes Dorf; fremde Fahnen wehen in der Farbe des
+  Nachbarn, fremde Wege und Gebäude kann man nicht anfassen. Die Partieleiste oben zeigt alle Dörfer. **Pause** darf jeder,
+  dreimal je Partie und höchstens 2 Minuten (weiter darf, wer pausiert hat, und der Gastgeber); das Tempo stellt nur der
+  Gastgeber. **Rausgeflogen oder neu geladen?** Das Spiel wartet, der Link (gleicher Browser) bringt einen auf denselben Platz
+  zurück, den Stand gibt ein Mitspieler. Nach 5 Minuten übernimmt ein **Verwalter** das Dorf (Wirtschaft läuft, nichts Neues)
+  und gibt es bei der Rückkehr zurück. Alle 5 Spielsekunden vergleichen alle ihre Prüfsumme; läuft einer auseinander, wird
+  das gemeldet und er bekommt den Stand des Taktgebers. Zahlen: `data/mehrspieler.json`.
+- **Speichern und Laden (M6):** „💾 Speichern“ lädt eine Datei mit dem ganzen Stand (Datenversion und Prüfsumme der Karte,
+  alle Dörfer, Spielernamen, übrige Pausen) herunter. „📂 Spielstand laden“ (Kartenwahl oder im Spiel) lädt die passende
+  Karte dazu; ein Stand mehrerer Spieler öffnet die Lobby, die Mitspieler kommen über den Link und spielen ihr Dorf weiter.
 - **Simulation** (`src/sim/`): fester Tick (20/s), nur Ganzzahlen, jede Aktion ist ein Befehl mit Tick-Nummer,
   Prüfsumme über den Zustand (Statusleiste „Sim“), Befehlsprotokoll zum Abspielen (`spieleAb`). Der Smoke-Test
   prüft, dass Node und Browser dieselbe Prüfsumme bekommen und ein Replay im zweiten Browser-Fenster gleich ausgeht.
+  Mehrere Spieler: jeder hat ein Dorf, Fahnen, Wege, Gebäude und Bauleute gehören einem Spieler; `stand()`/`ausStand()`
+  speichern und laden den ganzen Zustand.
+
+## Mehrspieler betreiben
+
+Das Spiel läuft direkt zwischen den Browsern (WebRTC, Gleichschritt: nur Befehle gehen über die Leitung). Dazu braucht es
+einen kleinen **Vermittlungs-Server** (Lobby und Verbindungsaufbau, kein Konto, keine Spieldaten) und für Firmen- und
+Handynetze ein **Notfall-Relais** (TURN, [coturn](https://github.com/coturn/coturn)).
+
+    npm run vermittlung                      # Port 8787; npm run dev reicht /vermittlung dorthin durch
+
+Zum Ausprobieren auf einem Rechner: `npm run vermittlung` und `npm run dev` starten, zwei Browser-Fenster öffnen, im ersten
+„Mit Freunden spielen“, den Link ins zweite. `…#raum=CODE&netz=schlecht` simuliert ein schlechtes Netz (Verzögerung,
+Schwankung, Stau; Werte in `data/mehrspieler.json`). Im Internet: coturn nach `server/coturn/turnserver.conf` einrichten und
+den Server mit denselben Zugangsdaten starten:
+
+    TURN_URLS=turn:turn.example.de:3478,turns:turn.example.de:5349 TURN_SECRET=<geheim> npm run vermittlung
+
+Der Server vergibt jedem Spieler kurzlebige TURN-Zugangsdaten. Mit `STATISCH=dist WELT_DATEN=welt-daten` liefert er auch
+das gebaute Spiel und die Weltdaten aus (ein Prozess für alles); sonst zeigt `VITE_VERMITTLUNG=wss://…/vermittlung` beim
+Bauen auf einen anderen Server (oder `…&vm=wss://…` in der Adresse).
 
 ## Befehle
 
@@ -96,7 +130,8 @@ nach Gebrauch wieder. Unterbrochen? Einfach neu starten, es setzt fort. Details 
 | `npm run dev` | Entwicklungsserver, liefert `welt-daten/` unter `/welt/` aus |
 | `npm run build` | Typprüfung und Produktions-Build (ohne Weltdaten) |
 | `npm test` | Unit-Tests (Vitest) |
-| `npm run test:smoke` | Browser-Test: Kartenwahl → Ausschnitt laden → Screenshots, Prüfsumme |
+| `npm run test:smoke` | Browser-Test: Kartenwahl → Ausschnitt laden → Screenshots, Prüfsumme; dazu zwei Fenster im Mehrspieler über schlechtes Netz (Neuladen in unter 30 s) |
+| `npm run vermittlung` | Vermittlungs-Server für den Mehrspieler (Port `PORT`, Standard 8787; TURN über `TURN_URLS`/`TURN_SECRET`) |
 | `npm run setup -- [Optionen]` | Weltdaten rechnen (siehe oben) |
 | `npm run build:share` | eigenständige Teilen-Version mit einem Teil der Weltdaten (z. B. als Artifact-Seite fürs Handy) |
 | `npm run build:share -- --gebiet nordeifel` | Teilen-Version zusätzlich mit allen Kacheln eines Gebiets (`nordeifel`, `nideggen`, `alle` oder `tx0-tx1,tz0-tz1`); Kacheln liegen in wenigen Bündel-Dateien. Bei Überschreiten der Artifact-Grenzen (Seite 16 MB, Datei 15 MB, Summe 60 MB, 250 Dateien) Abbruch, außer mit `--trotzdem`. Auch kombinierbar: `-- --gebiet nordeifel --vorschlaege monschau-rursee,rureifel` |

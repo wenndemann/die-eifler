@@ -64,3 +64,15 @@ describe('Abnahme M6', () => {
     expect(a.sicht(0).spieler.map((s) => s.stufe)).toEqual([1, 1]);
   });
 });
+
+describe('Szenario für Node = Browser', () => {
+  it('zwei Dörfer in einem Protokoll spielen sich gleich ab', { timeout: 120_000 }, async () => {
+    const { baueSzenarioM6 } = await import('./m6-szenario');
+    const { karte, protokoll } = baueSzenarioM6(6);
+    expect(protokoll.mitspieler?.length).toBe(1);
+    expect(new Set(protokoll.befehle.map((e) => e.spieler))).toEqual(new Set([0, 1]));
+    const a = spieleAb(karte, protokoll), b = spieleAb(karte, JSON.parse(JSON.stringify(protokoll)));
+    expect(a.pruefsumme()).toBe(b.pruefsumme());
+    expect(a.pruefeInnenzustand()).toEqual([]);
+  });
+});

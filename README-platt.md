@@ -78,6 +78,17 @@ donoh widder fott. Ungebroche? Einfach neu starte, et määt do wigger wo et opj
   em Klartext, wat fählt („Waat op Milch“), un de Verzällfijur vum Völkche meld sich met Sprüch (Platt, de
   Övversetzung em Tooltip). De Ware han klor Forme un Färve (Kiesrad, Mosskrog, Pann …). Spilltest-Drehbuch:
   [SPIELTEST.md](SPIELTEST.md).
+- **Met de Fründe spille (M6):** En d'r Kaatewahl „👥 Mit Freunden spielen“, Name enjevve, dä Enladungslink
+  (`…#raum=CODE`) verschecke. Kei Konto, nur ene Name. En d'r Lobby süht mer, wä do es un ov all de selve Kaat han
+  (Prüfsumm); d'r Jastjevver verdeilt de Startöchter (ongerschiedlije Ochtskääne, su wigg usenander wie et jeiht), stellt
+  et Tempo 1–3× en un fängk eets aan, wenn all Prüfsumme jlich sin. Jeder baut si eije Dorf; fremde Fahne weihe en d'r Färv
+  vum Nohber, fremde Weech un Jebäude darf mer nit aanpacke. **Paus** darf jeder, dreimol pro Partie un hüchstens 2 Minütche.
+  **Erusjefloore oder neu jelade?** Dat Spill waat, d'r Link brängk ene op dä selve Platz zeröck, d'r Stand kütt vum
+  Metspiller. Noh 5 Minütche övvernimmp ene **Verwalter** dat Dorf (de Wirtschaft läuf, nix Neues) un jitt et zeröck, wenn
+  mer widderkütt. Alle 5 Spillsekunde verjliche all ehr Prüfsumm; läuf eine usenander, weed dat jemeldt un hä kritt dä
+  Stand vum Taktjevver. Zahle: `data/mehrspieler.json`.
+- **Spiechere un Lade (M6):** „💾 Speichern“ läät en Datei met d'm janze Stand erunger (Kaat, all Dörfer, Name, Pause).
+  „📂 Spielstand laden“ läät de passende Kaat dobei; ene Stand met mieh Spiller määt de Lobby op.
 - **Simulation** (`src/sim/`): faste Tick (20/s), nur janze Zahle, jede Aktion es ene Befehl met Tick-Nummer,
   Prüfsumm övver dä Zostand, Befehlsprotokoll zom Avspille. Dä Smoke-Test pröf, dat Node un Browser de selve
   Prüfsumm krije.
@@ -89,7 +100,8 @@ donoh widder fott. Ungebroche? Einfach neu starte, et määt do wigger wo et opj
 | `npm run dev` | Entwicklungsserver, liefert `welt-daten/` unger `/welt/` us |
 | `npm run build` | Typprüfung un Produktions-Build (ohne Weltdate) |
 | `npm test` | Unit-Tests (Vitest) |
-| `npm run test:smoke` | Browser-Test: Kaatewahl → Usschnitt lade → Screenshots, Prüfsumm |
+| `npm run test:smoke` | Browser-Test: Kaatewahl → Usschnitt lade → Screenshots, Prüfsumm; och zwei Finster em Mehrspiller övver schlääch Netz |
+| `npm run vermittlung` | Vermittlungs-Server för d'r Mehrspiller (Port 8787; Relais övver `TURN_URLS`/`TURN_SECRET`, luur `server/coturn/`) |
 | `npm run setup -- [Optione]` | Weltdate rechne (luur bovve) |
 | `npm run build:share` | eijeständije Deile-Version mit enem Deil der Weltdate (z. B. als Artifact-Sigg fürs Handy) |
 | `npm run build:share -- --gebiet nordeifel` | Deile-Version och met alle Kachele vun enem Jebiet (`nordeifel`, `nideggen`, `alle`); wenn et ze jroß weed, hööt et op, ussem met `--trotzdem` |

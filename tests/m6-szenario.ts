@@ -5,7 +5,7 @@ import { SimKarte } from '../src/sim/karte';
 import { GEBAEUDE, WARE } from '../src/sim/daten';
 import { TICK_HZ } from '../src/sim/typen';
 import type { Befehl, KarteDaten, SimSicht } from '../src/sim/typen';
-import type { Simulation } from '../src/sim/sim';
+import { Simulation } from '../src/sim/sim';
 import { baueM5Karte, M5_PLAN } from './m5-szenario';
 
 type Hx = { q: number; r: number };
@@ -118,4 +118,19 @@ export class Bot {
       }
     }
   }
+}
+
+/**
+ * Für den Determinismus-Test Node = Browser: zwei Bots spielen 15 Spielminuten in einer Simulation mit zwei Dörfern (Befehle beider
+ * Spieler im selben Protokoll, wie sie der Gleichschritt einreiht).
+ */
+export function baueSzenarioM6(minuten = 15): { karte: KarteDaten; protokoll: import('../src/sim/typen').Protokoll } {
+  const karte = baueM6Karte();
+  const sim = new Simulation(karte, 2026, KERNE);
+  const bots = [0, 1].map((sp) => new Bot(sp, KERNE[sp], (b) => sim.befehl(sim.tick, sp, b)));
+  while (sim.tick < minuten * 60 * TICK_HZ) {
+    for (const b of bots) b.schau(sim);
+    sim.schritt();
+  }
+  return { karte, protokoll: sim.protokoll({ version: 'test', q: 0, r: 0, size: 'm6', pruefsumme: 'synthetisch' }) };
 }
