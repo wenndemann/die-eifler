@@ -1,0 +1,30 @@
+{
+ "hinweis": "Mehrspieler (Drehbuch 2.3, 8.3; ROADMAP M6). Gleichschritt: Der Taktgeber (anfangs der Gastgeber) verteilt alle 'zug_ms' einen Zug: bis zu welchem Tick alle rechnen dürfen und welche Befehle dabei gelten. Befehle wirken 'befehl_verzoegerung_ms' (Spielzeit bei 1×) nach dem Zug, in dem sie ankommen. Liegt ein Mitspieler mehr als 'vorsprung_max_s' zurück, wartet der Taktgeber. Alle 'pruef_alle_s' Spielsekunden vergleichen alle ihre Prüfsumme.",
+ "spieler_max": 4,
+ "zug_ms": 100,
+ "befehl_verzoegerung_ms": 200,
+ "vorsprung_max_s": 3,
+ "aufholen_ticks_je_frame": 60,
+ "pruef_alle_s": 5,
+ "pausen": {
+  "hinweis": "Pause darf jeder, aber begrenzt: so oft je Spieler und Partie, jede höchstens so lange. Fortsetzen darf, wer pausiert hat, und der Gastgeber.",
+  "je_spieler": 3,
+  "max_s": 120
+ },
+ "verwalter_nach_s": 300,
+ "start": {
+  "hinweis": "Startplätze in verschiedenen Ortskernen: mindestens so viele Hex-Schritte zwischen zwei Lagern (wird verringert, wenn der Ausschnitt nicht genug Kerne hat).",
+  "abstand_min_hex": 12
+ },
+ "netz": {
+  "hinweis": "Testaufbau 'schlechtes Netz' (#…&netz=schlecht): jede Nachricht kommt 'verzoegerung_ms' plus bis zu 'schwankung_ms' später an; 'stau_prozent' der Nachrichten hängen zusätzlich 'stau_ms' (verlorene Pakete, die der Kanal neu sendet).",
+  "schlecht": { "verzoegerung_ms": 150, "schwankung_ms": 120, "stau_prozent": 5, "stau_ms": 600 }
+ },
+ "server": {
+  "hinweis": "Vermittlungs-Server (server/vermittlung.mjs): Räume ohne Konto. Ein Raum ohne Spieler wird nach 'raum_leer_min' gelöscht. TURN-Zugangsdaten gelten 'turn_gueltig_h'.",
+  "raum_leer_min": 120,
+  "name_max": 24,
+  "nachricht_max_kb": 64,
+  "turn_gueltig_h": 12
+ }
+}
