@@ -10,10 +10,12 @@
     "build:share": "tsc --noEmit && node tools/build_share.mjs",
     "setup": "python3 tools/map/setup.py",
     "test": "vitest run",
-    "test:smoke": "node tests/smoke.mjs"
+    "test:smoke": "node tests/smoke.mjs",
+    "vermittlung": "node server/vermittlung.mjs"
   },
   "dependencies": {
-    "three": "^0.169.0"
+    "three": "^0.169.0",
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "@types/three": "^0.169.0",
