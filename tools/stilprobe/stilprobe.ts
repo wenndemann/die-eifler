@@ -3,14 +3,19 @@
 //   ?v=a  Siedler-Klassik: warm und satt, weich schattiert, mäßig übertrieben (nah an Siedler 2 Gold / 10th Anniversary)
 //   ?v=b  Comic mit Kontur: Toon-Schattierung in drei Stufen, schwarze Umrisse, stark übertrieben und schief (Asterix-Einschlag)
 //   ?v=c  Bilderbuch-Diorama: runde Formen, pastellige Malfarben mit Verlauf, weiches Licht und Dunst (Wimmelbuch)
+//   ?v=c1 C mit viel Wimmel-Kleinkram (Hühner, Zäune, Wäsche, Gärten, Brunnen, mehr Leute)
+//   ?v=c2 C mit kräftigeren Farben und klarerem Licht
+//   ?v=c3 C gemalt: feine braune Linie, Papierkorn, Unschärfe oben und unten (Miniatur-Blick)
 //   &nah=1 Kamera nah an den Figuren
 // Eigenständig (nutzt das Spiel nicht), nur zum Anschauen und für Screenshots (tools/stilprobe/aufnahme.mjs).
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 
-type Variante = 'a' | 'b' | 'c';
+type Variante = 'a' | 'b' | 'c' | 'c1' | 'c2' | 'c3';
 const url = new URLSearchParams(location.search);
-const V = (['a', 'b', 'c'].includes(url.get('v') ?? '') ? url.get('v') : 'a') as Variante;
+const V = (['a', 'b', 'c', 'c1', 'c2', 'c3'].includes(url.get('v') ?? '') ? url.get('v') : 'a') as Variante;
+/** Bilderbuch-Familie (C und ihre Verfeinerungen). */
+const BUCH = V.startsWith('c');
 const NAH = url.get('nah') === '1';
 
 interface Stil {
@@ -24,7 +29,18 @@ interface Stil {
   /** Farben. */
   wand: string; balken: string; dach: string; laden: string; sockel: string; gras: string; gras2: string; erde: string; himmel: string;
   sonne: string; sonneI: number; himmelI: number; nebel: number;
+  /** Kleinkram 0 wenig … 2 Wimmelbuch; Sättigung (1 = wie angegeben); feine Linie; Papierkorn und Miniatur-Unschärfe. */
+  wimmel?: number; satt?: number; linie?: string; papier?: boolean;
 }
+
+/** Grundwerte von C (für die Verfeinerungen). */
+function C0(): Stil { return { ...STILE_C }; }
+const STILE_C: Stil = {
+    name: 'C – Bilderbuch-Diorama', text: 'runde Formen, Malfarben mit Verlauf, weiches Licht und Dunst',
+    kopf: 1.2, bauch: 1.15, krumm: 0.8, schief: 0.045, ueberstand: 0.75, dachH: 0.95, rund: 0.22, umriss: false, toon: false,
+    wand: '#f6e6cf', balken: '#7a5238', dach: '#c96a52', laden: '#5f9e8f', sockel: '#b9ad9c', gras: '#97b866', gras2: '#c2d48a', erde: '#c7a37a',
+    himmel: '#f3dcc0', sonne: '#ffe2b8', sonneI: 2.0, himmelI: 1.3, nebel: 0.0035,
+};
 
 const STILE: Record<Variante, Stil> = {
   a: {
@@ -45,6 +61,12 @@ const STILE: Record<Variante, Stil> = {
     wand: '#f6e6cf', balken: '#7a5238', dach: '#c96a52', laden: '#5f9e8f', sockel: '#b9ad9c', gras: '#97b866', gras2: '#c2d48a', erde: '#c7a37a',
     himmel: '#f3dcc0', sonne: '#ffe2b8', sonneI: 2.0, himmelI: 1.3, nebel: 0.0035,
   },
+  c1: { ...C0(), name: 'C1 – Wimmelbuch voll', text: 'wie C, dazu viel Kleinkram: Hühner, Zäune, Wäsche, Gärten, Brunnen, mehr Leute', wimmel: 2 },
+  c2: {
+    ...C0(), name: 'C2 – Kräftig', text: 'wie C, aber satter und mit klarerem Licht, etwas Kleinkram', wimmel: 1, satt: 1.35,
+    sonneI: 2.5, himmelI: 1.1, nebel: 0.002, himmel: '#cfe3f2',
+  },
+  c3: { ...C0(), name: 'C3 – Gemalt', text: 'wie C, mit feiner brauner Linie, Papierkorn und Miniatur-Unschärfe, etwas Kleinkram', wimmel: 1, linie: '#5a3b26', papier: true },
 };
 const S = STILE[V];
 document.getElementById('schild')!.innerHTML = `${S.name}<small>${S.text}</small>`;
@@ -57,8 +79,8 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = V === 'c' ? THREE.ACESFilmicToneMapping : THREE.NeutralToneMapping;
-renderer.toneMappingExposure = V === 'c' ? 1.05 : 1.0;
+renderer.toneMapping = BUCH ? THREE.ACESFilmicToneMapping : THREE.NeutralToneMapping;
+renderer.toneMappingExposure = BUCH ? 1.05 : 1.0;
 document.body.append(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -68,16 +90,16 @@ const kamera = new THREE.PerspectiveCamera(NAH ? 30 : 34, innerWidth / innerHeig
 if (NAH) { kamera.position.set(17, 10, 27); kamera.lookAt(6, 3.2, 7); }
 else { kamera.position.set(30, 33, 44); kamera.lookAt(3, 1, 2); }
 
-scene.add(new THREE.HemisphereLight(S.himmel, V === 'c' ? '#a08060' : '#5a6a3a', S.himmelI));
+scene.add(new THREE.HemisphereLight(S.himmel, BUCH ? '#a08060' : '#5a6a3a', S.himmelI));
 const sonne = new THREE.DirectionalLight(S.sonne, S.sonneI);
 sonne.position.set(-40, 70, 35);
 sonne.castShadow = true;
 sonne.shadow.mapSize.set(2048, 2048);
 Object.assign(sonne.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 220 });
-sonne.shadow.radius = V === 'c' ? 6 : 3;
+sonne.shadow.radius = BUCH ? 6 : 3;
 sonne.shadow.bias = -0.0005;
 scene.add(sonne);
-if (V === 'c') { const rand = new THREE.DirectionalLight('#ffd2a0', 0.8); rand.position.set(40, 20, -40); scene.add(rand); }
+if (BUCH) { const rand = new THREE.DirectionalLight('#ffd2a0', 0.8); rand.position.set(40, 20, -40); scene.add(rand); }
 
 // ---------------------------------------------------------------- Materialien
 
@@ -88,20 +110,28 @@ const toonVerlauf = (() => {
   return t;
 })();
 const matCache = new Map<string, THREE.Material>();
+/** Farbe mit der Sättigung des Stils. */
+function farbeVon(farbe: string): THREE.Color {
+  const c = new THREE.Color(farbe);
+  if (S.satt && S.satt !== 1) { const h = { h: 0, s: 0, l: 0 }; c.getHSL(h); c.setHSL(h.h, Math.min(1, h.s * S.satt), h.l); }
+  return c;
+}
 function mat(farbe: string): THREE.Material {
   let m = matCache.get(farbe);
   if (m) return m;
+  const f0 = farbe;
+  farbe = `#${farbeVon(farbe).getHexString()}`;
   if (S.toon) m = new THREE.MeshToonMaterial({ color: farbe, gradientMap: toonVerlauf });
-  else if (V === 'c') m = new THREE.MeshStandardMaterial({ color: farbe, roughness: 0.95, vertexColors: true });
+  else if (BUCH) m = new THREE.MeshStandardMaterial({ color: farbe, roughness: 0.95, vertexColors: true });
   else m = new THREE.MeshStandardMaterial({ color: farbe, roughness: 0.78 });
-  matCache.set(farbe, m);
+  matCache.set(f0, m);
   return m;
 }
-const umrissMat = new THREE.MeshBasicMaterial({ color: '#1a120c', side: THREE.BackSide });
+const umrissMat = new THREE.MeshBasicMaterial({ color: S.linie ?? '#1a120c', side: THREE.BackSide });
 
 /** Bilderbuch: Verlauf von unten dunkler nach oben heller, wie gemalt. */
 function malVerlauf(g: THREE.BufferGeometry) {
-  if (V !== 'c') return;
+  if (!BUCH) return;
   g.computeBoundingBox();
   const b = g.boundingBox!, p = g.attributes.position;
   const c = new Float32Array(p.count * 3);
@@ -119,25 +149,25 @@ function teil(g: THREE.Object3D, geo: THREE.BufferGeometry, farbe: string, x = 0
   const m = new THREE.Mesh(geo, mat(farbe));
   m.position.set(x, y, z); m.rotation.set(rx, ry, rz);
   m.castShadow = true; m.receiveShadow = true;
-  if (S.umriss) {
+  if (S.umriss || S.linie) {
     const u = new THREE.Mesh(geo, umrissMat);
     geo.computeBoundingSphere();
     const r = geo.boundingSphere!.radius;
-    u.scale.setScalar(1 + Math.min(0.12, 0.09 / Math.max(0.3, r)));
+    u.scale.setScalar(1 + (S.linie ? Math.min(0.06, 0.035 / Math.max(0.3, r)) : Math.min(0.12, 0.09 / Math.max(0.3, r))));
     m.add(u);
   }
   g.add(m);
   return m;
 }
 const kiste = (w: number, h: number, d: number) => (S.rund > 0.01 ? new RoundedBoxGeometry(w, h, d, 2, Math.min(0.3, Math.min(w, h, d) * S.rund)) : new THREE.BoxGeometry(w, h, d));
-const seg = V === 'c' ? 16 : V === 'b' ? 10 : 12;
+const seg = BUCH ? 16 : V === 'b' ? 10 : 12;
 
 // ---------------------------------------------------------------- Boden, Weg, Bäume
 
 const boden = new THREE.CircleGeometry(400, 96).rotateX(-Math.PI / 2);
 {
   const p = boden.attributes.position, c = new Float32Array(p.count * 3);
-  const a = new THREE.Color(S.gras), b = new THREE.Color(S.gras2), x = new THREE.Color();
+  const a = farbeVon(S.gras), b = farbeVon(S.gras2), x = new THREE.Color();
   for (let i = 0; i < p.count; i++) {
     const n = 0.5 + 0.5 * Math.sin(p.getX(i) * 0.21) * Math.cos(p.getZ(i) * 0.17);
     x.copy(a).lerp(b, n * (V === 'b' ? 0.5 : 0.8));
@@ -156,7 +186,7 @@ for (let i = 0; i < 14; i++) {
   const g = new THREE.CylinderGeometry(2.1, 2.3, 0.12, seg).scale(1.4, 1, 1);
   const m = teil(weg, g, S.erde, x, 0.06, z, 0, t * 0.6, 0);
   m.castShadow = false;
-  if (S.umriss) m.children.length = 0;
+  m.children.length = 0;
 }
 
 function baum(x: number, z: number, s: number, art: number) {
@@ -164,13 +194,13 @@ function baum(x: number, z: number, s: number, art: number) {
   teil(g, new THREE.CylinderGeometry(0.35, 0.5, 3, seg), '#7a5236', 0, 1.5, 0);
   if (art === 0) {
     // Buche: Kugelkrone in Tupfen
-    const krone = V === 'b' ? '#4caa3a' : V === 'c' ? '#7fa65a' : '#4f8f3a';
+    const krone = V === 'b' ? '#4caa3a' : BUCH ? '#7fa65a' : '#4f8f3a';
     teil(g, new THREE.SphereGeometry(2.4, seg, seg - 2), krone, 0, 4.4, 0);
     teil(g, new THREE.SphereGeometry(1.7, seg, seg - 2), krone, 1.5, 3.8, 0.6);
     teil(g, new THREE.SphereGeometry(1.6, seg, seg - 2), krone, -1.3, 4.1, -0.7);
   } else {
     // Fichte: Kegel-Etagen
-    const f = V === 'b' ? '#2f8a4a' : V === 'c' ? '#5f8a62' : '#2f6a3c';
+    const f = V === 'b' ? '#2f8a4a' : BUCH ? '#5f8a62' : '#2f6a3c';
     for (let k = 0; k < 3; k++) teil(g, new THREE.ConeGeometry(2.4 - k * 0.6, 2.8, seg), f, 0, 3 + k * 1.6, 0);
   }
 }
@@ -283,8 +313,8 @@ function ware(g: THREE.Object3D, art: 'kaese' | 'krug' | 'bretter' | 'sack' | 'f
 
 // ---------------------------------------------------------------- Figuren: Träger und beschwipster Bote
 
-function figur(x: number, z: number, ry: number, tracht: string, kappe: string, last: 'kaese' | 'sack' | null, bote: boolean) {
-  const s = 2.4;
+function figur(x: number, z: number, ry: number, tracht: string, kappe: string, last: 'kaese' | 'sack' | null, bote: boolean, gross = 1) {
+  const s = 2.4 * gross;
   const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; g.scale.setScalar(s); scene.add(g);
   const k = S.kopf, bu = S.bauch, kr = S.krumm;
   const koerper = new THREE.Group(); g.add(koerper);
@@ -337,6 +367,99 @@ const zurKamera = (x: number, z: number, seitlich: number) => Math.atan2(kamera.
 figur(3, 9, zurKamera(3, 9, 0.6), '#3f6fb5', '#c0392b', 'kaese', false);
 figur(13, 12, zurKamera(13, 12, -0.7), '#4f8a4a', '#c0392b', 'sack', false);
 figur(8, 5, zurKamera(8, 5, 0.2), '#8a5a9a', '#2f7a3c', null, true);
+
+// ---------------------------------------------------------------- Wimmel-Kleinkram (C1–C3)
+
+function huhn(x: number, z: number, ry: number, farbe = '#f4efe4') {
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; g.scale.setScalar(1.3); scene.add(g);
+  teil(g, new THREE.SphereGeometry(0.42, seg, seg - 4).scale(1.25, 1, 0.9), farbe, 0, 0.55, 0);
+  teil(g, new THREE.SphereGeometry(0.22, seg, seg - 4), farbe, 0.42, 0.95, 0);
+  teil(g, new THREE.ConeGeometry(0.07, 0.18, 6).rotateZ(-Math.PI / 2), '#e8a020', 0.66, 0.93, 0);
+  teil(g, new THREE.SphereGeometry(0.08, 6, 5).scale(1, 1.3, 0.6), '#d6262a', 0.42, 1.15, 0);
+  teil(g, new THREE.ConeGeometry(0.22, 0.4, 6).rotateZ(0.9), farbe, -0.5, 0.75, 0);
+  for (const sz of [-1, 1]) teil(g, new THREE.CylinderGeometry(0.03, 0.03, 0.3, 5), '#e8a020', 0, 0.15, sz * 0.12);
+}
+function zaun(x0: number, z0: number, x1: number, z1: number) {
+  const n = Math.max(2, Math.round(Math.hypot(x1 - x0, z1 - z0) / 1.6));
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t;
+    teil(scene, kiste(0.22, 1.3 + (i % 2) * 0.15, 0.22), '#9a7450', x, 0.65, z, 0, 0, (i % 3 - 1) * 0.06);
+  }
+  const lang = Math.hypot(x1 - x0, z1 - z0), ry = -Math.atan2(z1 - z0, x1 - x0);
+  for (const y of [0.5, 1.0]) teil(scene, kiste(lang, 0.12, 0.1), '#b08a62', (x0 + x1) / 2, y, (z0 + z1) / 2, 0, ry, 0);
+}
+function wimmel(stufe: number) {
+  if (!stufe) return;
+  // Gemüsegarten mit Zaun
+  const gx = -14, gz = 9;
+  zaun(gx - 4, gz - 3, gx + 4, gz - 3); zaun(gx + 4, gz - 3, gx + 4, gz + 3); zaun(gx - 4, gz + 3, gx + 4, gz + 3); zaun(gx - 4, gz - 3, gx - 4, gz + 3);
+  for (let r = 0; r < 3; r++) for (let k = 0; k < 6; k++) {
+    teil(scene, new THREE.SphereGeometry(0.42, 10, 8).scale(1, 0.7, 1), r === 1 ? '#7fae4a' : '#5f9a3a', gx - 3 + k * 1.2, 0.3, gz - 1.8 + r * 1.8);
+    if (r === 2) teil(scene, new THREE.ConeGeometry(0.15, 0.5, 7).rotateX(Math.PI), '#e8822a', gx - 3 + k * 1.2 + 0.3, 0.3, gz + 1.8);
+  }
+  // Hühner auf dem Weg
+  const huehner = stufe > 1 ? [[1, 13, 0.4], [3, 15, 2.2], [5, 12.5, -0.8], [-1, 15.5, 1.3], [6.5, 15, 3.0], [2, 17, -2]] : [[2, 13.5, 0.4], [4, 15, 2.2], [0, 15, 1.3]];
+  huehner.forEach(([x, z, r], i) => huhn(x, z, r, i % 3 === 2 ? '#b8743a' : '#f4efe4'));
+  // Bank vor dem Haus mit Katze
+  teil(scene, kiste(2.6, 0.2, 0.8), '#9a6a40', -7.2, 0.9, 3.3, 0, 0.15, 0);
+  for (const sx of [-1, 1]) teil(scene, kiste(0.2, 0.9, 0.7), '#7a5236', -7.2 + sx * 1.1, 0.45, 3.3 + sx * 0.17, 0, 0.15, 0);
+  const katze = new THREE.Group(); katze.position.set(-6.6, 1.0, 3.3); scene.add(katze);
+  teil(katze, new THREE.SphereGeometry(0.42, 12, 10).scale(1.3, 0.8, 0.9), '#e08a3a', 0, 0.3, 0);
+  teil(katze, new THREE.SphereGeometry(0.3, 12, 10), '#e08a3a', 0.5, 0.55, 0.1);
+  for (const sz of [-1, 1]) teil(katze, new THREE.ConeGeometry(0.1, 0.22, 4), '#e08a3a', 0.55, 0.85, 0.1 + sz * 0.15);
+  teil(katze, new THREE.TorusGeometry(0.35, 0.07, 6, 10, Math.PI).rotateY(Math.PI / 2), '#e08a3a', -0.5, 0.35, 0.3);
+  // Brunnen mit Dach
+  const b = new THREE.Group(); b.position.set(4, 0, 0.5); scene.add(b);
+  teil(b, new THREE.CylinderGeometry(1.2, 1.3, 1.1, seg), S.sockel, 0, 0.55, 0);
+  teil(b, new THREE.CylinderGeometry(1.0, 1.0, 0.1, seg), '#5a8ab0', 0, 1.05, 0);
+  for (const sx of [-1, 1]) teil(b, kiste(0.2, 2.4, 0.2), '#7a5236', sx * 1.05, 2.0, 0);
+  teil(b, new THREE.ConeGeometry(1.8, 1.1, 4).rotateY(Math.PI / 4), S.dach, 0, 3.6, 0);
+  teil(b, new THREE.CylinderGeometry(0.4, 0.35, 0.5, 10), '#9a6a40', 0.4, 1.5, 0.4);
+  // Wäscheleine rechts
+  const w0 = { x: 19, z: 3 }, w1 = { x: 26, z: 6 };
+  for (const p of [w0, w1]) teil(scene, new THREE.CylinderGeometry(0.12, 0.14, 3.4, 8), '#7a5236', p.x, 1.7, p.z);
+  const len = Math.hypot(w1.x - w0.x, w1.z - w0.z), ryL = -Math.atan2(w1.z - w0.z, w1.x - w0.x);
+  teil(scene, new THREE.CylinderGeometry(0.03, 0.03, len, 5).rotateZ(Math.PI / 2), '#e8e2d0', (w0.x + w1.x) / 2, 3.2, (w0.z + w1.z) / 2, 0, ryL, 0);
+  ['#e05a5a', '#f4f1e8', '#5a8ad0', '#f0c040', '#7ab060'].forEach((f, i) => {
+    const t = (i + 0.7) / 5.4;
+    teil(scene, kiste(0.9, 1.2 - (i % 2) * 0.3, 0.06), f, w0.x + (w1.x - w0.x) * t, 2.55 + (i % 2) * 0.15, w0.z + (w1.z - w0.z) * t, 0, ryL, (i % 2 ? 0.05 : -0.04));
+  });
+  // Blumen am Haus und am Weg
+  for (let i = 0; i < 14; i++) {
+    const x = -10 + i * 1.5 + Math.sin(i * 7.1) * 0.6, z = 4.5 + Math.cos(i * 3.3) * 0.8;
+    if (x > -2 && x < 6) continue;
+    teil(scene, new THREE.SphereGeometry(0.3, 8, 6), ['#e0392b', '#f2b829', '#c86ad0', '#f4f1e8'][i % 4], x, 0.35, z);
+  }
+  if (stufe < 2) return;
+  // noch mehr Leben: Bäuerin mit Korb, spielendes Kind, Schubkarre, Heuhaufen, Kürbisse, Bienenstöcke
+  figur(-8, 13, zurKamera(-8, 13, 0.4), '#b5463f', '#f4f1e8', 'sack', false);
+  figur(9, 17, zurKamera(9, 17, -0.3), '#e0a830', '#3f6fb5', null, false, 0.7);
+  const karre = new THREE.Group(); karre.position.set(17, 0, -1); karre.rotation.y = 0.6; scene.add(karre);
+  teil(karre, kiste(2, 0.8, 1.2), '#9a6a40', 0, 1.0, 0);
+  teil(karre, new THREE.CylinderGeometry(0.5, 0.5, 0.2, 12).rotateX(Math.PI / 2), '#5a3b26', 1.1, 0.5, 0);
+  for (const sz of [-1, 1]) teil(karre, kiste(1.6, 0.12, 0.12), '#7a5236', -1.3, 0.9, sz * 0.5);
+  for (let k = 0; k < 4; k++) teil(karre, new THREE.SphereGeometry(0.35, 10, 8), '#e8822a', -0.3 + (k % 2) * 0.6, 1.55, -0.25 + Math.floor(k / 2) * 0.5);
+  teil(scene, new THREE.SphereGeometry(2.2, 14, 10).scale(1, 0.75, 1), '#e2c06a', 23, 1.2, -9);
+  for (let k = 0; k < 5; k++) teil(scene, new THREE.SphereGeometry(0.6, 12, 9).scale(1.1, 0.8, 1.1), '#e8822a', 14 + k * 1.3, 0.45, -2.5 + (k % 2) * 0.9);
+  for (let k = 0; k < 3; k++) {
+    teil(scene, kiste(1.0, 1.1, 1.0), ['#e0a830', '#5f9e8f', '#c96a52'][k], -20 + k * 1.6, 0.95, -1, 0, 0.2, 0);
+    teil(scene, kiste(1.2, 0.15, 1.2), '#7a5236', -20 + k * 1.6, 1.6, -1, 0, 0.2, 0);
+    teil(scene, kiste(1.0, 0.4, 0.9), '#7a5236', -20 + k * 1.6, 0.2, -1, 0, 0.2, 0);
+  }
+}
+wimmel(S.wimmel ?? 0);
+
+// ---------------------------------------------------------------- Papier und Miniatur-Unschärfe (C3)
+
+if (S.papier) {
+  const lage = (css: string) => { const d = document.createElement('div'); d.style.cssText = `position:fixed;left:0;right:0;pointer-events:none;${css}`; document.body.append(d); };
+  const blur = 'backdrop-filter:blur(2.5px);-webkit-backdrop-filter:blur(2.5px);';
+  lage(`top:0;height:26%;${blur}mask-image:linear-gradient(#000,transparent);-webkit-mask-image:linear-gradient(#000,transparent);`);
+  lage(`bottom:0;height:24%;${blur}mask-image:linear-gradient(transparent,#000);-webkit-mask-image:linear-gradient(transparent,#000);`);
+  const korn = `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.35 0 0 0 0 0.25 0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")`;
+  lage(`top:0;bottom:0;background:${korn};mix-blend-mode:multiply;opacity:0.35;`);
+  lage('top:0;bottom:0;box-shadow:inset 0 0 160px rgba(120,80,40,0.35);');
+}
 
 // ---------------------------------------------------------------- Bild
 

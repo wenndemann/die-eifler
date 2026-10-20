@@ -1,5 +1,5 @@
 // Screenshots der Stilprobe (ROADMAP M9): je Variante A, B, C eine Übersicht und eine Nahaufnahme der Figuren.
-// Aufruf: node tools/stilprobe/aufnahme.mjs [Ausgabeordner]
+// Aufruf: node tools/stilprobe/aufnahme.mjs [Ausgabeordner] [Varianten, z. B. c1,c2,c3]
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,7 +16,7 @@ const browser = await chromium.launch({ headless: false, executablePath: exe, ar
 try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
   page.on('pageerror', (e) => console.log('pageerror', e.message));
-  for (const v of ['a', 'b', 'c']) for (const nah of [0, 1]) {
+  for (const v of (process.argv[3] ?? 'a,b,c').split(',')) for (const nah of [0, 1]) {
     await page.goto(`http://127.0.0.1:5192/tools/stilprobe/index.html?v=${v}&nah=${nah}`);
     await page.waitForFunction(() => window.stilFertig, null, { timeout: 120000 });
     await page.waitForTimeout(500);
