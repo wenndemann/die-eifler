@@ -21,9 +21,10 @@ Leitideen:
 | M6 | Mehrspieler-Grundgerüst | zwei Browser bauen zusammen |
 | M7 | Bedienung und Speichern | spielbar ohne Erklärung |
 | M8 | Volle Grundwirtschaft und Jahreszeiten | 3 Dorfstufen, Winter, Schnaps |
+| M8b | Stil: Siedler trifft Comic | das Spiel sieht aus wie im Drehbuch (Kapitel 7) |
 | M9 | Gebiet, Nachbarn, Finden, Ziele | **erste 2-Stunden-Partie** |
 | M10 | Die 10 Völkchen | jeder Startort spielt sich anders |
-| M11 | Figuren, Wetter, Klang, Erzählerin | Version 1.0 (freies Spiel + Mehrspieler) |
+| M11 | Feinschliff Figuren, Wetter, Klang, Erzählerin | Version 1.0 (freies Spiel + Mehrspieler) |
 | M12 | Kampagne „Der Eifelsteig“ | 15 Etappen von Aachen nach Trier |
 
 ---
@@ -217,6 +218,24 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M9), Regler Bo
 
 ---
 
+## M8b – Stil: Siedler trifft Comic
+
+**Ziel:** Der Stil aus Drehbuch 7 wird verbindlich und überall umgesetzt, bevor die 2-Stunden-Partien beginnen: Siedler-2-Look mit Asterix-Comic-Einschlag, knubbelige Figuren, bunte, schiefe Fachwerkhäuser mit Charakter und Kleinkram, lesbare Waren. Damit der Stil nicht untergeht, ist er ein eigener Meilenstein mit messbarer Abnahme.
+
+- [ ] **Stilprobe** (Wohnhaus, Träger, Ware) in drei Varianten, der Nutzer wählt eine aus (`tools/stilprobe/`)
+- [ ] **Stil-Leitfaden** (`STIL.md`): Proportionen der Figuren, Farbpalette je Region, Dachneigung und „Schiefe“, Konturen/Schattierung, Licht und Farb-Grading, Oberfläche
+- [ ] **Alle Gebäude** im gewählten Stil neu, mit kleinen Animationen (Rauch, Mühlrad, Bienen, Schafe, Fässer), drei Bauphasen
+- [ ] **Figuren** (Träger, Arbeiter, Bauleute, Boten) im gewählten Stil, Mimik und Gesten in der Grundform
+- [ ] **Waren** an den Stil angepasst (lesbar bleibt Pflicht, Drehbuch 7.6)
+- [ ] Gelände, Wald und Wasser farblich zum Stil passend, Oberfläche (Fenster, Leisten) im selben Ton
+- [ ] **Bildstrecke** als Skript (`tools/bildstrecke.mjs`): feste Kameras, feste Saat – Übersicht, Dorf nah, jedes Gebäude, Figuren groß, Waren, Fenster, Sommer und Winter, Fest, kurze Bildfolgen für Bewegung
+- [ ] **Bewertung durch Gutachter-Agenten** auf der Bildstrecke: Bewertungsbogen aus Drehbuch 7 (Siedler-Comic-Mischung, Figuren, Gebäude, Waren, Einheitlichkeit, Licht und Farbe, Oberfläche, je 1–10 mit Begründung), 5 unabhängige Gutachter, einer davon gezielt kritisch, dazu der Vergleich mit der vorigen Version; die häufigste Kritik wird zur Aufgabenliste der nächsten Runde (Feinschliff)
+- [ ] Leistung: Leistungsbudget aus M1 bleibt eingehalten
+
+**Abnahme:** 4 von 5 Gutachter-Agenten sagen „Stilziel aus Drehbuch 7 erreicht“, kein Punkt des Bogens unter 7, und die neue Version gewinnt den Vergleich mit der vorigen. Das letzte Wort hat der Nutzer (Menschen-Blick wie beim Spieltest).
+
+---
+
 ## M9 – Gebiet, Nachbarn, Finden, Ziele → erste 2-Stunden-Partie
 
 **Ziel:** Man misst sich ohne Krieg. Danach ist **eine volle Partie von 2 Stunden** allein und zu mehreren spielbar (Drehbuch 6).
@@ -252,12 +271,12 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M9), Regler Bo
 
 ---
 
-## M11 – Figuren, Wetter, Klang → Version 1.0
+## M11 – Feinschliff Figuren, Wetter, Klang → Version 1.0
 
 **Ziel:** Charme und Fertigstellung. Freies Spiel und Mehrspieler sind fertig (Drehbuch 1, 7).
 
-- [ ] Figuren fertig im Siedler-Comic-Stil: Mimik, übertriebene Gesten, alle Berufe
-- [ ] **Waren schön** (Drehbuch 7.6): feine Modelle, Holzmaserung, Steine mit Moos, Wackeln beim Tragen
+- [ ] Figuren fertig im Stil aus M8b: volle Mimik, übertriebene Gesten, alle Berufe
+- [ ] **Waren schön** (Drehbuch 7.6, Grundstil aus M8b): feine Modelle, Holzmaserung, Steine mit Moos, Wackeln beim Tragen
 - [ ] **Gebrabbel** mit Eifeler Klang statt Sprecher, Betrunkene singen (Drehbuch 7.2)
 - [ ] Wetter- und Jahreszeiten-Optik: Talnebel (Höhennebel im Shader), Regen, Schnee, Wolkenschatten, Tageszeiten
 - [ ] Post-Processing: SSAO, dezentes Bloom, Farb-Grading, Qualitätsstufen (aus M1)
@@ -266,7 +285,7 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M9), Regler Bo
 - [ ] Running Gags aus Drehbuch 1.2 durchgehend eingebaut
 - [ ] Startmenü, Credits mit Quellenangaben, Leistungsdurchgang auf echter Hardware
 
-**Abnahme:** Eine Gruppe Fremder spielt über den Link eine Partie ohne Hilfe von uns. Die Leistung hält 60 fps bei „Mittel“.
+**Abnahme:** Eine Gruppe Fremder spielt über den Link eine Partie ohne Hilfe von uns. Die Leistung hält 60 fps bei „Mittel“. Die Bildstrecke aus M8b besteht die Gutachter-Bewertung weiterhin.
 
 ---
 
@@ -295,4 +314,5 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M9), Regler Bo
 - **Determinismus-Test** (Replay → gleiche Prüfsumme) läuft ab M3 bei jeder Änderung an der Simulation
 - Ab M6 wird jedes neue Feature auch im Mehrspieler angespielt
 - Screenshot-Test (`tools/shot.mjs`) aus festen Kamerapositionen, damit die Optik nicht unbemerkt kaputtgeht
+- Ab M8b: neue Gebäude, Figuren und Waren folgen dem Stil-Leitfaden (`STIL.md`); an jedem Meilenstein läuft die Bildstrecke mit Gutachter-Bewertung
 - Leistungsanzeige (F3) im Blick: Draw-Calls, Dreiecke, CPU-Zeit

@@ -364,6 +364,8 @@ Gebäude werden nie zerstört. Wechselt ein Hex mit Gebäude den Besitzer, steht
 
 Lustiger Siedler-Look: übertriebene Proportionen, krummbeinige Figuren, Gebäude mit Charakter, Sprüche und Animationen.
 
+**Beschlossen:** Der Stil wird in einem eigenen Meilenstein umgesetzt (ROADMAP M8b), nicht erst am Ende. Grundlage ist eine Stilprobe in drei Varianten, aus der der Nutzer wählt; daraus entsteht ein Stil-Leitfaden (`STIL.md`). Geprüft wird über eine feste Bildstrecke, die Gutachter-Agenten nach einem Bewertungsbogen aus diesem Kapitel benoten (4 von 5 „Stilziel erreicht“, kein Punkt unter 7); das letzte Wort hat der Mensch.
+
 ### 7.1 Figuren
 
 - **Mischung aus Siedler 2 und Asterix-Comic:** knubbelig wie in Siedler (großer Kopf, krumme Beine, dicke Nase, Kappe oder Kopftuch), dazu mehr Mimik und übertriebene Gesten wie im Comic.
