@@ -3,7 +3,7 @@
 // data/buildings.json (Eingang, Ausgang, wandelt, Radius, Wohnraum, Vorrat, Funktion) – ohne Code für einzelne Gebäude.
 // Gezeichnet wird in src/ui/fenster.ts. Einzeln testbar (tests/fensterdaten.test.ts).
 import {
-  ABNEHMER, DORFSTUFEN, FLAG_CAP, GEBAEUDE, GEBAEUDE_IDS, KIRMES, KLEINE_FESTE, MISCHKORB, NAHRUNG, VERTEILUNG_STANDARD, WAREN, WAREN_GRUPPEN, zutatMenge,
+  ABNEHMER, DORFSTUFEN, FLAG_CAP, GEBAEUDE, GEBAEUDE_IDS, KIRMES, KLEINE_FESTE, MISCHKORB, NAHRUNG, VERTEILUNG_JE_WARE, WAREN, WAREN_GRUPPEN, zutatMenge,
 } from '../sim/daten';
 import type { GebaeudeTyp } from '../sim/daten';
 import { PROMILLE, STAT_KOPF, TICK_HZ } from '../sim/typen';
@@ -306,13 +306,13 @@ export function verteilungFenster(k: FensterKontext): FensterDaten {
   for (let a = 0; a < WAREN.length; a++) {
     const b = betroffen(a);
     if (b.filter(Boolean).length < 2) continue;
-    const reihe = v[a] ?? [...VERTEILUNG_STANDARD];
+    const reihe = v[a] ?? [...VERTEILUNG_JE_WARE[a]];
     // nur die Abnehmer, die die Ware nehmen; ihr Rang in der ganzen Reihe bleibt im Knopf
     const plaetze = reihe.map((x, i) => ({ x, i })).filter((p) => b[p.x]);
     zeilen.push({
       id: `v:${a}`, ware: a, text: k.ware[a]?.mehr ?? WAREN[a],
       plaetze: plaetze.map((p) => ({ symbol: ABNEHMER[p.x].symbol, name: ABNEHMER[p.x].name, betrifft: true, knopf: `v:${a}:${p.i}` })),
-      standard: plaetze.every((p, j) => p.x === VERTEILUNG_STANDARD.filter((x) => b[x])[j]),
+      standard: plaetze.every((p, j) => p.x === VERTEILUNG_JE_WARE[a].filter((x) => b[x])[j]),
     });
   }
   return {
@@ -333,8 +333,8 @@ export function verteilungKnopf(knopf: string, v: readonly (readonly number[])[]
   if (!m) return null;
   const ware = Number(m[1]);
   if (!(ware >= 0 && ware < WAREN.length)) return null;
-  if (m[2] === 'std') return { ware, reihe: [...VERTEILUNG_STANDARD] };
-  const reihe = [...(v[ware] ?? VERTEILUNG_STANDARD)];
+  if (m[2] === 'std') return { ware, reihe: [...VERTEILUNG_JE_WARE[ware]] };
+  const reihe = [...(v[ware] ?? VERTEILUNG_JE_WARE[ware])];
   const b = betroffen(ware);
   const p = Number(m[2]);
   if (!(p >= 1 && p < reihe.length)) return null;

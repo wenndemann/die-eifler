@@ -58,7 +58,7 @@ export interface BotLauf {
 }
 
 /** Bauplatz nahe `nahe` (Ringe nach außen) samt Weg zur nächsten erreichbaren Fahne, oder null. */
-function suchePlatz(sim: Simulation, s: SimSicht, typ: string, nahe: Hx): { h: Hx; weg: Hx[] } | null {
+export function suchePlatz(sim: Simulation, s: SimSicht, typ: string, nahe: Hx): { h: Hx; weg: Hx[] } | null {
   for (let d = 0; d <= 7; d++) {
     for (let dr = -d; dr <= d; dr++) {
       for (let dq = Math.max(-d, -dr - d); dq <= Math.min(d, -dr + d); dq++) {
@@ -77,7 +77,7 @@ function suchePlatz(sim: Simulation, s: SimSicht, typ: string, nahe: Hx): { h: H
 }
 
 /** Zweiter Weg von der vollsten Fahne zu einer Fahne näher am Lager, mit der sie noch nicht direkt verbunden ist. */
-function zweiterWeg(sim: Simulation, tu: (b: Befehl) => void, lauf: BotLauf): void {
+export function zweiterWeg(sim: Simulation, tu: (b: Befehl) => void, lauf: BotLauf): void {
   const s = sim.sicht();
   const lager = s.gebaeude.find((g) => g.typ === 'lager')!;
   const voll = s.fahnen.filter((f) => f.waren.length >= 7 && f.id !== lager.fahne).sort((a, b) => b.waren.length - a.waren.length || a.id - b.id);

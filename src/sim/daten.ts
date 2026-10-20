@@ -65,7 +65,7 @@ const dorf = dorfJson as unknown as {
   kirmes: { liste: Record<string, number>; fest_s: number; zuzug: number; schaltet_frei: string[]; geschenk?: Record<string, number>; mischkorb?: number }[];
   bauleute: { takt_s: number; max: number };
   boten: { dauer_s: number; ab_hex: number; torkeln_prozent: number; verliert_jede: number; aufsammeln_s: number };
-  verteilung: { abnehmer: { id: string; name: string; symbol: string }[]; standard: string[] };
+  verteilung: { abnehmer: { id: string; name: string; symbol: string }[]; standard: string[]; je_ware?: Record<string, string[]> };
   statistik: { takt_s: number; max_punkte: number };
   autosave: { takt_min: number };
 };
@@ -331,6 +331,14 @@ export const VERTEILUNG_STANDARD: readonly number[] = dorf.verteilung.standard.m
   return i;
 });
 if (new Set(VERTEILUNG_STANDARD).size !== ABNEHMER_ZAHL) throw new Error('data/dorf.json: verteilung.standard muss jeden Abnehmer genau einmal nennen');
+/** Standard-Rangfolge je Warenart (Index = Ware): meist VERTEILUNG_STANDARD, für einzelne Waren abweichend (data/dorf.json: je_ware). */
+export const VERTEILUNG_JE_WARE: readonly (readonly number[])[] = WAREN.map((id) => {
+  const r = dorf.verteilung.je_ware?.[id];
+  if (!r) return VERTEILUNG_STANDARD;
+  const x = r.map((a) => ABNEHMER.findIndex((b) => b.id === a));
+  if (new Set(x).size !== ABNEHMER_ZAHL || x.some((i) => i < 0)) throw new Error(`data/dorf.json: verteilung.je_ware.${id} muss jeden Abnehmer genau einmal nennen`);
+  return x;
+});
 
 /** Statistik (ROADMAP M7): Messpunkt alle STAT_TAKT Ticks je Dorf, höchstens STAT_MAX Punkte (dann wird ausgedünnt). */
 export const STAT_TAKT = sek(dorf.statistik.takt_s);

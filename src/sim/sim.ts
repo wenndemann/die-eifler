@@ -9,7 +9,7 @@ import {
   FELS_LESE, FELS_LESE_START, FELS_STEIL, FELS_STEIN, FLAG_CAP, GEBAEUDE, KIRMES, LESE_PROZENT, NAHRUNG, NAHRUNG_REIHE, NAHRUNG_ZYKLUS,
   NOTNAGEL_FREI_UNTER, NOTNAGEL_TICKS, NOTPLAETZE, planierTicks, PRIO_MAX, PRIO_MIN, PRIO_STANDARD,
   RODUNG_STAMM_MAX, START_BAUARBEITER, START_BEWOHNER, START_PLANIERER, START_STEIN_ABSTAND_MIN, START_STEIN_MIN, START_STEIN_RADIUS,
-  START_VORRAT, STAT_MAX, STAT_TAKT, STEIL_GRAD, ABNEHMER_ZAHL, VERTEILUNG_STANDARD, SUCHE_WARTE, TREE_MAX, UEBERGABE_TICKS, WARE, WAREN, WEG_MAX_SCHRITTE,
+  START_VORRAT, STAT_MAX, STAT_TAKT, STEIL_GRAD, ABNEHMER_ZAHL, VERTEILUNG_JE_WARE, SUCHE_WARTE, TREE_MAX, UEBERGABE_TICKS, WARE, WAREN, WEG_MAX_SCHRITTE,
   AUE_DM, AUFSAMMELN_TICKS, BAULEUTE_MAX, BAULEUTE_TAKT, BOTE_AB_HEX, BOTE_TICKS, BOTE_TORKELN_PROZENT, BOTE_VERLIERT_JEDE, ERNTE_PROZENT,
   FEST_OBERGRENZE, FRIEREN_PROZENT, HOEHE_PROZENT, JAHRESZEIT_TICKS, KLEINE_FESTE, KLEINES_FEST_TICKS, MISCHKORB, SAAT_TICKS, SCHNEE_PROZENT,
   TAL_DM, WETTER, WETTER_ANKUENDIGUNG, WINTER, WINTER_ESSEN_TICKS, WINTER_JE_BEWOHNER,
@@ -178,7 +178,7 @@ const BOTE_WUNSCH_HAELT = 30 * 20;
 /** Standard-Verteilung für alle Waren (data/dorf.json). */
 function standardVerteilung(): number[] {
   const v: number[] = [];
-  for (let a = 0; a < WAREN.length; a++) v.push(...VERTEILUNG_STANDARD);
+  for (let a = 0; a < WAREN.length; a++) v.push(...VERTEILUNG_JE_WARE[a]);
   return v;
 }
 
@@ -1614,7 +1614,9 @@ export class Simulation {
   private pufferPlatz(g: Gebaeude, art: number): number {
     const t = GEBAEUDE[g.typ], d = this.doerfer[g.sp];
     if (t.funktion === 'kirmes') {
-      // Kirmesplatz: erst die Listen von Kirmes und kleinem Fest, dann beliebige veredelte Waren für den Mischkorb
+      // Kirmesplatz: erst die Listen von Kirmes und kleinem Fest, dann beliebige veredelte Waren für den Mischkorb. Werkzeug erst, wenn
+      // das Dorf selbst welches geschmiedet hat: das Geschenk und Funde gehören den Fachkräften der Eisenkette
+      if (art === WARE.werkzeug && d.erzeugt[art] === 0) return 0;
       const direkt = Math.max(0, this.platzBedarf(d, art) - g.puffer[art] - g.incoming[art]);
       const k = this.kirmesJetzt(d);
       if (!k || !k.mischkorb || !MISCHKORB[art]) return direkt;
