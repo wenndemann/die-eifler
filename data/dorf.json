@@ -20,10 +20,10 @@
  "stufen": ["Weiler", "Dorf", "Kirchdorf", "Marktflecken"],
  "kirmes": [
   {
-   "hinweis": "Weiler → Dorf (Drehbuch 5.2). Die weiteren Kirmes-Stufen kommen mit ihren Waren in M8.",
+   "hinweis": "Weiler → Dorf (Drehbuch 5.2). Zuzug: so viele Bewohner lockt die Kirmes an, auch über den Wohnraum hinaus. Die weiteren Kirmes-Stufen kommen mit ihren Waren in M8.",
    "liste": { "bratkartoffeln": 10, "most": 10, "kaese": 6 },
    "fest_s": 45,
-   "zuzug": 5,
+   "zuzug": 15,
    "schaltet_frei": ["Reifekeller", "Brauerei (M8)", "Brennerei (M8)", "Schänke (M8)", "Schützenhaus (M8)", "Lagerhaus (M8)"]
   }
  ]

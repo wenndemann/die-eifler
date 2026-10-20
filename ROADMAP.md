@@ -175,6 +175,7 @@ Nachgezogen beim Einstellen: Zwei volle Fahnen, die sich gegenseitig blockieren,
 - [ ] Fenster-System (verschiebbar, anpinnbar, Esc, Live-Daten)
 - [ ] Gebäude-, Fahnen-, Träger- und Lagerfenster, datengetrieben
 - [ ] Baumenü mit Gruppen, Tooltips, Begründungen, Tastenkürzeln
+- [ ] **Warenverteilung einstellbar** (wie in Siedler 2): wer eine Ware zuerst bekommt – Baustellen, Kirmesplatz, Verarbeiter, Wohnhäuser; bis dahin gilt die feste Reihenfolge aus M5
 - [ ] Icons aus den 3D-Modellen
 - [ ] Warenübersicht (W), Statistik (S), Ereignisprotokoll (L), Meldungen mit Sprung zum Ort
 - [ ] Einstellungen (Grafik, Oberfläche, Steuerung, Spiel), Autosave
