@@ -173,20 +173,24 @@ Noch nicht drin (kommt später): Gebiet und Grenzen zwischen den Dörfern (M9) �
 
 ---
 
-## M7 – Bedienung und Oberfläche
+## M7 – Bedienung und Oberfläche ✅ (erster Stand) → 🔨 Test mit neuen Spielern
 
 **Ziel:** Alles sichtbar, alles erklärbar, mit Maus und Tastatur am PC zuerst (Drehbuch 8.2, DESIGN §9).
 
-- [ ] Fenster-System (verschiebbar, anpinnbar, Esc, Live-Daten)
-- [ ] Gebäude-, Fahnen-, Träger- und Lagerfenster, datengetrieben
-- [ ] Baumenü mit Gruppen, Tooltips, Begründungen, Tastenkürzeln
-- [ ] **Warenverteilung einstellbar** (wie in Siedler 2): wer eine Ware zuerst bekommt – Baustellen, Kirmesplatz, Verarbeiter, Wohnhäuser; bis dahin gilt die feste Reihenfolge aus M5
-- [ ] Icons aus den 3D-Modellen
-- [ ] Warenübersicht (W), Statistik (S), Ereignisprotokoll (L), Meldungen mit Sprung zum Ort
-- [ ] Einstellungen (Grafik, Oberfläche, Steuerung, Spiel), Autosave
-- [ ] Tablet und Handy spielbar, aber nicht Schwerpunkt
+- [x] Fenster-System (verschiebbar, anpinnbar, Esc, Live-Daten 4× je Sekunde): `src/ui/fenster.ts`; Fenster beschreiben ihren Inhalt nur als Daten (Zustand, Balken, Waren, Tabelle, Knöpfe, Rangliste, Kurve, Eingaben)
+- [x] Gebäude-, Fahnen-, Träger- und Lagerfenster, datengetrieben: `src/spiel/fensterdaten.ts` liest nur die Felder aus `data/buildings.json` (Eingang, Ausgang, wandelt, Radius, Wohnraum, Vorrat, Funktion), kein Code für einzelne Gebäude (Test prüft das); Knöpfe Hinsehen, Anhalten (neuer Befehl `ruhen`), Abreißen, Priorität, Arbeitsbereich; Produktivität der letzten 2 Minuten
+- [x] Baumenü mit Reitern je Gruppe, Tooltips (Kosten, Bauplatz, Ein- → Ausgang, Arbeiter, Spruch), Begründungen (gesperrt: Stufe/steht schon; knapp: was im Lager fehlt), Tasten je Gebäude bei offenem Menü (`taste` in `data/buildings.json`), Ziffern 3–9 wie bisher
+- [x] **Warenverteilung einstellbar** (wie in Siedler 2): je Ware und Dorf eine Rangfolge der Abnehmer (Baustellen, Kirmesplatz, Verarbeiter, Wohnhäuser), Befehl `verteilung`, Teil von Prüfsumme und Spielstand; Standard = die feste Reihenfolge aus M5 (`data/dorf.json`: verteilung)
+- [x] Icons aus den 3D-Modellen (`src/render/icons.ts`: Waren und Gebäude einmal beim Start gerendert, Zeichen als Ersatz ohne WebGL)
+- [x] Warenübersicht (<kbd>I</kbd>), Statistik (<kbd>T</kbd>; Messpunkt je Spielminute im Spielstand, alle Dörfer im Vergleich), Ereignisprotokoll (<kbd>L</kbd>), Meldungen am rechten Rand zusammengefasst, Klick springt zum Ort (auch bei Meldungen der Erzählfigur). W und S bleiben bei der Kamera (beschlossen: I, T statt W, S)
+- [x] Einstellungen (Grafik, Oberfläche: Größe 80–150 % und Farbenblind-Modus, Steuerung: Kamera-Tempo, Spiel: Autosave und Tipps) mit <kbd>Esc</kbd> oder ⚙️, Hilfe (<kbd>H</kbd>); Autosave alle 10 Spielminuten in den Browser-Speicher (ein Platz, Spielstand-Format aus M6), „⏱ Weiterspielen“ in der Kartenwahl; im Mehrspieler speichert jeder für sich
+- [x] Tablet und Handy spielbar: Fenster als Blatt über der Bauleiste, nur eins auf einmal (außer angepinnten), Tipp öffnet Fenster
 
 **Abnahme:** Jedes Gebäude hat ein funktionierendes Fenster ohne Sondercode. Ein neuer Spieler findet sich ohne Hilfe zurecht. Mit 5 offenen Fenstern bleibt das Leistungsbudget eingehalten.
+→ Automatisch: `tests/fensterdaten.test.ts` (Fenster für jedes Gebäude, fertig und als Baustelle, aus seinen Daten; der Fenstercode nennt kein Gebäude), `tests/m7-sim.test.ts` (Verteilung, Ruhen, Statistik, alte Spielstände), `tests/partie.test.ts` (Verteilung und Ruhen über schlechtes Netz, nach Neuladen gleich), im Browser `tests/bedienung.mjs` (Reiter, Tooltip, Taste, 5 Fenster mit Pin, Verschieben, Esc, Aktualisierung im Mittel unter 4 ms je Runde, Verteilung per Klick, Meldung am Rand, Handy-Blatt) und `tests/mehrspieler.mjs` (Verteilung, Ruhen, Statistik, Autosave in zwei Fenstern).
+Offen: Test mit Menschen, die das Spiel nicht kennen („findet sich ohne Hilfe zurecht“) – Spieltest-Drehbuch [SPIELTEST.md](SPIELTEST.md).
+
+Noch nicht drin (kommt später): „nicht einlagern/auslagern“ je Ware im Lagerfenster (mit dem Lagerhaus in M8, vorher gibt es nur ein Lager); frei belegbare Tasten (Tasten stehen fest in der Hilfe).
 
 ---
 

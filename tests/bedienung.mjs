@@ -1,12 +1,15 @@
-// Bedienungs-Test im echten Browser (M4, Baumenü): Menü öffnen, Gebäude wählen, mit echten Mausklicks bauen, Gebäudekarte
+// Bedienungs-Test im echten Browser (M4, Baumenü): Menü öffnen, Gebäude wählen, mit echten Mausklicks bauen, Gebäudefenster
 // und Priorität, dazu eine Handy-Ansicht (390×844, Touch). Wird von smoke.mjs aufgerufen; Screenshots landen in `aus`.
 //   5-baumenue.png      Menü offen (Desktop)
 //   6-bauplaetze.png    Geist, Bauplatz-Anzeige und Arbeitsradius am Zielhex
-//   7-baustelle.png     gebaute Baustelle mit Gebäudekarte und Priorität
+//   7-baustelle.png     gebaute Baustelle mit Gebäudefenster und Priorität
 //   8-handy-menue.png   Menü auf dem Handy
 //   9-handy-bauen.png   Handy: Tipp zeigt Geist und Bauplätze, zweiter Tipp baut
-//   10-arbeitsbereich.png  Gebäudekarte, Modus „Arbeitsbereich“: zwei Ringe, Fähnchen und Linie am Zeiger
+//   10-arbeitsbereich.png  Gebäudefenster, Modus „Arbeitsbereich“: zwei Ringe, Fähnchen und Linie am Zeiger
 //   11-natur-nah.png    Nahansicht: Fels, Lesesteine und Bäume auf der Wiese
+//   12-baumenue-tooltip.png  M7: Baumenü mit Tooltip
+//   13-fuenf-fenster.png     M7: fünf offene Fenster (Lager angepinnt, Waren, Verteilung, Statistik, Protokoll)
+//   14-handy-fenster.png     M7: Gebäudefenster am Handy
 import { statSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -104,30 +107,30 @@ export async function bedienungsTest({ browser, url, aus, info, fail }) {
   info(`Bedienung: Gebäude dazugekommen: ${gebaut?.typ} (Baustelle ${gebaut?.bau ?? '?'}‰, Priorität ${gebaut?.prioritaet})`);
   if (gebaut?.typ !== 'holzfaeller') fail(`Bedienung: nach dem Klick kein Holzfäller auf ${ziel.hex.q},${ziel.hex.r}`);
 
-  // Gebäudekarte: ohne Werkzeug auf die Baustelle klicken, Priorität 3 über den Knopf setzen
+  // Gebäudefenster: ohne Werkzeug auf die Baustelle klicken, Priorität 3 über den Knopf setzen
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => window.eifeler.spiel.werkzeug === 'keins', null, { timeout: 5000 });
   await page.mouse.move(pos.x + 200, pos.y + 160);
   const pos2 = await page.evaluate((h) => window.eifeler.spiel.bildschirm(h), ziel.hex);
   await page.mouse.click(pos2.x, pos2.y);
-  await page.waitForSelector('.gebkarte:not([hidden])', { timeout: 10000 });
-  await page.locator('.gk-prio-knopf[data-p="3"]').click();
+  await page.waitForSelector('.fenster[data-gruppe="auswahl"]', { timeout: 10000 });
+  await page.locator('.fenster [data-knopf="prio:3"]').click();
   await page.waitForFunction((h) => window.eifeler.spiel.sicht.gebaeude.find((g) => g.q === h.q && g.r === h.r)?.prioritaet === 3, ziel.hex, { timeout: 30000, polling: 200 });
   const karte = await page.evaluate(() => ({
-    status: document.querySelector('.gk-status')?.textContent, zeilen: [...document.querySelectorAll('.gk-zeilen div')].map((d) => d.textContent),
-    an: document.querySelector('.gk-prio-knopf.an')?.dataset.p,
+    status: document.querySelector('.fenster .fe-zustand')?.textContent, zeilen: [...document.querySelectorAll('.fenster .fe-zeile, .fenster .fe-balkentext')].map((d) => d.textContent),
+    an: document.querySelector('.fenster .fe-knopf.an[data-knopf^="prio:"]')?.dataset.knopf.slice(5),
   }));
-  info(`Bedienung: Gebäudekarte „${karte.status}“ ${karte.zeilen.join(' / ')}; Priorität an: ${karte.an}`);
+  info(`Bedienung: Gebäudefenster „${karte.status}“ ${karte.zeilen.join(' / ')}; Priorität an: ${karte.an}`);
   if (karte.an !== '3') fail(`Bedienung: Prioritätsknopf zeigt ${karte.an} statt 3`);
   // Rechtsklick schaltet weiter: 3 → 1
   await page.mouse.click(pos2.x, pos2.y, { button: 'right' });
   await page.waitForFunction((h) => window.eifeler.spiel.sicht.gebaeude.find((g) => g.q === h.q && g.r === h.r)?.prioritaet === 1, ziel.hex, { timeout: 30000, polling: 200 });
   await page.keyboard.press('Escape');
   await page.mouse.click(pos2.x, pos2.y);
-  await page.waitForSelector('.gebkarte:not([hidden])', { timeout: 10000 });
+  await page.waitForSelector('.fenster[data-gruppe="auswahl"]', { timeout: 10000 });
   await page.waitForTimeout(800);
   await bild(page, '7-baustelle.png');
-  // Arbeitsbereich: Knopf in der Karte, Ringe folgen dem Zeiger, echter Klick setzt den Mittelpunkt (Befehl 'arbeitsbereich')
+  // Arbeitsbereich: Knopf im Gebäudefenster, Ringe folgen dem Zeiger, echter Klick setzt den Mittelpunkt (Befehl 'arbeitsbereich')
   const bz = await page.evaluate((b) => {
     const e = window.eifeler, sp = e.spiel, w = e.grid.toWorld(b);
     e.cam.pitchOverride = 45;
@@ -143,7 +146,7 @@ export async function bedienungsTest({ browser, url, aus, info, fail }) {
       if (i < 0 || !k.begehbar[i]) continue;
       const p = sp.bildschirm(c);
       if (p.x < 100 || p.x > 1000 || p.y < 110 || p.y > 620) continue;
-      if (p.x > 400 && p.x < 880 && p.y > 300) continue;   // hinter Gebäudekarte und Hinweiszeile
+      if ((p.x > 560 && p.y < 560) || (p.x > 400 && p.x < 880 && p.y > 560)) continue;   // hinter Gebäudefenster und Hinweiszeile
       if (!best || Math.abs(p.x - 640) + Math.abs(p.y - 220) < Math.abs(best.p.x - 640) + Math.abs(best.p.y - 220)) best = { c, p };
     }
     return best;
@@ -152,8 +155,8 @@ export async function bedienungsTest({ browser, url, aus, info, fail }) {
   if (!bz) fail('Bedienung: kein Hex in drei Hexen Abstand im Blickfeld für den Arbeitsbereich');
   else {
     const bp = await page.evaluate((c) => window.eifeler.spiel.bildschirm(c), bz.c);
-    await page.locator('.gk-bereich-an').click();
-    await page.waitForSelector('.gk-bereich-an.an', { timeout: 5000 });
+    await page.locator('.fenster [data-knopf="bereich"]').click();
+    await page.waitForSelector('.fenster [data-knopf="bereich"].an', { timeout: 5000 });
     await page.mouse.move(bp.x - 20, bp.y - 10);
     await page.mouse.move(bp.x, bp.y, { steps: 4 });
     // der Zeiger trifft nicht immer genau den Nachbar-Hex (Hang, Überhöhung): der tatsächlich getroffene Hex zählt
@@ -174,7 +177,7 @@ export async function bedienungsTest({ browser, url, aus, info, fail }) {
       id: window.eifeler.spiel.sicht.gebaeude.find((g) => g.q === b.q && g.r === b.r)?.id,
       befehle: window.eifeler.spiel.protokoll().befehle.filter((x) => x.befehl.art === 'arbeitsbereich').map((x) => x.befehl),
       mitte: window.eifeler.spiel.sicht.gebaeude.find((g) => g.q === b.q && g.r === b.r)?.mitte ?? null,
-      modus: !!document.querySelector('.gk-bereich-an.an'),
+      modus: !!document.querySelector('.fenster [data-knopf="bereich"].an'),
     }), ziel.hex);
     info(`Bedienung: Arbeitsbereich gesetzt, Befehl ${JSON.stringify(gesetzt.befehle[0])}, Sicht.mitte ${JSON.stringify(gesetzt.mitte)}`);
     if (!gesetzt.mitte || gesetzt.mitte.q !== bz.c.q || gesetzt.mitte.r !== bz.c.r) fail(`Bedienung: Sicht.mitte nach dem Setzen ${JSON.stringify(gesetzt.mitte)} statt ${JSON.stringify(bz.c)}`);
@@ -182,14 +185,14 @@ export async function bedienungsTest({ browser, url, aus, info, fail }) {
     if (gesetzt.modus) fail('Bedienung: Arbeitsbereich-Modus nach dem Setzen noch an');
     // Esc beendet den Modus ohne Befehl
     const vorBefehle = gesetzt.befehle.length;
-    await page.locator('.gk-bereich-an').click();
-    await page.waitForSelector('.gk-bereich-an.an', { timeout: 5000 });
+    await page.locator('.fenster [data-knopf="bereich"]').click();
+    await page.waitForSelector('.fenster [data-knopf="bereich"].an', { timeout: 5000 });
     await page.keyboard.press('Escape');
-    const nachEsc = await page.evaluate(() => ({ modus: !!document.querySelector('.gk-bereich-an.an'), n: window.eifeler.spiel.protokoll().befehle.filter((x) => x.befehl.art === 'arbeitsbereich').length }));
+    const nachEsc = await page.evaluate(() => ({ modus: !!document.querySelector('.fenster [data-knopf="bereich"].an'), n: window.eifeler.spiel.protokoll().befehle.filter((x) => x.befehl.art === 'arbeitsbereich').length }));
     if (nachEsc.modus || nachEsc.n !== vorBefehle) fail(`Bedienung: Esc im Arbeitsbereich-Modus: ${JSON.stringify(nachEsc)}`);
   }
   // Natur aus der Nähe: Felsgruppe, Lesesteine, Bäume auf der Wiese (Sicht.natur; ohne felsArt/start aus der Menge geschätzt)
-  await page.keyboard.press('Escape');   // Gebäudekarte zu (vor der Kamerafahrt: Tasten brechen sie ab)
+  await page.keyboard.press('Escape');   // Gebäudefenster zu (vor der Kamerafahrt: Tasten brechen sie ab)
   const natur = await page.evaluate(() => {
     const e = window.eifeler, sp = e.spiel, k = sp.sim.karte, nat = sp.sicht.natur, L = sp.lagerHex;
     const dist = (a, c) => (Math.abs(a.q - c.q) + Math.abs(a.r - c.r) + Math.abs(a.q + a.r - c.q - c.r)) / 2;
@@ -216,6 +219,87 @@ export async function bedienungsTest({ browser, url, aus, info, fail }) {
   if (!(await page.evaluate(() => !document.querySelector('.baumenue').hidden))) fail('Bedienung: Taste B öffnet das Menü nicht');
   await page.keyboard.press('Escape');
   if (!(await page.evaluate(() => document.querySelector('.baumenue').hidden))) fail('Bedienung: Esc schließt das Menü nicht');
+
+  // ---- M7: Baumenü mit Reitern, Tooltip und Taste; Fenster mit Pin, Esc und Live-Daten; 5 Fenster im Leistungsbudget
+  await page.keyboard.press('b');
+  await page.locator('.bm-reiter-knopf[data-gruppe="Essen"]').click();
+  const reiter = await page.evaluate(() => [...document.querySelectorAll('.bm-gruppe')].filter((g) => !g.hidden).map((g) => g.querySelector('h4').textContent));
+  if (reiter.length !== 1 || reiter[0] !== 'Essen') fail(`Bedienung M7: Reiter „Essen“ zeigt ${reiter.join(', ')}`);
+  await page.locator('.bm-reiter-knopf[data-gruppe="Alle"]').click();
+  await page.hover('.bm-eintrag[data-id="kueche"]');
+  const tipp = await page.evaluate(() => { const t = document.querySelector('.bm-tipp'); return t && !t.hidden ? t.textContent : null; });
+  info(`Bedienung M7: Tooltip Küche „${tipp}“`);
+  if (!/Kosten: .*Kartoffeln → 1 Bratkartoffel/.test(tipp ?? '')) fail(`Bedienung M7: Tooltip im Baumenü: ${tipp}`);
+  await bild(page, '12-baumenue-tooltip.png');
+  await page.keyboard.press('f');
+  const taste = await page.evaluate(() => ({ w: window.eifeler.spiel.werkzeug, offen: !document.querySelector('.baumenue').hidden }));
+  if (taste.w !== 'holzfaeller' || taste.offen) fail(`Bedienung M7: Taste F im Baumenü: ${JSON.stringify(taste)}`);
+  await page.keyboard.press('Escape');
+  // Lagerfenster per Klick, anpinnen, weitere Fenster per Taste; Esc schließt nur nicht angepinnte
+  await page.evaluate(() => { const e = window.eifeler, sp = e.spiel, w = e.grid.toWorld(sp.lagerHex); e.cam.pitchOverride = 45; e.cam.jumpTo(w.x, w.z + 120, 900, 0.25); e.settle(); return null; });
+  await frames(page, 4);
+  const lagerPos = await page.evaluate(() => window.eifeler.spiel.bildschirm(window.eifeler.spiel.lagerHex));
+  await page.mouse.click(lagerPos.x, lagerPos.y);
+  await page.waitForSelector('.fenster[data-fenster="geb:1"]', { timeout: 10000 });
+  await page.locator('.fenster[data-fenster="geb:1"] .fe-pin').click();
+  for (const k of ['i', 'v', 't', 'l']) await page.keyboard.press(k);
+  await page.waitForTimeout(600);
+  const offen = await page.evaluate(() => window.eifeler.spiel.fenster.ids);
+  info(`Bedienung M7: offene Fenster ${offen.join(', ')}`);
+  if (offen.length !== 5) fail(`Bedienung M7: 5 Fenster erwartet, offen: ${offen.join(', ')}`);
+  // Fenster verschieben (Kopf ziehen)
+  const kopf = await page.locator('.fenster[data-fenster="waren"] .fe-kopf').boundingBox();
+  await page.mouse.move(kopf.x + 60, kopf.y + 15);
+  await page.mouse.down();
+  await page.mouse.move(kopf.x - 240, kopf.y + 140, { steps: 5 });
+  await page.mouse.up();
+  const neu = await page.locator('.fenster[data-fenster="waren"]').boundingBox();
+  if (Math.abs(neu.x - (kopf.x - 300)) > 12 || Math.abs(neu.y - (kopf.y + 125)) > 12) fail(`Bedienung M7: Fenster nicht verschoben (${Math.round(neu.x)},${Math.round(neu.y)})`);
+  // Leistungsbudget (DESIGN §11.2: Frame-CPU unter 8 ms): mit 5 Fenstern kostet ihre Aktualisierung (4× je Sekunde) fast nichts
+  const mess = await page.evaluate(async () => {
+    const sp = window.eifeler.spiel;
+    sp.pause(false);
+    sp.fenster.messung = { ms: 0, max: 0, n: 0 };
+    const t0 = performance.now(), f0 = sp.fenster.messung.n;
+    await new Promise((ok) => setTimeout(ok, 4000));
+    const lager = document.querySelector('.fenster[data-fenster="geb:1"]').textContent;
+    return { ms: sp.fenster.messung.ms, max: sp.fenster.messung.max, n: sp.fenster.messung.n - f0, s: (performance.now() - t0) / 1000, lager };
+  });
+  info(`Bedienung M7: 5 Fenster, ${mess.n} Aktualisierungen in ${mess.s.toFixed(1)} s, im Mittel ${mess.ms.toFixed(2)} ms (max ${mess.max.toFixed(1)} ms)`);
+  if (mess.n < 8) fail(`Bedienung M7: Fenster werden kaum aktualisiert (${mess.n} in ${mess.s.toFixed(1)} s)`);
+  if (mess.ms > 4) fail(`Bedienung M7: Fenster-Aktualisierung zu teuer (${mess.ms.toFixed(2)} ms im Mittel)`);
+  if (!/Bretter|Stein/.test(mess.lager)) fail('Bedienung M7: Lagerfenster ohne Bestand');
+  await bild(page, '13-fuenf-fenster.png');
+  for (let i = 0; i < 6; i++) await page.keyboard.press('Escape');
+  const nachEscs = await page.evaluate(() => window.eifeler.spiel.fenster.ids);
+  info(`Bedienung M7: nach Esc offen: ${nachEscs.join(', ')}`);
+  if (!nachEscs.includes('geb:1') || nachEscs.some((x) => !['geb:1', 'einstellungen'].includes(x))) fail(`Bedienung M7: Esc und Pin: ${nachEscs.join(', ')}`);
+  // Warenverteilung über das Fenster (Befehl 'verteilung'), Ruhen über das Gebäudefenster ist im Unit-Test
+  await page.evaluate(() => { const sp = window.eifeler.spiel; for (const id of sp.fenster.ids) if (id !== 'geb:1') sp.fenster.schliesse(id); sp.fensterUmschalten('verteilung'); });
+  await page.waitForSelector('.fenster[data-fenster="verteilung"] .fe-platz:not([disabled])', { timeout: 5000 });
+  await page.locator('.fenster[data-fenster="verteilung"] .fe-platz:not([disabled])').first().click();
+  await page.waitForFunction(() => window.eifeler.spiel.protokoll().befehle.some((x) => x.befehl.art === 'verteilung'), null, { timeout: 10000, polling: 200 })
+    .then(() => info('Bedienung M7: Warenverteilung umgestellt (Befehl verteilung)'))
+    .catch(() => fail('Bedienung M7: Klick in der Warenverteilung schickt keinen Befehl'));
+  // Meldung am Rand: ein Gebäude ohne Weg, Klick springt hin
+  await page.evaluate(() => {
+    const sp = window.eifeler.spiel, L = sp.lagerHex;
+    for (let d = 3; d < 8; d++) for (const [dq, dr] of [[d, 0], [0, d], [-d, 0], [0, -d], [d, -d], [-d, d]]) {
+      const c = { q: L.q + dq, r: L.r + dr };
+      if (sp.sim.kannBauen('wohnhaus', c.q, c.r)) { sp.befehl({ art: 'gebaeude', typ: 'wohnhaus', q: c.q, r: c.r }); return; }
+    }
+  });
+  await page.waitForSelector('.randmeldung[data-art="getrennt"]', { timeout: 15000 })
+    .then(async () => {
+      const vor = await page.evaluate(() => ({ ...window.eifeler.cam.target }));
+      await page.locator('.randmeldung[data-art="getrennt"]').click();
+      await page.waitForTimeout(800);
+      const nach = await page.evaluate(() => ({ ...window.eifeler.cam.target }));
+      info(`Bedienung M7: Meldung am Rand „${await page.locator('.randmeldung[data-art="getrennt"]').textContent()}“, Kamera ${Math.round(Math.hypot(nach.x - vor.x, nach.z - vor.z))} m gefahren`);
+    })
+    .catch(() => fail('Bedienung M7: keine Meldung am Rand für ein Gebäude ohne Weg'));
+  const prot = await page.evaluate(() => window.eifeler.spiel.protokollZeilen.map((z) => z.text));
+  if (!prot.some((t) => /ohne Weg/.test(t))) fail(`Bedienung M7: Protokoll ohne die Meldung: ${prot.slice(-5).join(' | ')}`);
   await ctx.close();
 
   // ------------------------------------------------------------ Handy: Touch, 390×844
@@ -254,6 +338,15 @@ export async function bedienungsTest({ browser, url, aus, info, fail }) {
   await hp.locator('.aktion.bauen').tap();   // „Bauen“ bestätigt
   await hp.waitForFunction((n) => window.eifeler.spiel.sicht.gebaeude.length > n, hv.n, { timeout: 30000, polling: 200 });
   info('Bedienung Handy: Gebäude per Tipp und „Bauen“ gebaut');
+  // M7 Handy: Gebäudefenster als Blatt unten, ganz im Bild
+  await hp.evaluate(() => { const sp = window.eifeler.spiel; sp.waehleWerkzeug('keins'); sp.klickAuf(sp.lagerHex, true); });
+  await hp.waitForSelector('.fenster[data-fenster="geb:1"]', { timeout: 10000 });
+  await hp.waitForTimeout(500);
+  const blatt = await hp.evaluate(() => { const r = document.querySelector('.fenster').getBoundingClientRect(); return { l: r.left, r: r.right, o: r.top, u: r.bottom, b: innerWidth, h: innerHeight, sb: document.documentElement.scrollWidth }; });
+  info(`Bedienung Handy: Gebäudefenster ${Math.round(blatt.l)}..${Math.round(blatt.r)} × ${Math.round(blatt.o)}..${Math.round(blatt.u)} px`);
+  if (blatt.l < 0 || blatt.r > blatt.b + 0.5 || blatt.o < 0 || blatt.u > blatt.h || blatt.sb > blatt.b) fail(`Bedienung Handy: Fenster ragt aus dem Bild ${JSON.stringify(blatt)}`);
+  await bild(hp, '14-handy-fenster.png');
+  await hp.evaluate(() => window.eifeler.spiel.fenster.schliesseGruppe('auswahl', true));
   // Weg am Handy: Start-Fahne, ein Zwischenpunkt, dann Tipp auf die Gebäudefahne baut sofort (ohne Bestätigen)
   const weg = await hp.evaluate((ziel) => {
     const sp = window.eifeler.spiel;

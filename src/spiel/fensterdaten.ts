@@ -90,7 +90,7 @@ export function leistungText(t: GebaeudeTyp, w: readonly WareText[]): string[] {
   if (t.wandelt) z.push(`${mengeText(t.wandelt.menge, w[t.wandelt.ein])} → 1 ${w[t.wandelt.aus]?.eins ?? ''} in ${Math.round(t.wandelt.ticks / TICK_HZ)} s`);
   else if (t.funktion === 'erzeuger' && t.ausgangWare >= 0) z.push(`alle ${Math.round(t.arbeitTicks / TICK_HZ)} s 1 ${w[t.ausgangWare]?.eins ?? ''}`);
   else if (t.radius > 0 && t.ausgangWare >= 0) z.push(`holt ${w[t.ausgangWare]?.mehr ?? ''} im Umkreis von ${t.radius} Hexen`);
-  else if (t.funktion === 'foerster') z.push(`pflanzt Bäume im Umkreis von ${t.radius} Hexen`);
+  else if (t.radius > 0) z.push(`arbeitet im Umkreis von ${t.radius} Hexen (pflanzt, wo Platz ist)`);
   if (t.funktion === 'wohnen') z.push(`${t.nahrungPlaetze} Essensplätze · besseres Essen bringt schneller Nachwuchs`);
   if (t.wohnraum > 0) z.push(`Wohnraum für ${t.wohnraum}`);
   if (t.arbeiter) z.push(`braucht ${t.arbeiter} Bewohner als Arbeiter`);

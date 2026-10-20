@@ -267,7 +267,7 @@ IDs sind ASCII (`hoelzfaeller`, `kaese`), Anzeigenamen mit Umlauten.
 - **Gebäudefenster:** Zustand in Klartext („Wartet auf Stämme“), Puffer, Fortschritt, Produktivität, Knöpfe für Pause, Kamera und Abriss.
 - **Fahnen- und Trägerfenster:** Stapel mit Zielen, angeschlossene Segmente.
 - **Lagerfenster:** Bestand nach Kategorie. Pro Ware „normal“, „nicht einlagern“ oder „auslagern“.
-- **Warenübersicht** (W), **Statistik** (S), **Ereignisprotokoll** (L), **Einstellungen** (Esc).
+- **Warenübersicht** (I), **Statistik** (T), **Ereignisprotokoll** (L), **Einstellungen** (Esc). W und S bleiben bei der Kamera (beschlossen in M7).
 - **Meldungen** am rechten Rand, zusammengefasst („3× Fahne voll“). Ein Klick springt zum Ort.
 
 ### 9.3 Spielsteuerung
