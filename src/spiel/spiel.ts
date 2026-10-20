@@ -13,13 +13,18 @@ import type { Partie } from '../netz/partie';
 import { Partieleiste } from '../ui/partieleiste';
 import { AUTOSAVE_SPEICHER, baueSpielstand, dateiname, holeAutosave, leseSpielstand, type Spielstand } from './spielstand';
 import { spieleAb } from '../sim/replay';
-import { ARBEIT_MITTE_MAX, AUTOSAVE_MIN, DORFSTUFEN, FLAG_CAP, GEBAEUDE, GEBAEUDE_IDS, KIRMES, WAREN, WAREN_NAMEN } from '../sim/daten';
+import {
+  ARBEIT_MITTE_MAX, AUTOSAVE_MIN, BAULEUTE_MAX, DORFSTUFEN, FEST_OBERGRENZE, FLAG_CAP, GEBAEUDE, GEBAEUDE_IDS, JAHRESZEIT_TICKS, JAHRESZEITEN, KIRMES, KLEINE_FESTE,
+  WAREN, WAREN_NAMEN, WETTER, WETTER_ANKUENDIGUNG, zutatMenge,
+} from '../sim/daten';
 import { PROMILLE, TICK_HZ } from '../sim/typen';
 import type { Befehl, Id, Protokoll, SichtFahne, SichtGebaeude, SichtSegment, SimSicht } from '../sim/typen';
 import { Wege } from '../render/wege';
 import { Fahnen } from '../render/fahnen';
 import { Traeger } from '../render/traeger';
 import { Arbeiter } from '../render/arbeiter';
+import { Boten } from '../render/boten';
+import { setzeSchnee } from '../render/kulisse';
 import { Natur } from '../render/natur';
 import { Gebaeude, type GebaeudeHaken } from '../render/gebaeude';
 import { Markierung, type RingArt } from '../render/markierung';
@@ -32,10 +37,10 @@ import { Fensterflaeche, type Eingabe, type FensterArt, type FensterDaten } from
 import { ladeEinstellungen, speichereEinstellungen, wendeAn, type Einstellungen } from '../ui/einstellungen';
 import { icons, wennIconsDa, type Icons } from '../render/icons';
 import {
-  bauTooltip, fahneFenster, gebaeudeFenster, hilfeFenster, Produktivitaet, protokollFenster, statistikFenster, verteilungFenster,
+  bauTooltip, fahneFenster, gebaeudeFenster, hilfeFenster, LAGERREGEL_NAMEN, Produktivitaet, protokollFenster, statistikFenster, verteilungFenster,
   verteilungKnopf, warenFenster, warnungen, wegFenster, type FensterKontext, type ProtokollZeile, type StatMass,
 } from './fensterdaten';
-import { erzaehlerFuer, MeldungsFilter, type Erzaehler, type Meldung } from './meldungen';
+import { erzaehlerFuer, MeldungsFilter, type Erzaehler, type Meldung, type MeldungsNamen } from './meldungen';
 import {
   BAUPLATZ_NAMEN, bedarfNamen, fehlmengen, hexeImUmkreis, kostenText as kostenAlsText, menueGruppen, naechstePrioritaet, PRIO_NAMEN,
   reichweiteText, wareTexte, zustandsText,
@@ -87,7 +92,16 @@ const GEBAEUDE_WERKZEUGE = GEBAEUDE_IDS.filter((id) => id !== 'lager');
 /** Warenliste als Text: „10 Bratkartoffeln, 10 Most, 6 Käse“. */
 const listeText = (liste: readonly number[]) => kostenAlsText(liste, WARE_TEXT);
 /** Was die Kirmes Weiler → Dorf freischaltet (Text). */
-const FREI_TEXT = KIRMES[0] ? KIRMES[0].schaltetFrei.join(', ') : '';
+/** Was die Kirmes freischaltet, die zur Stufe `stufe` führt. */
+const freiText = (stufe: number) => (KIRMES[stufe - 1] ? KIRMES[stufe - 1].schaltetFrei.join(', ') : '');
+/** Namen für Meldungen ab M8: kleine Feste, Wetter, Felder. */
+const MELDUNGS_NAMEN: MeldungsNamen = {
+  fest: (nr) => KLEINE_FESTE[nr]?.name ?? 'Fest',
+  wetter: (art) => ({ id: WETTER[art]?.id ?? '', name: WETTER[art]?.name ?? '' }),
+  feld: (typ) => GEBAEUDE[typ]?.name ?? typ,
+};
+/** Jahreszeit als Zeichen. */
+const JZ_SYMBOL = ['🌱', '☀️', '🍂', '❄️'];
 
 /** Namen der Waren, auf die ein fertiges Gebäude wartet (Eingang laut Daten), für „Wartet auf Milch“. */
 function eingangNamen(g: SichtGebaeude): string {
@@ -95,7 +109,7 @@ function eingangNamen(g: SichtGebaeude): string {
   if (!t || g.bau < PROMILLE) return bedarfNamen(g.bedarf ?? [], WARE_TEXT);
   if (t.funktion === 'wohnen') return 'Essen';
   if (t.funktion === 'kirmes') return 'die Warenliste';
-  return bedarfNamen(t.puffer.map((n, a) => (n > 0 && (g.puffer?.[a] ?? 0) < (t.wandelt?.menge ?? 1) ? 1 : 0)), WARE_TEXT);
+  return bedarfNamen(t.puffer.map((n, a) => (n > 0 && (g.puffer?.[a] ?? 0) < zutatMenge(t, a) ? 1 : 0)), WARE_TEXT);
 }
 
 /** Baumenü aus den Daten: Gruppen und Gebäude wie in data/buildings.json (ohne Lager), mit Icon, Taste und Tooltip. */
@@ -139,6 +153,7 @@ export class Spiel {
   private readonly fahnen: Fahnen;
   private readonly traeger: Traeger;
   private readonly arbeiter: Arbeiter;
+  private readonly boten: Boten;
   private readonly natur: Natur;
   private readonly gebaeude: Gebaeude;
   private readonly markierung: Markierung;
@@ -235,13 +250,14 @@ export class Spiel {
     this.traeger = new Traeger(map, grid, base, ex);
     this.gebaeude = new Gebaeude(map, grid, base, ex, ctx.haken);
     this.arbeiter = new Arbeiter(map, grid, base, ex);
+    this.boten = new Boten(map, grid, base, ex);
     this.natur = new Natur(map, grid, base, ex, ctx.haken.trees);
     this.markierung = new Markierung(map, grid, base, ex);
     this.bauplaetze = new Bauplaetze(map, grid, base, ex);
     this.geist = new Geist(map, grid, base, ex);
     this.wege.wald = ctx.haken.trees ?? null;
-    this.fahnen.kamera = ctx.camera; this.traeger.kamera = ctx.camera; this.gebaeude.kamera = ctx.camera; this.arbeiter.kamera = ctx.camera;
-    this.group.add(this.wege.group, this.fahnen.group, this.traeger.group, this.gebaeude.group, this.arbeiter.group, this.natur.group,
+    this.fahnen.kamera = ctx.camera; this.traeger.kamera = ctx.camera; this.gebaeude.kamera = ctx.camera; this.arbeiter.kamera = ctx.camera; this.boten.kamera = ctx.camera;
+    this.group.add(this.wege.group, this.fahnen.group, this.traeger.group, this.gebaeude.group, this.arbeiter.group, this.boten.group, this.natur.group,
       this.bauplaetze.group, this.geist.group, this.markierung.group);
     ctx.scene.add(this.group);
 
@@ -389,7 +405,7 @@ export class Spiel {
     this.ctx.ex = ex;
     this.wege.setExaggeration(ex); this.fahnen.setExaggeration(ex); this.traeger.setExaggeration(ex);
     this.gebaeude.setExaggeration(ex); this.markierung.setExaggeration(ex);
-    this.arbeiter.setExaggeration(ex); this.natur.setExaggeration(ex);
+    this.arbeiter.setExaggeration(ex); this.natur.setExaggeration(ex); this.boten.setExaggeration(ex);
     this.bauplaetze.setExaggeration(ex); this.geist.setExaggeration(ex);
   }
 
@@ -433,6 +449,10 @@ export class Spiel {
     this.traeger.update(this._sicht, a, dt);
     this.natur.update(this._sicht);
     this.arbeiter.update(this._sicht, a, dt);
+    this.boten.update(this._sicht, a, dt);
+    // Schnee kommt mit dem Winter und taut in den ersten Minuten des Frühjahrs (Drehbuch 7.4)
+    const j = this._sicht.jahr, zt = JAHRESZEIT_TICKS - j.rest;
+    setzeSchnee(j.jahreszeit === 3 ? Math.min(1, zt / (90 * 20)) : j.jahreszeit === 0 && j.jahr > 0 ? Math.max(0, 1 - zt / (120 * 20)) : 0);
 
     // Maus: Hex unter dem Zeiger (gedrosselt, folgt auch der bewegten Kamera)
     this.mausTimer -= dt;
@@ -471,7 +491,7 @@ export class Spiel {
 
   private zeigeMeldung(m: Meldung): void {
     const g = m.gebaeude ? this._sicht.gebaeude.find((x) => x.id === m.gebaeude) : undefined;
-    const ort = g ? { q: g.q, r: g.r } : undefined;
+    const ort = g ? { q: g.q, r: g.r } : m.ort;
     this.meldungen.zeige({ wer: this.erzaehler.name, text: m.text, platt: m.platt, gross: m.gross, onKlick: ort ? () => this.springeZu(ort) : undefined });
     this.insProtokoll(`${this.erzaehler.name}: ${m.text}`, false, ort);
   }
@@ -502,8 +522,16 @@ export class Spiel {
       else if (e.art === 'stufe') this.insProtokoll(`Das Dorf ist jetzt ${DORFSTUFEN[e.wert] ?? ''}.`, false);
       else if (e.art === 'zuzug') this.insProtokoll(`${e.wert} Zugezogene kommen zur Kirmes.`, false);
       else if (e.art === 'notnagel') this.insProtokoll('Ein Zugezogener kommt (Notnagel).', false);
+      else if (e.art === 'jahreszeit') this.insProtokoll(`${JZ_SYMBOL[e.wert]} ${JAHRESZEITEN[e.wert] ?? ''} beginnt.`, false);
+      else if (e.art === 'wetter') this.insProtokoll(`${WETTER[e.wert]?.symbol ?? ''} ${WETTER[e.wert]?.name ?? ''} kommt in ${Math.round(WETTER_ANKUENDIGUNG / 20 / 60)} Minuten.`, true);
+      else if (e.art === 'kleines_fest') this.insProtokoll(`${KLEINE_FESTE[e.wert]?.symbol ?? ''} ${KLEINE_FESTE[e.wert]?.name ?? 'Fest'} gefeiert (+${KLEINE_FESTE[e.wert]?.punkte ?? 0} Punkte, höchstens ${FEST_OBERGRENZE}).`, false, ort);
+      else if (e.art === 'friert') this.insProtokoll('Es fehlt Essen für den Winter – die Leute frieren.', true);
+      else if (e.art === 'satt') this.insProtokoll('Alle wieder satt.', false);
+      else if (e.art === 'bauleute') this.insProtokoll(e.wert === 0 ? 'Ein neuer Bauarbeiter (1 Werkzeug).' : 'Ein neuer Planierer (1 Werkzeug).', false);
+      else if (e.art === 'verloren') this.insProtokoll(`Ein Bote hat ${WARE_TEXT[e.wert]?.eins ?? 'etwas'} verloren.`, true, e.q !== undefined && e.r !== undefined ? { q: e.q, r: e.r } : undefined);
     }
-    for (const m of this.filter.neue(s.ereignisse, s.dorf, name, (a) => WARE_TEXT[a]?.mehr ?? '', (n) => DORFSTUFEN[n] ?? '', FREI_TEXT, liste)) this.zeigeMeldung(m);
+    for (const m of this.filter.neue(s.ereignisse, s.dorf, name, (a) => WARE_TEXT[a]?.mehr ?? '', (n) => DORFSTUFEN[n] ?? '', freiText(s.dorf.stufe), liste,
+      MELDUNGS_NAMEN, s.jahr.kommt)) this.zeigeMeldung(m);
     // Begrüßung erst, wenn das Spiel läuft (beim Laden wäre sie schon wieder weg)
     if (!this.begruesst && s.tick >= 20) {
       this.begruesst = true;
@@ -1109,7 +1137,19 @@ export class Spiel {
     else if (k === 'bereich_zurueck') this.bereichZuruecksetzen();
     else if (k === 'ruhen') { this.befehl({ art: 'ruhen', id, an: !g.ruht }); this.melde(g.ruht ? `${NAMEN[g.typ]} arbeitet wieder.` : `${NAMEN[g.typ]} ruht.`, false); }
     else if (k === 'kamera') this.springeZu(g);
-    else if (k === 'abriss') {
+    else if (k.startsWith('regel:') && g.regel) {
+      // Lagerregel durchschalten: normal → nicht einlagern → auslagern → normal
+      const a = Number(k.slice(6));
+      const neu = ((g.regel[a] ?? 0) + 1) % 3;
+      this.befehl({ art: 'lagerregel', id, ware: a, regel: neu });
+      this.melde(`${WARE_TEXT[a]?.mehr ?? ''}: ${LAGERREGEL_NAMEN[neu]}.`, false);
+    } else if (/^(bau|plan):[+-]$/.test(k)) {
+      const d = this._sicht.dorf;
+      const plus = k.endsWith('+') ? 1 : -1;
+      const bau = Math.max(0, Math.min(BAULEUTE_MAX, d.bauSoll + (k.startsWith('bau') ? plus : 0)));
+      const plan = Math.max(0, Math.min(BAULEUTE_MAX, d.planSoll + (k.startsWith('plan') ? plus : 0)));
+      this.befehl({ art: 'bauleute', bauarbeiter: bau, planierer: plan });
+    } else if (k === 'abriss') {
       if (this.abrissFrage?.id === `geb:${id}`) { this.abrissFrage = null; this.befehl({ art: 'abriss_gebaeude', id }); this.melde('Abgerissen.', false); }
       else this.abrissFrage = { id: `geb:${id}`, bis: performance.now() + 3000 };
     }
@@ -1334,13 +1374,31 @@ export class Spiel {
       const soll = k.liste.reduce((a, b) => a + b, 0);
       const ist = k.liste.reduce((a, n, i) => a + Math.min(n, k.geliefert[i]), 0);
       const teile = k.liste.map((n, a) => (n > 0 ? `${WARE_TEXT[a].icon} ${Math.min(n, k.geliefert[a])}/${n}` : '')).filter(Boolean).join(' · ');
+      const misch = k.mischkorb.soll ? ` · 🧺 ${k.mischkorb.da}/${k.mischkorb.soll}` : '';
+      const mischText = k.mischkorb.soll ? ` und ${k.mischkorb.soll} beliebige veredelte Waren` : '';
+      const gesamt = soll + k.mischkorb.soll, da = ist + k.mischkorb.da;
       if (k.fest > 0) kirmes = { text: `🎡 Kirmes! Noch ${Math.ceil(k.fest / 20)} s – dann wird aus dem ${DORFSTUFEN[d.stufe]} ein ${DORFSTUFEN[d.stufe + 1]}`, prozent: 100, fest: true };
-      else if (!k.platz) kirmes = { text: `🎡 Kirmes ${DORFSTUFEN[d.stufe]} → ${DORFSTUFEN[d.stufe + 1]}: Kirmesplatz bauen, dann ${listeText(k.liste)} liefern`, prozent: 0, fest: false };
-      else kirmes = { text: `🎡 Kirmes: ${teile}`, prozent: soll ? (100 * ist) / soll : 0, fest: false };
+      else if (!k.platz) kirmes = { text: `🎡 Kirmes ${DORFSTUFEN[d.stufe]} → ${DORFSTUFEN[d.stufe + 1]}: Kirmesplatz bauen, dann ${listeText(k.liste)}${mischText} liefern`, prozent: 0, fest: false };
+      else kirmes = { text: `🎡 Kirmes → ${DORFSTUFEN[d.stufe + 1]}: ${teile}${misch}`, prozent: gesamt ? (100 * da) / gesamt : 0, fest: false };
     } else if (d.stufe > 0) {
-      kirmes = { text: `🎡 ${DORFSTUFEN[d.stufe]}! Die nächste Kirmes kommt mit M8.`, prozent: 100, fest: false };
+      kirmes = { text: `🎡 ${DORFSTUFEN[d.stufe]}! Höher geht es nicht – jetzt wird gefeiert, was das Jahr hergibt.`, prozent: 100, fest: false };
     }
-    const zeigen = [0, 1, 2, 6, 5, 4, 9, 8, 7, 10, 11].map((a) => ({ art: a, icon: WARE_TEXT[a]?.icon ?? '', name: WARE_TEXT[a]?.mehr ?? '' }));
+    // kleines Fest der Jahreszeit (Drehbuch 6 „Feste“)
+    let fest: NonNullable<StatusDaten['dorf']>['fest'] = null;
+    if (d.fest) {
+      const f = KLEINE_FESTE[d.fest.nr];
+      const soll = d.fest.liste.reduce((a, b) => a + b, 0), ist = d.fest.geliefert.reduce((a, b) => a + b, 0);
+      const teile = d.fest.liste.map((n, a) => (n > 0 ? `${WARE_TEXT[a].icon} ${d.fest!.geliefert[a]}/${n}` : '')).filter(Boolean).join(' · ');
+      fest = d.fest.laeuft > 0 ? { text: `${f.symbol} ${f.name}! Es wird gefeiert.`, prozent: 100, fest: true }
+        : { text: `${f.symbol} ${f.name} (+${f.punkte} Punkte): ${teile}`, prozent: soll ? (100 * ist) / soll : 0, fest: false };
+    }
+    // Jahreszeit und Wetter (Drehbuch 7.4)
+    const j = s.jahr;
+    const minuten = (t: number) => Math.max(1, Math.ceil(t / (60 * 20)));
+    let jahr = `${JZ_SYMBOL[j.jahreszeit]} ${JAHRESZEITEN[j.jahreszeit]}, Jahr ${j.jahr + 1} (noch ${minuten(j.rest)} min)`;
+    for (const w of j.wetter) jahr += ` · ${WETTER[w.art].symbol} ${WETTER[w.art].name} (noch ${minuten(w.bis - s.tick)} min)`;
+    for (const w of j.kommt) jahr += ` · bald ${WETTER[w.art].symbol} ${WETTER[w.art].name}`;
+    const zeigen = [0, 1, 2, 6, 5, 4, 9, 8, 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19].map((a) => ({ art: a, icon: WARE_TEXT[a]?.icon ?? '', name: WARE_TEXT[a]?.mehr ?? '' }));
     const vorrat = this.lagerVorrat();
     const knappText: Record<string, string> = {};
     for (const id of GEBAEUDE_WERKZEUGE) {
@@ -1352,6 +1410,7 @@ export class Spiel {
       dorf: {
         stufe: DORFSTUFEN[d.stufe] ?? '', bewohner: d.bewohner, wohnraum: d.wohnraum, frei: d.frei,
         bauarbeiter: [d.bauarbeiter.frei, d.bauarbeiter.gesamt], planierer: [d.planierer.frei, d.planierer.gesamt], kirmes,
+        fest, punkte: d.festPunkte, friert: d.friert, jahr, winter: j.jahreszeit === 3,
       },
     });
     // Baumenü: noch nicht freigeschaltete und schon gebaute einmalige Gebäude sperren

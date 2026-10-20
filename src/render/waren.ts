@@ -145,6 +145,82 @@ const FORMEN: Record<string, Form> = {
       paint(new THREE.BoxGeometry(W * 0.06, W * 0.55, W * 0.06).rotateZ(0.35).translate(W * 0.12, W * 0.8, 0), '#8a6340'),
     ],
   }),
+  // Gerste: gebundene Garbe mit Ähren oben und Strohband
+  garbe: (f) => {
+    const out = [walze(W * 0.22, W * 0.3, W * 0.75, 0, ton(f, 0.85), 8), walze(W * 0.24, W * 0.24, W * 0.08, W * 0.32, '#8a6038', 8)];
+    for (let i = 0; i < 7; i++) {
+      const a = (i / 7) * Math.PI * 2;
+      out.push(paint(new THREE.ConeGeometry(W * 0.07, W * 0.3, 4).rotateZ(Math.cos(a) * 0.4).rotateX(Math.sin(a) * 0.4)
+        .translate(Math.cos(a) * W * 0.14, W * 0.88, Math.sin(a) * W * 0.14), f));
+    }
+    return { hoehe: W * 1.0, teile: out };
+  },
+  // Landbier: liegendes Holzfass mit dunklen Reifen und Zapfhahn
+  fass: (f) => ({
+    hoehe: W * 0.75,
+    teile: [
+      paint(new THREE.CylinderGeometry(W * 0.36, W * 0.36, W * 0.85, 10).rotateZ(Math.PI / 2).translate(0, W * 0.38, 0), f),
+      paint(new THREE.CylinderGeometry(W * 0.4, W * 0.4, W * 0.38, 10).rotateZ(Math.PI / 2).translate(0, W * 0.38, 0), ton(f, 1.12)),
+      paint(new THREE.CylinderGeometry(W * 0.41, W * 0.41, W * 0.06, 10).rotateZ(Math.PI / 2).translate(-W * 0.3, W * 0.38, 0), '#3a2a1a'),
+      paint(new THREE.CylinderGeometry(W * 0.41, W * 0.41, W * 0.06, 10).rotateZ(Math.PI / 2).translate(W * 0.3, W * 0.38, 0), '#3a2a1a'),
+      paint(new THREE.BoxGeometry(W * 0.06, W * 0.14, W * 0.06).translate(W * 0.45, W * 0.3, 0), '#c9a227'),
+    ],
+  }),
+  // Wacholder: kleines Körbchen mit dunkelblauen Beeren und einem grünen Zweig
+  beeren: (f) => {
+    const out = [walze(W * 0.36, W * 0.28, W * 0.26, 0, '#b0844e', 9)];
+    for (let i = 0; i < 9; i++) {
+      const a = i * 2.4, r = W * (0.05 + (i % 3) * 0.09);
+      out.push(kugel(W * 0.09, Math.cos(a) * r, W * (0.3 + (i % 2) * 0.05), Math.sin(a) * r, i % 4 ? f : ton(f, 0.7)));
+    }
+    out.push(paint(new THREE.ConeGeometry(W * 0.08, W * 0.45, 4).rotateZ(1.1).translate(W * 0.25, W * 0.42, 0), '#3f6b3a'));
+    return { hoehe: W * 0.5, teile: out };
+  },
+  // Schnaps: Flasche aus hellem Glas mit rotem Korken und Etikett – deutlich anders als der Mostkrug
+  flasche: (f) => ({
+    hoehe: W * 1.05,
+    teile: [
+      walze(W * 0.2, W * 0.2, W * 0.6, 0, f, 9),
+      walze(W * 0.08, W * 0.2, W * 0.15, W * 0.6, f, 9),
+      walze(W * 0.07, W * 0.07, W * 0.2, W * 0.75, f, 7),
+      walze(W * 0.08, W * 0.08, W * 0.1, W * 0.95, '#b03a2e', 7),
+      walze(W * 0.205, W * 0.205, W * 0.22, W * 0.18, '#f2e6c8', 9),
+    ],
+  }),
+  // Erz: rostbrauner, kantiger Brocken mit dunklen Adern
+  brocken: (f) => ({
+    hoehe: W * 0.7,
+    teile: [
+      paint(new THREE.DodecahedronGeometry(W * 0.4, 0).scale(1.1, 0.85, 0.95).translate(0, W * 0.34, 0), f),
+      paint(new THREE.DodecahedronGeometry(W * 0.2, 0).translate(W * 0.28, W * 0.18, W * 0.2), ton(f, 0.6)),
+      paint(new THREE.DodecahedronGeometry(W * 0.16, 0).translate(-W * 0.3, W * 0.14, -W * 0.15), ton(f, 1.2)),
+    ],
+  }),
+  // Holzkohle: offener Sack mit schwarzen Stücken obenauf
+  kohle: (f) => {
+    const out = [kugel(W * 0.4, 0, W * 0.32, 0, '#cbb88a', 0.85), walze(W * 0.3, W * 0.36, W * 0.1, W * 0.55, '#bfa978', 9)];
+    for (let i = 0; i < 6; i++) out.push(paint(new THREE.DodecahedronGeometry(W * 0.1, 0).translate(Math.cos(i * 1.1) * W * 0.16, W * 0.66, Math.sin(i * 1.1) * W * 0.16), i % 2 ? f : ton(f, 1.6)));
+    return { hoehe: W * 0.75, teile: out };
+  },
+  // Eisen: drei graublaue Barren, gestapelt
+  barren: (f) => ({
+    hoehe: W * 0.42,
+    teile: [
+      paint(new THREE.BoxGeometry(W * 0.9, W * 0.16, W * 0.3).translate(0, W * 0.08, -W * 0.17), f),
+      paint(new THREE.BoxGeometry(W * 0.9, W * 0.16, W * 0.3).translate(0, W * 0.08, W * 0.17), ton(f, 0.85)),
+      paint(new THREE.BoxGeometry(W * 0.3, W * 0.16, W * 0.9).translate(0, W * 0.24, 0), ton(f, 1.15)),
+    ],
+  }),
+  // Werkzeug: Hammer und Schaufel über Kreuz (Drehbuch 4.5)
+  werkzeug: (f) => ({
+    hoehe: W * 0.4,
+    teile: [
+      paint(new THREE.BoxGeometry(W * 1.1, W * 0.08, W * 0.08).rotateY(0.6).translate(0, W * 0.1, 0), '#8a6340'),
+      paint(new THREE.BoxGeometry(W * 0.16, W * 0.18, W * 0.38).rotateY(0.6).translate(Math.cos(0.6) * W * 0.5, W * 0.12, -Math.sin(0.6) * W * 0.5), f),
+      paint(new THREE.BoxGeometry(W * 1.0, W * 0.07, W * 0.07).rotateY(-0.6).translate(0, W * 0.2, 0), '#8a6340'),
+      paint(new THREE.BoxGeometry(W * 0.3, W * 0.04, W * 0.26).rotateY(-0.6).translate(-Math.cos(0.6) * W * 0.55, W * 0.2, -Math.sin(0.6) * W * 0.55), ton(f, 0.9)),
+    ],
+  }),
 };
 
 /** Farbenblind-Modus (Einstellungen): andere Hauptfarben; gilt für Modelle, die danach gebaut werden. */

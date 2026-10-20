@@ -102,6 +102,13 @@ donoh widder fott. Ungebroche? Einfach neu starte, et määt do wigger wo et opj
   Jrööß vun d'r Ovverfläch, Färveblind-Modus, Kamera-Tempo, Autosave, Tipps) un ❓ **Hölp** (<kbd>H</kbd>). Wat hängk, steiht
   rääts am Rand („2× Jebäude ohne Wääch zom Lager“), ene Klick sprengk hin. **Autosave** alle 10 Spillminütte em Browser,
   „⏱ Weiterspielen“ en d'r Kaatewahl. Am Handy kumme de Finster unge övver de Bauleiss. Jeiht och em Mehrspiller.
+- **Janze Wirtschaff un Johreszigge (M8):** Ab Dorf **Bier** (Jerstefeld → Brauerei → Landbier), **Schnaps** (Wacholderheid →
+  Brennerei), **Schänk** un **Lagerhuus**; ab Kirchdorf **Iise** (Ääzjrov, Köhlerei, Iisehött, Schmied → Werkzeuch). Em
+  Lagerfinster stellt mer de Wunschzahl vun Bauarbeider un Planierer en un för jede Waar „normal / nit enlagere / uslagere“.
+  Kirmes bes zom **Marktflecke**, **kleine Feste** (Maifest, Viehmaat, Ääntedank, Mätesfüür, Fastelovend) eimol em Johr för
+  Punkte. **Johreszigge:** e Johr dorrt 60 Spillminütte; em Winter litt Schnie, de Felder ruhe, un et Dorf ääß vum Vürrot – wä
+  nix hät, früss (lahm, ävver keiner stirv). **Wedder** kütt för all jlich, aanjekündich als Buureräjel. **Beschwipste Bote**
+  vun d'r Schänk loofe querfeldein, torkele un verliere ens jet. Zahle: `data/jahr.json`, `data/feste.json`, `data/dorf.json`.
 - **Simulation** (`src/sim/`): faste Tick (20/s), nur janze Zahle, jede Aktion es ene Befehl met Tick-Nummer,
   Prüfsumm övver dä Zostand, Befehlsprotokoll zom Avspille. Dä Smoke-Test pröf, dat Node un Browser de selve
   Prüfsumm krije.

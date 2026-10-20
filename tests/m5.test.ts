@@ -251,7 +251,7 @@ describe('Kirmes und Dorfstufe (Drehbuch 5.2)', () => {
     lauf(sim, k.festTicks + 2);
     const d = sim.sicht().dorf;
     expect(d.stufe).toBe(1);
-    expect(d.kirmes).toBeNull();
+    expect(d.kirmes!.liste[WARE.landbier]).toBe(KIRMES[1].liste[WARE.landbier]); // nächste Stufe: Dorf → Kirchdorf
     expect(d.bewohner).toBe(vorher + k.zuzug);
     expect(sim.sperrGrund('reifekeller')).toBe('');
     expect(sim.kannBauen('reifekeller', -3, 0)).toBe(true);

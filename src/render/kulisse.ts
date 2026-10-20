@@ -8,7 +8,12 @@ export const kulisseUniforms = {
   /** Mittel-Hex des Spielfelds (q, r) und Radius in Hexen. */
   uKPlay: { value: new THREE.Vector3() },
   uKOn: { value: 1 },
+  /** Schnee im Winter (Drehbuch 7.4): 0 kein, 1 ganz weiß; die Spiel-Schicht blendet ihn mit der Jahreszeit ein und aus. */
+  uSchnee: { value: 0 },
 };
+
+/** Schneedecke setzen (0..1), wirkt auf Gelände und Wald. */
+export function setzeSchnee(anteil: number) { kulisseUniforms.uSchnee.value = Math.max(0, Math.min(1, anteil)); }
 
 export function setzeKulisse(originX: number, originZ: number, q: number, r: number, radius: number) {
   kulisseUniforms.uKOrigin.value.set(-originX, -originZ);
@@ -19,7 +24,9 @@ export function setzeKulisse(originX: number, originZ: number, q: number, r: num
 export const FADE_HEX = [8, 17] as const;
 
 export const KULISSE_GLSL = /* glsl */ `
-uniform vec2 uKOrigin; uniform vec3 uKPlay; uniform float uKOn;
+uniform vec2 uKOrigin; uniform vec3 uKPlay; uniform float uKOn; uniform float uSchnee;
+// Schnee: weiß-bläulich, k 0..1 wie stark er liegen bleibt
+vec3 kSchnee(vec3 c, float k){ return mix(c, vec3(0.93, 0.95, 0.99), clamp(uSchnee * k, 0.0, 1.0)); }
 vec2 kHexRound(vec2 a){ vec3 c=vec3(a.x, a.y, -a.x-a.y); vec3 r=floor(c+0.5); vec3 d=abs(r-c);
   if(d.x>d.y && d.x>d.z) r.x=-r.y-r.z; else if(d.y>d.z) r.y=-r.x-r.z; return r.xy; }
 vec2 kFrac(vec2 xz){ vec2 p = xz - uKOrigin; return vec2((0.57735027 * p.x - p.y / 3.0) / 60.0, p.y / 90.0); }

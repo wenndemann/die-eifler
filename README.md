@@ -113,6 +113,23 @@ nach Gebrauch wieder. Unterbrochen? Einfach neu starten, es setzt fort. Details 
   (<kbd>H</kbd>). Störungen stehen zusammengefasst am rechten Rand („2× Gebäude ohne Weg zum Lager“), ein Klick springt hin.
   **Autosave** alle 10 Spielminuten in den Browser (ein Platz), „⏱ Weiterspielen“ in der Kartenwahl. Am Handy kommen Fenster
   als Blatt über der Bauleiste. Warenverteilung, Anhalten und Statistik sind Spielzustand und gehen auch im Mehrspieler.
+- **Volle Grundwirtschaft und Jahreszeiten (M8):** Ab Dorf: **Bier** (Gerstenfeld → Brauerei → Landbier), **Schnaps**
+  (Wacholderheide → Brennerei), **Schänke** und **Lagerhaus**; ab Kirchdorf **Eisen** (Erzgrube, Köhlerei, Eisenhütte, Schmiede →
+  Werkzeug). Erzgrube und Eisenhütte brauchen Werkzeug für ihre Fachkraft, die Kirchdorf-Kirmes schenkt 2 Stück. Im Lagerfenster
+  stellt man die **Wunschzahl Bauarbeiter und Planierer** ein (je neuer: 1 Werkzeug + 1 Bewohner) und je Ware die
+  **Lagerregel** normal / nicht einlagern / auslagern (Zeile antippen). Kirmes **Dorf → Kirchdorf** (15 Bergkäse, 20 Honig,
+  25 Landbier, 10 Schnaps) und **Kirchdorf → Marktflecken** (10 Bergkäse als Platzhalter der Völkchen-Spezialität bis M10,
+  10 Werkzeug, Mischkorb aus 20 beliebigen veredelten Waren). **Kleine Feste** am Kirmesplatz, jedes in seiner Jahreszeit und
+  einmal im Jahr: Maifest, Viehmarkt, Erntedank, Martinsfeuer, Fastelovend, 15–25 Punkte, höchstens 200 (`data/feste.json`).
+  **Jahreszeiten:** ein Spieljahr = 60 Spielminuten, Start im Frühjahr. Felder (Kartoffel, Obst, Bienen, Gerste, Wacholder)
+  ruhen im Winter, säen im Frühjahr 2 min und ernten im Herbst schneller; im Winter liegt Schnee, Wege sind langsamer und das
+  Dorf isst je 10 Bewohner jede Minute 1 Essen aus dem Lager – fehlt es, frieren die Leute (halbes Tempo, kein Nachwuchs, niemand
+  stirbt). **Wetter** aus der gemeinsamen Saat, 2 Minuten vorher als Bauernregel angekündigt: Regen, Talnebel, Venn-Wind,
+  Dürre, Missernte, Hochwasser in der Aue (Gebäude stehen still, an Ufer-Fahnen schwimmen Waren weg). **Beschwipste Boten:**
+  die Schänke macht aus Schnaps Boten, die weite Lieferungen querfeldein tragen, torkeln, rote Nase und Flasche haben und jede
+  zehnte Ware verlieren (liest später einer auf). Zahlen: `data/jahr.json`, `data/feste.json`, `data/dorf.json`.
+  Balancing: der Spieltest-Bot (`tests/m8-szenario.ts`) wird in 2 Stunden allein Marktflecken (Dorf ~27, Kirchdorf ~52,
+  Marktflecken ~75 Bot-Minuten; Menschen brauchen länger).
 - **Simulation** (`src/sim/`): fester Tick (20/s), nur Ganzzahlen, jede Aktion ist ein Befehl mit Tick-Nummer,
   Prüfsumme über den Zustand (Statusleiste „Sim“), Befehlsprotokoll zum Abspielen (`spieleAb`). Der Smoke-Test
   prüft, dass Node und Browser dieselbe Prüfsumme bekommen und ein Replay im zweiten Browser-Fenster gleich ausgeht.
@@ -146,6 +163,7 @@ Bauen auf einen anderen Server (oder `…&vm=wss://…` in der Adresse).
 | `npm run build` | Typprüfung und Produktions-Build (ohne Weltdaten) |
 | `npm test` | Unit-Tests (Vitest) |
 | `npm run test:smoke` | Browser-Test: Kartenwahl → Ausschnitt laden → Screenshots, Prüfsumme; dazu zwei Fenster im Mehrspieler über schlechtes Netz (Neuladen in unter 30 s) |
+| `node tools/m8-ansicht.mjs [ordner]` | Ansicht M8: stellt alle neuen Gebäude, Boten und verlorene Waren ans Lager und macht Screenshots im Sommer, im Winter und nah am Boten |
 | `npm run vermittlung` | Vermittlungs-Server für den Mehrspieler (Port `PORT`, Standard 8787; TURN über `TURN_URLS`/`TURN_SECRET`) |
 | `npm run setup -- [Optionen]` | Weltdaten rechnen (siehe oben) |
 | `npm run build:share` | eigenständige Teilen-Version mit einem Teil der Weltdaten (z. B. als Artifact-Seite fürs Handy) |

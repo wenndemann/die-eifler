@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { spieleAb } from '../src/sim/replay';
 import { Simulation } from '../src/sim/sim';
-import { ABNEHMER, ABNEHMER_ZAHL, STAT_MAX, STAT_TAKT, VERTEILUNG_STANDARD, WARE, WAREN } from '../src/sim/daten';
+import { ABNEHMER, ABNEHMER_ZAHL, STAT_MAX, STAT_TAKT, VERTEILUNG_JE_WARE, VERTEILUNG_STANDARD, WARE, WAREN } from '../src/sim/daten';
 import { STAT_KOPF } from '../src/sim/typen';
 import type { Befehl } from '../src/sim/typen';
 import { kopie } from '../src/sim/stand';
@@ -39,7 +39,8 @@ describe('Warenverteilung (ROADMAP M7)', () => {
     for (const sp of [0, 1]) {
       const v = sim.sicht(sp).dorf.verteilung;
       expect(v.length).toBe(WAREN.length);
-      for (const r of v) expect(r).toEqual([...VERTEILUNG_STANDARD]);
+      v.forEach((r, a) => expect(r).toEqual([...VERTEILUNG_JE_WARE[a]]));
+      expect(v[WARE.bretter]).toEqual([...VERTEILUNG_STANDARD]);
     }
   });
 

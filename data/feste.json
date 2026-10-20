@@ -1,0 +1,12 @@
+{
+ "hinweis": "Kleine Feste (Drehbuch 6 „Feste“, 7.4; beschlossen M8): gefeiert am Kirmesplatz, jedes nur in seiner Jahreszeit (0 Frühjahr, 1 Sommer, 2 Herbst, 3 Winter) und höchstens einmal je Spieljahr. Waren, die auch die Kirmes braucht, gehen erst an die Kirmes. Punkte zählen bis 'obergrenze' (danach wird weiter gefeiert, aber ohne Punkte). Kleine Feste schalten nichts frei. Das Weinfest kommt mit Ahrtalern und Moselanern (M10).",
+ "obergrenze": 200,
+ "fest_s": 30,
+ "feste": [
+  { "id": "maifest", "name": "Maifest", "symbol": "🌳", "jahreszeit": 0, "liste": { "landbier": 8, "bratkartoffeln": 6 }, "punkte": 20 },
+  { "id": "viehmarkt", "name": "Viehmarkt", "symbol": "🐄", "jahreszeit": 1, "liste": { "kaese": 6, "milch": 6, "honig": 4 }, "punkte": 15 },
+  { "id": "erntedank", "name": "Erntedank", "symbol": "🌾", "jahreszeit": 2, "liste": { "kartoffeln": 8, "aepfel": 8, "gerste": 4 }, "punkte": 20 },
+  { "id": "martinsfeuer", "name": "Martinsfeuer", "symbol": "🔥", "jahreszeit": 2, "liste": { "bratkartoffeln": 6, "schnaps": 4, "holzkohle": 2 }, "punkte": 25 },
+  { "id": "fastelovend", "name": "Fastelovend", "symbol": "🎭", "jahreszeit": 3, "liste": { "most": 6, "schnaps": 4 }, "punkte": 15 }
+ ]
+}

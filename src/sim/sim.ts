@@ -9,16 +9,20 @@ import {
   FELS_LESE, FELS_LESE_START, FELS_STEIL, FELS_STEIN, FLAG_CAP, GEBAEUDE, KIRMES, LESE_PROZENT, NAHRUNG, NAHRUNG_REIHE, NAHRUNG_ZYKLUS,
   NOTNAGEL_FREI_UNTER, NOTNAGEL_TICKS, NOTPLAETZE, planierTicks, PRIO_MAX, PRIO_MIN, PRIO_STANDARD,
   RODUNG_STAMM_MAX, START_BAUARBEITER, START_BEWOHNER, START_PLANIERER, START_STEIN_ABSTAND_MIN, START_STEIN_MIN, START_STEIN_RADIUS,
-  START_VORRAT, STAT_MAX, STAT_TAKT, STEIL_GRAD, ABNEHMER_ZAHL, VERTEILUNG_STANDARD, SUCHE_WARTE, TREE_MAX, UEBERGABE_TICKS, WARE, WAREN, WEG_MAX_SCHRITTE,
+  START_VORRAT, STAT_MAX, STAT_TAKT, STEIL_GRAD, ABNEHMER_ZAHL, VERTEILUNG_JE_WARE, SUCHE_WARTE, TREE_MAX, UEBERGABE_TICKS, WARE, WAREN, WEG_MAX_SCHRITTE,
+  AUE_DM, AUFSAMMELN_TICKS, BAULEUTE_MAX, BAULEUTE_TAKT, BOTE_AB_HEX, BOTE_TICKS, BOTE_TORKELN_PROZENT, BOTE_VERLIERT_JEDE, ERNTE_PROZENT,
+  FEST_OBERGRENZE, FRIEREN_PROZENT, HOEHE_PROZENT, JAHRESZEIT_TICKS, KLEINE_FESTE, KLEINES_FEST_TICKS, MISCHKORB, SAAT_TICKS, SCHNEE_PROZENT,
+  TAL_DM, WETTER, WETTER_ANKUENDIGUNG, WINTER, WINTER_ESSEN_TICKS, WINTER_JE_BEWOHNER,
 } from './daten';
+import { inJahreszeit, jahreszeitVon, jahrVon, Wetterkalender } from './jahr';
 import type { GebaeudeTyp } from './daten';
 import { SimKarte } from './karte';
 import { FELS_FELS, FELS_KLIPPE, FELS_LESE as ART_LESE, hashHex, hashHex2, hashHex3 } from './natur';
 import { sucheWeg, ZahlenHeap } from './pfad';
-import { PROMILLE } from './typen';
+import { PROMILLE, STAT_KOPF } from './typen';
 import type {
-  Befehl, GebaeudeZustand, Id, KarteDaten, Protokoll, ProtokollEintrag, SichtArbeiter, SichtBaumann, SichtEreignis, SichtNatur, SichtStatistik,
-  SimSicht, StartDaten,
+  Befehl, GebaeudeZustand, Id, KarteDaten, Protokoll, ProtokollEintrag, SichtArbeiter, SichtBaumann, SichtBote, SichtEreignis, SichtJahr, SichtNatur,
+  SichtStatistik, SimSicht, StartDaten,
 } from './typen';
 import { ausBase64, inBase64, kopie, STAND_ZAHLEN } from './stand';
 import type { SimStand } from './stand';
@@ -75,7 +79,24 @@ interface Gebaeude {
   // Baustelle (Drehbuch 4.5): angelieferter Stapel je Warenart, Ware in der Hand des Bauarbeiters (-1 keine), Planieren nötig/erledigt
   // (Ticks), zugewiesener Bauarbeiter und Planierer (Id des Baumanns, 0 keiner).
   stapel: number[]; haende: number; planSoll: number; planIst: number; bauer: Id; planierer: Id;
+  /** Lager und Lagerhaus: Regel je Warenart (0 normal, 1 nicht einlagern, 2 auslagern); sonst leer. */
+  regel: number[];
 }
+
+/** Phasen eines Boten: wartet, holt die Ware im Lager, bringt sie zum Ziel, geht zu einer liegenden Ware, bringt Ware ins Lager. */
+const BO_WARTET = 0, BO_HOLT = 1, BO_BRINGT = 2, BO_SAMMELT = 3, BO_HEIM = 4;
+
+/** Beschwipster Bote (DESIGN §10.3): ein Bewohner auf Schnaps, querfeldein unterwegs bis Tick `bis`. */
+interface Bote {
+  id: Id; sp: number; schaenke: Id; bis: number; phase: number;
+  /** Gehweg (Hex-Indizes, torkelnd), Position, Ticks im Schritt und dessen Dauer. */
+  route: number[]; ri: number; t: number; dauer: number;
+  /** Ware (-1 keine), Ziel-Gebäude der Lieferung, Lager, aus dem sie kommt bzw. in das sie geht; faellt: Routen-Index, an dem sie herunterfällt (-1 nie). */
+  art: number; ziel: Id; lager: Id; faellt: number;
+}
+
+/** Ware, die ein Bote verloren hat: liegt auf Hex h, bis ein Bote sie holt (bote) oder ab Tick `bis` ein Bewohner sie aufliest. */
+interface Liegend { h: number; art: number; sp: number; bis: number; bote: Id }
 
 /** Phasen eines Baumanns: geht über die Wege, arbeitet an der Baustelle, wartet dort auf Material. */
 const BM_GEHT = 0, BM_ARBEIT = 1, BM_WARTET = 2;
@@ -109,6 +130,14 @@ interface Dorf {
   ereignisse: SichtEreignis[];
   /** Freier Wohnraum zu Beginn des Ticks (abgeleitet, nicht Teil der Prüfsumme). */
   wohnFrei: number;
+  /** Wunschzahl Bauarbeiter und Planierer (Drehbuch 4.5). */
+  bauSoll: number; planSoll: number;
+  /** Kleine Feste: Spieljahr, in dem jedes zuletzt gefeiert wurde (-1 nie), laufendes Fest (Restticks, Index), Punkte daraus. */
+  festJahr: number[]; kfest: number; kfestNr: number; festPunkte: number;
+  /** Winter: 1 = es fehlt Essen, die Leute frieren; Uhr bis zur nächsten Wintermahlzeit. */
+  friert: number; winterT: number;
+  /** Tick, an dem zuletzt eine Lieferung für einen Boten weit genug war (die Schänke schickt nur dann Boten los). */
+  botenWunsch: number;
 }
 
 function neuesDorf(bewohner: number): Dorf {
@@ -116,20 +145,47 @@ function neuesDorf(bewohner: number): Dorf {
     bewohner, frei: bewohner, bauGesamt: START_BAUARBEITER, bauFrei: START_BAUARBEITER, planGesamt: START_PLANIERER, planFrei: START_PLANIERER,
     stufe: 0, fest: 0, notnagelT: 0, verwalter: 0, ereignisse: [], wohnFrei: 0,
     vert: standardVerteilung(), erzeugt: new Array<number>(WAREN.length).fill(0), statPunkte: [], statTakt: STAT_TAKT, statNaechst: 0,
+    ...dorfM8(),
   };
 }
+
+/** Felder, die mit M8 ins Dorf kamen (auch für ältere Spielstände). */
+function dorfM8(): Pick<Dorf, 'bauSoll' | 'planSoll' | 'festJahr' | 'kfest' | 'kfestNr' | 'festPunkte' | 'friert' | 'winterT' | 'botenWunsch'> {
+  return {
+    bauSoll: START_BAUARBEITER, planSoll: START_PLANIERER, festJahr: KLEINE_FESTE.map(() => -1), kfest: 0, kfestNr: -1, festPunkte: 0,
+    friert: 0, winterT: 0, botenWunsch: -1_000_000,
+  };
+}
+
+/** Liste auf `n` Einträge mit Nullen verlängern (Spielstände mit weniger Waren). */
+function aufLaenge(a: number[] | undefined, n: number): number[] {
+  const x = Array.isArray(a) ? a.slice(0, n) : [];
+  while (x.length < n) x.push(0);
+  return x;
+}
+
+/** Ist das Gebäude ein fertiges Lager (Dorfkern oder Lagerhaus)? */
+function istLager(g: { typ: string; fertig: number }): boolean {
+  return g.fertig === 1 && GEBAEUDE[g.typ].funktion === 'lager';
+}
+
+/** Nahrung, einfache zuerst (für den Wintervorrat). */
+const EINFACH_ZUERST: readonly number[] = NAHRUNG_REIHE.slice().sort((a, b) => NAHRUNG[a] - NAHRUNG[b] || a - b);
+/** Abstand zwischen zwei Boten derselben Schänke und wie lange ein Wunsch nach Boten anhält (Ticks). */
+const BOTE_TAKT = 10 * 20;
+const BOTE_WUNSCH_HAELT = 30 * 20;
 
 /** Standard-Verteilung für alle Waren (data/dorf.json). */
 function standardVerteilung(): number[] {
   const v: number[] = [];
-  for (let a = 0; a < WAREN.length; a++) v.push(...VERTEILUNG_STANDARD);
+  for (let a = 0; a < WAREN.length; a++) v.push(...VERTEILUNG_JE_WARE[a]);
   return v;
 }
 
 /** Abnehmer-Art eines Gebäudes (ABNEHMER): 0 Baustelle, 1 Kirmesplatz, 2 Verarbeiter, 3 Wohnhaus; -1 Lager. */
 function abnehmerArt(g: { typ: string; fertig: number }): number {
-  if (g.typ === 'lager') return -1;
   if (!g.fertig) return 0;
+  if (istLager(g)) return -1;
   const f = GEBAEUDE[g.typ].funktion;
   return f === 'kirmes' ? 1 : f === 'wohnen' ? 3 : 2;
 }
@@ -200,6 +256,22 @@ export class Simulation {
   private inb = new Map<Id, number>();
   private natCache: SichtNatur | null = null;
   private natHash: { rev: number; hex: string } | null = null;
+  /** Beschwipste Boten und verlorene Waren (M8). */
+  private boten = new Map<Id, Bote>();
+  private liegend: Liegend[] = [];
+  /** Jahreszeit und Wetter aus Tick und Saat (abgeleitet); Hex-Lagen für das Wetter: Tal, Höhe, Aue (aus der Karte, statisch). */
+  private kalender: Wetterkalender;
+  private lageTal: Uint8Array;
+  private lageHoehe: Uint8Array;
+  private lageAue: Uint8Array;
+  /** Wirkung von Jahreszeit und Wetter im laufenden Tick (abgeleitet, zu Beginn jedes Ticks neu): Prozent je Lage (0 alle, 1 Tal, 2 Höhe, 3 Aue). */
+  private wegeP = [0, 0, 0, 0];
+  private arbeitP = [0, 0, 0, 0];
+  private felderP = 0;
+  private missernte = '';
+  private missernteP = 0;
+  private hochwasser = false;
+  private jz = 0;
 
   /** `start`: ein Dorf (Einzelspiel) oder eins je Spieler; Spieler i startet am Lager-Hex start[i]. */
   constructor(karteDaten: KarteDaten, saat: number, start: StartDaten | readonly StartDaten[]) {
@@ -234,6 +306,104 @@ export class Simulation {
     this.starts.forEach((st) => this.fairerStart(this.karte.index(st.q, st.r)));
     this.felsArtKopie = this.felsArt.slice();
     this.baumStartKopie = this.baumStart.slice();
+    this.kalender = new Wetterkalender(this.saat);
+    this.lageTal = new Uint8Array(n); this.lageHoehe = new Uint8Array(n); this.lageAue = new Uint8Array(n);
+    this.lagenBerechnen();
+    this.jahrTick();
+  }
+
+  /**
+   * Lagen fürs Wetter (data/jahr.json): Tal = mindestens TAL_DM tiefer als der Schnitt im Umkreis 4; Höhe = oberstes Drittel (HOEHE_PROZENT)
+   * der Höhen im Ausschnitt; Aue = begehbarer Hex an Wasser, Fluss oder Ufer, höchstens AUE_DM über dem Wasser.
+   */
+  private lagenBerechnen(): void {
+    const k = this.karte, n = k.count;
+    let lo = Infinity, hi = -Infinity;
+    for (let i = 0; i < n; i++) if (k.begehbar[i]) { lo = Math.min(lo, k.hoehe[i]); hi = Math.max(hi, k.hoehe[i]); }
+    const grenze = lo + Math.floor(((hi - lo) * HOEHE_PROZENT) / 100);
+    const nass = (i: number) => k.terrain[i] === 0 || (k.flags[i] & (FLAG.fluss | FLAG.ufer)) !== 0;
+    for (let i = 0; i < n; i++) {
+      if (!k.begehbar[i]) continue;
+      if (hi > lo && k.hoehe[i] >= grenze) this.lageHoehe[i] = 1;
+      let sum = 0, z = 0;
+      const q = k.qs[i], r = k.rs[i];
+      for (let dr = -4; dr <= 4; dr++) {
+        for (let dq = Math.max(-4, -dr - 4); dq <= Math.min(4, -dr + 4); dq++) {
+          const x = k.index(q + dq, r + dr);
+          if (x >= 0 && k.begehbar[x]) { sum += k.hoehe[x]; z++; }
+        }
+      }
+      if (z > 0 && Math.floor(sum / z) - k.hoehe[i] >= TAL_DM) this.lageTal[i] = 1;
+      if (nass(i)) { this.lageAue[i] = 1; continue; }
+      for (let d = 0; d < 6; d++) {
+        const x = k.nachbarn[i * 6 + d];
+        if (x >= 0 && nass(x) && k.hoehe[i] <= k.hoehe[x] + AUE_DM) { this.lageAue[i] = 1; break; }
+      }
+    }
+  }
+
+  /** Lage eines Hex fürs Wetter: Index 1 Tal, 2 Höhe, 3 Aue (0 = keine besondere). */
+  private lageP(p: readonly number[], h: number): number {
+    return p[0] + (this.lageTal[h] ? p[1] : 0) + (this.lageHoehe[h] ? p[2] : 0) + (this.lageAue[h] ? p[3] : 0);
+  }
+
+  /** Jahreszeit und Wetter für den laufenden Tick (abgeleitet aus Tick und Saat, bei allen gleich). */
+  private jahrTick(): void {
+    const t = this._tick;
+    this.jz = jahreszeitVon(t);
+    this.wegeP = [this.jz === WINTER ? SCHNEE_PROZENT : 0, 0, 0, 0];
+    this.arbeitP = [0, 0, 0, 0];
+    this.felderP = this.jz === 2 ? ERNTE_PROZENT : 0;
+    this.missernte = ''; this.missernteP = 0; this.hochwasser = false;
+    for (const e of this.kalender.aktiv(t)) {
+      const w = WETTER[e.art];
+      this.wegeP[w.wo] += w.wege;
+      this.arbeitP[w.wo] += w.arbeit;
+      this.felderP += w.felder;
+      if (w.missernte) { this.missernte = e.feld; this.missernteP = w.missernte; }
+      if (w.hochwasser) this.hochwasser = true;
+    }
+  }
+
+  /** Wege-Verlangsamung (Prozent) auf Hex h: Schnee, Regen, Talnebel. */
+  private wegeProzent(h: number): number { return this.lageP(this.wegeP, h); }
+
+  /**
+   * Bleibt eine Einheit mit `p` Prozent Verlangsamung in diesem Tick stehen? Ihre Zeiten dauern so (100 + p) / 100-mal so lang,
+   * gleichmäßig über die Ticks verteilt; `salz` (Id) verschiebt den Takt, damit nicht alle gleichzeitig stocken.
+   */
+  private bremst(p: number, salz: number): boolean {
+    if (p <= 0) return false;
+    const t = this._tick + salz * 7;
+    return Math.floor(((t + 1) * p) / (100 + p)) > Math.floor((t * p) / (100 + p));
+  }
+
+  /** Bekommt eine Einheit mit `p` Prozent Beschleunigung in diesem Tick einen Extraschritt? */
+  private schub(p: number, salz: number): boolean {
+    if (p <= 0) return false;
+    const t = this._tick + salz * 7;
+    return Math.floor(((t + 1) * p) / 100) > Math.floor((t * p) / 100);
+  }
+
+  /** Steht ein fertiges Gebäude wegen Jahreszeit oder Wetter still? Zustand oder ''. */
+  private stillstand(g: Gebaeude, t: GebaeudeTyp): '' | 'winter' | 'saat' | 'hochwasser' {
+    if (t.feld) {
+      if (this.jz === WINTER) return 'winter';
+      if (this.jz === 0 && jahrVon(this._tick) > 0 && inJahreszeit(this._tick) < SAAT_TICKS) return 'saat';
+    }
+    if (this.hochwasser && this.lageAue[g.h] && t.arbeiter) return 'hochwasser';
+    return '';
+  }
+
+  /** Tempo eines arbeitenden Gebäudes in Prozent: + schneller (Ernte, Regen auf Feldern), − langsamer (Dürre, Missernte, Wind, Frieren). */
+  private tempoProzent(g: Gebaeude, t: GebaeudeTyp): number {
+    let p = -this.lageP(this.arbeitP, g.h);
+    if (this.doerfer[g.sp].friert) p -= FRIEREN_PROZENT;
+    if (t.feld) {
+      p += this.felderP;
+      if (this.missernte === g.typ) p -= this.missernteP;
+    }
+    return p;
   }
 
   /**
@@ -319,6 +489,8 @@ export class Simulation {
         for (const e of jetzt) { this.fuehreAus(e.befehl, e.spieler); this.befehlZahl++; }
       }
     }
+    this.jahrTick();
+    this.jahrEreignisse();
     if (this.verbundenNeu) this.verbindungenNeu();
     this.inbNeu();
     for (let sp = 0; sp < this.doerfer.length; sp++) this.doerfer[sp].wohnFrei = this.wohnraumFrei(sp);
@@ -327,6 +499,8 @@ export class Simulation {
     if (t % 10 === 0) { this.baeumeWachsen(); this.zielePruefen(); }
     if (t % 4 === 0) { this.lagerPull(); for (let sp = 0; sp < this.doerfer.length; sp++) this.bauleuteSchicken(sp); }
     for (const b of [...this.bauleute.values()]) this.baumannSchritt(b);
+    for (const b of [...this.boten.values()]) this.boteSchritt(b);
+    if (t % 20 === 0) this.aufsammeln();
     this.traegerPhase();
     if (t % 40 === 0) for (const s of this.segmente.values()) if (s.verkehr > 0) s.verkehr--;
     this._tick++;
@@ -367,6 +541,8 @@ export class Simulation {
         baumRes: inBase64(this.baumRes), felsRes: inBase64(this.felsRes), jungReif: jr, jungListe: this.jungListe,
       },
       log: this.log, ausstehend: this.ausstehend, stat: this.stat, erzeugtJe: this.erzeugtJe,
+      boten: [...this.boten.values()] as unknown as Record<string, unknown>[],
+      liegend: this.liegend as unknown as Record<string, unknown>[],
     });
   }
 
@@ -384,19 +560,38 @@ export class Simulation {
     this.befehlZahl = z('befehlZahl'); this.natRev = z('natRev');
     if (st.doerfer.length !== this.doerfer.length) throw new Error('Spielstand: Zahl der Dörfer passt nicht');
     this.doerfer = st.doerfer as unknown as Dorf[];
-    // Spielstände von vor M7: Verteilung, Statistik und Pause mit Standardwerten
+    const nw = WAREN.length;
+    // Spielstände von vor M7: Verteilung, Statistik und Pause mit Standardwerten; von vor M8: weniger Waren (mit Nullen bzw. der
+    // Standard-Verteilung auffüllen), Jahreszeit, Feste, Bauleute und Lagerregeln mit Standardwerten
     for (const d of this.doerfer) {
-      if (!Array.isArray(d.vert) || d.vert.length !== WAREN.length * ABNEHMER_ZAHL) d.vert = standardVerteilung();
-      if (!Array.isArray(d.erzeugt) || d.erzeugt.length !== WAREN.length) d.erzeugt = new Array<number>(WAREN.length).fill(0);
+      if (!Array.isArray(d.vert) || d.vert.length % ABNEHMER_ZAHL !== 0 || d.vert.length > nw * ABNEHMER_ZAHL) d.vert = standardVerteilung();
+      else if (d.vert.length < nw * ABNEHMER_ZAHL) d.vert = d.vert.concat(standardVerteilung().slice(d.vert.length));
       if (!Array.isArray(d.statPunkte)) { d.statPunkte = []; d.statTakt = STAT_TAKT; d.statNaechst = this._tick; }
+      const alt = Array.isArray(d.erzeugt) ? d.erzeugt.length : nw;
+      if (alt < nw) {
+        const K = STAT_KOPF;
+        d.statPunkte = d.statPunkte.map((p) => [...p.slice(0, K), ...aufLaenge(p.slice(K, K + alt), nw), ...aufLaenge(p.slice(K + alt, K + 2 * alt), nw)]);
+      }
+      d.erzeugt = aufLaenge(d.erzeugt, nw);
+      const m8 = dorfM8() as unknown as Record<string, unknown>;
+      for (const key of Object.keys(m8)) if ((d as unknown as Record<string, unknown>)[key] === undefined) (d as unknown as Record<string, unknown>)[key] = m8[key];
+      d.festJahr = KLEINE_FESTE.map((_, i) => (Array.isArray(d.festJahr) ? d.festJahr[i] ?? -1 : -1));
     }
+    this.erzeugtJe = aufLaenge(st.erzeugtJe, nw);
     const map = <T extends { id: Id }>(a: Record<string, unknown>[]) => new Map((a as unknown as T[]).map((x) => [x.id, x] as [Id, T]));
     this.fahnen = map<Fahne>(st.fahnen);
     this.segmente = map<Segment>(st.segmente);
     this.traeger = map<Traeger>(st.traeger);
     this.gebaeude = map<Gebaeude>(st.gebaeude);
     this.bauleute = map<Baumann>(st.bauleute);
-    for (const g of this.gebaeude.values()) { g.ruht ??= 0; g.erzeugt ??= 0; }
+    for (const g of this.gebaeude.values()) {
+      g.ruht ??= 0; g.erzeugt ??= 0;
+      for (const key of ['verbaut', 'puffer', 'incoming', 'ausgang', 'vorrat', 'stapel'] as const) g[key] = aufLaenge(g[key], nw);
+      if (!Array.isArray(g.regel)) g.regel = GEBAEUDE[g.typ].funktion === 'lager' ? new Array<number>(nw).fill(0) : [];
+      else if (g.regel.length) g.regel = aufLaenge(g.regel, nw);
+    }
+    this.boten = new Map(((st.boten ?? []) as unknown as Bote[]).map((b) => [b.id, b] as [Id, Bote]));
+    this.liegend = (st.liegend ?? []) as unknown as Liegend[];
     const n = this.karte.count, nat = st.natur;
     this.baum = ausBase64(nat.baum, n); this.jung = ausBase64(nat.jung, n); this.stufe = ausBase64(nat.stufe, n);
     this.fels = ausBase64(nat.fels, n); this.felsArt = ausBase64(nat.felsArt, n);
@@ -405,7 +600,7 @@ export class Simulation {
     for (let i = 0; i + 1 < nat.jungReif.length; i += 2) this.jungReif[nat.jungReif[i]] = nat.jungReif[i + 1];
     this.jungListe = nat.jungListe;
     this.felsArtKopie = this.felsArt.slice();
-    this.log = st.log; this.ausstehend = st.ausstehend; this.stat = st.stat; this.erzeugtJe = st.erzeugtJe;
+    this.log = st.log; this.ausstehend = st.ausstehend; this.stat = st.stat;
     // Abgeleitetes neu
     this.hexFahne.fill(0); this.hexGeb.fill(0); this.hexWeg.fill(0);
     for (const f of this.fahnen.values()) this.hexFahne[f.h] = f.id;
@@ -413,6 +608,7 @@ export class Simulation {
     for (const s of this.segmente.values()) for (let i = 1; i < s.pfad.length - 1; i++) this.hexWeg[s.pfad[i]] = s.id;
     this.natCache = null; this.natHash = null;
     this.netzGeaendert();
+    this.jahrTick();
   }
 
   /**
@@ -468,6 +664,19 @@ export class Simulation {
       case 'ruhen': {
         const g = this.gebaeude.get(b.id);
         if (g && g.sp === sp && GEBAEUDE[g.typ].pausierbar && typeof b.an === 'boolean') g.ruht = b.an ? 1 : 0;
+        break;
+      }
+      case 'lagerregel': {
+        const g = this.gebaeude.get(b.id);
+        if (!g || g.sp !== sp || GEBAEUDE[g.typ].funktion !== 'lager' || !Number.isInteger(b.ware) || b.ware < 0 || b.ware >= WAREN.length) break;
+        if (!Number.isInteger(b.regel) || b.regel < 0 || b.regel > 2) break;
+        g.regel[b.ware] = b.regel;
+        break;
+      }
+      case 'bauleute': {
+        const ok = (x: unknown) => Number.isInteger(x) && (x as number) >= 0 && (x as number) <= BAULEUTE_MAX;
+        if (!ok(b.bauarbeiter) || !ok(b.planierer)) break;
+        this.doerfer[sp].bauSoll = b.bauarbeiter; this.doerfer[sp].planSoll = b.planierer;
         break;
       }
     }
@@ -584,7 +793,7 @@ export class Simulation {
     return {
       tick: this._tick,
       ich,
-      spieler: this.doerfer.map((d) => ({ stufe: d.stufe, bewohner: d.bewohner, verwalter: d.verwalter === 1 })),
+      spieler: this.doerfer.map((d) => ({ stufe: d.stufe, bewohner: d.bewohner, festPunkte: d.festPunkte, verwalter: d.verwalter === 1 })),
       fahnen: [...this.fahnen.values()].map((f) => ({ id: f.id, sp: f.sp, ...hx(f.h), waren: f.waren.map((w) => w.art), ziele: f.waren.map((w) => w.ziel), gebaeude: f.gebaeude })),
       segmente: [...this.segmente.values()].map((s) => ({ id: s.id, sp: s.sp, a: s.a, b: s.b, pfad: s.pfad.map(hx), traeger: s.traeger, verkehr: s.verkehr })),
       traeger: tr,
@@ -595,7 +804,8 @@ export class Simulation {
           bau: this.bauStand(g, t),
           getrennt: g.getrennt, prioritaet: g.prio, ruht: g.ruht === 1, erzeugt: g.erzeugt, zustand: this.zustandVon(g, t),
         };
-        if (g.typ === 'lager') o.vorrat = g.vorrat.slice();
+        if (istLager(g)) { o.vorrat = g.vorrat.slice(); o.regel = g.regel.slice(); }
+        if (t.funktion === 'schaenke') o.boten = this.botenVon(g.id);
         if (!g.fertig) {
           o.bedarf = t.kosten.map((n, a) => Math.max(0, n - g.verbaut[a]));
           o.stapel = g.stapel.map((n, a) => n + (g.haende === a ? 1 : 0));
@@ -613,7 +823,36 @@ export class Simulation {
       bauleute: [...this.bauleute.values()].map((b) => this.baumannSicht(b)),
       dorf: this.dorfSicht(ich),
       ereignisse: dorf.ereignisse.map((e) => ({ ...e })),
+      jahr: this.jahrSicht(),
+      boten: [...this.boten.values()].map((b) => this.boteSicht(b)),
+      liegend: this.liegend.map((x) => ({ q: k.qs[x.h], r: k.rs[x.h], ware: x.art, sp: x.sp })),
     };
+  }
+
+  private jahrSicht(): SichtJahr {
+    const t = this._tick;
+    return {
+      jahr: jahrVon(t), jahreszeit: jahreszeitVon(t), rest: JAHRESZEIT_TICKS - inJahreszeit(t),
+      wetter: this.kalender.aktiv(t).map((e) => ({ art: e.art, bis: e.ende, feld: e.feld })),
+      kommt: this.kalender.kommend(t).filter((e) => e.start > t && e.start - WETTER_ANKUENDIGUNG <= t).map((e) => ({ art: e.art, ab: e.start, feld: e.feld })),
+    };
+  }
+
+  private boteSicht(b: Bote): SichtBote {
+    const k = this.karte;
+    const hx = (h: number) => ({ q: k.qs[h], r: k.rs[h] });
+    const rest = b.bis - this._tick;
+    const pegel = rest > (2 * BOTE_TICKS) / 3 ? 3 : rest > BOTE_TICKS / 3 ? 2 : 1;
+    const ware = b.phase === BO_BRINGT || b.phase === BO_HEIM ? b.art : -1;
+    if (b.ri + 1 < b.route.length) {
+      return {
+        id: b.id, sp: b.sp, von: hx(b.route[b.ri]), nach: hx(b.route[b.ri + 1]), ware, tut: 'geht', pegel,
+        fortschritt: b.dauer > 0 ? Math.min(PROMILLE - 1, Math.floor((PROMILLE * b.t) / b.dauer)) : 0,
+        schritt: b.dauer > 0 ? Math.max(1, Math.floor(PROMILLE / b.dauer)) : 0,
+      };
+    }
+    const h = hx(b.route[b.route.length - 1]);
+    return { id: b.id, sp: b.sp, von: h, nach: h, ware, tut: 'wartet', pegel, fortschritt: 0, schritt: 0 };
   }
 
   private baumannSicht(b: Baumann): SichtBaumann {
@@ -638,13 +877,23 @@ export class Simulation {
     for (const t of this.traeger.values()) if (t.sp === sp) traeger++;
     const ks = KIRMES[d.stufe];
     const platz = this.kirmesPlatz(sp);
+    const da = platz && platz.fertig ? platz.puffer : new Array<number>(WAREN.length).fill(0);
+    let misch = 0;
+    if (ks) for (let a = 0; a < WAREN.length; a++) if (MISCHKORB[a]) misch += Math.max(0, da[a] - ks.liste[a]);
+    const fnr = d.kfest > 0 ? d.kfestNr : this.festJetzt(d);
+    const kv = this.kirmesJetzt(d);
     return {
       stufe: d.stufe, bewohner: d.bewohner, frei: d.frei, traeger, arbeiter, wohnraum,
       bauarbeiter: { gesamt: d.bauGesamt, frei: d.bauFrei }, planierer: { gesamt: d.planGesamt, frei: d.planFrei },
       kirmes: ks ? {
-        liste: ks.liste.slice(), geliefert: platz && platz.fertig ? platz.puffer.slice() : ks.liste.map(() => 0),
-        platz: platz ? platz.id : 0, fest: d.fest, festDauer: ks.festTicks,
+        liste: ks.liste.slice(), geliefert: da.slice(),
+        platz: platz ? platz.id : 0, fest: d.fest, festDauer: ks.festTicks, mischkorb: { soll: ks.mischkorb, da: Math.min(ks.mischkorb, misch) },
       } : null,
+      fest: fnr >= 0 ? {
+        nr: fnr, liste: KLEINE_FESTE[fnr].liste.slice(), laeuft: d.kfest,
+        geliefert: KLEINE_FESTE[fnr].liste.map((n, a) => Math.max(0, Math.min(n, da[a] - (kv ? kv.liste[a] : 0)))),
+      } : null,
+      festPunkte: d.festPunkte, friert: d.friert === 1, bauSoll: d.bauSoll, planSoll: d.planSoll,
       notnagel: this.notnagelGreift(sp) ? NOTNAGEL_TICKS - d.notnagelT : -1,
       verteilung: WAREN.map((_, a) => d.vert.slice(a * ABNEHMER_ZAHL, (a + 1) * ABNEHMER_ZAHL)),
       erzeugt: d.erzeugt.slice(),
@@ -667,7 +916,7 @@ export class Simulation {
   }
 
   private zustandVon(g: Gebaeude, t: GebaeudeTyp): GebaeudeZustand {
-    if (g.typ === 'lager') return 'bereit';
+    if (istLager(g)) return 'bereit';
     if (g.getrennt) return 'getrennt';
     if (!g.fertig) {
       if (g.planIst < g.planSoll) return g.planierer ? 'planieren' : 'kein_planierer';
@@ -683,14 +932,20 @@ export class Simulation {
     }
     if (t.funktion === 'kirmes') {
       const d = this.doerfer[g.sp];
-      if (d.fest > 0) return 'fest';
-      return KIRMES[d.stufe] ? 'wartet_material' : 'bereit';
+      if (d.fest > 0 || d.kfest > 0) return 'fest';
+      return KIRMES[d.stufe] || this.festJetzt(d) >= 0 ? 'wartet_material' : 'bereit';
     }
-    if (t.arbeiter && !g.ar) return 'kein_arbeiter';
+    if (t.arbeiter && !g.ar) return t.werkzeug && this.doerfer[g.sp].frei > 0 ? 'kein_werkzeug' : 'kein_arbeiter';
+    const still = this.stillstand(g, t);
+    if (still && !g.ruht) return still;
+    if (t.funktion === 'schaenke') {
+      if (this.botenVon(g.id) > 0) return 'arbeitet';
+      return g.puffer[WARE.schnaps] > 0 ? 'bereit' : 'wartet_material';
+    }
     if (t.funktion === 'verarbeiter') {
       if (g.arbeit) return 'arbeitet';
       if (g.ausgang[t.ausgangWare] >= t.ausgangMax) return 'voll';
-      return g.puffer[t.wandelt!.ein] >= t.wandelt!.menge ? 'arbeitet' : 'wartet_material';
+      return this.zutatenDa(g, t) ? 'arbeitet' : 'wartet_material';
     }
     if (t.funktion === 'erzeuger') return g.ausgang[t.ausgangWare] >= t.ausgangMax ? 'voll' : 'arbeitet';
     if (g.ph === PH_SUCHE) {
@@ -742,6 +997,7 @@ export class Simulation {
       if (this.hexFahne[f.h] !== f.id) fehler.push(`Fahne ${f.id}: Hex-Belegung`);
       for (const s of f.segmente) if (!this.segmente.has(s)) fehler.push(`Fahne ${f.id}: Segment ${s} fehlt`);
     }
+    for (const b of this.boten.values()) if (b.art >= 0 && b.ziel && (b.phase === BO_HOLT || b.phase === BO_BRINGT)) zaehle({ art: b.art, ziel: b.ziel });
     for (const t of this.traeger.values()) {
       if (t.art >= 0) zaehle({ art: t.art, ziel: t.ziel });
       const s = this.segmente.get(t.seg);
@@ -760,7 +1016,7 @@ export class Simulation {
         if (g.incoming[a] !== soll) fehler.push(`Gebäude ${g.id} incoming[${a}] ${g.incoming[a]} statt ${soll}`);
         if (g.verbaut[a] + g.stapel[a] + (g.haende === a ? 1 : 0) > t.kosten[a]) fehler.push(`Gebäude ${g.id}: mehr verbaut/angeliefert als nötig (Ware ${a})`);
         if (g.fertig && g.verbaut[a] < t.kosten[a]) fehler.push(`Gebäude ${g.id}: fertig ohne volles Material (Ware ${a})`);
-        if (g.typ !== 'lager' && g.puffer[a] > this.pufferMax(g, t, a)) fehler.push(`Gebäude ${g.id}: Input-Puffer ${a} über Maximum`);
+        if (!istLager(g) && t.funktion !== 'kirmes' && g.puffer[a] > this.pufferMax(g, t, a)) fehler.push(`Gebäude ${g.id}: Input-Puffer ${a} über Maximum`);
         if (g.ausgang[a] > (a === t.ausgangWare ? t.ausgangMax : 0)) fehler.push(`Gebäude ${g.id}: Output-Puffer ${a} über Maximum`);
       }
       arbeiter[g.sp] += g.ar;
@@ -776,6 +1032,11 @@ export class Simulation {
       if (g.planierer && this.bauleute.get(g.planierer)?.ziel !== g.id) fehler.push(`Gebäude ${g.id}: Planierer ${g.planierer}`);
       if (g.fertig && (g.bauer || g.planierer || summe(g.stapel) || g.haende >= 0)) fehler.push(`Gebäude ${g.id}: fertig mit Baustellenresten`);
     }
+    const botenJe = this.doerfer.map(() => 0);
+    for (const b of this.boten.values()) {
+      botenJe[b.sp]++;
+      if (b.ziel && (b.phase === BO_HOLT || b.phase === BO_BRINGT) && !this.gebaeude.has(b.ziel)) fehler.push(`Bote ${b.id}: Ziel ${b.ziel} fehlt`);
+    }
     const bau = this.doerfer.map(() => 0), plan = this.doerfer.map(() => 0);
     for (const b of this.bauleute.values()) {
       if (b.beruf === 0) bau[b.sp]++; else plan[b.sp]++;
@@ -784,8 +1045,8 @@ export class Simulation {
     }
     this.doerfer.forEach((d, sp) => {
       const v = this.doerfer.length > 1 ? `Spieler ${sp}: ` : '';
-      if (d.frei < 0 || d.frei + traegerJe[sp] + arbeiter[sp] !== d.bewohner) {
-        fehler.push(`${v}Bewohner: ${d.frei} frei + ${traegerJe[sp]} Träger + ${arbeiter[sp]} Arbeiter statt ${d.bewohner}`);
+      if (d.frei < 0 || d.frei + traegerJe[sp] + arbeiter[sp] + botenJe[sp] !== d.bewohner) {
+        fehler.push(`${v}Bewohner: ${d.frei} frei + ${traegerJe[sp]} Träger + ${arbeiter[sp]} Arbeiter + ${botenJe[sp]} Boten statt ${d.bewohner}`);
       }
       if (d.bauFrei < 0 || d.bauFrei + bau[sp] !== d.bauGesamt) fehler.push(`${v}Bauarbeiter: ${d.bauFrei} frei + ${bau[sp]} unterwegs statt ${d.bauGesamt}`);
       for (let a = 0; a < WAREN.length; a++) {
@@ -827,7 +1088,14 @@ export class Simulation {
       w(d.bewohner); w(d.frei); w(d.bauGesamt); w(d.bauFrei); w(d.planGesamt); w(d.planFrei); w(d.stufe); w(d.fest); w(d.notnagelT); w(d.verwalter);
       liste(d.vert); liste(d.erzeugt); w(d.statTakt); w(d.statNaechst); w(d.statPunkte.length);
       for (const p of d.statPunkte) liste(p);
+      w(d.bauSoll); w(d.planSoll); liste(d.festJahr); w(d.kfest); w(d.kfestNr); w(d.festPunkte); w(d.friert); w(d.winterT); w(d.botenWunsch);
     }
+    w(this.boten.size);
+    for (const b of this.boten.values()) {
+      w(b.id); w(b.sp); w(b.schaenke); w(b.bis); w(b.phase); liste(b.route); w(b.ri); w(b.t); w(b.dauer); w(b.art); w(b.ziel); w(b.lager); w(b.faellt);
+    }
+    w(this.liegend.length);
+    for (const x of this.liegend) { w(x.h); w(x.art); w(x.sp); w(x.bis); w(x.bote); }
     w(this.stat.angekommen); w(this.stat.verbraucht); w(this.stat.erzeugt); w(this.stat.verbaut);
     liste(this.erzeugtJe);
     w(this.fahnen.size);
@@ -847,7 +1115,7 @@ export class Simulation {
       w(g.id); w(g.sp); f.text(g.typ); w(g.h); w(g.fahne); w(g.fertig); liste(g.verbaut); w(g.prio); w(g.getrennt ? 1 : 0); w(g.ruht); w(g.erzeugt);
       liste(g.puffer); liste(g.incoming); liste(g.ausgang); w(g.zeit); w(g.arbeit); liste(g.vorrat);
       w(g.ar); w(g.ph); w(g.pt); w(g.pd); w(g.wi); w(g.zh); liste(g.weg); w(g.traegt); w(g.leer); w(g.mitte);
-      liste(g.stapel); w(g.haende); w(g.planSoll); w(g.planIst); w(g.bauer); w(g.planierer);
+      liste(g.stapel); w(g.haende); w(g.planSoll); w(g.planIst); w(g.bauer); w(g.planierer); liste(g.regel);
     }
     w(this.bauleute.size);
     for (const b of this.bauleute.values()) { w(b.id); w(b.sp); w(b.beruf); w(b.ziel); w(b.phase); liste(b.route); w(b.ri); w(b.t); w(b.dauer); }
@@ -1010,6 +1278,7 @@ export class Simulation {
       puffer: nul(), incoming: nul(), ausgang: nul(), zeit: 0, arbeit: 0, vorrat: nul(),
       ar: 0, ph: PH_SUCHE, pt: 0, pd: 0, wi: 0, zh: -1, weg: [], traegt: -1, leer: 0, mitte: -1,
       stapel: nul(), haende: -1, planSoll: 0, planIst: 0, bauer: 0, planierer: 0,
+      regel: t.funktion === 'lager' ? nul() : [],
     };
     // Bauplätze am Hang muss erst ein Planierer ebnen (Drehbuch 4.5)
     if (!g.fertig) g.planSoll = planierTicks(this.karte.neigung[h]);
@@ -1184,9 +1453,28 @@ export class Simulation {
     if (!g || g.typ === 'lager') return;
     const f = this.fahnen.get(g.fahne)!;
     const t = GEBAEUDE[g.typ];
+    // Lagerhaus: der Bestand geht ins nächste andere Lager des Dorfs (die Leute tragen ihn hinüber)
+    if (istLager(g)) {
+      let ziel: Gebaeude | undefined, bd = Infinity;
+      for (const l of this.gebaeude.values()) {
+        if (l.id === g.id || l.sp !== g.sp || !istLager(l)) continue;
+        const d = this.karte.abstand(l.h, g.h);
+        if (d < bd) { bd = d; ziel = l; }
+      }
+      if (ziel) for (let a = 0; a < WAREN.length; a++) ziel.vorrat[a] += g.vorrat[a];
+      g.vorrat.fill(0);
+    }
+    // Werkzeug der Fachkraft kommt mit an die Fahne
+    const werkzeug = g.ar && t.werkzeug ? t.werkzeug : 0;
     for (let a = 0; a < WAREN.length; a++) {
-      const n = g.puffer[a] + g.ausgang[a] + g.stapel[a] + (g.haende === a ? 1 : 0) + (g.traegt === a ? 1 : 0) + Math.floor(g.verbaut[a] / 2);
+      const n = g.puffer[a] + g.ausgang[a] + g.stapel[a] + (g.haende === a ? 1 : 0) + (g.traegt === a ? 1 : 0) + Math.floor(g.verbaut[a] / 2)
+        + (a === WARE.werkzeug ? werkzeug : 0);
       for (let i = 0; i < n; i++) if (f.waren.length < FLAG_CAP) f.waren.push({ art: a, ziel: 0 });
+    }
+    // Boten mit diesem Ziel oder aus diesem Lager bringen ihre Ware stattdessen ins nächste Lager
+    for (const b of this.boten.values()) {
+      if (b.ziel === g.id && (b.phase === BO_HOLT || b.phase === BO_BRINGT)) b.ziel = 0;
+      if (b.lager === g.id) b.lager = 0;
     }
     if (g.ar) { this.doerfer[g.sp].frei++; this.reservierungFreigeben(g, t); }
     f.gebaeude = 0;
@@ -1212,7 +1500,7 @@ export class Simulation {
   private verbindungenNeu(): void {
     this.verbunden.clear();
     const stapel: Id[] = [];
-    for (const g of this.gebaeude.values()) if (g.typ === 'lager') { this.verbunden.add(g.fahne); stapel.push(g.fahne); }
+    for (const g of this.gebaeude.values()) if (istLager(g)) { this.verbunden.add(g.fahne); stapel.push(g.fahne); }
     while (stapel.length) {
       const f = this.fahnen.get(stapel.pop()!)!;
       for (const sid of f.segmente) {
@@ -1221,7 +1509,7 @@ export class Simulation {
         if (!this.verbunden.has(o)) { this.verbunden.add(o); stapel.push(o); }
       }
     }
-    for (const g of this.gebaeude.values()) g.getrennt = g.typ !== 'lager' && !this.verbunden.has(g.fahne);
+    for (const g of this.gebaeude.values()) g.getrennt = !istLager(g) && !this.verbunden.has(g.fahne);
     this.verbundenNeu = false;
   }
 
@@ -1255,7 +1543,7 @@ export class Simulation {
 
   private zielOk(w: Ware, z: Fahne): boolean {
     const g = this.gebaeude.get(w.ziel);
-    return !!g && (g.typ === 'lager' || !g.getrennt) && this.distZu(g.fahne).has(z.id);
+    return !!g && (istLager(g) || !g.getrennt) && this.distZu(g.fahne).has(z.id);
   }
 
   private wareZielSetzen(w: Ware, z: Fahne): void {
@@ -1294,14 +1582,48 @@ export class Simulation {
    */
   private pufferMax(g: Gebaeude, t: GebaeudeTyp, art: number): number {
     if (t.funktion === 'wohnen') return NAHRUNG[art] > 0 ? t.nahrungPlaetze : 0;
-    if (t.funktion === 'kirmes') { const k = KIRMES[this.doerfer[g.sp].stufe]; return k ? k.liste[art] : 0; }
+    if (t.funktion === 'kirmes') {
+      const d = this.doerfer[g.sp], k = this.kirmesJetzt(d);
+      return this.platzBedarf(d, art) + (k && MISCHKORB[art] ? k.mischkorb : 0);
+    }
+    // die Fachkraft hat ihr Werkzeug schon
+    if (art === WARE.werkzeug && t.werkzeug && g.ar) return 0;
     return t.puffer[art];
+  }
+
+  /** Kirmes der aktuellen Stufe, solange nicht gerade gefeiert wird (sonst undefined). */
+  private kirmesJetzt(d: Dorf): (typeof KIRMES)[number] | undefined {
+    return d.fest > 0 ? undefined : KIRMES[d.stufe];
+  }
+
+  /** Kleines Fest, das in dieser Jahreszeit noch aussteht (Index in KLEINE_FESTE), oder -1; während eines kleinen Fests -1. */
+  private festJetzt(d: Dorf): number {
+    if (d.kfest > 0) return -1;
+    const jahr = jahrVon(this._tick);
+    for (let i = 0; i < KLEINE_FESTE.length; i++) if (KLEINE_FESTE[i].jahreszeit === this.jz && d.festJahr[i] !== jahr) return i;
+    return -1;
+  }
+
+  /** Was am Kirmesplatz von Ware `art` gebraucht wird: Kirmesliste plus Liste des kleinen Fests (ohne Mischkorb). */
+  private platzBedarf(d: Dorf, art: number): number {
+    const k = this.kirmesJetzt(d), f = this.festJetzt(d);
+    return (k ? k.liste[art] : 0) + (f >= 0 ? KLEINE_FESTE[f].liste[art] : 0);
   }
 
   /** Freier Platz im Input-Puffer eines fertigen Gebäudes für Ware `art` (Puffer − vorhanden − unterwegs). */
   private pufferPlatz(g: Gebaeude, art: number): number {
     const t = GEBAEUDE[g.typ], d = this.doerfer[g.sp];
-    if (t.funktion === 'kirmes' && d.fest > 0) return 0;
+    if (t.funktion === 'kirmes') {
+      // Kirmesplatz: erst die Listen von Kirmes und kleinem Fest, dann beliebige veredelte Waren für den Mischkorb. Werkzeug erst, wenn
+      // das Dorf selbst welches geschmiedet hat: das Geschenk und Funde gehören den Fachkräften der Eisenkette
+      if (art === WARE.werkzeug && d.erzeugt[art] === 0) return 0;
+      const direkt = Math.max(0, this.platzBedarf(d, art) - g.puffer[art] - g.incoming[art]);
+      const k = this.kirmesJetzt(d);
+      if (!k || !k.mischkorb || !MISCHKORB[art]) return direkt;
+      let belegt = 0;
+      for (let a = 0; a < WAREN.length; a++) if (MISCHKORB[a]) belegt += Math.max(0, g.puffer[a] + g.incoming[a] - this.platzBedarf(d, a));
+      return direkt + Math.max(0, k.mischkorb - belegt);
+    }
     const p = this.pufferMax(g, t, art) - g.puffer[art] - g.incoming[art];
     if (t.funktion !== 'wohnen' || p <= 0) return p;
     // was die Kirmes noch braucht, isst keiner weg (nur der Überschuss im Lager) – solange der Kirmesplatz in der Verteilung vorgeht
@@ -1316,6 +1638,12 @@ export class Simulation {
   /** Gebäude nimmt Waren in den Input-Puffer (Verarbeiter, Wohnhaus, Kirmesplatz). */
   private hatEingang(t: GebaeudeTyp): boolean {
     return t.pufferSumme > 0 || t.funktion === 'wohnen' || t.funktion === 'kirmes';
+  }
+
+  /** Liegen alle Zutaten für den nächsten Arbeitsgang eines Verarbeiters im Input-Puffer? */
+  private zutatenDa(g: Gebaeude, t: GebaeudeTyp): boolean {
+    for (const z of t.wandelt!.ein) if (g.puffer[z.a] < z.n) return false;
+    return true;
   }
 
   /**
@@ -1339,13 +1667,17 @@ export class Simulation {
       }
       if (best) return best;
     }
+    // zuletzt das nächste Lager, das die Ware einlagert (Lagerregel normal); nimmt keins sie, dann das nächste überhaupt
     bd = Infinity;
+    let notfall = 0, nd = Infinity;
     for (const g of this.gebaeude.values()) {
-      if (g.sp !== z.sp || g.typ !== 'lager') continue;
+      if (g.sp !== z.sp || !istLager(g)) continue;
       const d = this.distZu(g.fahne).get(z.id);
-      if (d !== undefined && d < bd) { bd = d; best = g.id; }
+      if (d === undefined) continue;
+      if (g.regel[art] === 0 && d < bd) { bd = d; best = g.id; }
+      if (d < nd) { nd = d; notfall = g.id; }
     }
-    return best;
+    return best || notfall;
   }
 
   /** Segment, über das die Ware an Fahne z weiterläuft (kürzester Weg zum Ziel), oder 0. Erneuert ein ungültiges Ziel. */
@@ -1427,13 +1759,13 @@ export class Simulation {
       if (w.ziel !== g.id) continue;
       f.waren.splice(i, 1);
       if (g.incoming[w.art] > 0) g.incoming[w.art]--;
-      if (g.typ === 'lager') g.vorrat[w.art]++;
+      if (istLager(g)) g.vorrat[w.art]++;
       else if (!g.fertig) g.stapel[w.art]++;
       else g.puffer[w.art]++;
       this.stat.angekommen++;
       break;
     }
-    if (g.typ === 'lager' || !g.fertig || g.getrennt) return;
+    if (istLager(g) || !g.fertig || g.getrennt) return;
     const t = GEBAEUDE[g.typ];
     // Output-Puffer → Fahne, solange diese Platz hat (Rückstau)
     if (t.ausgangMax > 0 && g.ausgang[t.ausgangWare] > 0 && this.platz(f)) {
@@ -1443,8 +1775,20 @@ export class Simulation {
     if (t.arbeiter && !g.ar) {
       const d = this.doerfer[g.sp];
       if (d.frei <= 0) return;
+      // Fachkräfte fangen erst mit ihrem Werkzeug an (Drehbuch 4.5, 5)
+      if (t.werkzeug && g.puffer[WARE.werkzeug] < t.werkzeug) return;
+      if (t.werkzeug) { g.puffer[WARE.werkzeug] -= t.werkzeug; this.stat.verbraucht += t.werkzeug; }
       d.frei--;
       g.ar = 1; g.ph = PH_SUCHE; g.pt = 0; g.leer = 0;
+    }
+    // Jahreszeit und Wetter (Drehbuch 7.4): Felder ruhen im Winter und werden im Frühjahr gesät, Hochwasser legt die Aue still,
+    // Wind, Dürre, Missernte und Frieren bremsen, Ernte und Regen auf den Feldern treiben an
+    let extra = false;
+    if (t.arbeiter && t.funktion !== 'schaenke') {
+      if (this.stillstand(g, t)) { if (t.funktion === 'erzeuger') g.arbeit = 0; return; }
+      const p = this.tempoProzent(g, t);
+      if (p < 0 && this.bremst(-p, g.id)) return;
+      extra = this.schub(p, g.id);
     }
     switch (t.funktion) {
       case 'holzfaeller': case 'steinbruch': case 'foerster': this.laeuferTick(g, t); break;
@@ -1452,11 +1796,12 @@ export class Simulation {
         const wd = t.wandelt!;
         if (!g.arbeit) {
           if (g.ruht) break;
-          if (g.puffer[wd.ein] >= wd.menge && g.ausgang[wd.aus] < t.ausgangMax) {
-            g.puffer[wd.ein] -= wd.menge; g.arbeit = 1; g.zeit = 0; this.stat.verbraucht += wd.menge;
+          if (this.zutatenDa(g, t) && g.ausgang[wd.aus] < t.ausgangMax) {
+            for (const z of wd.ein) { g.puffer[z.a] -= z.n; this.stat.verbraucht += z.n; }
+            g.arbeit = 1; g.zeit = 0;
           }
         } else {
-          g.zeit++;
+          g.zeit += extra ? 2 : 1;
           if (g.zeit >= wd.ticks) { this.produziert(g, wd.aus); g.arbeit = 0; g.zeit = 0; }
         }
         break;
@@ -1465,12 +1810,13 @@ export class Simulation {
         // Feld, Wiese, Stall, Bienenstock: alle arbeitTicks eine Ware, solange der Output-Puffer Platz hat
         if (g.ausgang[t.ausgangWare] >= t.ausgangMax || g.ruht) { g.arbeit = 0; break; }
         g.arbeit = 1;
-        g.zeit++;
+        g.zeit += extra ? 2 : 1;
         if (g.zeit >= t.arbeitTicks) { this.produziert(g, t.ausgangWare); g.zeit = 0; }
         break;
       }
       case 'wohnen': this.wohnenTick(g, t); break;
       case 'kirmes': this.kirmesTick(g); break;
+      case 'schaenke': this.schaenkeTick(g, t); break;
       default: break;
     }
   }
@@ -1603,7 +1949,7 @@ export class Simulation {
     // Priorität, dann Id; Wohnhäuser wollen das beste Essen zuerst. Mit der Standard-Verteilung genau die feste Reihenfolge aus M5.
     const wunsch: { g: Gebaeude; a: number; rang: number; prio: number; i: number }[] = [];
     for (const g of this.gebaeude.values()) {
-      if (g.typ === 'lager' || g.getrennt) continue;
+      if (istLager(g) || g.getrennt) continue;
       const t = GEBAEUDE[g.typ];
       if (g.fertig && !this.hatEingang(t)) continue;
       const art = abnehmerArt(g), v = this.doerfer[g.sp].vert;
@@ -1616,24 +1962,51 @@ export class Simulation {
         wunsch.push({ g, a, rang, prio: g.fertig ? 0 : g.prio, i });
       }
     }
-    if (!wunsch.length) return;
     wunsch.sort((x, y) => x.rang - y.rang || y.prio - x.prio || x.g.id - y.g.id || x.i - y.i);
     for (const { g, a } of wunsch) {
       if ((g.fertig ? this.pufferPlatz(g, a) : this.offen(g, a)) <= 0) continue;
       const dm = this.distZu(g.fahne);
       let best: Gebaeude | null = null, bd = Infinity;
       for (const l of this.gebaeude.values()) {
-        if (l.sp !== g.sp || l.typ !== 'lager' || gezogen.has(l.id) || l.vorrat[a] <= 0) continue;
+        if (l.sp !== g.sp || !istLager(l) || gezogen.has(l.id) || l.vorrat[a] <= 0) continue;
         // Nur ausgehende Waren an der Lagerfahne bremsen; was zum Lager unterwegs ist, nimmt das Lager selbst ab
         if (this.ausgehend(l) >= FLAG_CAP / 2) continue;
         const d = dm.get(l.fahne);
         if (d !== undefined && d < bd) { bd = d; best = l; }
       }
       if (!best) continue;
+      // Weiter Weg: ein freier beschwipster Bote trägt querfeldein (DESIGN §10.3)
+      if (this.karte.abstand(best.h, g.h) > BOTE_AB_HEX) {
+        this.doerfer[g.sp].botenWunsch = this._tick;
+        if (this.boteSchicken(g, a, best)) continue;
+      }
       best.vorrat[a]--;
       g.incoming[a]++;
       this.fahnen.get(best.fahne)!.waren.push({ art: a, ziel: g.id });
       gezogen.add(best.id);
+    }
+    this.auslagern(gezogen);
+  }
+
+  /** Lagerregel „auslagern“: je Lager eine Ware dieser Art an seine Fahne, Ziel das nächste Lager des Dorfs mit Regel „normal“. */
+  private auslagern(gezogen: Set<Id>): void {
+    for (const l of this.gebaeude.values()) {
+      if (!istLager(l) || gezogen.has(l.id) || this.ausgehend(l) >= FLAG_CAP / 2) continue;
+      for (let a = 0; a < WAREN.length; a++) {
+        if (l.regel[a] !== 2 || l.vorrat[a] <= 0) continue;
+        let ziel: Gebaeude | null = null, bd = Infinity;
+        for (const x of this.gebaeude.values()) {
+          if (x.id === l.id || x.sp !== l.sp || !istLager(x) || x.regel[a] !== 0) continue;
+          const d = this.distZu(x.fahne).get(l.fahne);
+          if (d !== undefined && d < bd) { bd = d; ziel = x; }
+        }
+        if (!ziel) continue;
+        l.vorrat[a]--;
+        ziel.incoming[a]++;
+        this.fahnen.get(l.fahne)!.waren.push({ art: a, ziel: ziel.id });
+        gezogen.add(l.id);
+        break;
+      }
     }
   }
 
@@ -1677,7 +2050,8 @@ export class Simulation {
       this.ereignis(g.sp, 'bewohner', g.id, ware);
       // gleich weiter mit dem nächsten Bissen
     }
-    if (g.ruht || !this.nahrungIn(g) || this.wohnraumFrei(g.sp) <= 0) return;
+    // wer friert, bekommt keinen Nachwuchs (Wintervorrat, Drehbuch 7.4)
+    if (g.ruht || this.doerfer[g.sp].friert || !this.nahrungIn(g) || this.wohnraumFrei(g.sp) <= 0) return;
     for (const a of NAHRUNG_REIHE) {
       if (g.puffer[a] <= 0) continue;
       g.puffer[a]--; g.arbeit = a + 1; g.zeit = 0; this.stat.verbraucht++;
@@ -1697,7 +2071,7 @@ export class Simulation {
     const p = this.kirmesPlatz(sp);
     if (p && p.fertig) n -= p.puffer[art] + p.incoming[art];
     if (n <= 0) return 0;
-    for (const l of this.gebaeude.values()) if (l.sp === sp && l.typ === 'lager') n -= l.vorrat[art];
+    for (const l of this.gebaeude.values()) if (l.sp === sp && istLager(l)) n -= l.vorrat[art];
     // 0 = es liegt mehr im Lager, als noch fehlt
     return Math.max(0, n + 1);
   }
@@ -1710,12 +2084,57 @@ export class Simulation {
   /** Kirmesplatz: Ist die Warenliste geliefert, wird sie verbraucht und das Fest beginnt. */
   private kirmesTick(g: Gebaeude): void {
     const d = this.doerfer[g.sp];
-    const k = KIRMES[d.stufe];
-    if (!k || d.fest > 0) return;
-    for (let a = 0; a < k.liste.length; a++) if (g.puffer[a] < k.liste[a]) return;
-    for (let a = 0; a < k.liste.length; a++) { g.puffer[a] -= k.liste[a]; this.stat.verbraucht += k.liste[a]; }
-    d.fest = Math.max(1, k.festTicks);
-    this.ereignis(g.sp, 'kirmes', g.id, d.stufe);
+    const k = this.kirmesJetzt(d);
+    if (k) {
+      let ok = true, misch = 0;
+      for (let a = 0; a < k.liste.length; a++) {
+        if (g.puffer[a] < k.liste[a]) ok = false;
+        else if (MISCHKORB[a]) misch += g.puffer[a] - k.liste[a];
+      }
+      if (ok && misch >= k.mischkorb) {
+        for (let a = 0; a < k.liste.length; a++) { g.puffer[a] -= k.liste[a]; this.stat.verbraucht += k.liste[a]; }
+        // Mischkorb aus dem Überschuss, Waren in fester Reihenfolge
+        let rest = k.mischkorb;
+        for (let a = 0; a < WAREN.length && rest > 0; a++) {
+          if (!MISCHKORB[a]) continue;
+          const n = Math.min(rest, g.puffer[a]);
+          g.puffer[a] -= n; rest -= n; this.stat.verbraucht += n;
+        }
+        d.fest = Math.max(1, k.festTicks);
+        this.ereignis(g.sp, 'kirmes', g.id, d.stufe);
+      }
+    }
+    // kleines Fest der Jahreszeit (Drehbuch 6 „Feste“): Waren, die die Kirmes noch braucht, bleiben ihr
+    const f = this.festJetzt(d);
+    if (f < 0) return;
+    const fest = KLEINE_FESTE[f], kv = this.kirmesJetzt(d);
+    for (let a = 0; a < WAREN.length; a++) if (fest.liste[a] > 0 && g.puffer[a] - (kv ? kv.liste[a] : 0) < fest.liste[a]) return;
+    for (let a = 0; a < WAREN.length; a++) { g.puffer[a] -= fest.liste[a]; this.stat.verbraucht += fest.liste[a]; }
+    d.kfest = Math.max(1, KLEINES_FEST_TICKS); d.kfestNr = f;
+    d.festJahr[f] = jahrVon(this._tick);
+    d.festPunkte += Math.max(0, Math.min(fest.punkte, FEST_OBERGRENZE - d.festPunkte));
+    this.ereignis(g.sp, 'kleines_fest', g.id, f);
+  }
+
+  /** Schänke (DESIGN §10.3): macht aus einem Schnaps und einem freien Bewohner einen Boten, wenn weite Lieferungen anstehen. */
+  private schaenkeTick(g: Gebaeude, t: GebaeudeTyp): void {
+    if (g.zeit < BOTE_TAKT) g.zeit++;
+    const d = this.doerfer[g.sp];
+    if (g.ruht || g.zeit < BOTE_TAKT || g.puffer[WARE.schnaps] < 1 || d.frei <= 0 || this.botenVon(g.id) >= t.boten) return;
+    const gebraucht = this._tick - d.botenWunsch < BOTE_WUNSCH_HAELT || this.liegend.some((x) => x.sp === g.sp && !x.bote);
+    if (!gebraucht) return;
+    g.puffer[WARE.schnaps]--; this.stat.verbraucht++;
+    g.zeit = 0; g.erzeugt++;
+    d.frei--;
+    const b: Bote = { id: this.naechsteId++, sp: g.sp, schaenke: g.id, bis: this._tick + BOTE_TICKS, phase: BO_WARTET, route: [g.h], ri: 0, t: 0, dauer: 0, art: -1, ziel: 0, lager: 0, faellt: -1 };
+    this.boten.set(b.id, b);
+  }
+
+  /** Boten einer Schänke, die gerade unterwegs sind. */
+  private botenVon(id: Id): number {
+    let n = 0;
+    for (const b of this.boten.values()) if (b.schaenke === id) n++;
+    return n;
   }
 
   /** Bringt gerade ein Wohnhaus im Dorf von `sp` Nachwuchs (Zyklus läuft)? */
@@ -1742,13 +2161,68 @@ export class Simulation {
         d.stufe++;
         this.ereignis(sp, 'stufe', 0, d.stufe);
         if (k && k.zuzug > 0) { this.neuerBewohner(sp, k.zuzug); this.ereignis(sp, 'zuzug', 0, k.zuzug); }
+        const kern = this.dorfkern(sp);
+        if (k && kern) for (let a = 0; a < WAREN.length; a++) kern.vorrat[a] += k.geschenk[a];
       }
     }
+    if (d.kfest > 0) d.kfest--;
+    this.winterTick(sp);
+    if (this._tick % BAULEUTE_TAKT === 0) this.neueBauleute(sp);
     if (this._tick >= d.statNaechst) this.statPunkt(sp);
     if (this.notnagelGreift(sp)) {
       d.notnagelT++;
       if (d.notnagelT >= NOTNAGEL_TICKS) { d.notnagelT = 0; this.neuerBewohner(sp); this.ereignis(sp, 'notnagel', 0, 1); }
     } else d.notnagelT = 0;
+  }
+
+  /** Der Dorfkern (Start-Lager) von `sp`. */
+  private dorfkern(sp: number): Gebaeude | undefined {
+    for (const g of this.gebaeude.values()) if (g.sp === sp && g.typ === 'lager') return g;
+    return undefined;
+  }
+
+  /**
+   * Wintervorrat (Drehbuch 7.4): Im Winter isst das Dorf alle WINTER_ESSEN_TICKS je angefangene WINTER_JE_BEWOHNER Bewohner ein Essen aus
+   * seinen Lagern, einfaches zuerst. Reicht es nicht, frieren die Leute bis zur nächsten vollen Mahlzeit; im Frühjahr ist es vorbei.
+   */
+  private winterTick(sp: number): void {
+    const d = this.doerfer[sp];
+    if (this.jz !== WINTER) {
+      d.winterT = 0;
+      if (d.friert) { d.friert = 0; this.ereignis(sp, 'satt', 0, 0); }
+      return;
+    }
+    d.winterT++;
+    if (d.winterT < WINTER_ESSEN_TICKS) return;
+    d.winterT = 0;
+    let soll = Math.ceil(d.bewohner / WINTER_JE_BEWOHNER);
+    for (const a of EINFACH_ZUERST) {
+      for (const l of this.gebaeude.values()) {
+        if (soll <= 0) break;
+        if (l.sp !== sp || !istLager(l) || l.vorrat[a] <= 0) continue;
+        const n = Math.min(soll, l.vorrat[a]);
+        l.vorrat[a] -= n; soll -= n; this.stat.verbraucht += n;
+      }
+    }
+    if (soll > 0 && !d.friert) { d.friert = 1; this.ereignis(sp, 'friert', 0, soll); }
+    else if (soll <= 0 && d.friert) { d.friert = 0; this.ereignis(sp, 'satt', 0, 0); }
+  }
+
+  /** Neue Bauarbeiter und Planierer (Drehbuch 4.5): fehlen welche zur Wunschzahl, wird aus Werkzeug und einem freien Bewohner einer. */
+  private neueBauleute(sp: number): void {
+    const d = this.doerfer[sp];
+    for (const beruf of [0, 1] as const) {
+      const fehlt = beruf === 0 ? d.bauGesamt < d.bauSoll : d.planGesamt < d.planSoll;
+      if (!fehlt || d.frei <= 0) continue;
+      let l: Gebaeude | undefined;
+      for (const x of this.gebaeude.values()) if (x.sp === sp && istLager(x) && x.vorrat[WARE.werkzeug] > 0) { l = x; break; }
+      if (!l) return;
+      l.vorrat[WARE.werkzeug]--; this.stat.verbraucht++;
+      d.frei--; d.bewohner--;
+      if (beruf === 0) { d.bauGesamt++; d.bauFrei++; } else { d.planGesamt++; d.planFrei++; }
+      this.ereignis(sp, 'bauleute', 0, beruf);
+      return;
+    }
   }
 
   /** Statistik: Messpunkt für das Dorf von `sp` (SichtStatistik); über STAT_MAX jeder zweite alte Punkt weg und doppelter Takt. */
@@ -1758,7 +2232,7 @@ export class Simulation {
     let gebaeude = 0;
     for (const g of this.gebaeude.values()) {
       if (g.sp !== sp) continue;
-      if (g.typ === 'lager') for (let a = 0; a < WAREN.length; a++) vorrat[a] += g.vorrat[a];
+      if (istLager(g)) for (let a = 0; a < WAREN.length; a++) vorrat[a] += g.vorrat[a];
       else if (g.fertig) gebaeude++;
     }
     d.statPunkte.push([this._tick, d.bewohner, d.stufe, gebaeude, ...vorrat, ...d.erzeugt]);
@@ -1782,7 +2256,7 @@ export class Simulation {
   private naechstesLager(f: Id): Gebaeude | undefined {
     let best: Gebaeude | undefined, bd = Infinity;
     for (const l of this.gebaeude.values()) {
-      if (l.typ !== 'lager') continue;
+      if (!istLager(l)) continue;
       const d = this.distZu(l.fahne).get(f);
       if (d !== undefined && d < bd) { bd = d; best = l; }
     }
@@ -1882,7 +2356,7 @@ export class Simulation {
     if (b.ziel) { b.phase = BM_WARTET; return; }
     const f = this.hexFahne[b.route[b.route.length - 1]];
     const g = f ? this.gebaeude.get(this.fahnen.get(f)!.gebaeude) : undefined;
-    if (!f || (g && g.typ === 'lager')) { this.baumannHeim(b); return; }
+    if (!f || (g && istLager(g))) { this.baumannHeim(b); return; }
     b.phase = BM_WARTET;
     this.baumannWeiter(b, f);
   }
@@ -1890,6 +2364,7 @@ export class Simulation {
   private baumannSchritt(b: Baumann): void {
     if (b.phase === BM_GEHT) {
       if (b.ziel && !this.gebaeude.has(b.ziel)) { this.baumannFertig(b); return; }
+      if (this.bremst(this.wegeProzent(b.route[b.ri]), b.id)) return;
       b.t++;
       if (b.t < b.dauer) return;
       b.t = 0; b.ri++;
@@ -1926,6 +2401,228 @@ export class Simulation {
     if (summe(g.incoming) === 0) this.baumannFertig(b);
   }
 
+  // ------------------------------------------------------------------ Jahreszeiten und Wetter (Drehbuch 7.4)
+
+  /** Ereignisse am Tick: neue Jahreszeit, Wetter angekündigt (Bauernregel), Hochwasser beginnt (Waren schwimmen davon). */
+  private jahrEreignisse(): void {
+    const t = this._tick;
+    if (t > 0 && t % JAHRESZEIT_TICKS === 0) for (let sp = 0; sp < this.doerfer.length; sp++) this.ereignis(sp, 'jahreszeit', 0, this.jz);
+    for (const e of this.kalender.kommend(t)) {
+      if (e.start - WETTER_ANKUENDIGUNG === t) for (let sp = 0; sp < this.doerfer.length; sp++) this.ereignis(sp, 'wetter', 0, e.art);
+      if (e.start === t && WETTER[e.art].hochwasser) this.hochwasserBeginnt(WETTER[e.art].wegschwimmen);
+    }
+  }
+
+  /** An jeder Fahne in der Aue schwimmen bis zu `n` Waren davon (die obersten). Gebäude und Bewohner bleiben (Drehbuch 7.4). */
+  private hochwasserBeginnt(n: number): void {
+    for (const f of this.fahnen.values()) {
+      if (!this.lageAue[f.h]) continue;
+      for (let i = 0; i < n && f.waren.length; i++) this.wareVerloren(f.waren.pop()!);
+    }
+  }
+
+  // ------------------------------------------------------------------ Beschwipste Boten (DESIGN §10.3)
+
+  /**
+   * Torkelnder Gehweg querfeldein von a nach b: meist ein Schritt näher (bei mehreren der Zufall), in BOTE_TORKELN_PROZENT der Fälle
+   * zur Seite (gleicher Abstand); nach zu vielen Seitenschritten nur noch geradeaus. Blockiert Wasser den direkten Weg, die Pfadsuche.
+   */
+  private torkelPfad(a: number, b: number): number[] | null {
+    const k = this.karte, weg = [a];
+    let c = a, seite = 0;
+    const seiteMax = 2 + k.abstand(a, b);
+    while (c !== b) {
+      const dc = k.abstand(c, b);
+      const vor: number[] = [], quer: number[] = [];
+      for (let d = 0; d < 6; d++) {
+        const n = k.nachbarn[c * 6 + d];
+        if (n < 0 || !k.begehbar[n]) continue;
+        const dn = k.abstand(n, b);
+        if (dn === dc - 1) vor.push(n);
+        else if (dn === dc && n !== weg[weg.length - 2]) quer.push(n);
+      }
+      if (!vor.length) {
+        const p = sucheWeg(k, c, b, () => true, 4 * WEG_MAX_SCHRITTE);
+        if (!p) return null;
+        for (let i = 1; i < p.length; i++) weg.push(p[i]);
+        return weg;
+      }
+      if (quer.length && seite < seiteMax && this.zufall(100) < BOTE_TORKELN_PROZENT) { c = quer[this.zufall(quer.length)]; seite++; }
+      else c = vor[vor.length > 1 ? this.zufall(vor.length) : 0];
+      weg.push(c);
+    }
+    return weg;
+  }
+
+  private boteLos(b: Bote, phase: number, route: number[]): void {
+    b.phase = phase; b.route = route; b.ri = 0; b.t = 0;
+    b.dauer = route.length > 1 ? this.karte.schritt(route[0], route[1]) : 0;
+  }
+
+  /** Hex, auf dem der Bote gerade steht. */
+  private boteHex(b: Bote): number { return b.route[Math.min(b.ri, b.route.length - 1)]; }
+
+  /** Ein freier Bote holt Ware `a` aus Lager `l` und bringt sie querfeldein zu `g`. false, wenn keiner frei ist oder kein Weg geht. */
+  private boteSchicken(g: Gebaeude, a: number, l: Gebaeude): boolean {
+    let best: Bote | undefined, bd = Infinity;
+    for (const b of this.boten.values()) {
+      if (b.sp !== g.sp || b.phase !== BO_WARTET || b.bis <= this._tick) continue;
+      const d = this.karte.abstand(this.boteHex(b), l.h);
+      if (d < bd) { bd = d; best = b; }
+    }
+    if (!best) return false;
+    const hin = this.torkelPfad(this.boteHex(best), l.h);
+    if (!hin) return false;
+    l.vorrat[a]--;
+    g.incoming[a]++;
+    best.art = a; best.ziel = g.id; best.lager = l.id; best.faellt = -1;
+    this.boteLos(best, BO_HOLT, hin);
+    if (hin.length < 2) this.boteAngekommen(best);
+    return true;
+  }
+
+  /** Bote bringt seine Ware ins nächste Lager seines Dorfs (Ziel weg oder aufgelesene Ware). */
+  private boteHeim(b: Bote): void {
+    const h = this.boteHex(b);
+    let l: Gebaeude | undefined, bd = Infinity;
+    for (const x of this.gebaeude.values()) {
+      if (x.sp !== b.sp || !istLager(x)) continue;
+      const d = this.karte.abstand(x.h, h);
+      if (d < bd) { bd = d; l = x; }
+    }
+    b.ziel = 0;
+    const weg = l ? this.torkelPfad(h, l.h) : null;
+    if (!l || !weg) {
+      // kein Weg: die Ware landet trotzdem im Lager (nichts geht verloren, Drehbuch 7.4)
+      if (l && b.art >= 0) l.vorrat[b.art]++;
+      b.art = -1; b.lager = 0; this.boteLos(b, BO_WARTET, [h]);
+      return;
+    }
+    b.lager = l.id;
+    this.boteLos(b, BO_HEIM, weg);
+    if (weg.length < 2) this.boteAngekommen(b);
+  }
+
+  private boteAngekommen(b: Bote): void {
+    const h = this.boteHex(b);
+    b.t = 0; b.dauer = 0;
+    switch (b.phase) {
+      case BO_HOLT: {
+        const ziel = b.ziel ? this.gebaeude.get(b.ziel) : undefined;
+        if (!ziel) { this.boteHeim(b); return; }
+        const weg = this.torkelPfad(h, ziel.h);
+        if (!weg) {
+          // nicht hinzukommen: Ware zurück ins Lager, Bestellung löst sich
+          const l = this.gebaeude.get(b.lager);
+          if (l) l.vorrat[b.art]++;
+          if (ziel.incoming[b.art] > 0) ziel.incoming[b.art]--;
+          b.art = -1; b.ziel = 0; b.lager = 0; this.boteLos(b, BO_WARTET, [h]);
+          return;
+        }
+        // jede BOTE_VERLIERT_JEDE-te Ware fällt unterwegs herunter
+        b.faellt = weg.length > 2 && this.zufall(BOTE_VERLIERT_JEDE) === 0 ? weg.length >> 1 : -1;
+        this.boteLos(b, BO_BRINGT, weg);
+        if (weg.length < 2) this.boteAngekommen(b);
+        return;
+      }
+      case BO_BRINGT: {
+        const g = b.ziel ? this.gebaeude.get(b.ziel) : undefined;
+        if (!g || g.sp !== b.sp) { this.boteHeim(b); return; }
+        if (g.incoming[b.art] > 0) g.incoming[b.art]--;
+        if (istLager(g)) g.vorrat[b.art]++;
+        else if (!g.fertig) g.stapel[b.art]++;
+        else g.puffer[b.art]++;
+        this.stat.angekommen++;
+        b.art = -1; b.ziel = 0; b.lager = 0;
+        this.boteLos(b, BO_WARTET, [h]);
+        return;
+      }
+      case BO_SAMMELT: {
+        const i = this.liegend.findIndex((x) => x.bote === b.id);
+        if (i < 0) { this.boteLos(b, BO_WARTET, [h]); return; }
+        b.art = this.liegend[i].art;
+        this.liegend.splice(i, 1);
+        this.boteHeim(b);
+        return;
+      }
+      case BO_HEIM: {
+        const l = this.gebaeude.get(b.lager);
+        if (!l || !istLager(l)) { this.boteHeim(b); return; }
+        if (b.art >= 0) { l.vorrat[b.art]++; this.stat.angekommen++; }
+        b.art = -1; b.lager = 0;
+        this.boteLos(b, BO_WARTET, [h]);
+        return;
+      }
+      default: this.boteLos(b, BO_WARTET, [h]);
+    }
+  }
+
+  /** Bote lässt seine Ware fallen: sie bleibt liegen, die Bestellung löst sich (das Ziel bestellt neu). */
+  private boteVerliert(b: Bote): void {
+    const h = this.boteHex(b);
+    const g = this.gebaeude.get(b.ziel);
+    if (g && g.incoming[b.art] > 0) g.incoming[b.art]--;
+    this.liegend.push({ h, art: b.art, sp: b.sp, bis: this._tick + AUFSAMMELN_TICKS, bote: 0 });
+    this.ereignis(b.sp, 'verloren', 0, b.art);
+    const e = this.doerfer[b.sp].ereignisse;
+    e[e.length - 1].q = this.karte.qs[h]; e[e.length - 1].r = this.karte.rs[h];
+    b.art = -1; b.ziel = 0; b.lager = 0; b.faellt = -1;
+    this.boteLos(b, BO_WARTET, [h]);
+  }
+
+  private boteSchritt(b: Bote): void {
+    if (b.ri + 1 < b.route.length) {
+      if (this.bremst(this.wegeProzent(b.route[b.ri]), b.id)) return;
+      b.t++;
+      if (b.t < b.dauer) return;
+      b.t = 0; b.ri++;
+      if (b.phase === BO_BRINGT && b.ri === b.faellt && b.art >= 0) { this.boteVerliert(b); return; }
+      if (b.ri + 1 < b.route.length) { b.dauer = this.karte.schritt(b.route[b.ri], b.route[b.ri + 1]); return; }
+      this.boteAngekommen(b);
+      return;
+    }
+    if (b.phase !== BO_WARTET) { this.boteAngekommen(b); return; }
+    // Schwips verflogen: zurück in den Vorrat
+    if (b.bis <= this._tick) {
+      this.boten.delete(b.id);
+      this.doerfer[b.sp].frei++;
+      return;
+    }
+    // ab und zu nach liegenden Waren sehen
+    if ((this._tick + b.id) % 20 !== 0) return;
+    const h = this.boteHex(b);
+    let best: Liegend | undefined, bd = Infinity;
+    for (const x of this.liegend) {
+      if (x.sp !== b.sp || x.bote) continue;
+      const d = this.karte.abstand(x.h, h);
+      if (d < bd) { bd = d; best = x; }
+    }
+    if (!best) return;
+    const weg = this.torkelPfad(h, best.h);
+    if (!weg) return;
+    best.bote = b.id;
+    this.boteLos(b, BO_SAMMELT, weg);
+    if (weg.length < 2) this.boteAngekommen(b);
+  }
+
+  /** Liegengebliebenes, das kein Bote holt, liest nach AUFSAMMELN_TICKS ein Bewohner auf und bringt es ins nächste Lager. */
+  private aufsammeln(): void {
+    if (!this.liegend.length) return;
+    this.liegend = this.liegend.filter((x) => {
+      if (x.bote && this.boten.get(x.bote)?.phase === BO_SAMMELT) return true;
+      x.bote = 0;
+      if (x.bis > this._tick) return true;
+      let l: Gebaeude | undefined, bd = Infinity;
+      for (const g of this.gebaeude.values()) {
+        if (g.sp !== x.sp || !istLager(g)) continue;
+        const d = this.karte.abstand(g.h, x.h);
+        if (d < bd) { bd = d; l = g; }
+      }
+      if (l) l.vorrat[x.art]++;
+      return false;
+    });
+  }
+
   // ------------------------------------------------------------------ Träger
 
   private traegerPhase(): void {
@@ -1944,7 +2641,7 @@ export class Simulation {
     for (const e of [s.a, s.b]) {
       const dm = this.distZu(e);
       for (const l of this.gebaeude.values()) {
-        if (l.sp !== s.sp || l.typ !== 'lager') continue;
+        if (l.sp !== s.sp || !istLager(l)) continue;
         const d = dm.get(l.fahne);
         if (d !== undefined && (!best || d < best.d)) best = { l, e, d };
       }
@@ -1994,6 +2691,7 @@ export class Simulation {
   private traegerSchritt(t: Traeger): void {
     const s = this.segmente.get(t.seg)!;
     if (t.pause > 0) { t.pause--; return; }
+    if (t.phase !== 1 && this.bremst(this.wegeProzent(t.phase === 0 ? t.route[t.ri] : s.pfad[t.pos]), t.id)) return;
     if (t.phase === 0) {
       t.t++;
       if (t.t >= t.dauer) {

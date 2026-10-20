@@ -2,11 +2,17 @@
  "hinweis": "Dorf, Bewohner, Bauen und Kirmes (Drehbuch 4.2–4.5, 5.2; DESIGN §5). Startwerte, werden beim Spielen eingestellt. Zeiten in Sekunden, Waren über Waren-Ids (goods.json).",
  "start": {
   "hinweis": "Bewohner beim Start (freie Bewohner, daraus werden Träger und Arbeiter). Bauarbeiter und Planierer sind ein fester Vorrat und zählen nicht zum Wohnraum (Drehbuch 4.5).",
-  "bewohner": 10, "bauarbeiter": 4, "planierer": 2
+  "bewohner": 10,
+  "bauarbeiter": 4,
+  "planierer": 2
  },
  "wohnen": {
   "hinweis": "Ein Wohnhaus mit Essen bringt je Zyklus einen Bewohner und isst dabei 1 Ware, die beste zuerst; nur solange Wohnraum frei ist. Zyklus je Nahrungsstufe (1 einfach, 2 veredelt, 3 edel). Notnagel: weniger als 'notnagel_frei_unter' freie Bewohner und kein Nachwuchs in Sicht (kein Wohnhaus mit Essen oder kein Wohnraum frei) → alle 'notnagel_s' ein Zugezogener (auch ohne Wohnraum, der schläft in der Scheune).",
-  "zyklus_s": [14, 9, 6],
+  "zyklus_s": [
+   14,
+   9,
+   6
+  ],
   "notnagel_frei_unter": 4,
   "notnagel_s": 30
  },
@@ -17,25 +23,118 @@
   "planieren_s": 8,
   "planieren_je_grad_s": 0.5
  },
- "stufen": ["Weiler", "Dorf", "Kirchdorf", "Marktflecken"],
+ "stufen": [
+  "Weiler",
+  "Dorf",
+  "Kirchdorf",
+  "Marktflecken"
+ ],
  "kirmes": [
   {
-   "hinweis": "Weiler → Dorf (Drehbuch 5.2). Zuzug: so viele Bewohner lockt die Kirmes an, auch über den Wohnraum hinaus. Die weiteren Kirmes-Stufen kommen mit ihren Waren in M8.",
-   "liste": { "bratkartoffeln": 10, "most": 10, "kaese": 6 },
+   "hinweis": "Weiler → Dorf (Drehbuch 5.2). Zuzug: so viele Bewohner lockt die Kirmes an, auch über den Wohnraum hinaus. 'geschenk' kommt nach dem Fest ins Lager. 'mischkorb': so viele beliebige veredelte Waren (Nahrung ab Stufe 2 oder 'mischkorb' in goods.json) zusätzlich.",
+   "liste": {
+    "bratkartoffeln": 10,
+    "most": 10,
+    "kaese": 6
+   },
    "fest_s": 45,
    "zuzug": 15,
-   "schaltet_frei": ["Reifekeller", "Brauerei (M8)", "Brennerei (M8)", "Schänke (M8)", "Schützenhaus (M8)", "Lagerhaus (M8)"]
+   "schaltet_frei": [
+    "Reifekeller",
+    "Gerstenfeld",
+    "Brauerei",
+    "Wacholderheide",
+    "Brennerei",
+    "Schänke",
+    "Lagerhaus"
+   ]
+  },
+  {
+   "hinweis": "Dorf → Kirchdorf (Drehbuch 5.2). Die Spezialkette des Völkchens kommt mit M10. Das Geschenk (2 Werkzeug) bringt die Eisenkette in Gang (beschlossen M8). Mengen beim Balancing (M8, 2-Stunden-Lauf des Bots) über die Startwerte 10/12/15/5 gehoben: der Bot erreicht das Kirchdorf nach rund 52 min, ein Mensch braucht erfahrungsgemäß länger (Ziel ~75 min).",
+   "liste": {
+    "bergkaese": 15,
+    "honig": 20,
+    "landbier": 25,
+    "schnaps": 10
+   },
+   "fest_s": 45,
+   "zuzug": 15,
+   "geschenk": {
+    "werkzeug": 2
+   },
+   "schaltet_frei": [
+    "Erzgrube",
+    "Köhlerei",
+    "Eisenhütte",
+    "Schmiede",
+    "neue Bauarbeiter und Planierer"
+   ]
+  },
+  {
+   "hinweis": "Kirchdorf → Marktflecken (Drehbuch 5.2). Bis M10 steht Bergkäse als Platzhalter für die Spezialität des Völkchens (beschlossen M8). Werkzeug nimmt der Kirmesplatz erst, wenn das Dorf selbst welches geschmiedet hat (sonst fehlt es Erzgrube und Eisenhütte). Der Bot schafft es nach rund 75 min (Ziel für Menschen ~110 min).",
+   "liste": {
+    "bergkaese": 10,
+    "werkzeug": 10
+   },
+   "mischkorb": 20,
+   "fest_s": 60,
+   "zuzug": 20,
+   "schaltet_frei": [
+    "besserer Handel (M9)"
+   ]
   }
  ],
+ "bauleute": {
+  "hinweis": "Neue Bauarbeiter und Planierer (Drehbuch 4.5): Im Lagerfenster stellt man die Wunschzahl ein; fehlen welche, macht das Dorf alle 'takt_s' aus 1 Werkzeug im Lager und 1 freien Bewohner einen neuen. Höchstens 'max' je Beruf.",
+  "takt_s": 10,
+  "max": 20
+ },
+ "boten": {
+  "hinweis": "Beschwipste Boten (DESIGN §10.3, beschlossen M8): Die Schänke macht aus 1 Schnaps einen Boten aus einem freien Bewohner, der 'dauer_s' unterwegs ist. Boten tragen Waren querfeldein vom Lager direkt zum Abnehmer, wenn er weiter als 'ab_hex' entfernt ist; sie torkeln ('torkeln_prozent' der Schritte gehen zur Seite) und verlieren jede 'verliert_jede'-te Ware unterwegs. Liegengebliebenes liest nach 'aufsammeln_s' ein Bewohner auf und bringt es ins nächste Lager.",
+  "dauer_s": 180,
+  "ab_hex": 8,
+  "torkeln_prozent": 30,
+  "verliert_jede": 10,
+  "aufsammeln_s": 120
+ },
  "verteilung": {
-  "hinweis": "Warenverteilung wie in Siedler 2 (ROADMAP M7): Für jede Ware eine Rangfolge der Abnehmer, wer sie zuerst bekommt. Die Spieler stellen sie im Fenster „Verteilung“ um (Befehl verteilung, je Dorf). Standard ist die feste Reihenfolge aus M5. Das Lager nimmt immer zuletzt.",
+  "hinweis": "Warenverteilung wie in Siedler 2 (ROADMAP M7): Für jede Ware eine Rangfolge der Abnehmer, wer sie zuerst bekommt. Die Spieler stellen sie im Fenster „Verteilung“ um (Befehl verteilung, je Dorf). Standard ist die feste Reihenfolge aus M5. Das Lager nimmt immer zuletzt. 'je_ware' weicht für einzelne Waren davon ab: Werkzeug geht zuerst an Fachkräfte (Verarbeiter), sonst verklemmt die Eisenkette (beschlossen M8).",
   "abnehmer": [
-   { "id": "baustelle", "name": "Baustellen", "symbol": "🏗️" },
-   { "id": "kirmes", "name": "Kirmesplatz", "symbol": "🎡" },
-   { "id": "verarbeiter", "name": "Verarbeiter", "symbol": "⚙️" },
-   { "id": "wohnen", "name": "Wohnhäuser", "symbol": "🏠" }
+   {
+    "id": "baustelle",
+    "name": "Baustellen",
+    "symbol": "🏗️"
+   },
+   {
+    "id": "kirmes",
+    "name": "Kirmesplatz",
+    "symbol": "🎡"
+   },
+   {
+    "id": "verarbeiter",
+    "name": "Verarbeiter",
+    "symbol": "⚙️"
+   },
+   {
+    "id": "wohnen",
+    "name": "Wohnhäuser",
+    "symbol": "🏠"
+   }
   ],
-  "standard": ["baustelle", "kirmes", "verarbeiter", "wohnen"]
+  "standard": [
+   "baustelle",
+   "kirmes",
+   "verarbeiter",
+   "wohnen"
+  ],
+  "je_ware": {
+   "werkzeug": [
+    "baustelle",
+    "verarbeiter",
+    "kirmes",
+    "wohnen"
+   ]
+  }
  },
  "statistik": {
   "hinweis": "Statistik (ROADMAP M7): Die Simulation schreibt alle 'takt_s' Spielsekunden je Dorf einen Messpunkt (Bewohner, Gebäude, Lagerbestand und erzeugte Waren je Ware); er ist Teil des Spielstands. Ab 'max_punkte' wird jeder zweite alte Punkt gestrichen und der Takt verdoppelt.",

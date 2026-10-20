@@ -59,6 +59,13 @@ export type Befehl =
   | { art: 'verteilung'; ware: number; reihe: number[] }
   /** Gebäude ruhen lassen (an) oder weiterarbeiten (aus); nur eigene Gebäude mit Arbeiter oder Wohnhäuser (GEBAEUDE_PAUSIERBAR). */
   | { art: 'ruhen'; id: Id; an: boolean }
+  /**
+   * Lagerregel (ROADMAP M8, wie Siedler 2): Ware `ware` im eigenen Lager oder Lagerhaus `id` normal einlagern (0), nicht einlagern (1:
+   * neue Waren gehen in ein anderes Lager) oder auslagern (2: der Bestand wird in Lager mit „normal“ getragen). Sonst wirkungslos.
+   */
+  | { art: 'lagerregel'; id: Id; ware: number; regel: number }
+  /** Wunschzahl Bauarbeiter und Planierer im eigenen Dorf (Drehbuch 4.5): fehlen welche, entstehen neue aus Werkzeug und Bewohner. */
+  | { art: 'bauleute'; bauarbeiter: number; planierer: number }
   | { art: 'abriss_fahne'; id: Id }
   | { art: 'abriss_weg'; id: Id }
   | { art: 'abriss_gebaeude'; id: Id }
@@ -139,13 +146,17 @@ export interface SichtTraeger {
  * - 'kein_platz'      Förster findet im Radius keinen freien Pflanzplatz
  * - 'voll'            Output-Puffer voll (Rückstau), die Arbeit ruht
  * - 'ruht'            vom Spieler angehalten (Befehl 'ruhen')
+ * - 'winter'          Feld ruht im Winter (Drehbuch 7.4)
+ * - 'saat'            Feld wird im Frühjahr erst gesät
+ * - 'hochwasser'      Gebäude in der Aue steht beim Hochwasser still
+ * - 'kein_werkzeug'   die Fachkraft wartet auf Werkzeug
  * - 'arbeitet'        arbeitet gerade (auch auf dem Weg zur Arbeit)
  * - 'bereit'          fertig und nichts zu tun (Lager, Kirmesplatz ohne weitere Stufe)
  */
 export type GebaeudeZustand =
   | 'baustelle' | 'wartet_material' | 'getrennt' | 'kein_arbeiter' | 'kein_baum' | 'kein_fels' | 'kein_platz' | 'voll'
   | 'kein_planierer' | 'planieren' | 'kein_bauarbeiter' | 'hunger' | 'wohnraum_voll' | 'fest'
-  | 'ruht' | 'arbeitet' | 'bereit';
+  | 'ruht' | 'arbeitet' | 'bereit' | 'winter' | 'saat' | 'hochwasser' | 'kein_werkzeug';
 
 /** Der Arbeiter eines Holzfällers, Försters oder Steinbruchs (Figur in der Welt). */
 export interface SichtArbeiter {
@@ -191,6 +202,10 @@ export interface SichtGebaeude {
   arbeiter?: SichtArbeiter;
   /** Arbeitsmittelpunkt, nur wenn gesetzt und ungleich dem Gebäude-Hex. */
   mitte?: { q: number; r: number };
+  /** Lager und Lagerhaus: Regel je Warenart (0 normal, 1 nicht einlagern, 2 auslagern). */
+  regel?: number[];
+  /** Schänke: Boten, die gerade unterwegs sind. */
+  boten?: number;
 }
 
 /**
@@ -230,11 +245,17 @@ export interface SichtBaumann {
 /** Ereignis für Meldungen (Drehbuch 1.1: mit Spruch in der Oberfläche). nr steigt fortlaufend. */
 export interface SichtEreignis {
   nr: number; tick: number;
-  art: 'bewohner' | 'notnagel' | 'fertig' | 'kirmes' | 'stufe' | 'zuzug';
-  /** Gebäude (bewohner, fertig, kirmes) oder 0. */
+  art: 'bewohner' | 'notnagel' | 'fertig' | 'kirmes' | 'stufe' | 'zuzug'
+    | 'jahreszeit' | 'wetter' | 'friert' | 'satt' | 'kleines_fest' | 'bauleute' | 'verloren';
+  /** Gebäude (bewohner, fertig, kirmes, kleines_fest) oder 0. */
   gebaeude: Id;
-  /** Zahl (zuzug: Bewohner; stufe: neue Stufe) oder Warenart (bewohner: gegessene Ware). */
+  /**
+   * Zahl (zuzug: Bewohner; stufe: neue Stufe; jahreszeit: 0 Frühjahr … 3 Winter; wetter: Wetterart, angekündigt; kleines_fest: Fest-Index;
+   * bauleute: 0 Bauarbeiter, 1 Planierer) oder Warenart (bewohner: gegessene Ware; verloren: fallen gelassene Ware).
+   */
   wert: number;
+  /** Ort (Hex) für verloren, sonst nicht gesetzt. */
+  q?: number; r?: number;
 }
 
 /** Dorf: Bewohner, Wohnraum, Bauleute, Dorfstufe und Kirmes (Drehbuch 4.3, 4.5, 5.2). */
@@ -248,7 +269,15 @@ export interface SichtDorf {
   bauarbeiter: { gesamt: number; frei: number };
   planierer: { gesamt: number; frei: number };
   /** Kirmes der aktuellen Stufe (null, wenn es keine weitere gibt): Warenliste, am Platz geliefert, Fest-Restticks (0 = kein Fest). */
-  kirmes: { liste: number[]; geliefert: number[]; platz: Id; fest: number; festDauer: number } | null;
+  kirmes: { liste: number[]; geliefert: number[]; platz: Id; fest: number; festDauer: number; mischkorb: { soll: number; da: number } } | null;
+  /** Kleines Fest dieser Jahreszeit (Drehbuch 6 „Feste“): Index in KLEINE_FESTE, Warenliste, am Platz dafür bereit, laufendes Fest. */
+  fest: { nr: number; liste: number[]; geliefert: number[]; laeuft: number } | null;
+  /** Punkte aus kleinen Festen (bis FEST_OBERGRENZE). */
+  festPunkte: number;
+  /** Im Winter fehlt Essen: die Leute frieren (Gebäude langsamer, kein Nachwuchs). */
+  friert: boolean;
+  /** Wunschzahl Bauarbeiter und Planierer (Befehl bauleute). */
+  bauSoll: number; planSoll: number;
   /** Ticks bis zum nächsten Zugezogenen (Notnagel) oder -1, wenn der Notnagel nicht greift. */
   notnagel: number;
   /** Warenverteilung: je Warenart die Rangfolge der Abnehmer-Arten (ABNEHMER in src/sim/daten.ts). */
@@ -266,9 +295,28 @@ export const STAT_KOPF = 4;
 
 /** Kurzüberblick über ein Dorf im Mehrspieler (für alle sichtbar). */
 export interface SichtSpieler {
-  stufe: number; bewohner: number;
+  stufe: number; bewohner: number; festPunkte: number;
   /** Der Verwalter führt das Dorf (Spieler fehlt länger als 5 Minuten). */
   verwalter: boolean;
+}
+
+/** Beschwipster Bote (DESIGN §10.3): läuft querfeldein, torkelt; pegel 1 angeheitert … 3 sternhagelvoll. */
+export interface SichtBote {
+  id: Id; sp: number;
+  von: { q: number; r: number }; nach: { q: number; r: number };
+  fortschritt: number; schritt: number;
+  ware: number;
+  tut: 'geht' | 'wartet';
+  pegel: 1 | 2 | 3;
+}
+
+/** Jahreszeit und Wetter (Drehbuch 7.4): für alle gleich. */
+export interface SichtJahr {
+  /** Spieljahr (0 = erstes), Jahreszeit (0 Frühjahr … 3 Winter), Ticks bis zur nächsten Jahreszeit. */
+  jahr: number; jahreszeit: number; rest: number;
+  /** Laufendes Wetter (Art = Index in WETTER) bis Tick; dazu, was angekündigt ist (ab Tick). */
+  wetter: { art: number; bis: number; feld: string }[];
+  kommt: { art: number; ab: number; feld: string }[];
 }
 
 export interface SimSicht {
@@ -288,13 +336,21 @@ export interface SimSicht {
   dorf: SichtDorf;
   /** Die letzten Ereignisse (höchstens 32), älteste zuerst. */
   ereignisse: SichtEreignis[];
+  jahr: SichtJahr;
+  boten: SichtBote[];
+  /** Waren, die Boten haben fallen lassen (liegen, bis sie einer aufliest). */
+  liegend: { q: number; r: number; ware: number; sp: number }[];
 }
 
 /** Leere Natur (ohne Hexe) für Darstellungen ohne Simulation, z. B. die Demo. */
 export const KEINE_NATUR: SichtNatur = { rev: 0, baum: new Uint8Array(0), jung: new Uint8Array(0), stufe: new Uint8Array(0), fels: new Uint8Array(0), felsArt: new Uint8Array(0) };
 
+/** Jahr ohne Simulation (Demo): Frühjahr, kein Wetter. */
+export const KEIN_JAHR: SichtJahr = { jahr: 0, jahreszeit: 0, rest: 0, wetter: [], kommt: [] };
+
 /** Leeres Dorf für Darstellungen ohne Simulation (Demo). */
 export const KEIN_DORF: SichtDorf = {
   stufe: 0, bewohner: 0, frei: 0, traeger: 0, arbeiter: 0, wohnraum: 0,
   bauarbeiter: { gesamt: 0, frei: 0 }, planierer: { gesamt: 0, frei: 0 }, kirmes: null, notnagel: -1, verteilung: [], erzeugt: [],
+  fest: null, festPunkte: 0, friert: false, bauSoll: 0, planSoll: 0,
 };

@@ -2,7 +2,7 @@
 // zwischen den Fenstern, simuliertes schlechtes Netz (#…&netz=schlecht). Ablauf: Gastgeber eröffnet einen Raum, Gast kommt über
 // den Einladungslink, beide laden die Karte (gleiche Prüfsumme), Start, beide bauen, Tempo 3, der Gast lädt die Seite neu und muss
 // in unter 30 Sekunden wieder drin sein, Pause, Prüfsummen gleich, Speichern. M7: Warenverteilung über das Fenster, Ruhen,
-// Statistik und Autosave im Mehrspieler.
+// Statistik und Autosave im Mehrspieler. M8: Lagerregel und Bauleute-Wunsch über das Lagerfenster, Jahreszeit und Wetter bei beiden gleich.
 //
 // Läuft in npm run test:smoke mit; allein:  node tests/mehrspieler.mjs   (Server und Vite startet es selbst)
 import { existsSync, mkdirSync } from 'node:fs';
@@ -163,6 +163,15 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
       fail(`Das Wohnhaus des Gasts (nach dem Neuladen) fehlt: b2 ${JSON.stringify(b2)}, Befehle beim Gastgeber ${JSON.stringify(d)}, Gast ${JSON.stringify(g)}`);
     }
     for (const x of s) for (const e of x.abw) fail(`Partie meldet: ${JSON.stringify(e)}`);
+    // M8: Lagerfenster im Mehrspieler – der Gast schaltet die Lagerregel für Steine um (Zeile antippen), der Gastgeber wünscht sich
+    // einen Bauarbeiter mehr (Knopf); beides muss bei beiden ankommen
+    const lagerId = async (s) => s.evaluate(() => { const sp = window.eifeler.spiel; const g = sp.sicht.gebaeude.find((x) => x.sp === sp.ich && x.typ === 'lager'); sp.oeffneGebaeude(g.id); return g.id; });
+    const lg = await lagerId(gast), lh = await lagerId(host);
+    await gast.waitForSelector(`.fenster[data-fenster="geb:${lg}"] [data-knopf="regel:2"]`, { timeout: 10000 });
+    await gast.locator(`.fenster[data-fenster="geb:${lg}"] [data-knopf="regel:2"]`).click();
+    await host.waitForSelector(`.fenster[data-fenster="geb:${lh}"] [data-knopf="bau:+"]`, { timeout: 10000 });
+    await host.locator(`.fenster[data-fenster="geb:${lh}"] [data-knopf="bau:+"]`).click();
+    await host.waitForTimeout(1500);
     // M7: Verteilung des Gasts und das Ruhen des Gastgebers sind bei beiden gleich (auch nach dem Neuladen des Gasts)
     await gast.evaluate(() => window.eifeler.spiel.pauseUmschalten());
     await host.waitForFunction(laeuft, null, { timeout: 10000 });
@@ -172,8 +181,15 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
     for (let i = 0; i < 40; i++) { const t = await Promise.all([host, gast].map((x) => x.evaluate(() => window.eifeler.partie.sim.tick))); if (t[0] === t[1]) break; await host.waitForTimeout(250); }
     const m7b = await Promise.all([host, gast].map((x) => x.evaluate(() => {
       const sim = window.eifeler.partie.sim;
-      return { vert: JSON.stringify(sim.sicht(1).dorf.verteilung), ruht: sim.sicht(0).gebaeude.some((g) => g.sp === 0 && g.typ === 'holzfaeller' && g.ruht), stat: sim.statistikVon(1).punkte.length };
+      return {
+        vert: JSON.stringify(sim.sicht(1).dorf.verteilung), ruht: sim.sicht(0).gebaeude.some((g) => g.sp === 0 && g.typ === 'holzfaeller' && g.ruht), stat: sim.statistikVon(1).punkte.length,
+        regel: sim.sicht(1).gebaeude.find((g) => g.sp === 1 && g.typ === 'lager').regel[2], bauSoll: sim.sicht(0).dorf.bauSoll, jahr: JSON.stringify(sim.sicht(0).jahr), tick: sim.tick,
+      };
     })));
+    info(`Mehrspieler M8: Lagerregel Steine beim Gast ${m7b.map((x) => x.regel).join('/')}, Bauarbeiter-Wunsch Gastgeber ${m7b.map((x) => x.bauSoll).join('/')}, Jahreszeit gleich ${m7b[0].jahr === m7b[1].jahr}`);
+    if (m7b.some((x) => x.regel !== 1)) fail(`Mehrspieler M8: Lagerregel des Gasts kam nicht an: ${m7b.map((x) => x.regel).join('/')}`);
+    if (m7b.some((x) => x.bauSoll !== 5)) fail(`Mehrspieler M8: Bauleute-Wunsch des Gastgebers kam nicht an: ${m7b.map((x) => x.bauSoll).join('/')}`);
+    if (m7b[0].tick === m7b[1].tick && m7b[0].jahr !== m7b[1].jahr) fail(`Mehrspieler M8: Jahreszeit/Wetter verschieden: ${m7b[0].jahr} / ${m7b[1].jahr}`);
     info(`Mehrspieler M7: Verteilung gleich ${m7b[0].vert === m7b[1].vert}, Holzfäller ruht ${m7b.map((x) => x.ruht).join('/')}, Statistik-Punkte ${m7b.map((x) => x.stat).join('/')}`);
     if (m7b[0].vert !== m7b[1].vert) fail('Mehrspieler M7: Warenverteilung unterschiedlich');
     if (!m7b[0].vert.includes('[0,1,3,2]') && !m7b[0].vert.includes('[0,2,1,3]')) fail(`Mehrspieler M7: Verteilung des Gasts kam nicht an: ${m7b[0].vert}`);

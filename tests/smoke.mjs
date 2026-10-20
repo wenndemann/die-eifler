@@ -1,6 +1,7 @@
 // Rauchtest im echten Browser: Kartenwahl -> Vorschlag -> „Hier siedeln!“ -> Ausschnitt lädt, keine Seitenfehler,
 // Screenshots aus drei festen Kamerapositionen, Prüfsumme nach Neuladen gleich, Gegenprobe mit tools/map/pruefsumme.py.
-// Dazu (M3–M6): Determinismus Node = Browser (30-Segment-Szenario, Holzwirtschaft M4, Spieltest-Bot M5, zwei Dörfer M6), Spiel auf der echten Karte
+// Dazu (M3–M8): Determinismus Node = Browser (30-Segment-Szenario, Holzwirtschaft M4, Spieltest-Bot M5, zwei Dörfer M6, 55 Minuten
+// Spieltest-Bot M8 mit Jahreszeiten, Wetter, Festen und Boten), Spiel auf der echten Karte
 // (Aufbau per Befehle mit Holz und Stein, 5 Spielminuten, Screenshot nah am Lager) und Replay des Protokolls in einem
 // zweiten Browser-Kontext. Dazu die Bedienung (tests/bedienung.mjs): Baumenü, Geist, Bauplätze, Klick-Bau, Priorität, Handy.
 // M6 (tests/mehrspieler.mjs): zwei Fenster, Vermittlungs-Server, WebRTC, schlechtes Netz, Neuladen, Pause, Prüfsummen, Speichern.
@@ -191,7 +192,7 @@ try {
 
   // ---- M3 a) Determinismus Node = Browser: das 30-Segment-Szenario, die Holzwirtschaft M4 (je 12000 Ticks) und 12 Minuten des
   //      M5-Spieltest-Bots (Bewohner, Bauleute, Essens-Ketten) in beiden Umgebungen
-  for (const [name, modul] of [['baueSzenario30'], ['baueSzenarioM4'], ['baueSzenarioM5', './tests/m5-szenario.ts'], ['baueSzenarioM6', './tests/m6-szenario.ts']]) {
+  for (const [name, modul] of [['baueSzenario30'], ['baueSzenarioM4'], ['baueSzenarioM5', './tests/m5-szenario.ts'], ['baueSzenarioM6', './tests/m6-szenario.ts'], ['baueSzenarioM8', './tests/m8-szenario.ts']]) {
     const nodeCode = await szenarioBuendel('esm', 'node', name, modul);
     const nodeMod = await import(`data:text/javascript;base64,${Buffer.from(nodeCode).toString('base64')}`);
     const t1 = Date.now();

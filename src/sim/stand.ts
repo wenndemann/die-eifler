@@ -21,6 +21,9 @@ export interface SimStand {
   bauleute: Record<string, unknown>[];
   /** Natur je Hex (Base64) und die belegten Jungbaum-Plätze als Paare [Platz, Reifetick]. */
   natur: { baum: string; jung: string; stufe: string; fels: string; felsArt: string; baumRes: string; felsRes: string; jungReif: number[]; jungListe: number[] };
+  /** Beschwipste Boten und liegengebliebene Waren (ab M8; fehlt in älteren Spielständen). */
+  boten?: Record<string, unknown>[];
+  liegend?: Record<string, unknown>[];
   log: ProtokollEintrag[];
   ausstehend: ProtokollEintrag[];
   stat: { angekommen: number; verbraucht: number; erzeugt: number; maxWarte: number; verbaut: number };

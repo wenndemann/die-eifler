@@ -5,7 +5,7 @@ import { Simulation } from '../src/sim/sim';
 import { ABNEHMER, GEBAEUDE, GEBAEUDE_IDS, STAT_TAKT, VERTEILUNG_STANDARD, WARE, WAREN, WAREN_NAMEN } from '../src/sim/daten';
 import type { Abschnitt, FensterDaten } from '../src/ui/fenster';
 import {
-  betroffen, fahneFenster, gebaeudeFenster, hilfeFenster, Produktivitaet, protokollFenster, statistikFenster, verteilungFenster,
+  bauTooltip, betroffen, fahneFenster, gebaeudeFenster, hilfeFenster, Produktivitaet, protokollFenster, statistikFenster, verteilungFenster,
   verteilungKnopf, warenFenster, warnungen, wegFenster, type FensterKontext,
 } from '../src/spiel/fensterdaten';
 import { wareTexte } from '../src/spiel/baumenue';
@@ -125,15 +125,48 @@ describe('Fahne, Weg, Waren', () => {
   });
 });
 
+describe('M8 im Fenster: Lagerregeln, Bauleute, Feste, Boten', () => {
+  it('Lager und Lagerhaus: Regel je Ware als Tabelle (Knopf regel:<ware>), Bauleute-Wunschzahl mit Knöpfen', () => {
+    const sim = new Simulation(baueTestKarte(false), 1, { q: 0, r: 0 });
+    const lh = fertig(sim, 'lagerhaus', 6, 0);
+    tu(sim, { art: 'lagerregel', id: 1, ware: WARE.stein, regel: 2 });
+    lauf(sim, 2);
+    for (const id of [1, lh]) {
+      const d = gebaeudeFenster(id, kontext(sim))!;
+      const tab = art(d, 'tabelle').find((x) => x.titel?.startsWith('Lagerregeln'))!;
+      expect(tab.zeilen.length).toBe(WAREN.length);
+      expect(tab.zeilen[WARE.stein].knopf).toBe(`regel:${WARE.stein}`);
+      expect(tab.zeilen[WARE.stein].zellen[2].text).toContain(id === 1 ? 'auslagern' : 'normal');
+      expect(knoepfe(d)).toEqual(expect.arrayContaining(['bau:-', 'bau:+', 'plan:-', 'plan:+']));
+    }
+  });
+
+  it('Kirmesplatz zeigt Mischkorb, kleines Fest und Festpunkte; Schänke ihre Boten; Felder und Fachkräfte ihre Regeln', () => {
+    const sim = new Simulation(baueTestKarte(false), 1, { q: 0, r: 0 });
+    (sim as unknown as { doerfer: { stufe: number }[] }).doerfer[0].stufe = 2;
+    const kp = fertig(sim, 'kirmesplatz', 4, 0);
+    const sch = fertig(sim, 'schaenke', -4, 0);
+    lauf(sim, 2);
+    const d = gebaeudeFenster(kp, kontext(sim))!;
+    const z = art(d, 'zeilen').flatMap((x) => x.zeilen).join(' ');
+    expect(z).toContain('Mischkorb');
+    expect(z).toContain('Punkte aus kleinen Festen');
+    expect(titel(d).some((x) => String(x).includes('Maifest'))).toBe(true);
+    expect(art(gebaeudeFenster(sch, kontext(sim))!, 'zeilen').some((x) => x.titel === 'Boten')).toBe(true);
+    expect(bauTooltip('gerstenfeld', WT).join(' ')).toContain('Winter');
+    expect(bauTooltip('erzgrube', WT).join(' ')).toContain('Werkzeug');
+  });
+});
+
 describe('Warenverteilung im Fenster', () => {
   it('nur Waren mit mindestens zwei Abnehmern, je Ware nur die Abnehmer, die sie nehmen', () => {
     const sim = new Simulation(baueTestKarte(false), 1, { q: 0, r: 0 });
     const d = verteilungFenster(kontext(sim));
     const r = art(d, 'rangliste')[0].zeilen;
     expect(r.some((z) => z.ware === WARE.kartoffeln)).toBe(true);
-    expect(r.some((z) => z.ware === WARE.bretter)).toBe(false); // nur Baustellen
+    expect(r.some((z) => z.ware === WARE.stein)).toBe(false); // nur Baustellen
     const kart = r.find((z) => z.ware === WARE.kartoffeln)!;
-    expect(kart.plaetze.map((p) => p.name)).toEqual(['Verarbeiter', 'Wohnhäuser']);
+    expect(kart.plaetze.map((p) => p.name)).toEqual(['Kirmesplatz', 'Verarbeiter', 'Wohnhäuser']); // Kirmesplatz: Erntedank
     expect(kart.standard).toBe(true);
     expect(betroffen(WARE.kaese)).toEqual(ABNEHMER.map((a) => a.id !== 'baustelle'));
   });
@@ -144,8 +177,9 @@ describe('Warenverteilung im Fenster', () => {
     expect(verteilungKnopf(`v:${WARE.kartoffeln}:3`, v)).toEqual({ ware: WARE.kartoffeln, reihe: [0, 1, 3, 2] });
     // Käse: Verarbeiter (Rang 2) vor Kirmesplatz (Rang 1)
     expect(verteilungKnopf(`v:${WARE.kaese}:2`, v)).toEqual({ ware: WARE.kaese, reihe: [0, 2, 1, 3] });
-    // Kartoffeln: Verarbeiter ist schon der erste, der sie nimmt
-    expect(verteilungKnopf(`v:${WARE.kartoffeln}:2`, v)).toBeNull();
+    // Kartoffeln: Verarbeiter vor Kirmesplatz (Erntedank); der Kirmesplatz ist schon der erste, der sie nimmt
+    expect(verteilungKnopf(`v:${WARE.kartoffeln}:2`, v)).toEqual({ ware: WARE.kartoffeln, reihe: [0, 2, 1, 3] });
+    expect(verteilungKnopf(`v:${WARE.kartoffeln}:1`, v)).toBeNull();
     expect(verteilungKnopf(`v:${WARE.most}:std`, v)).toEqual({ ware: WARE.most, reihe: [...VERTEILUNG_STANDARD] });
     expect(verteilungKnopf('v:99:1', v)).toBeNull();
     expect(verteilungKnopf('quatsch', v)).toBeNull();

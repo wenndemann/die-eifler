@@ -1,0 +1,42 @@
+{
+ "hinweis": "Jahreszeiten und Wetter (Drehbuch 7.4; beschlossen M8). Ein Spieljahr dauert 'jahr_min' Spielminuten und beginnt im Frühjahr, jede Jahreszeit ist ein Viertel davon. Alles folgt aus Tick und Saat: im Mehrspieler trifft es alle gleich. Prozente sind Startwerte und werden beim Spielen eingestellt: „p Prozent langsamer“ heißt, alles dauert (100 + p) / 100-mal so lang (100 = halb so schnell); „p Prozent schneller“ gibt p zusätzliche Arbeitsschritte je 100.",
+ "jahr_min": 60,
+ "jahreszeiten": ["Frühjahr", "Sommer", "Herbst", "Winter"],
+ "feld": {
+  "hinweis": "Gebäude mit 'saison': 'feld' (buildings.json): im Frühjahr die ersten 'saat_s' Sekunden Aussaat ohne Ertrag (nicht im allerersten Frühjahr), im Herbst Ernte 'ernte_prozent' schneller, im Winter Ruhe.",
+  "saat_s": 120,
+  "ernte_prozent": 50
+ },
+ "winter": {
+  "hinweis": "Wintervorrat: Im Winter isst das Dorf alle 'essen_s' Sekunden je angefangene 'je_bewohner' Bewohner 1 Essen aus dem Lager (einfaches zuerst). Fehlt es, frieren die Leute bis zur nächsten vollen Mahlzeit: Gebäude arbeiten 'frieren_prozent' langsamer, Wohnhäuser bringen keinen Nachwuchs. Niemand stirbt (Drehbuch 7.4). Schnee macht Träger und Bauleute 'schnee_prozent' langsamer.",
+  "essen_s": 60,
+  "je_bewohner": 10,
+  "frieren_prozent": 100,
+  "schnee_prozent": 25
+ },
+ "wetter": {
+  "hinweis": "Je Jahreszeit 'je_jahreszeit_min' bis 'je_jahreszeit_max' Ereignisse aus der Liste der Jahreszeit, jedes 'dauer_min_s' bis 'dauer_max_s' lang, angekündigt 'ankuendigung_s' vorher als Bauernregel der Erzählfigur (data/meldungen.json: wetter_<art>). Im ersten Frühjahr gibt es kein Wetter. Wirkungen: 'wege' = Träger und Bauleute langsamer (Prozent, nur auf den Hexen von 'wo'), 'arbeit' = Gebäude langsamer (Prozent, 'wo'), 'felder' = Gebäude mit saison feld schneller (+) oder langsamer (−), 'missernte' = eine zufällige Feldart halb so schnell, 'hochwasser' = Gebäude in der Aue stehen still und an ihren Fahnen schwimmen bis zu 'wegschwimmen' Waren davon. 'wo': alle, tal (Täler), hoehe (Höhen), aue (Ufer von Bach und Fluss).",
+  "je_jahreszeit_min": 1,
+  "je_jahreszeit_max": 2,
+  "dauer_min_s": 180,
+  "dauer_max_s": 300,
+  "ankuendigung_s": 120,
+  "tal_dm": 150,
+  "hoehe_prozent": 66,
+  "aue_dm": 30,
+  "arten": {
+   "regen": { "name": "Regen", "symbol": "🌧️", "wege": 20, "felder": 20, "wo": "alle" },
+   "talnebel": { "name": "Talnebel", "symbol": "🌫️", "wege": 30, "wo": "tal" },
+   "wind": { "name": "Venn-Wind", "symbol": "🌬️", "arbeit": 25, "wo": "hoehe" },
+   "duerre": { "name": "Dürre", "symbol": "☀️", "felder": -100, "wo": "alle" },
+   "missernte": { "name": "Missernte", "symbol": "🥀", "missernte": 100, "wo": "alle" },
+   "hochwasser": { "name": "Hochwasser", "symbol": "🌊", "hochwasser": true, "wegschwimmen": 2, "wo": "aue" }
+  },
+  "je_jahreszeit": [
+   ["regen", "talnebel", "hochwasser"],
+   ["regen", "duerre", "wind"],
+   ["regen", "talnebel", "missernte", "wind"],
+   ["wind", "talnebel"]
+  ]
+ }
+}

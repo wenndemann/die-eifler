@@ -37,4 +37,15 @@ describe('Meldungen der Erzählfigur', () => {
     expect(neu([], 14, 18).length).toBe(0);
     expect(neu([], 18, 18).map((m) => m.text).join()).toContain('voll');
   });
+
+  it('M8: Jahreszeit, Bauernregel fürs Wetter, kleines Fest, Frieren, verlorene Ware mit Ort', () => {
+    const f = new MeldungsFilter(erzaehlerFuer('Einruhr'), 'Einruhr');
+    const namen = { fest: () => 'Maifest', wetter: (a: number) => (a === 5 ? { id: 'hochwasser', name: 'Hochwasser' } : { id: 'missernte', name: 'Missernte' }), feld: () => 'Gerstenfeld' };
+    const m = f.neue([ev(1, 'jahreszeit', 0, 3), ev(2, 'wetter', 0, 5), ev(3, 'wetter', 0, 4), ev(4, 'kleines_fest', 7, 0), ev(5, 'friert'),
+      { ...ev(6, 'verloren', 0, 2), q: 3, r: -1 }], dorf(12, 30), () => null, () => 'Steine', () => 'Dorf', '', '', namen, [{ art: 4, feld: 'gerstenfeld' }]);
+    expect(m.map((x) => x.text).join(' | ')).toMatch(/Winter.*Bauernregel.*Hochwasser.*Gerstenfeld.*Maifest.*frieren.*Steine/s);
+    expect(m[0].gross).toBe(true);
+    expect(m[3].gebaeude).toBe(7);
+    expect(m[5].ort).toEqual({ q: 3, r: -1 });
+  });
 });

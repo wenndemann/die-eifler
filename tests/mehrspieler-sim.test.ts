@@ -29,7 +29,7 @@ describe('Mehrspieler-Simulation', () => {
     expect(s0.dorf.bewohner).toBe(10);
     expect(s1.dorf.bewohner).toBe(10);
     expect(s1.ich).toBe(1);
-    expect(s0.spieler).toEqual([{ stufe: 0, bewohner: 10, verwalter: false }, { stufe: 0, bewohner: 10, verwalter: false }]);
+    expect(s0.spieler).toEqual([{ stufe: 0, bewohner: 10, festPunkte: 0, verwalter: false }, { stufe: 0, bewohner: 10, festPunkte: 0, verwalter: false }]);
     expect(() => sim.sicht(2)).toThrow();
     expect(sim.pruefeInnenzustand()).toEqual([]);
   });

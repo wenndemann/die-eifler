@@ -144,6 +144,7 @@ ${KULISSE_GLSL}`)
 varying float vKFade; varying float vKOut;
 ${KULISSE_GLSL}`)
         .replace('#include <color_fragment>', `#include <color_fragment>
+diffuseColor.rgb = kSchnee(diffuseColor.rgb, 0.45);
 diffuseColor.rgb = kGrau(diffuseColor.rgb, vKOut * 0.85);`)
         .replace('#include <fog_fragment>', KULISSE_FOG);
     };

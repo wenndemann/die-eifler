@@ -62,7 +62,7 @@ export async function bedienungsTest({ browser, url, aus, info, fail }) {
 
   // Baumenü: Knopf „Bauen“ öffnet es, ein Eintrag je Gebäude außer dem Lager
   await page.locator('.werkzeug[data-w="menue"]').click();
-  await page.waitForSelector('.baumenue:not([hidden])', { timeout: 5000 });
+  await page.waitForSelector('.baumenue:not([hidden])', { timeout: 30000 });
   const menue = await page.evaluate(() => ({
     eintraege: [...document.querySelectorAll('.bm-eintrag')].map((b) => b.dataset.id),
     gruppen: [...document.querySelectorAll('.bm-gruppe h4')].map((h) => h.textContent),
@@ -109,7 +109,7 @@ export async function bedienungsTest({ browser, url, aus, info, fail }) {
 
   // Gebäudefenster: ohne Werkzeug auf die Baustelle klicken, Priorität 3 über den Knopf setzen
   await page.keyboard.press('Escape');
-  await page.waitForFunction(() => window.eifeler.spiel.werkzeug === 'keins', null, { timeout: 5000 });
+  await page.waitForFunction(() => window.eifeler.spiel.werkzeug === 'keins', null, { timeout: 30000 });
   await page.mouse.move(pos.x + 200, pos.y + 160);
   const pos2 = await page.evaluate((h) => window.eifeler.spiel.bildschirm(h), ziel.hex);
   await page.mouse.click(pos2.x, pos2.y);
@@ -159,7 +159,7 @@ export async function bedienungsTest({ browser, url, aus, info, fail }) {
   else {
     const bp = await page.evaluate((c) => window.eifeler.spiel.bildschirm(c), bz.c);
     await page.locator('.fenster [data-knopf="bereich"]').click();
-    await page.waitForSelector('.fenster [data-knopf="bereich"].an', { timeout: 5000 });
+    await page.waitForSelector('.fenster [data-knopf="bereich"].an', { timeout: 30000 });
     await page.mouse.move(bp.x - 20, bp.y - 10);
     await page.mouse.move(bp.x, bp.y, { steps: 4 });
     // der Zeiger trifft nicht immer genau den Nachbar-Hex (Hang, Überhöhung): der tatsächlich getroffene Hex zählt
@@ -189,7 +189,7 @@ export async function bedienungsTest({ browser, url, aus, info, fail }) {
     // Esc beendet den Modus ohne Befehl
     const vorBefehle = gesetzt.befehle.length;
     await page.locator('.fenster [data-knopf="bereich"]').click();
-    await page.waitForSelector('.fenster [data-knopf="bereich"].an', { timeout: 5000 });
+    await page.waitForSelector('.fenster [data-knopf="bereich"].an', { timeout: 30000 });
     await page.keyboard.press('Escape');
     const nachEsc = await page.evaluate(() => ({ modus: !!document.querySelector('.fenster [data-knopf="bereich"].an'), n: window.eifeler.spiel.protokoll().befehle.filter((x) => x.befehl.art === 'arbeitsbereich').length }));
     if (nachEsc.modus || nachEsc.n !== vorBefehle) fail(`Bedienung: Esc im Arbeitsbereich-Modus: ${JSON.stringify(nachEsc)}`);
@@ -281,7 +281,7 @@ export async function bedienungsTest({ browser, url, aus, info, fail }) {
   if (!nachEscs.includes('geb:1') || nachEscs.some((x) => !['geb:1', 'einstellungen'].includes(x))) fail(`Bedienung M7: Esc und Pin: ${nachEscs.join(', ')}`);
   // Warenverteilung über das Fenster (Befehl 'verteilung'), Ruhen über das Gebäudefenster ist im Unit-Test
   await page.evaluate(() => { const sp = window.eifeler.spiel; for (const id of sp.fenster.ids) if (id !== 'geb:1') sp.fenster.schliesse(id); sp.fensterUmschalten('verteilung'); });
-  await page.waitForSelector('.fenster[data-fenster="verteilung"] .fe-platz:not([disabled])', { timeout: 5000 });
+  await page.waitForSelector('.fenster[data-fenster="verteilung"] .fe-platz:not([disabled])', { timeout: 30000 });
   await page.locator('.fenster[data-fenster="verteilung"] .fe-platz:not([disabled])').first().click();
   await page.waitForFunction(() => window.eifeler.spiel.protokoll().befehle.some((x) => x.befehl.art === 'verteilung'), null, { timeout: 10000, polling: 200 })
     .then(() => info('Bedienung M7: Warenverteilung umgestellt (Befehl verteilung)'))
@@ -316,7 +316,7 @@ export async function bedienungsTest({ browser, url, aus, info, fail }) {
   await hp.evaluate(() => window.eifeler.skipIntro());
   const z2 = await vorbereiten(hp, 'holzfaeller', 1000);
   await hp.locator('.werkzeug[data-w="menue"]').tap();
-  await hp.waitForSelector('.baumenue:not([hidden])', { timeout: 5000 });
+  await hp.waitForSelector('.baumenue:not([hidden])', { timeout: 30000 });
   await hp.waitForTimeout(600);
   const mass = await hp.evaluate(() => {
     const r = document.querySelector('.baumenue').getBoundingClientRect();

@@ -22,6 +22,9 @@ const WARE_KURZ: Record<string, [string, string, string]> = {
   setzling: ['🌱', 'Setzling', 'Setzlinge'], milch: ['🥛', 'Milch', 'Milch'], aepfel: ['🍎', 'Apfel', 'Äpfel'],
   kartoffeln: ['🥔', 'Kartoffel', 'Kartoffeln'], kaese: ['🧀', 'Käse', 'Käse'], most: ['🍏', 'Most', 'Most'],
   bratkartoffeln: ['🍳', 'Bratkartoffel', 'Bratkartoffeln'], honig: ['🍯', 'Honig', 'Honig'], bergkaese: ['🧀', 'Bergkäse', 'Bergkäse'],
+  gerste: ['🌾', 'Gerste', 'Gerste'], landbier: ['🍺', 'Landbier', 'Landbier'], wacholder: ['🫐', 'Wacholder', 'Wacholder'],
+  schnaps: ['🍶', 'Schnaps', 'Schnaps'], erz: ['🪨', 'Erz', 'Erz'], holzkohle: ['⚫', 'Holzkohle', 'Holzkohle'], eisen: ['🔩', 'Eisen', 'Eisen'],
+  werkzeug: ['🔨', 'Werkzeug', 'Werkzeug'],
 };
 
 /** Texte je Warenart (Index = Warenart). Unbekannte Waren bekommen das letzte Wort ihres Anzeigenamens. */
@@ -119,7 +122,11 @@ export function zustandsText(zustand: string, baustelle: boolean, bedarf: string
     case 'hunger': return { titel: 'Wartet auf Essen', spruch: 'Mit leerem Teller zieht hier keiner ein.', warn: true };
     case 'wohnraum_voll': return { titel: 'Kein Wohnraum frei – noch ein Wohnhaus bauen', spruch: 'Voll ist voll. Auch in der Eifel.', warn: false };
     case 'ruht': return { titel: 'Angehalten', spruch: 'Feierabend auf Anweisung. Keiner beschwert sich.', warn: false };
-    case 'fest': return { titel: 'Kirmes!', spruch: 'Musik, Karussell, Feuerwerk. Gearbeitet wird morgen.', warn: false };
+    case 'fest': return { titel: 'Es wird gefeiert!', spruch: 'Musik, Karussell, Feuerwerk. Gearbeitet wird morgen.', warn: false };
+    case 'winter': return { titel: 'Ruht im Winter', spruch: 'Unter dem Schnee wächst nichts. Außer der Vorfreude.', warn: false };
+    case 'saat': return { titel: 'Wird gesät', spruch: 'Erst säen, dann ernten. So war das schon immer.', warn: false };
+    case 'hochwasser': return { titel: 'Hochwasser – steht still', spruch: 'Das Wasser geht wieder. Nicht in die Aue bauen hilft.', warn: true };
+    case 'kein_werkzeug': return { titel: 'Wartet auf Werkzeug', spruch: 'Ohne Hammer kein Handwerk. Die Schmiede macht welches.', warn: true };
     case 'arbeitet': return { titel: 'Arbeitet', spruch: 'Läuft.', warn: false };
     default: return { titel: 'Fertig', spruch: 'Steht und wartet auf Arbeit.', warn: false };
   }
