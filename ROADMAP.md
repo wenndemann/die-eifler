@@ -124,25 +124,29 @@ Nachgezogen nach dem ersten Anspielen: Im Spielfeld gibt es nur Bäume und Stein
 
 Später (Feinschliff, nicht jetzt):
 - Gebäude-Effizienz als Anzeige (Auslastung, Laufwege) – mit den Gebäudefenstern (M7) und dem Balancing (M8)
-- Zahlen: Radien, Gebäudeabstand, Bäume je Hex, Wachstumszeit, Steinmengen → im M5-Spieltest
-- Bauarbeiter als eigener Beruf statt „Träger verbaut selbst“ → M5 (Drehbuch 4.5)
+- Zahlen: Radien, Gebäudeabstand, Bäume je Hex, Wachstumszeit, Steinmengen → im M5-Spieltest (mit Menschen, SPIELTEST.md)
+- ~~Bauarbeiter als eigener Beruf statt „Träger verbaut selbst“ → M5 (Drehbuch 4.5)~~ erledigt in M5
 
 ---
 
-## M5 – Bewohner, Nahrung, erste Kirmes
+## M5 – Bewohner, Nahrung, erste Kirmes ✅ (erster Stand) → 🔨 Spieltest mit Menschen
 
 **Ziel:** die erste **spaßige Spielschleife** – Nahrung lässt das Dorf wachsen, die Kirmes gibt ein Ziel (Drehbuch 4.3, 4.4, 5.2).
 
-- [ ] Wohnhaus mit Wohnraum, Bewohner aus Nahrung (3 Stufen), Notnagel (DESIGN §5)
-- [ ] **Planierer und Bauarbeiter** (Drehbuch 4.5): Träger liefern nur ab, Planierer ebnen Plätze am Hang, ein Bauarbeiter je Baustelle hämmert Stück für Stück; Start mit 4 Bauarbeitern und 2 Planierern
-- [ ] **Waren lesbar** (Drehbuch 7.6): jede Ware mit klarer Form und Farbe, auch die neuen Nahrungswaren
-- [ ] Ketten der Stufe Weiler: Kartoffel → Küche → Bratkartoffeln, Obstwiese → Mostkeller → Most, Schafstall → Käserei → Käse, Bienenstock → Honig
-- [ ] Kirmesplatz, Warenliste, Fest mit Animation, Dorfstufe **Weiler → Dorf** und Freischaltungen
-- [ ] Meldungen und Zustand in Klartext über Gebäuden („Wartet auf Stämme“), erste Sprüche
-- [ ] Ablauf „Die ersten 30 Minuten“ aus Drehbuch 4.4 als Spieltest-Drehbuch
-- [ ] Zahlen im Spieltest einstellen (aus M4 nachgezogen): Radien, Gebäudeabstand, Bäume je Hex, Wachstumszeit, Steinmengen, Bauzeit je Ware
+- [x] Wohnhaus mit Wohnraum, Bewohner aus Nahrung (3 Stufen), Notnagel (DESIGN §5; Zahlen in `data/dorf.json`)
+- [x] **Planierer und Bauarbeiter** (Drehbuch 4.5): Träger liefern nur ab (Stapel an der Baustelle), Planierer ebnen Plätze am Hang, ein Bauarbeiter je Baustelle hämmert Stück für Stück; Start mit 4 Bauarbeitern und 2 Planierern
+- [x] **Waren lesbar** (Drehbuch 7.6): jede Ware mit klarer Form und Farbe (`form`, `farbe` in `data/goods.json`), auch die neuen Nahrungswaren
+- [x] Ketten der Stufe Weiler: Kartoffel → Küche → Bratkartoffeln, Obstwiese → Mostkeller → Most, Schafstall → Käserei → Käse, Bienenstock → Honig
+- [x] Kirmesplatz, Warenliste, Fest mit Animation (Karussell, Feuerwerk), Dorfstufe **Weiler → Dorf** und Freischaltungen (Reifekeller; Brauerei, Brennerei, Schänke, Schützenhaus, Lagerhaus kommen mit M8)
+- [x] Meldungen und Zustand in Klartext über Gebäuden („Wartet auf Milch“, „Wird planiert“), erste Sprüche der Erzählfigur (`data/meldungen.json`)
+- [x] Ablauf „Die ersten 30 Minuten“ aus Drehbuch 4.4 als Spieltest-Drehbuch: [SPIELTEST.md](SPIELTEST.md), dazu der Spieltest-Bot (`tests/m5-szenario.ts`)
+- [x] Zahlen im Spieltest-Bot eingestellt (Erzeuger, Verarbeiter, Notnagel); Radien, Gebäudeabstand, Bäume je Hex, Wachstumszeit, Steinmengen und Bauzeit je Ware warten auf den Test mit Menschen
 
 **Abnahme:** Ein Testspieler erreicht in 30–45 Minuten die erste Kirmes, ohne die Regeln erklärt zu bekommen, und will danach weiterspielen.
+→ Automatisch: `tests/m5.test.ts` (der Bot erreicht die Kirmes nach rund 22 Spielminuten, Replay gleich, Node = Browser im Smoke-Test).
+Offen: der Test mit einem Menschen nach [SPIELTEST.md](SPIELTEST.md).
+
+Nachgezogen beim Einstellen: Zwei volle Fahnen, die sich gegenseitig blockieren, drehen sich über die Notplätze frei (Tausch und Direktlieferung); der Notnagel greift, wenn kein Nachwuchs in Sicht ist; Wohnhäuser lassen liegen, was die Kirmes braucht.
 
 ---
 
@@ -171,6 +175,7 @@ Später (Feinschliff, nicht jetzt):
 - [ ] Fenster-System (verschiebbar, anpinnbar, Esc, Live-Daten)
 - [ ] Gebäude-, Fahnen-, Träger- und Lagerfenster, datengetrieben
 - [ ] Baumenü mit Gruppen, Tooltips, Begründungen, Tastenkürzeln
+- [ ] **Warenverteilung einstellbar** (wie in Siedler 2): wer eine Ware zuerst bekommt – Baustellen, Kirmesplatz, Verarbeiter, Wohnhäuser; bis dahin gilt die feste Reihenfolge aus M5
 - [ ] Icons aus den 3D-Modellen
 - [ ] Warenübersicht (W), Statistik (S), Ereignisprotokoll (L), Meldungen mit Sprung zum Ort
 - [ ] Einstellungen (Grafik, Oberfläche, Steuerung, Spiel), Autosave
@@ -184,7 +189,7 @@ Später (Feinschliff, nicht jetzt):
 
 **Ziel:** alle rund **25 Grundgebäude**, drei Dorfstufen und ein Jahreslauf (Drehbuch 5.1, 5.2, 7.4).
 
-- [ ] Reifekeller (Bergkäse), Bier (Gerstenfeld → Brauerei → Landbier), Schnaps (Wacholderheide → Brennerei), Schänke, Lagerhaus (Drehbuch 6.2)
+- [ ] Reifekeller (Bergkäse; Gebäude schon in M5 als Freischaltung der ersten Kirmes), Bier (Gerstenfeld → Brauerei → Landbier), Schnaps (Wacholderheide → Brennerei), Schänke, Lagerhaus (Drehbuch 6.2)
 - [ ] Eisen schlank ab Stufe 2: Erzgrube, Köhlerei, Eisenhütte, Schmiede → Werkzeug nur für die Fachkräfte der besseren Gebäude und für neue Bauarbeiter und Planierer (Drehbuch 4.5)
 - [ ] **Kleine Feste** zu ihrer Jahreszeit (Maifest, Erntedank, Viehmarkt, Martinsfeuer, Fastelovend, Weinfest): Warenliste, Fest, Punkte, einmal je Spieljahr, Obergrenze (Drehbuch 6 „Feste“)
 - [ ] Kirmes-Stufen **Dorf → Kirchdorf** und **Kirchdorf → Marktflecken**

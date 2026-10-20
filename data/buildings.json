@@ -1,44 +1,336 @@
 {
- "hinweis": "Gebäude nach DESIGN §6.2 (Startwerte, werden beim Spielen eingestellt). Zeiten in Sekunden, Kosten und Waren über Waren-Ids (goods.json). 'funktion' wählt das Verhalten in der Simulation; 'radius' ist der Arbeitsradius in Hexen um den Arbeitsmittelpunkt (außen „geht noch“), 'radiusGut' der innere Ring „gut“; 'eingang' der Input-Puffer je Ware, 'ausgang' der Output-Puffer.",
+ "hinweis": "Gebäude nach DESIGN §6.2 und Drehbuch 5.1 (Startwerte, werden beim Spielen eingestellt). Zeiten in Sekunden, Kosten und Waren über Waren-Ids (goods.json). 'funktion' wählt das Verhalten in der Simulation (lager, wohnen, holzfaeller, foerster, steinbruch, erzeuger, verarbeiter, kirmes); 'radius' ist der Arbeitsradius in Hexen um den Arbeitsmittelpunkt (außen „geht noch“), 'radiusGut' der innere Ring „gut“; 'eingang' der Input-Puffer je Ware, 'ausgang' der Output-Puffer; 'wandelt' macht aus 'menge' Stück 'ein' eine Ware 'aus'; ein Erzeuger macht alle 'arbeit_s' eine Ware; 'nahrung_plaetze' sind die Essensplätze des Wohnhauses; 'ab_stufe' die Dorfstufe, ab der man es bauen kann (0 Weiler, 1 Dorf); 'einmalig' heißt höchstens eins je Dorf.",
  "gebaeude": [
   {
-   "id": "lager", "name": "Dorfkern", "gruppe": "Wohnen", "symbol": "🏘️",
+   "id": "lager",
+   "name": "Dorfkern",
+   "gruppe": "Wohnen",
+   "symbol": "🏘️",
    "spruch": "Hier fängt die Eifel an. Und hört so schnell nicht wieder auf.",
-   "funktion": "lager", "groesse": 3, "kosten": { "bretter": 4, "stein": 3 }, "wohnraum": 10,
-   "vorrat": { "bretter": 12, "stein": 8, "kartoffeln": 8 }
+   "funktion": "lager",
+   "groesse": 3,
+   "kosten": {
+    "bretter": 4,
+    "stein": 3
+   },
+   "wohnraum": 10,
+   "vorrat": {
+    "bretter": 12,
+    "stein": 8,
+    "kartoffeln": 8
+   }
   },
   {
-   "id": "holzfaeller", "name": "Holzfällerhütte", "gruppe": "Holz & Stein", "symbol": "🪓",
+   "id": "wohnhaus",
+   "name": "Wohnhaus",
+   "gruppe": "Wohnen",
+   "symbol": "🏠",
+   "spruch": "Klein, aber dicht. Mit vollem Teller kommen die Leute von selbst.",
+   "funktion": "wohnen",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 3,
+    "stein": 2
+   },
+   "wohnraum": 8,
+   "nahrung_plaetze": 4
+  },
+  {
+   "id": "holzfaeller",
+   "name": "Holzfällerhütte",
+   "gruppe": "Holz & Stein",
+   "symbol": "🪓",
    "spruch": "Der Baum lag schon da. Wir haben ihn nur gefunden.",
-   "funktion": "holzfaeller", "groesse": 1, "kosten": { "bretter": 2 }, "radius": 4, "radiusGut": 2, "arbeiter": 1,
-   "ausgang": { "ware": "stamm", "max": 6 },
-   "zeiten": { "arbeit_s": 5, "ruhe_s": 2 }
+   "funktion": "holzfaeller",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 2
+   },
+   "radius": 4,
+   "radiusGut": 2,
+   "arbeiter": 1,
+   "ausgang": {
+    "ware": "stamm",
+    "max": 6
+   },
+   "zeiten": {
+    "arbeit_s": 5,
+    "ruhe_s": 2
+   }
   },
   {
-   "id": "foerster", "name": "Försterei", "gruppe": "Holz & Stein", "symbol": "🌱",
+   "id": "foerster",
+   "name": "Försterei",
+   "gruppe": "Holz & Stein",
+   "symbol": "🌱",
    "spruch": "Wer pflanzt, braucht Geduld – und einen Hang, den kein Flachländer will.",
-   "funktion": "foerster", "groesse": 1, "kosten": { "bretter": 1 }, "radius": 4, "radiusGut": 2, "arbeiter": 1,
-   "zeiten": { "arbeit_s": 3, "ruhe_s": 3 }
+   "funktion": "foerster",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 1
+   },
+   "radius": 4,
+   "radiusGut": 2,
+   "arbeiter": 1,
+   "zeiten": {
+    "arbeit_s": 3,
+    "ruhe_s": 3
+   }
   },
   {
-   "id": "saegewerk", "name": "Sägewerk", "gruppe": "Holz & Stein", "symbol": "🪚",
+   "id": "saegewerk",
+   "name": "Sägewerk",
+   "gruppe": "Holz & Stein",
+   "symbol": "🪚",
    "spruch": "Aus einem Stamm werden Bretter, aus Brettern wird Streit um die Hecke.",
-   "funktion": "saegewerk", "groesse": 2, "kosten": { "bretter": 2, "stein": 1 }, "arbeiter": 1,
-   "eingang": { "stamm": 2 },
-   "wandelt": { "ein": "stamm", "aus": "bretter", "dauer_s": 5 },
-   "ausgang": { "ware": "bretter", "max": 6 }
+   "funktion": "verarbeiter",
+   "groesse": 2,
+   "kosten": {
+    "bretter": 2,
+    "stein": 1
+   },
+   "arbeiter": 1,
+   "eingang": {
+    "stamm": 2
+   },
+   "wandelt": {
+    "ein": "stamm",
+    "menge": 1,
+    "aus": "bretter",
+    "dauer_s": 5
+   },
+   "ausgang": {
+    "ware": "bretter",
+    "max": 6
+   }
   },
   {
-   "id": "steinbruch", "name": "Steinbruch", "gruppe": "Holz & Stein", "symbol": "⛏️",
+   "id": "steinbruch",
+   "name": "Steinbruch",
+   "gruppe": "Holz & Stein",
+   "symbol": "⛏️",
    "spruch": "Steine gibt es in der Eifel genug. Man muss sie nur finden – und dann noch tragen.",
-   "funktion": "steinbruch", "groesse": 1, "kosten": { "bretter": 2 }, "radius": 4, "radiusGut": 2, "arbeiter": 1,
-   "ausgang": { "ware": "stein", "max": 6 },
-   "zeiten": { "arbeit_s": 6, "ruhe_s": 2 }
+   "funktion": "steinbruch",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 2
+   },
+   "radius": 4,
+   "radiusGut": 2,
+   "arbeiter": 1,
+   "ausgang": {
+    "ware": "stein",
+    "max": 6
+   },
+   "zeiten": {
+    "arbeit_s": 6,
+    "ruhe_s": 2
+   }
   },
   {
-   "id": "huette", "name": "Eifeler Hütte", "gruppe": "Wohnen", "symbol": "🏠",
-   "spruch": "Klein, aber dicht. Der Wind pfeift, das Dach hält. Meistens.",
-   "funktion": "wohnen", "groesse": 1, "kosten": { "bretter": 3, "stein": 2 }, "wohnraum": 8
+   "id": "kartoffelfeld",
+   "name": "Kartoffelfeld",
+   "gruppe": "Essen",
+   "symbol": "🥔",
+   "spruch": "Die Kartoffel wächst überall. Sogar in der Eifel. Vor allem in der Eifel.",
+   "funktion": "erzeuger",
+   "groesse": 2,
+   "kosten": {
+    "bretter": 2
+   },
+   "arbeiter": 1,
+   "ausgang": {
+    "ware": "kartoffeln",
+    "max": 8
+   },
+   "zeiten": {
+    "arbeit_s": 20
+   }
+  },
+  {
+   "id": "kueche",
+   "name": "Küche",
+   "gruppe": "Essen",
+   "symbol": "🍳",
+   "spruch": "Zwei Kartoffeln rein, eine Pfanne raus. Speck wäre schön. Gibt's aber nicht.",
+   "funktion": "verarbeiter",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 2,
+    "stein": 1
+   },
+   "arbeiter": 1,
+   "eingang": {
+    "kartoffeln": 4
+   },
+   "wandelt": {
+    "ein": "kartoffeln",
+    "menge": 2,
+    "aus": "bratkartoffeln",
+    "dauer_s": 12
+   },
+   "ausgang": {
+    "ware": "bratkartoffeln",
+    "max": 6
+   }
+  },
+  {
+   "id": "obstwiese",
+   "name": "Obstwiese",
+   "gruppe": "Essen",
+   "symbol": "🍏",
+   "spruch": "Der Apfel fällt nicht weit vom Stamm. Er rollt höchstens den Hang runter.",
+   "funktion": "erzeuger",
+   "groesse": 2,
+   "kosten": {
+    "bretter": 2
+   },
+   "arbeiter": 1,
+   "ausgang": {
+    "ware": "aepfel",
+    "max": 6
+   },
+   "zeiten": {
+    "arbeit_s": 24
+   }
+  },
+  {
+   "id": "mostkeller",
+   "name": "Mostkeller",
+   "gruppe": "Essen",
+   "symbol": "🍺",
+   "spruch": "Most ist Apfelsaft mit Erfahrung.",
+   "funktion": "verarbeiter",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 2,
+    "stein": 1
+   },
+   "arbeiter": 1,
+   "eingang": {
+    "aepfel": 4
+   },
+   "wandelt": {
+    "ein": "aepfel",
+    "menge": 2,
+    "aus": "most",
+    "dauer_s": 15
+   },
+   "ausgang": {
+    "ware": "most",
+    "max": 6
+   }
+  },
+  {
+   "id": "schafstall",
+   "name": "Schafstall",
+   "gruppe": "Essen",
+   "symbol": "🐑",
+   "spruch": "Das Schaf ist das einzige Eifeler Wesen, das bei Regen nicht meckert. Es mäht nur.",
+   "funktion": "erzeuger",
+   "groesse": 2,
+   "kosten": {
+    "bretter": 2,
+    "stein": 1
+   },
+   "arbeiter": 1,
+   "ausgang": {
+    "ware": "milch",
+    "max": 6
+   },
+   "zeiten": {
+    "arbeit_s": 24
+   }
+  },
+  {
+   "id": "kaeserei",
+   "name": "Käserei",
+   "gruppe": "Essen",
+   "symbol": "🧀",
+   "spruch": "Käse ist Milch, die Geduld gelernt hat.",
+   "funktion": "verarbeiter",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 2,
+    "stein": 1
+   },
+   "arbeiter": 1,
+   "eingang": {
+    "milch": 2
+   },
+   "wandelt": {
+    "ein": "milch",
+    "menge": 1,
+    "aus": "kaese",
+    "dauer_s": 12
+   },
+   "ausgang": {
+    "ware": "kaese",
+    "max": 6
+   }
+  },
+  {
+   "id": "bienenstock",
+   "name": "Bienenstock",
+   "gruppe": "Essen",
+   "symbol": "🍯",
+   "spruch": "Die Bienen arbeiten. Der Imker guckt zu. So ist das Geschäft.",
+   "funktion": "erzeuger",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 2,
+    "stein": 1
+   },
+   "arbeiter": 1,
+   "ausgang": {
+    "ware": "honig",
+    "max": 6
+   },
+   "zeiten": {
+    "arbeit_s": 30
+   }
+  },
+  {
+   "id": "reifekeller",
+   "name": "Reifekeller",
+   "gruppe": "Essen",
+   "symbol": "🏺",
+   "spruch": "Im Keller wird aus Käse Bergkäse. Und aus Geduld noch mehr Geduld.",
+   "funktion": "verarbeiter",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 3,
+    "stein": 2
+   },
+   "arbeiter": 1,
+   "eingang": {
+    "kaese": 2
+   },
+   "ab_stufe": 1,
+   "wandelt": {
+    "ein": "kaese",
+    "menge": 1,
+    "aus": "bergkaese",
+    "dauer_s": 12
+   },
+   "ausgang": {
+    "ware": "bergkaese",
+    "max": 6
+   }
+  },
+  {
+   "id": "kirmesplatz",
+   "name": "Kirmesplatz",
+   "gruppe": "Feste",
+   "symbol": "🎡",
+   "spruch": "Ohne Kirmes ist ein Dorf nur ein Haufen Häuser mit Meinung.",
+   "funktion": "kirmes",
+   "groesse": 2,
+   "kosten": {
+    "bretter": 4,
+    "stein": 2
+   },
+   "einmalig": true
   }
  ]
 }

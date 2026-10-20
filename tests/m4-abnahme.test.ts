@@ -49,7 +49,7 @@ describe('Abnahme M4: Bauen mit Holz und Stein', () => {
     expect(START_VORRAT[WARE.bretter]).toBe(12);
     expect(START_VORRAT[WARE.stein]).toBe(8);
     const s = sim.sicht();
-    expect(s.gebaeude.map((g) => g.typ).sort()).toEqual(['foerster', 'holzfaeller', 'huette', 'lager', 'saegewerk', 'steinbruch']);
+    expect(s.gebaeude.map((g) => g.typ).sort()).toEqual(['foerster', 'holzfaeller', 'lager', 'saegewerk', 'steinbruch', 'wohnhaus']);
     expect(s.gebaeude.every((g) => g.bau === 1000 && !g.getrennt)).toBe(true);
     expect(mit.fertigTick).toBeGreaterThan(0);
     expect(mit.fertigTick).toBeLessThan(5 * MIN);

@@ -6,7 +6,7 @@ import { BAUM_WACHSEN, FLAG_CAP, FELS_STEIL, FELS_STEIN, START_VORRAT, TREE_MAX,
 import type { Befehl, Protokoll } from '../src/sim/typen';
 import { baueSzenario30, baueTestKarte, gerade, KARTE_INFO, knoten, setzeWald, fuegeStartStein } from './sim-szenario';
 
-const START = { q: 0, r: 0 };
+const START = { q: 0, r: 0, bewohner: 40 };
 
 function neu(saat = 1, start = START, karte = baueTestKarte()) { return new Simulation(karte, saat, start); }
 function tu(sim: Simulation, b: Befehl) { sim.befehl(sim.tick, 0, b); }
@@ -117,7 +117,7 @@ describe('Warenfluss', () => {
   it('Holzfäller liefert Stamm ins Lager, die Hütte wird aus dem Lager gebaut', () => {
     const sim = neu();
     tu(sim, { art: 'gebaeude', typ: 'holzfaeller', q: 9, r: 0 });
-    tu(sim, { art: 'gebaeude', typ: 'huette', q: 0, r: 3 });
+    tu(sim, { art: 'gebaeude', typ: 'wohnhaus', q: 0, r: 3 });
     tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 9) });
     tu(sim, { art: 'weg', pfad: gerade(0, 0, 5, 3) });
     lauf(sim, 3000);
@@ -218,7 +218,7 @@ describe('Warenfluss', () => {
     tu(sim, { art: 'gebaeude', typ: 'holzfaeller', q: 9, r: 0 });
     tu(sim, { art: 'gebaeude', typ: 'steinbruch', q: 9, r: 3 });
     tu(sim, { art: 'gebaeude', typ: 'saegewerk', q: 3, r: 3 });
-    tu(sim, { art: 'gebaeude', typ: 'huette', q: 0, r: 6 });
+    tu(sim, { art: 'gebaeude', typ: 'wohnhaus', q: 0, r: 6 });
     for (const p of [{ q: 3, r: 0 }, { q: 6, r: 0 }, { q: 6, r: 3 }, { q: 0, r: 3 }]) tu(sim, { art: 'fahne', ...p });
     const w = (p: { q: number; r: number }, d: number) => tu(sim, { art: 'weg', pfad: gerade(p.q, p.r, d, 3) });
     w({ q: 0, r: 0 }, 0); w({ q: 3, r: 0 }, 0); w({ q: 6, r: 0 }, 0);
@@ -277,13 +277,13 @@ describe('M4: Bauplatz, Kosten, Natur am Start', () => {
     expect(sim.bauplatzGroesse(-15, 8)).toBe(0); // Wasser
     expect(sim.bauplatzGroesse(8, -10)).toBe(0); // Fels
     expect(sim.bauplatzGroesse(100, 0)).toBe(0); // außerhalb
-    tu(sim, { art: 'gebaeude', typ: 'huette', q: 2, r: 0 });
+    tu(sim, { art: 'gebaeude', typ: 'wohnhaus', q: 2, r: 0 });
     lauf(sim, 1);
     expect(sim.bauplatzGroesse(2, 0)).toBe(0);
     expect(sim.bauplatzGroesse(3, 0)).toBe(0);
     expect(sim.bauplatzGroesse(4, 0)).toBe(3);
-    expect(sim.kosten('huette')[WARE.bretter]).toBe(3);
-    expect(sim.kosten('huette')[WARE.stein]).toBe(2);
+    expect(sim.kosten('wohnhaus')[WARE.bretter]).toBe(3);
+    expect(sim.kosten('wohnhaus')[WARE.stein]).toBe(2);
     expect(sim.kosten('saegewerk')).toEqual(sim.kosten('saegewerk').map((_, i) => (i === WARE.bretter ? 2 : i === WARE.stein ? 1 : 0)));
     expect(sim.kosten('nichts')).toEqual([]);
     expect(sim.kannBauen('constructor', 5, 5)).toBe(false);
@@ -345,25 +345,25 @@ describe('M4: Bauplatz, Kosten, Natur am Start', () => {
     expect(v.summe).toBe(18 * TREE_MAX);
     expect(v.hexe.every((h) => h.gut)).toBe(true);
     expect(sim.arbeitsHexe('holzfaeller', -3, 0, { q: -3, r: 0 }).summe).toBe(0); // Mittelpunkt = Gebäude: wie ohne
-    expect(sim.arbeitsHexe('huette', 3, 0)).toEqual({ art: 'keine', hexe: [], summe: 0 });
+    expect(sim.arbeitsHexe('wohnhaus', 3, 0)).toEqual({ art: 'keine', hexe: [], summe: 0 });
     expect(sim.arbeitsHexe('holzfaeller', -3, 0).summe).toBe(0);
   });
 });
 
 describe('M4: Baustellen', () => {
-  it('Material kommt einzeln über das Netz, der Träger verbaut es, dann ist das Gebäude fertig', () => {
+  it('Material kommt einzeln über das Netz, der Träger legt es ab, der Bauarbeiter verbaut es, dann ist das Gebäude fertig', () => {
     const sim = neu();
-    tu(sim, { art: 'gebaeude', typ: 'huette', q: 3, r: 0 });
+    tu(sim, { art: 'gebaeude', typ: 'wohnhaus', q: 3, r: 0 });
     tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 3) });
     lauf(sim, 1);
     const vor = START_VORRAT;
     expect(sim.statistik().verbaut).toBe(0);
-    expect(sim.sicht().gebaeude.find((g) => g.typ === 'huette')!.zustand).toMatch(/baustelle|wartet_material/);
+    expect(sim.sicht().gebaeude.find((g) => g.typ === 'wohnhaus')!.zustand).toMatch(/baustelle|wartet_material/);
     const stufen = new Set<number>();
     let letzte = 0, maxSprung = 0, fertigTick = -1;
     for (let i = 0; i < 3000 && fertigTick < 0; i++) {
       sim.schritt();
-      const g = sim.sicht().gebaeude.find((x) => x.typ === 'huette')!;
+      const g = sim.sicht().gebaeude.find((x) => x.typ === 'wohnhaus')!;
       stufen.add(g.bau);
       maxSprung = Math.max(maxSprung, g.bau - letzte);
       letzte = g.bau;
@@ -378,9 +378,9 @@ describe('M4: Baustellen', () => {
     expect(stufen.size).toBe(6);            // 0, 200, 400, 600, 800, 1000: fünf einzelne Lieferungen
     expect(maxSprung).toBe(200);
     expect(sim.statistik().verbaut).toBe(5);
-    const g = sim.sicht().gebaeude.find((x) => x.typ === 'huette')!;
+    const g = sim.sicht().gebaeude.find((x) => x.typ === 'wohnhaus')!;
     expect(g.bedarf).toBeUndefined();
-    expect(g.zustand).toBe('bereit');
+    expect(['hunger', 'arbeitet']).toContain(g.zustand);
     const nach = lagerVorrat(sim);
     expect(nach[WARE.bretter]).toBe(vor[WARE.bretter] - 3);
     expect(nach[WARE.stein]).toBe(vor[WARE.stein] - 2);
@@ -391,8 +391,8 @@ describe('M4: Baustellen', () => {
     const lager = (sim as any).gebaeude.get(1);
     const vorrat = lager.vorrat.slice();
     lager.vorrat.fill(0); // erst nach den Prioritäten gibt es Material – und zwar nur für eine Hütte
-    tu(sim, { art: 'gebaeude', typ: 'huette', q: 3, r: 0 });
-    tu(sim, { art: 'gebaeude', typ: 'huette', q: -3, r: 0 });
+    tu(sim, { art: 'gebaeude', typ: 'wohnhaus', q: 3, r: 0 });
+    tu(sim, { art: 'gebaeude', typ: 'wohnhaus', q: -3, r: 0 });
     tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 3) });
     tu(sim, { art: 'weg', pfad: gerade(0, 0, 3, 3) });
     lauf(sim, 1);
@@ -420,8 +420,8 @@ describe('M4: Baustellen', () => {
     const sim = neu();
     const lager = (sim as any).gebaeude.get(1);
     lager.vorrat.fill(0);
-    tu(sim, { art: 'gebaeude', typ: 'huette', q: 6, r: 0 });
-    tu(sim, { art: 'gebaeude', typ: 'huette', q: -3, r: 0 });
+    tu(sim, { art: 'gebaeude', typ: 'wohnhaus', q: 6, r: 0 });
+    tu(sim, { art: 'gebaeude', typ: 'wohnhaus', q: -3, r: 0 });
     tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 6) });
     tu(sim, { art: 'weg', pfad: gerade(0, 0, 3, 3) });
     lauf(sim, 1);
@@ -433,9 +433,9 @@ describe('M4: Baustellen', () => {
   });
   it('getrennte Baustellen bekommen nichts', () => {
     const sim = neu();
-    tu(sim, { art: 'gebaeude', typ: 'huette', q: 6, r: 0 });
+    tu(sim, { art: 'gebaeude', typ: 'wohnhaus', q: 6, r: 0 });
     lauf(sim, 1200);
-    const g = sim.sicht().gebaeude.find((x) => x.typ === 'huette')!;
+    const g = sim.sicht().gebaeude.find((x) => x.typ === 'wohnhaus')!;
     expect(g.zustand).toBe('getrennt');
     expect(g.bau).toBe(0);
     expect(lagerVorrat(sim).slice(0, 3)).toEqual(START_VORRAT.slice(0, 3));
@@ -443,19 +443,19 @@ describe('M4: Baustellen', () => {
   });
   it('Abriss einer Baustelle: Hälfte (abgerundet) des verbauten Materials liegt an der Fahne, Rest verloren, Fahne bleibt', () => {
     const sim = neu();
-    tu(sim, { art: 'gebaeude', typ: 'huette', q: 3, r: 0 });
+    tu(sim, { art: 'gebaeude', typ: 'wohnhaus', q: 3, r: 0 });
     tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 3) });
     lauf(sim, 1);
-    let g = sim.sicht().gebaeude.find((x) => x.typ === 'huette')!;
-    while (g.bau < 600 || sim.tick % 10 === 0) { sim.schritt(); g = sim.sicht().gebaeude.find((x) => x.typ === 'huette')!; }
-    const kosten = sim.kosten('huette');
+    let g = sim.sicht().gebaeude.find((x) => x.typ === 'wohnhaus')!;
+    while (g.bau < 600 || sim.tick % 10 === 0) { sim.schritt(); g = sim.sicht().gebaeude.find((x) => x.typ === 'wohnhaus')!; }
+    const kosten = sim.kosten('wohnhaus');
     const verbaut = kosten.map((k, a) => k - g.bedarf![a]);
     expect(summe(verbaut)).toBeGreaterThanOrEqual(3);
     const fahneId = g.fahne;
     tu(sim, { art: 'abriss_gebaeude', id: g.id });
     sim.schritt();
     const s = sim.sicht();
-    expect(s.gebaeude.find((x) => x.typ === 'huette')).toBeUndefined();
+    expect(s.gebaeude.find((x) => x.typ === 'wohnhaus')).toBeUndefined();
     const f = s.fahnen.find((x) => x.id === fahneId)!;
     expect(f).toBeDefined();
     expect(f.gebaeude).toBe(0);
@@ -615,14 +615,15 @@ describe('M4: Holz', () => {
     tu(sim, { art: 'gebaeude', typ: 'holzfaeller', q: 9, r: 0 });
     tu(sim, { art: 'weg', pfad: gerade(0, 0, 0, 9) });
     lauf(sim, 2);
-    (sim as any).freieTraeger = 0;
+    (sim as any).bewohner -= (sim as any).frei; (sim as any).frei = 0;
+    (sim as any).notnagelT = -1e6; // kein Zugezogener (Notnagel) in diesem Test
     lauf(sim, 3000);
     const g = sim.sicht().gebaeude.find((x) => x.typ === 'holzfaeller')!;
     expect(g.bau).toBe(1000);
     expect(g.zustand).toBe('kein_arbeiter');
     expect(g.arbeiter).toBeUndefined();
     expect(sim.statistik().erzeugt).toBe(0);
-    (sim as any).freieTraeger = 1;
+    (sim as any).frei = 1; (sim as any).bewohner++;
     lauf(sim, 400);
     const g2 = sim.sicht().gebaeude.find((x) => x.typ === 'holzfaeller')!;
     expect(g2.arbeiter).toBeDefined();

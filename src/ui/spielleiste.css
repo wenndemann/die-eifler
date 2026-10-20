@@ -33,6 +33,28 @@
 .spielstatus .zeile1 { display: flex; align-items: center; gap: 4px; }
 .spielstatus .zeit { margin-left: 8px; color: var(--gold); font-variant-numeric: tabular-nums; }
 .spielstatus .zeile2 { color: var(--ink-dim); line-height: 1.35; }
+.spielstatus .zeile-dorf { color: var(--ink-dim); line-height: 1.35; }
+.spielstatus .zeile-dorf b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.spielstatus .zeile-dorf .stufe { color: var(--gold); }
+.spielstatus .zeile-dorf .warn b { color: #ffb4a8; }
+.spielstatus .zeile-kirmes { display: flex; flex-direction: column; gap: 3px; color: var(--ink); line-height: 1.35; }
+.spielstatus .zeile-kirmes .balken { display: block; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+.spielstatus .zeile-kirmes .balken i { display: block; height: 100%; background: linear-gradient(90deg, #c8402e, #e0a830); }
+.spielstatus .zeile-kirmes.fest .txt { color: #ffe08a; font-weight: 600; animation: kirmes-blink 0.9s ease-in-out infinite alternate; }
+@keyframes kirmes-blink { from { opacity: 0.7; } to { opacity: 1; } }
+.bm-eintrag.gesperrt { opacity: 0.5; cursor: not-allowed; }
+.bm-eintrag.gesperrt .bm-kosten { color: var(--ink-dim); }
+
+/* Meldungen der Erzählfigur (oben in der Mitte) */
+.meldungen { position: fixed; top: 140px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; z-index: 30;
+  width: min(460px, calc(100vw - 28px)); pointer-events: none; }
+.meldung { pointer-events: auto; background: rgba(36, 28, 20, 0.92); color: #f4ecd8; border: 1px solid rgba(231, 194, 122, 0.45); border-radius: 10px;
+  padding: 8px 12px; font-size: 13.5px; line-height: 1.4; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35); transition: opacity 0.4s, transform 0.4s; }
+.meldung.gross { border-color: #e0a830; background: rgba(70, 40, 18, 0.95); font-size: 15px; }
+.meldung .wer { display: block; color: #e7c27a; font-weight: 600; font-size: 12px; margin-bottom: 2px; }
+.meldung .platt { display: block; margin-top: 4px; font-style: italic; color: #d9c9a6; text-decoration: underline dotted rgba(217, 201, 166, 0.5); cursor: help; }
+.meldung.weg { opacity: 0; transform: translateY(-8px); }
+@media (max-width: 700px) { .meldungen { top: calc(118px + env(safe-area-inset-top, 0px)); } .meldung { font-size: 12.5px; padding: 6px 10px; } }
 .spielstatus .zeile2 b { color: var(--ink); font-variant-numeric: tabular-nums; }
 .spielstatus .simsumme { font-style: normal; font-family: ui-monospace, monospace; font-size: 11px; color: var(--gold-dim); }
 .tempo {

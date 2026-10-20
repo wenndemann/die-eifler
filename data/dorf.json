@@ -1,0 +1,30 @@
+{
+ "hinweis": "Dorf, Bewohner, Bauen und Kirmes (Drehbuch 4.2–4.5, 5.2; DESIGN §5). Startwerte, werden beim Spielen eingestellt. Zeiten in Sekunden, Waren über Waren-Ids (goods.json).",
+ "start": {
+  "hinweis": "Bewohner beim Start (freie Bewohner, daraus werden Träger und Arbeiter). Bauarbeiter und Planierer sind ein fester Vorrat und zählen nicht zum Wohnraum (Drehbuch 4.5).",
+  "bewohner": 10, "bauarbeiter": 4, "planierer": 2
+ },
+ "wohnen": {
+  "hinweis": "Ein Wohnhaus mit Essen bringt je Zyklus einen Bewohner und isst dabei 1 Ware, die beste zuerst; nur solange Wohnraum frei ist. Zyklus je Nahrungsstufe (1 einfach, 2 veredelt, 3 edel). Notnagel: weniger als 'notnagel_frei_unter' freie Bewohner und kein Nachwuchs in Sicht (kein Wohnhaus mit Essen oder kein Wohnraum frei) → alle 'notnagel_s' ein Zugezogener (auch ohne Wohnraum, der schläft in der Scheune).",
+  "zyklus_s": [14, 9, 6],
+  "notnagel_frei_unter": 4,
+  "notnagel_s": 30
+ },
+ "bauen": {
+  "hinweis": "Bauarbeiter verbauen je Ware 'je_ware_s'. Bauplätze ab 'planieren_ab_grad' Steigung müssen erst planiert werden; das dauert 'planieren_s' plus 'planieren_je_grad_s' je Grad darüber.",
+  "je_ware_s": 2.5,
+  "planieren_ab_grad": 6,
+  "planieren_s": 8,
+  "planieren_je_grad_s": 0.5
+ },
+ "stufen": ["Weiler", "Dorf", "Kirchdorf", "Marktflecken"],
+ "kirmes": [
+  {
+   "hinweis": "Weiler → Dorf (Drehbuch 5.2). Zuzug: so viele Bewohner lockt die Kirmes an, auch über den Wohnraum hinaus. Die weiteren Kirmes-Stufen kommen mit ihren Waren in M8.",
+   "liste": { "bratkartoffeln": 10, "most": 10, "kaese": 6 },
+   "fest_s": 45,
+   "zuzug": 15,
+   "schaltet_frei": ["Reifekeller", "Brauerei (M8)", "Brennerei (M8)", "Schänke (M8)", "Schützenhaus (M8)", "Lagerhaus (M8)"]
+  }
+ ]
+}

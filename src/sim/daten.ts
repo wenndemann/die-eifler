@@ -3,8 +3,9 @@
 import { TICK_HZ } from './typen';
 import warenJson from '../../data/goods.json';
 import gebaeudeJson from '../../data/buildings.json';
+import dorfJson from '../../data/dorf.json';
 
-interface WareJson { id: string; name: string; gruppe: string }
+interface WareJson { id: string; name: string; gruppe: string; nahrung?: number; form?: string; farbe?: string }
 interface GebaeudeJson {
   id: string; name: string; gruppe: string; symbol: string; spruch: string;
   funktion: string; groesse: number; kosten: Record<string, number>;
@@ -12,8 +13,9 @@ interface GebaeudeJson {
   vorrat?: Record<string, number>;
   eingang?: Record<string, number>;
   ausgang?: { ware: string; max: number };
-  wandelt?: { ein: string; aus: string; dauer_s: number };
+  wandelt?: { ein: string; menge?: number; aus: string; dauer_s: number };
   zeiten?: { arbeit_s?: number; ruhe_s?: number };
+  nahrung_plaetze?: number; ab_stufe?: number; einmalig?: boolean;
 }
 
 const warenListe = (warenJson as { waren: WareJson[] }).waren;
@@ -26,6 +28,13 @@ export const WARE: Readonly<Record<string, number>> = Object.fromEntries(WAREN.m
 export const WAREN_NAMEN: readonly string[] = warenListe.map((w) => w.name);
 /** Gruppe je Warenart (Grundstoff, Nahrung ...). */
 export const WAREN_GRUPPEN: readonly string[] = warenListe.map((w) => w.gruppe);
+/** Nahrungsstufe je Warenart: 0 keine Nahrung, 1 einfach, 2 veredelt, 3 edel (DESIGN §5). */
+export const NAHRUNG: readonly number[] = warenListe.map((w) => w.nahrung ?? 0);
+/** Nahrungs-Warenarten, die beste Stufe zuerst (bei Gleichstand kleinere Warenart). */
+export const NAHRUNG_REIHE: readonly number[] = WAREN.map((_, i) => i).filter((i) => NAHRUNG[i] > 0).sort((a, b) => NAHRUNG[b] - NAHRUNG[a] || a - b);
+/** Lesbares Modell je Warenart (Drehbuch 7.6): Form und Hauptfarbe. */
+export const WAREN_FORM: readonly string[] = warenListe.map((w) => w.form ?? 'sack');
+export const WAREN_FARBE: readonly string[] = warenListe.map((w) => w.farbe ?? '#b08850');
 
 /** Stapel an einer Fahne und Notplätze (nur für den Tausch der Träger). */
 export const FLAG_CAP = 8;
@@ -41,10 +50,37 @@ export const STEIGUNG_DM = 5;
 export const GEFAELLE_DM = 20;
 /** Dauer einer Übergabe an der Fahne. */
 export const UEBERGABE_TICKS = 6;
-/** Der liefernde Träger verbaut eine Ware selbst (DESIGN §4.6: BUILD_ACTION 0,4 s). */
-export const BUILD_ACTION = 8;
+const dorf = dorfJson as {
+  start: { bewohner: number; bauarbeiter: number; planierer: number };
+  wohnen: { zyklus_s: number[]; notnagel_frei_unter: number; notnagel_s: number };
+  bauen: { je_ware_s: number; planieren_ab_grad: number; planieren_s: number; planieren_je_grad_s: number };
+  stufen: string[];
+  kirmes: { liste: Record<string, number>; fest_s: number; zuzug: number; schaltet_frei: string[] }[];
+};
+const sek = (s: number) => Math.round(s * TICK_HZ);
 
-export const TRAEGER_START = 40;
+/** Start (Drehbuch 4.2, 4.5; data/dorf.json): freie Bewohner, fester Vorrat an Bauarbeitern und Planierern. */
+export const START_BEWOHNER = dorf.start.bewohner;
+export const START_BAUARBEITER = dorf.start.bauarbeiter;
+export const START_PLANIERER = dorf.start.planierer;
+/** Wohnhaus-Zyklus je Nahrungsstufe 1..3 in Ticks (Index = Stufe; 0 unbenutzt). */
+export const NAHRUNG_ZYKLUS: readonly number[] = [0, ...dorf.wohnen.zyklus_s.map(sek)];
+/** Notnagel (Drehbuch 4.3): unter so vielen freien Bewohnern und ohne Essen kommt alle NOTNAGEL_TICKS ein Zugezogener. */
+export const NOTNAGEL_FREI_UNTER = dorf.wohnen.notnagel_frei_unter;
+export const NOTNAGEL_TICKS = sek(dorf.wohnen.notnagel_s);
+/** Bauarbeiter: Ticks je verbaute Ware (Drehbuch 4.5: Startwert 2–3 s). */
+export const BAU_JE_WARE = sek(dorf.bauen.je_ware_s);
+/** Planierer: ab dieser Steigung (Grad) muss ein Bauplatz planiert werden; Dauer in Ticks. */
+export const PLANIEREN_AB_GRAD = dorf.bauen.planieren_ab_grad;
+export function planierTicks(grad: number): number {
+  if (grad < PLANIEREN_AB_GRAD) return 0;
+  return sek(dorf.bauen.planieren_s) + (grad - PLANIEREN_AB_GRAD) * sek(dorf.bauen.planieren_je_grad_s);
+}
+/** Namen der Dorfstufen (0 Weiler, 1 Dorf, 2 Kirchdorf, 3 Marktflecken; Drehbuch 5.2). */
+export const DORFSTUFEN: readonly string[] = dorf.stufen;
+
+/** Kirmes je Dorfstufe (Index = Stufe, von der aus gefeiert wird): Warenliste je Warenart, Festdauer in Ticks, Zuzug, Freischaltungen. */
+export interface KirmesStufe { liste: readonly number[]; festTicks: number; zuzug: number; schaltetFrei: readonly string[] }
 
 /** Bäume (DESIGN §12): höchstens so viele je Hex (ausgewachsen + Jungbäume). */
 export const TREE_MAX = 3;
@@ -76,7 +112,7 @@ export const PRIO_STANDARD = 2;
 /** Wartezeit, bis ein Arbeiter ohne Ziel (kein Baum, kein Fels, kein Platz) neu sucht. */
 export const SUCHE_WARTE = 2 * TICK_HZ;
 
-export type Funktion = 'lager' | 'wohnen' | 'holzfaeller' | 'foerster' | 'steinbruch' | 'saegewerk';
+export type Funktion = 'lager' | 'wohnen' | 'holzfaeller' | 'foerster' | 'steinbruch' | 'erzeuger' | 'verarbeiter' | 'kirmes';
 
 export interface GebaeudeTyp {
   id: string; name: string; gruppe: string; symbol: string; spruch: string;
@@ -96,12 +132,18 @@ export interface GebaeudeTyp {
   /** Output-Puffer (Warenart, Größe); -1 bei keiner. */
   ausgangWare: number;
   ausgangMax: number;
-  /** Verarbeiter: macht aus 1 Ware `ein` in `ticks` eine Ware `aus`. */
-  wandelt?: { ein: number; aus: number; ticks: number };
+  /** Verarbeiter: macht aus `menge` Waren `ein` in `ticks` eine Ware `aus`. */
+  wandelt?: { ein: number; menge: number; aus: number; ticks: number };
   /** Arbeitsdauer (Fällen, Pflanzen, Hauen) und Ruhe danach in Ticks. */
   arbeitTicks: number;
   ruheTicks: number;
   wohnraum: number;
+  /** Wohnhaus: Essensplätze (alle Nahrungswaren zusammen). */
+  nahrungPlaetze: number;
+  /** Ab dieser Dorfstufe baubar (0 = von Anfang an). */
+  abStufe: number;
+  /** Höchstens eins je Dorf (Kirmesplatz). */
+  einmalig: boolean;
   /** Startvorrat je Warenart (nur Lager). */
   vorrat: readonly number[];
 }
@@ -134,10 +176,13 @@ function baue(j: GebaeudeJson): GebaeudeTyp {
     puffer, pufferSumme: puffer.reduce((s, n) => s + n, 0),
     ausgangWare: j.ausgang ? ausId(j.ausgang.ware) : -1,
     ausgangMax: j.ausgang ? j.ausgang.max : 0,
-    wandelt: j.wandelt ? { ein: ausId(j.wandelt.ein), aus: ausId(j.wandelt.aus), ticks: ticks(j.wandelt.dauer_s) } : undefined,
+    wandelt: j.wandelt ? { ein: ausId(j.wandelt.ein), menge: j.wandelt.menge ?? 1, aus: ausId(j.wandelt.aus), ticks: ticks(j.wandelt.dauer_s) } : undefined,
     arbeitTicks: ticks(j.zeiten?.arbeit_s),
     ruheTicks: ticks(j.zeiten?.ruhe_s),
     wohnraum: j.wohnraum ?? 0,
+    nahrungPlaetze: j.nahrung_plaetze ?? 0,
+    abStufe: j.ab_stufe ?? 0,
+    einmalig: !!j.einmalig,
     vorrat: jeWare(j.vorrat),
   };
 }
@@ -151,3 +196,8 @@ export const GEBAEUDE_IDS: readonly string[] = typen.map((t) => t.id);
 
 /** Startvorrat des Lagers je Warenart (12 bretter, 8 stein, 8 kartoffeln). */
 export const START_VORRAT: readonly number[] = GEBAEUDE.lager.vorrat;
+
+/** Kirmes-Stufen aus data/dorf.json (Weiler → Dorf; weitere kommen in M8). */
+export const KIRMES: readonly KirmesStufe[] = dorf.kirmes.map((k) => ({
+  liste: jeWare(k.liste), festTicks: sek(k.fest_s), zuzug: k.zuzug, schaltetFrei: k.schaltet_frei.slice(),
+}));

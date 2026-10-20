@@ -97,10 +97,15 @@ export function reichweiteText(art: string, summe: number, nah?: number): { text
 /** Zustand eines Gebäudes in Klartext mit kurzem Spruch. */
 export interface ZustandsText { titel: string; spruch: string; warn: boolean }
 
-export function zustandsText(zustand: string, baustelle: boolean, bedarf: string): ZustandsText {
+/** `funktion` (optional, aus den Daten): Wohnhäuser „arbeiten“ nicht, bei ihnen kommt Nachwuchs. */
+export function zustandsText(zustand: string, baustelle: boolean, bedarf: string, funktion = ''): ZustandsText {
+  if (!baustelle && funktion === 'wohnen' && zustand === 'arbeitet') return { titel: 'Nachwuchs kommt', spruch: 'Satt und zufrieden. Da kommen die Leute von selbst.', warn: false };
   if (baustelle) {
     if (zustand === 'getrennt') return { titel: 'Keine Verbindung zum Lager', spruch: 'Ohne Weg kommt kein Brett an.', warn: true };
     if (zustand === 'wartet_material') return { titel: bedarf ? `Wartet auf ${bedarf}` : 'Wartet auf Material', spruch: 'Der Träger kommt. Irgendwann.', warn: false };
+    if (zustand === 'kein_planierer') return { titel: 'Wartet auf einen Planierer', spruch: 'Am Hang baut keiner schief. Erst wird planiert.', warn: false };
+    if (zustand === 'planieren') return { titel: 'Wird planiert', spruch: 'Die Schaufel ebnet, was der Herrgott schief gemacht hat.', warn: false };
+    if (zustand === 'kein_bauarbeiter') return { titel: 'Wartet auf einen Bauarbeiter', spruch: 'Material liegt da. Der Bauarbeiter ist noch woanders.', warn: false };
     return { titel: 'Wird gebaut', spruch: 'Es hämmert.', warn: false };
   }
   switch (zustand) {
@@ -110,7 +115,10 @@ export function zustandsText(zustand: string, baustelle: boolean, bedarf: string
     case 'kein_fels': return { titel: 'Kein Fels mehr in Reichweite', spruch: 'Der Berg ist leer. Das gibt es.', warn: true };
     case 'kein_platz': return { titel: 'Kein Pflanzplatz frei', spruch: 'Hier wächst schon alles zu.', warn: true };
     case 'voll': return { titel: 'Lager voll – keiner holt ab', spruch: 'Wer nicht abholt, stapelt.', warn: true };
-    case 'wartet_material': return { titel: 'Wartet auf Nachschub', spruch: 'Ohne Rohstoff kein Feierabend.', warn: false };
+    case 'wartet_material': return { titel: bedarf ? `Wartet auf ${bedarf}` : 'Wartet auf Nachschub', spruch: 'Ohne Rohstoff kein Feierabend.', warn: false };
+    case 'hunger': return { titel: 'Wartet auf Essen', spruch: 'Mit leerem Teller zieht hier keiner ein.', warn: true };
+    case 'wohnraum_voll': return { titel: 'Kein Wohnraum frei – noch ein Wohnhaus bauen', spruch: 'Voll ist voll. Auch in der Eifel.', warn: false };
+    case 'fest': return { titel: 'Kirmes!', spruch: 'Musik, Karussell, Feuerwerk. Gearbeitet wird morgen.', warn: false };
     case 'arbeitet': return { titel: 'Arbeitet', spruch: 'Läuft.', warn: false };
     default: return { titel: 'Fertig', spruch: 'Steht und wartet auf Arbeit.', warn: false };
   }

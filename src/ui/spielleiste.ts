@@ -49,6 +49,14 @@ export interface StatusDaten {
   /** Vorrat im Lager je Warenart (Index = Warenart, siehe WAREN in src/sim/daten.ts). */
   vorrat: number[];
   pruefsumme: string;
+  /** Dorf (M5): Stufe, Bewohner und Wohnraum, Bauleute frei/gesamt, Kirmes-Zeile (fertiger Text) und deren Fortschritt in Prozent. */
+  dorf?: {
+    stufe: string; bewohner: number; wohnraum: number; frei: number;
+    bauarbeiter: [number, number]; planierer: [number, number];
+    kirmes: { text: string; prozent: number; fest: boolean } | null;
+  };
+  /** Kurznamen der Waren im Lager, die gezeigt werden (Index, Symbol, Name). */
+  lagerZeigen?: { art: number; icon: string; name: string }[];
 }
 
 export interface LeistenAufrufe {
@@ -109,6 +117,8 @@ export class Spielleiste {
   private status = el('div', 'panel spielstatus');
   private tempoKnoepfe = new Map<number, HTMLButtonElement>();
   private zeit = el('span', 'zeit');
+  private zeileDorf = el('div', 'zeile-dorf');
+  private kirmes = el('div', 'zeile-kirmes', '<span class="txt"></span><span class="balken"><i></i></span>');
   private zeile2 = el('div', 'zeile2');
   private letzteStatus = '';
 
@@ -150,7 +160,8 @@ export class Spielleiste {
       z1.append(b);
     }
     z1.append(this.zeit);
-    this.status.append(z1, this.zeile2);
+    this.kirmes.title = 'Kirmes: Warenliste am Kirmesplatz abliefern, dann wird gefeiert und das Dorf steigt eine Stufe auf';
+    this.status.append(z1, this.zeileDorf, this.kirmes, this.zeile2);
     root.append(this.status);
     this.setHinweis(null);
     this.setAktionen(null, false);
@@ -308,17 +319,45 @@ export class Spielleiste {
   }
 
   setStatus(s: StatusDaten) {
-    const [stamm, brett, stein] = s.vorrat;
-    const kartoffeln = s.vorrat[6] ?? 0;
-    const sig = `${s.tick >> 4}|${s.freieTraeger}|${s.vorrat.join(',')}|${s.pruefsumme}`;
+    const sig = `${s.tick >> 4}|${s.freieTraeger}|${s.vorrat.join(',')}|${s.pruefsumme}|${JSON.stringify(s.dorf ?? null)}`;
     this.zeit.textContent = `${zeitText(s.tick)} · Tick ${s.tick}`;
     if (sig === this.letzteStatus) return;
     this.letzteStatus = sig;
-    this.zeile2.innerHTML = `Träger frei <b>${s.freieTraeger}</b> · Lager: Stamm <b>${stamm}</b> · Brett <b>${brett}</b> · Stein <b>${stein}</b> · Kartoffeln <b>${kartoffeln}</b>` +
+    const d = s.dorf;
+    this.zeileDorf.style.display = d ? '' : 'none';
+    this.kirmes.style.display = d?.kirmes ? '' : 'none';
+    if (d) {
+      const voll = d.bewohner >= d.wohnraum;
+      this.zeileDorf.innerHTML = `<b class="stufe">${d.stufe}</b> · <span title="Bewohner / Wohnraum (Wohnhäuser bauen für mehr Platz)"${voll ? ' class="warn"' : ''}>👪 <b>${d.bewohner}</b>/${d.wohnraum}</span>` +
+        ` · <span title="freie Bewohner (werden Träger und Arbeiter)">frei <b>${d.frei}</b></span>` +
+        ` · <span title="Bauarbeiter frei / gesamt">🔨 <b>${d.bauarbeiter[0]}</b>/${d.bauarbeiter[1]}</span>` +
+        ` · <span title="Planierer frei / gesamt">⛏️ <b>${d.planierer[0]}</b>/${d.planierer[1]}</span>`;
+      if (d.kirmes) {
+        (this.kirmes.firstElementChild as HTMLElement).textContent = d.kirmes.text;
+        (this.kirmes.querySelector('i') as HTMLElement).style.width = `${Math.max(2, Math.min(100, d.kirmes.prozent))}%`;
+        this.kirmes.classList.toggle('fest', d.kirmes.fest);
+      }
+    }
+    const zeigen = s.lagerZeigen ?? [{ art: 0, icon: '', name: 'Stamm' }, { art: 1, icon: '', name: 'Brett' }, { art: 2, icon: '', name: 'Stein' }, { art: 6, icon: '', name: 'Kartoffeln' }];
+    const lager = zeigen.filter((w, i) => i < 3 || (s.vorrat[w.art] ?? 0) > 0)
+      .map((w) => `<span title="${w.name}">${w.icon ? w.icon + ' ' : w.name + ' '}<b>${s.vorrat[w.art] ?? 0}</b></span>`).join(' · ');
+    this.zeile2.innerHTML = `${d ? '' : `Träger frei <b>${s.freieTraeger}</b> · `}Lager: ${lager}` +
       ` · Sim <i class="simsumme" title="Prüfsumme des Spielzustands">${s.pruefsumme.slice(0, 8)}</i>`;
     // Baumenü: Gebäude, deren Material das Lager gerade nicht deckt, gedämpft zeigen (bauen geht trotzdem)
     for (const { knopf, daten } of this.eintraege.values()) {
       knopf.classList.toggle('knapp', daten.kosten.some((n, i) => n > (s.vorrat[i] ?? 0)));
+    }
+  }
+
+  /**
+   * Gesperrte Gebäude im Baumenü (Dorfstufe zu klein, einmaliges Gebäude steht schon): Id → Grund in Klartext; nicht genannte sind frei.
+   */
+  setGesperrt(gesperrt: Readonly<Record<string, string>>) {
+    for (const [id, e] of this.eintraege) {
+      const grund = gesperrt[id];
+      e.knopf.disabled = !!grund;
+      e.knopf.classList.toggle('gesperrt', !!grund);
+      e.kosten.textContent = grund ? `🔒 ${grund}` : e.daten.kostenText;
     }
   }
 

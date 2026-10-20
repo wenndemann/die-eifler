@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import type { MapData } from '../map/mapdata';
 import type { HexGrid } from '../map/hex';
 import { FLAG } from '../welt/format';
-import { KEINE_NATUR, PROMILLE, TICK_HZ, type SichtFahne, type SichtGebaeude, type SichtSegment, type SichtTraeger, type SimSicht } from '../sim/typen';
+import { KEIN_DORF, KEINE_NATUR, PROMILLE, TICK_HZ, type SichtFahne, type SichtGebaeude, type SichtSegment, type SichtTraeger, type SimSicht } from '../sim/typen';
 import { Wege } from './wege';
 import { Fahnen } from './fahnen';
 import { Traeger } from './traeger';
@@ -31,7 +31,7 @@ export class SimDemo {
   readonly fahnen: Fahnen;
   readonly traeger: Traeger;
   readonly gebaeude: Gebaeude;
-  sicht: SimSicht = { tick: 0, fahnen: [], segmente: [], traeger: [], gebaeude: [], freieTraeger: 0, natur: KEINE_NATUR };
+  sicht: SimSicht = { tick: 0, fahnen: [], segmente: [], traeger: [], gebaeude: [], freieTraeger: 0, natur: KEINE_NATUR, bauleute: [], dorf: KEIN_DORF, ereignisse: [] };
   private laeufe: Lauf[] = [];
   private acc = 0;
   private pausiert = false;
@@ -131,7 +131,7 @@ export class SimDemo {
   }
 
   private aufbauen() {
-    this.sicht = { tick: 0, fahnen: [], segmente: [], traeger: [], gebaeude: [], freieTraeger: 0, natur: KEINE_NATUR };
+    this.sicht = { tick: 0, fahnen: [], segmente: [], traeger: [], gebaeude: [], freieTraeger: 0, natur: KEINE_NATUR, bauleute: [], dorf: KEIN_DORF, ereignisse: [] };
     this.laeufe = [];
     this.nextId = 1;
     const L = this.lagerHex;
@@ -148,7 +148,7 @@ export class SimDemo {
       if (gewaehlt.length >= 6) break;
       if ([L, ...gewaehlt].every((o) => abstand(o, h) >= 2)) gewaehlt.push(h);
     }
-    const typen: [string, number, boolean][] = [['holzfaeller', PROMILLE, false], ['steinbruch', 500, false], ['saegewerk', 150, false], ['huette', PROMILLE, true]];
+    const typen: [string, number, boolean][] = [['holzfaeller', PROMILLE, false], ['steinbruch', 500, false], ['saegewerk', 150, false], ['wohnhaus', PROMILLE, true]];
     const lagerF = this.neueFahne(L, 1);
     const gb = (typ: string, h: H, f: SichtFahne, bau: number, getrennt: boolean): SichtGebaeude => {
       const g: SichtGebaeude = { id: this.nextId++, typ, q: h.q, r: h.r, fahne: f.id, bau, getrennt, prioritaet: 2, zustand: 'bereit' };
@@ -177,7 +177,7 @@ export class SimDemo {
   /** Viele Träger und Fahnen für die Leistungsprobe: Gitter aus Fahnen auf geraden Hex-Koordinaten. */
   stress(nTraeger = 200, nFahnen = 100) {
     const L = this.lagerHex;
-    this.sicht = { tick: 0, fahnen: [], segmente: [], traeger: [], gebaeude: [], freieTraeger: 0, natur: KEINE_NATUR };
+    this.sicht = { tick: 0, fahnen: [], segmente: [], traeger: [], gebaeude: [], freieTraeger: 0, natur: KEINE_NATUR, bauleute: [], dorf: KEIN_DORF, ereignisse: [] };
     this.laeufe = [];
     const mapF = new Map<string, SichtFahne>();
     const kand: H[] = [];

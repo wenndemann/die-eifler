@@ -27,7 +27,9 @@ def _open(url, timeout, header=None):
 
 
 def mit_wiederholung(fn, versuche=5, pause=2.0):
-    """Ruft fn() bis zu `versuche`-mal auf, Wartezeit verdoppelt sich. 404 wird nicht wiederholt."""
+    """Ruft fn() bis zu `versuche`-mal auf (mindestens WELT_VERSUCHE aus der Umgebung), Wartezeit verdoppelt sich, höchstens 60 s.
+    404 wird nicht wiederholt."""
+    versuche = max(versuche, int(os.environ.get("WELT_VERSUCHE", "0") or 0))
     for n in range(versuche):
         try:
             return fn()
@@ -38,7 +40,7 @@ def mit_wiederholung(fn, versuche=5, pause=2.0):
         except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as e:
             letzte = e
         if n < versuche - 1:
-            time.sleep(pause * (2 ** n))
+            time.sleep(min(60.0, pause * (2 ** n)))
     raise letzte
 
 

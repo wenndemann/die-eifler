@@ -19,6 +19,13 @@ Voraussetzungen: Node.js ≥ 20, Python ≥ 3.10, Internet (die Geodaten werden 
     npm run setup -- --gebiet nideggen      # Testgebiet Nideggen–Heimbach, ~10 Minuten
     npm run dev                              # http://localhost:5173
 
+**Schneller:** fertig gerechnete Weltdaten aus dem GitHub-Release laden, statt sie selbst zu rechnen:
+
+    tools/welt-laden.sh nideggen            # oder nordeifel
+
+Die Releases rechnet der Workflow „Weltdaten“ (`.github/workflows/weltdaten.yml`) auf GitHub: im Tab „Actions“
+starten oder einen Branch `weltdaten/<gebiet>` pushen.
+
 `npm run setup` ruft `tools/map/setup.py` auf und legt eine Datenversion unter `welt-daten/` ab (nicht in Git).
 Ohne `--gebiet` wird die **ganze Welt** gerechnet (Aachen – Trier – Maria Laach, mit Ostbelgien und
 Nord-Luxemburg): das dauert viele Stunden, lädt rund 25 GB amtliche Höhendaten kachelweise und löscht sie
@@ -53,7 +60,8 @@ nach Gebrauch wieder. Unterbrochen? Einfach neu starten, es setzt fort. Details 
   (<kbd>B</kbd>, Ziffern ab <kbd>3</kbd> direkt) zeigt die Gebäude aus `data/buildings.json` mit Kosten und Bauplatzgröße.
   Mit gewähltem Gebäude zeigt die Karte die Bauplätze (klein/mittel/groß, <kbd>P</kbd> auch ohne Werkzeug), ein
   Geistermodell am Ziel und den Arbeitsradius („36 Bäume in Reichweite“). Platzieren kostet nichts: Die Baustelle
-  meldet Bedarf, Träger bringen Bretter und Steine einzeln und verbauen sie, das Haus wächst in drei Phasen.
+  meldet Bedarf, Träger bringen Bretter und Steine einzeln und legen sie an der Baustelle ab, ein Bauarbeiter verbaut sie
+  (seit M5), das Haus wächst in drei Phasen.
   Gebäude anklicken öffnet eine Karte mit Zustand („Wartet auf Bretter“, „Kein Baum mehr in Reichweite“), Bedarf und
   Priorität 1–3 (Rechtsklick auf eine Baustelle schaltet sie reihum). Holzfäller fällt Bäume im Arbeitsbereich (der Kartenwald
   im Spielfeld ist Simulationszustand: was man sieht, gibt es, auch die Einzelbäume auf der Wiese), Förster pflanzt nach, Jungbäume wachsen in drei Stufen, Sägewerk macht aus Stämmen Bretter,
@@ -65,6 +73,18 @@ nach Gebrauch wieder. Unterbrochen? Einfach neu starten, es setzt fort. Details 
   vom Haus): Ringe folgen dem Zeiger, Klick setzt, am Handy zeigt der Tipp und „Setzen“ bzw. zweiter Tipp bestätigt,
   <kbd>Esc</kbd> bricht ab, „Zurücksetzen“ legt ihn wieder aufs Haus. Ein Fähnchen und eine dünne Linie zeigen den
   gesetzten Mittelpunkt. Waren und Gebäude sind Daten: `data/goods.json`, `data/buildings.json`.
+- **Bewohner, Nahrung, erste Kirmes (M5):** Man startet mit 10 Bewohnern, 4 Bauarbeitern und 2 Planierern
+  (`data/dorf.json`). Träger liefern nur ab; Planierer ebnen Bauplätze am Hang (man sieht die Erde glatt werden), dann
+  kommt ein Bauarbeiter mit Hammer und verbaut den Stapel Stück für Stück. Mehr Baustellen als Bauleute heißt warten,
+  die Priorität entscheidet. Ein **Wohnhaus** mit Essen bringt neue Bewohner, bis der Wohnraum voll ist (Dorfkern 10,
+  Wohnhaus 8); besseres Essen geht schneller (Kartoffeln 14 s, Bratkartoffeln/Most/Käse/Honig 9 s). Ohne Nachwuchs
+  in Sicht und mit weniger als 4 freien Bewohnern kommt alle 30 s ein Zugezogener (Notnagel). Die Ketten der Stufe
+  Weiler: Kartoffelfeld → Küche → Bratkartoffeln, Obstwiese → Mostkeller → Most, Schafstall → Käserei → Käse,
+  Bienenstock → Honig. Am **Kirmesplatz** liefert man 10 Bratkartoffeln, 10 Most und 6 Käse; dann wird gefeiert
+  (Karussell, Feuerwerk), der Weiler wird zum Dorf und der Reifekeller ist frei. Statusleiste oben links: Dorfstufe,
+  Bewohner/Wohnraum, Bauleute und die Warenliste. Über Gebäuden steht in Klartext, was fehlt („Wartet auf Milch“),
+  die Erzählfigur des Völkchens meldet sich mit Sprüchen (Platt mit Übersetzung im Tooltip). Waren haben klare Formen
+  und Farben (Käserad, Mostkrug, Pfanne …). Spieltest-Drehbuch: [SPIELTEST.md](SPIELTEST.md).
 - **Simulation** (`src/sim/`): fester Tick (20/s), nur Ganzzahlen, jede Aktion ist ein Befehl mit Tick-Nummer,
   Prüfsumme über den Zustand (Statusleiste „Sim“), Befehlsprotokoll zum Abspielen (`spieleAb`). Der Smoke-Test
   prüft, dass Node und Browser dieselbe Prüfsumme bekommen und ein Replay im zweiten Browser-Fenster gleich ausgeht.

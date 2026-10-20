@@ -1,4 +1,4 @@
-// Arbeiter-Figuren (M4): Holzfäller, Förster und Steinbruch-Arbeiter. Gleiche knubbelige Figur wie die Träger
+// Arbeiter-Figuren (M4, M5): Holzfäller, Förster, Steinbruch-Arbeiter, Bauarbeiter (Hammer) und Planierer (Schaufel). Gleiche knubbelige Figur wie die Träger
 // (traeger.ts: eine Geometrie, Gliedmaßen im Vertex-Shader), dazu ein Werkzeug je Beruf (Axt, Spaten, Spitzhacke) als
 // eigene Instanzen. Beim Gehen trägt die Figur das Werkzeug aufrecht in der Hand; beim Arbeiten ('arbeitet') schwingt
 // es mit den Armen (Schlag- bzw. Grabbewegung am Zielhex); beim Heimtragen ('traegt') liegt die Ware sichtbar über
@@ -14,12 +14,13 @@ import { TRAEGER_H, fernFaktor } from './massstab';
 import { WAREN_ANZAHL, warenGeometrie } from './waren';
 import { figur, material } from './traeger';
 
-type Beruf = 'holzfaeller' | 'foerster' | 'steinbruch';
+type Beruf = 'holzfaeller' | 'foerster' | 'steinbruch' | 'bauarbeiter' | 'planierer';
 const BERUFE: Beruf[] = ['holzfaeller', 'foerster', 'steinbruch'];
 
 /** Hemdfarbe je Beruf (färbt Rumpf und Ärmel der Trägerfigur ein). */
 const HEMD: Record<Beruf, THREE.Color> = {
   holzfaeller: new THREE.Color('#c0443a'), foerster: new THREE.Color('#3f8f4c'), steinbruch: new THREE.Color('#8f949c'),
+  bauarbeiter: new THREE.Color('#e0a830'), planierer: new THREE.Color('#8a6a48'),
 };
 
 // ---- Werkzeuge in Figur-Einheiten (Figur ist 1 hoch). Ursprung = Griffstelle der Hand; Stiel hängt nach -y, Kopf unten.
@@ -49,7 +50,14 @@ function spaten(): THREE.BufferGeometry {
     paint(new THREE.BoxGeometry(0.19, 0.04, 0.035).translate(0, -0.49, 0), STAHL_DUNKEL),
   ])!;
 }
-const WERKZEUG: Record<Beruf, () => THREE.BufferGeometry> = { holzfaeller: axt, foerster: spaten, steinbruch: spitzhacke };
+function hammer(): THREE.BufferGeometry {
+  return mergeGeometries([
+    stiel(0.55),
+    paint(new THREE.BoxGeometry(0.09, 0.11, 0.24).translate(0, -0.42, 0.02), STAHL_DUNKEL),
+    paint(new THREE.BoxGeometry(0.1, 0.12, 0.06).translate(0, -0.42, 0.16), STAHL),
+  ])!;
+}
+const WERKZEUG: Record<Beruf, () => THREE.BufferGeometry> = { holzfaeller: axt, foerster: spaten, steinbruch: spitzhacke, bauarbeiter: hammer, planierer: spaten };
 
 /** Schulter und Hand-Griffstelle (rechter Arm der Trägerfigur, traeger.ts). */
 const SCHULTER: [number, number, number] = [0.25, 0.54, 0];
@@ -64,6 +72,8 @@ const ARBEIT: Record<Beruf, { dauer: number; tief: number; hoch: number; aus: nu
   holzfaeller: { dauer: 1.1, tief: 0.5, hoch: 0.98, aus: 0.7 },
   steinbruch: { dauer: 1.35, tief: 0.5, hoch: 1.0, aus: 0.72 },
   foerster: { dauer: 1.5, tief: 0.27, hoch: 0.52, aus: 0.55 },
+  bauarbeiter: { dauer: 0.55, tief: 0.45, hoch: 0.85, aus: 0.6 },
+  planierer: { dauer: 1.2, tief: 0.27, hoch: 0.55, aus: 0.55 },
 };
 
 interface Zustand { phase: number; yaw: number; x: number; z: number; benutzt: number; zeit: number }
@@ -95,6 +105,8 @@ export class Arbeiter {
       holzfaeller: new Instanzen(this.group, WERKZEUG.holzfaeller(), matte, false, true, [], 32),
       foerster: new Instanzen(this.group, WERKZEUG.foerster(), matte, false, true, [], 32),
       steinbruch: new Instanzen(this.group, WERKZEUG.steinbruch(), matte, false, true, [], 32),
+      bauarbeiter: new Instanzen(this.group, WERKZEUG.bauarbeiter(), matte, false, true, [], 8),
+      planierer: new Instanzen(this.group, WERKZEUG.planierer(), matte, false, true, [], 8),
     };
     const waren = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: true });
     for (let a = 0; a < WAREN_ANZAHL; a++) this.waren.push(new Instanzen(this.group, warenGeometrie(a), waren, false, true, [], 32));
@@ -117,6 +129,13 @@ export class Arbeiter {
       n++;
       this.figurSetzen(g.id, g.typ as Beruf, a, alpha, dt, map, base, ex, m, mw, q, p, s, farbe);
     }
+    // Bauarbeiter und Planierer (Drehbuch 4.5): laufen über die Wege, arbeiten auf dem Bauplatz, warten neben der Fahne
+    for (const b of sicht.bauleute) {
+      n++;
+      const tut = b.tut === 'wartet' ? 'ruht' : b.tut;
+      const a: SichtArbeiter = { von: b.von, nach: b.nach, fortschritt: b.fortschritt, schritt: b.schritt, tut, ziel: null, ware: -1 };
+      this.figurSetzen(b.id, b.beruf, a, alpha, dt, map, base, ex, m, mw, q, p, s, farbe, b.tut === 'arbeitet');
+    }
     this.figuren.fertig();
     for (const w of Object.values(this.werkzeuge)) w.fertig();
     for (const w of this.waren) w.fertig();
@@ -124,12 +143,14 @@ export class Arbeiter {
   }
 
   private figurSetzen(id: Id, beruf: Beruf, a: SichtArbeiter, alpha: number, dt: number, map: MapData, base: number, ex: number,
-    m: THREE.Matrix4, mw: THREE.Matrix4, q: THREE.Quaternion, p: THREE.Vector3, s: THREE.Vector3, farbe: THREE.Color) {
+    m: THREE.Matrix4, mw: THREE.Matrix4, q: THREE.Quaternion, p: THREE.Vector3, s: THREE.Vector3, farbe: THREE.Color, aufBauplatz = false) {
     const geht = a.tut === 'geht' || a.tut === 'traegt';
     const f = Math.min(1, Math.max(0, (a.fortschritt + (geht ? alpha * a.schritt : 0)) / PROMILLE));
     const w0 = this.grid.toWorld(a.von), w1 = this.grid.toWorld(a.nach);
     let x = w0.x + (w1.x - w0.x) * f, z = w0.z + (w1.z - w0.z) * f;
     if (a.tut === 'ruht') { x += 11; z += 8; }   // neben der Fahne, nicht in ihr
+    // Bauleute arbeiten hinter der Fahne auf dem Grundstück, je nach Id etwas versetzt
+    if (aufBauplatz) { x += Math.sin(id * 1.7) * 9; z -= 14 + Math.cos(id * 1.3) * 5; }
     let st = this.zustand.get(id);
     if (!st) {
       st = { phase: (id * 2.3) % 6.28, yaw: Math.atan2(w1.x - w0.x, w1.z - w0.z) || 0, x, z, benutzt: 0, zeit: (id * 0.37) % 1 };

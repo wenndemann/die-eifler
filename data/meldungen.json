@@ -1,0 +1,46 @@
+{
+ "hinweis": "Meldungen der Erzählfigur (Drehbuch 1.1, 1.4, 4.4): Hochdeutsch, der Sprachtick der Figur kommt aus regions.json dazu. Platzhalter: {name} Erzählfigur, {ort} Startort, {gebaeude} Gebäude, {ware} Ware, {stufe} Dorfstufe, {n} Zahl, {liste} Kirmes-Warenliste. Mehrere Texte je Anlass werden der Reihe nach verwendet.",
+ "begruessung": [
+  "Willkommen in {ort}! Hier fängt die Eifel an. Erst Holz und Stein, dann Kartoffeln – und dann feiern wir Kirmes.",
+  "Na, da seid ihr ja. {ort} wartet. Holzfäller an den Wald, Weg dahin, und dann sehen wir weiter."
+ ],
+ "erste_schritte": [
+  "Tipp: Ein Holzfäller am Waldrand und ein Weg zum Lager – dann laufen die Stämme.",
+  "Tipp: Das Sägewerk macht aus Stämmen Bretter. Ohne Bretter baut hier keiner was.",
+  "Tipp: Kartoffelfeld und Wohnhaus – mit vollem Teller kommen die Leute von selbst.",
+  "Tipp: Für die Kirmes braucht es {liste}. Und einen Kirmesplatz."
+ ],
+ "fertig": [
+  "{gebaeude} steht. Hat keiner geglaubt.",
+  "{gebaeude} ist fertig. Der Bauarbeiter will jetzt einen Kaffee.",
+  "{gebaeude}: fertig. Gebaut wie für die Ewigkeit. Oder bis zum nächsten Sturm."
+ ],
+ "bewohner_erster": [
+  "Der erste Neue ist da! {ware} hat ihn angelockt."
+ ],
+ "bewohner_viele": [
+  "Schon {n} Eifeler im Dorf. Das wird eng an der Theke.",
+  "{n} Leute! Bald brauchen wir ein zweites Wohnhaus. Oder ein drittes.",
+  "{n} Eifeler. Und jeder weiß es besser."
+ ],
+ "wohnraum_voll": [
+  "Die Wohnhäuser sind voll. Wer noch kommen soll, braucht ein Dach überm Kopf."
+ ],
+ "notnagel": [
+  "Ein Zugezogener ist da. Woher? Hinterm Hügel. Hat Hunger, packt aber mit an.",
+  "Noch ein Zugezogener. Schläft erstmal in der Scheune.",
+  "Ein Zugezogener! Sagt, er wär von bei Aachen."
+ ],
+ "kirmesplatz": [
+  "Der Kirmesplatz steht! Jetzt fehlt nur noch: {liste}."
+ ],
+ "kirmes": [
+  "Kirmes! Musik, Karussell, Feuerwerk – und keiner arbeitet. Wie es sich gehört."
+ ],
+ "stufe": [
+  "Aus dem Weiler ist ein {stufe} geworden! Neue Gebäude sind frei: {liste}."
+ ],
+ "zuzug": [
+  "Die Kirmes hat {n} Neue angelockt. Hat sich rumgesprochen."
+ ]
+}

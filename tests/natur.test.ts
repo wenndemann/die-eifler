@@ -11,7 +11,7 @@ import { hashHex, hashHex2 } from '../src/sim/natur';
 import type { Befehl, KarteDaten, Protokoll } from '../src/sim/typen';
 import { baueTestKarte, fuegeStartStein, gerade, KARTE_INFO, setzeWald } from './sim-szenario';
 
-const START = { q: 0, r: 0 };
+const START = { q: 0, r: 0, bewohner: 40 };
 const neu = (saat = 1, karte: KarteDaten = baueTestKarte()) => new Simulation(karte, saat, START);
 const tu = (sim: Simulation, b: Befehl) => sim.befehl(sim.tick, 0, b);
 const lauf = (sim: Simulation, n: number) => { for (let i = 0; i < n; i++) sim.schritt(); };
@@ -148,7 +148,7 @@ describe('M4b: Bauen rodet', () => {
     const h = sim.karte.index(6, 1);
     expect(sim.sicht().natur.baum[h]).toBe(TREE_MAX);
     expect(sim.bauplatzGroesse(6, 1)).toBe(3);
-    tu(sim, { art: 'gebaeude', typ: 'huette', q: 6, r: 1 });
+    tu(sim, { art: 'gebaeude', typ: 'wohnhaus', q: 6, r: 1 });
     lauf(sim, 1);
     expect(sim.sicht().natur.baum[h]).toBe(0);
     expect(sim.statistik().erzeugtJe[WARE.stamm]).toBe(2);
@@ -165,8 +165,8 @@ describe('M4b: Bauen rodet', () => {
     const k = new SimKarte(karte);
     karte.terrain[k.index(4, 0)] = 2; karte.flags[k.index(4, 0)] &= ~1; // Wald
     const sim = neu(1, karte);
-    tu(sim, { art: 'gebaeude', typ: 'huette', q: 4, r: 0 });
-    tu(sim, { art: 'gebaeude', typ: 'huette', q: 8, r: 0 });
+    tu(sim, { art: 'gebaeude', typ: 'wohnhaus', q: 4, r: 0 });
+    tu(sim, { art: 'gebaeude', typ: 'wohnhaus', q: 8, r: 0 });
     lauf(sim, 1);
     expect(sim.statistik().erzeugtJe[WARE.stamm]).toBe(2);
     expect(sim.statistik().erzeugt).toBe(2);
@@ -192,9 +192,9 @@ describe('M4b: Bauen rodet', () => {
     const sim = neu(1, karte);
     const k = sim.karte;
     expect(sim.sicht().natur.fels[k.index(5, 5)]).toBe(FELS_STEIL);
-    expect(sim.kannBauen('huette', 5, 5)).toBe(true);
-    expect(sim.kannBauen('huette', 7, 5)).toBe(false);
-    tu(sim, { art: 'gebaeude', typ: 'huette', q: 5, r: 5 });
+    expect(sim.kannBauen('wohnhaus', 5, 5)).toBe(true);
+    expect(sim.kannBauen('wohnhaus', 7, 5)).toBe(false);
+    tu(sim, { art: 'gebaeude', typ: 'wohnhaus', q: 5, r: 5 });
     lauf(sim, 1);
     const n = sim.sicht().natur;
     expect(n.fels[k.index(5, 5)]).toBe(0);
@@ -278,9 +278,9 @@ describe('M4b: Arbeitsbereich', () => {
 
   it('Ungültige Befehle sind wirkungslos; höchstens ARBEIT_MITTE_MAX Hexe Abstand; auch Baustellen nehmen den Mittelpunkt an', () => {
     const { sim, id } = aufbau();
-    tu(sim, { art: 'gebaeude', typ: 'huette', q: 0, r: 3 });
+    tu(sim, { art: 'gebaeude', typ: 'wohnhaus', q: 0, r: 3 });
     lauf(sim, 1);
-    const huette = idVon(sim, 'huette', { q: 0, r: 3 });
+    const huette = idVon(sim, 'wohnhaus', { q: 0, r: 3 });
     const lager = sim.sicht().gebaeude.find((g) => g.typ === 'lager')!.id;
     const falsche: Befehl[] = [
       { art: 'arbeitsbereich', id, q: 3 + ARBEIT_MITTE_MAX + 1, r: 0 },   // zu weit

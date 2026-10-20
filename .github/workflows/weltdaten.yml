@@ -1,0 +1,67 @@
+# Weltdaten auf GitHub rechnen und als Release ablegen (statt in jeder Session neu zu laden).
+# Start: im Tab „Actions“ → „Weltdaten“ → „Run workflow“ (Gebiet wählen), oder einen Branch weltdaten/<gebiet> pushen.
+# Ergebnis: Release „welt-daten-<gebiet>“ mit welt-daten-<gebiet>.tar.gz; laden mit tools/welt-laden.sh <gebiet>.
+name: Weltdaten
+
+on:
+  workflow_dispatch:
+    inputs:
+      gebiet:
+        description: 'Gebiet (nideggen ~10 min, nordeifel ~1 h, welt viele Stunden)'
+        type: choice
+        options: [nideggen, nordeifel]
+        default: nideggen
+  push:
+    branches: ['weltdaten/**']
+
+permissions:
+  contents: write
+
+jobs:
+  rechnen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - name: Gebiet bestimmen
+        run: |
+          G="${{ inputs.gebiet }}"
+          if [ -z "$G" ]; then G="${GITHUB_REF_NAME#weltdaten/}"; fi
+          case "$G" in nideggen|nordeifel) ;; *) echo "Unbekanntes Gebiet: $G"; exit 1 ;; esac
+          echo "GEBIET=$G" >> "$GITHUB_ENV"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Python-Pakete
+        run: pip install -r tools/map/requirements.txt
+      - name: Weltdaten rechnen
+        # OSM aus den Geofabrik-Auszügen: zuverlässiger als die oft überlasteten Overpass-Server. Die amtlichen Höhenserver brechen
+        # von GitHub aus gern Verbindungen ab: wenige parallele Downloads, viele Wiederholungen, und das Setup setzt bei einem
+        # neuen Start dort fort, wo es aufgehört hat (bis zu 5 Durchgänge).
+        env:
+          WELT_VERSUCHE: '10'
+        run: |
+          for n in 1 2 3 4 5; do
+            echo "== Durchgang $n"
+            if python3 tools/map/setup.py --gebiet "$GEBIET" --osm geofabrik --jobs 2; then exit 0; fi
+            sleep 30
+          done
+          exit 1
+      - name: Packen
+        run: |
+          V=$(python3 -c "import json;print(json.load(open('welt-daten/versions.json'))['aktuell'])")
+          echo "VERSION=$V" >> "$GITHUB_ENV"
+          tar -czf "welt-daten-$GEBIET.tar.gz" -C welt-daten "$V"
+          ls -lh "welt-daten-$GEBIET.tar.gz"
+      - name: Release anlegen oder ersetzen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="welt-daten-$GEBIET"
+          NOTIZ="Weltdaten $VERSION (Gebiet $GEBIET), gerechnet am $(date -u +%Y-%m-%d) aus ${GITHUB_SHA::7}. Laden: tools/welt-laden.sh $GEBIET"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "welt-daten-$GEBIET.tar.gz" --clobber
+            gh release edit "$TAG" --notes "$NOTIZ"
+          else
+            gh release create "$TAG" "welt-daten-$GEBIET.tar.gz" --title "Weltdaten $GEBIET" --notes "$NOTIZ" --target "$GITHUB_SHA"
+          fi

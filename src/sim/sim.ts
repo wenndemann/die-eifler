@@ -3,10 +3,11 @@
 import { FLAG } from '../welt/format';
 import { Fnv2 } from '../welt/pruefsumme';
 import {
-  ARBEIT_MITTE_MAX, BAUM_HEIDE_PROZENT, BAUM_MOOR_PROZENT, BAUM_WACHSEN, BAUM_WIESE_PROZENT, BUILD_ACTION, FAHNE_MAX_SEGMENTE,
-  FELS_LESE, FELS_LESE_START, FELS_STEIL, FELS_STEIN, FLAG_CAP, GEBAEUDE, LESE_PROZENT, NOTPLAETZE, PRIO_MAX, PRIO_MIN, PRIO_STANDARD,
-  RODUNG_STAMM_MAX, START_STEIN_ABSTAND_MIN, START_STEIN_MIN, START_STEIN_RADIUS, START_VORRAT, STEIL_GRAD, SUCHE_WARTE, TRAEGER_START,
-  TREE_MAX, UEBERGABE_TICKS, WARE, WAREN, WEG_MAX_SCHRITTE,
+  ARBEIT_MITTE_MAX, BAU_JE_WARE, BAUM_HEIDE_PROZENT, BAUM_MOOR_PROZENT, BAUM_WACHSEN, BAUM_WIESE_PROZENT, FAHNE_MAX_SEGMENTE,
+  FELS_LESE, FELS_LESE_START, FELS_STEIL, FELS_STEIN, FLAG_CAP, GEBAEUDE, KIRMES, LESE_PROZENT, NAHRUNG, NAHRUNG_REIHE, NAHRUNG_ZYKLUS,
+  NOTNAGEL_FREI_UNTER, NOTNAGEL_TICKS, NOTPLAETZE, planierTicks, PRIO_MAX, PRIO_MIN, PRIO_STANDARD,
+  RODUNG_STAMM_MAX, START_BAUARBEITER, START_BEWOHNER, START_PLANIERER, START_STEIN_ABSTAND_MIN, START_STEIN_MIN, START_STEIN_RADIUS,
+  START_VORRAT, STEIL_GRAD, SUCHE_WARTE, TREE_MAX, UEBERGABE_TICKS, WARE, WAREN, WEG_MAX_SCHRITTE,
 } from './daten';
 import type { GebaeudeTyp } from './daten';
 import { SimKarte } from './karte';
@@ -14,7 +15,8 @@ import { FELS_FELS, FELS_KLIPPE, FELS_LESE as ART_LESE, hashHex, hashHex2, hashH
 import { sucheWeg, ZahlenHeap } from './pfad';
 import { PROMILLE } from './typen';
 import type {
-  Befehl, GebaeudeZustand, Id, KarteDaten, Protokoll, ProtokollEintrag, SichtArbeiter, SichtNatur, SimSicht,
+  Befehl, GebaeudeZustand, Id, KarteDaten, Protokoll, ProtokollEintrag, SichtArbeiter, SichtBaumann, SichtEreignis, SichtNatur, SimSicht,
+  StartDaten,
 } from './typen';
 
 interface Ware { art: number; ziel: Id }
@@ -40,8 +42,6 @@ interface Traeger {
   pos: number; dir: 1 | -1; t: number; dauer: number;
   pause: number;
   art: number; ziel: Id;
-  /** 1 = verbaut die getragene Ware gerade an der Baustelle (Pause = BUILD_ACTION). */
-  baut: 0 | 1;
   /** Ticks, die er mit Ware vor einer vollen Fahne steht. */
   warte: number;
   route: number[]; ri: number; routeSegs: Id[];
@@ -66,9 +66,39 @@ interface Gebaeude {
   ar: number; ph: number; pt: number; pd: number; wi: number; zh: number; weg: number[]; traegt: number; leer: number;
   /** Arbeitsmittelpunkt (Hex-Index) oder -1 = das Gebäude selbst. */
   mitte: number;
+  // Baustelle (Drehbuch 4.5): angelieferter Stapel je Warenart, Ware in der Hand des Bauarbeiters (-1 keine), Planieren nötig/erledigt
+  // (Ticks), zugewiesener Bauarbeiter und Planierer (Id des Baumanns, 0 keiner).
+  stapel: number[]; haende: number; planSoll: number; planIst: number; bauer: Id; planierer: Id;
 }
 
+/** Phasen eines Baumanns: geht über die Wege, arbeitet an der Baustelle, wartet dort auf Material. */
+const BM_GEHT = 0, BM_ARBEIT = 1, BM_WARTET = 2;
+
+/** Bauarbeiter (beruf 0) oder Planierer (beruf 1), Drehbuch 4.5. */
+interface Baumann {
+  id: Id; beruf: 0 | 1;
+  /** Ziel-Baustelle (0 = Heimweg ins Lager). */
+  ziel: Id;
+  phase: number;
+  /** Gehweg als Hex-Indizes, Position, Ticks im Schritt und dessen Dauer; beim Arbeiten t/dauer der Arbeit. */
+  route: number[]; ri: number; t: number; dauer: number;
+}
+
+const EREIGNISSE_MAX = 32;
+
 const DIST_K = 1 << 21;
+const ALLE_WAREN: readonly number[] = WAREN.map((_, i) => i);
+
+/** Reihenfolge der fertigen Abnehmer: 0 Kirmesplatz, 1 Verarbeiter, 2 Wohnhaus. */
+function abnehmerRang(t: GebaeudeTyp): number {
+  return t.funktion === 'kirmes' ? 0 : t.funktion === 'wohnen' ? 2 : 1;
+}
+
+function summe(a: readonly number[]): number {
+  let n = 0;
+  for (const v of a) n += v;
+  return n;
+}
 
 /** Gebäudetyp nach Id; unbekannte Ids (auch Namen wie „constructor“) liefern undefined. */
 function typVon(typ: string): GebaeudeTyp | undefined {
@@ -78,10 +108,26 @@ function typVon(typ: string): GebaeudeTyp | undefined {
 export class Simulation {
   readonly karte: SimKarte;
   private readonly saat: number;
+  /** Abweichende Startbewohner (nur fürs Protokoll). */
+  private readonly startBewohner: number | undefined;
   private _tick = 0;
   private rng: number;
   private naechsteId = 1;
-  private freieTraeger = TRAEGER_START;
+  /** Bewohner gesamt (frei + Träger + Arbeiter) und davon frei im Vorrat (DESIGN §5). */
+  private bewohner: number;
+  private frei: number;
+  /** Bauleute (Drehbuch 4.5): Gesamtzahl und frei im Lager, je Bauarbeiter und Planierer. */
+  private bauGesamt = START_BAUARBEITER;
+  private bauFrei = START_BAUARBEITER;
+  private planGesamt = START_PLANIERER;
+  private planFrei = START_PLANIERER;
+  private bauleute = new Map<Id, Baumann>();
+  /** Dorfstufe (0 Weiler …), laufendes Fest (Restticks), Notnagel-Uhr. */
+  private dorfStufe = 0;
+  private fest = 0;
+  private notnagelT = 0;
+  private ereignisse: SichtEreignis[] = [];
+  private ereignisNr = 0;
   private befehlZahl = 0;
   private fahnen = new Map<Id, Fahne>();
   private segmente = new Map<Id, Segment>();
@@ -117,10 +163,14 @@ export class Simulation {
   private inb = new Map<Id, number>();
   private natCache: SichtNatur | null = null;
   private natHash: { rev: number; hex: string } | null = null;
+  /** Freier Wohnraum zu Beginn des Ticks (abgeleitet). */
+  private wohnFrei = 0;
 
-  constructor(karteDaten: KarteDaten, saat: number, start: { q: number; r: number }) {
+  constructor(karteDaten: KarteDaten, saat: number, start: StartDaten) {
     this.karte = new SimKarte(karteDaten);
     this.saat = saat | 0;
+    this.startBewohner = start.bewohner;
+    this.bewohner = this.frei = Math.max(0, Math.floor(start.bewohner ?? START_BEWOHNER));
     this.rng = (Math.imul(this.saat, 0x9e3779b1) ^ 0x85ebca6b) | 0;
     const n = this.karte.count;
     this.hexFahne = new Int32Array(n);
@@ -226,9 +276,12 @@ export class Simulation {
     }
     if (this.verbundenNeu) this.verbindungenNeu();
     this.inbNeu();
+    this.wohnFrei = this.wohnraumFrei();
     for (const g of this.gebaeude.values()) this.gebaeudeTick(g);
+    this.dorfTick();
     if (t % 10 === 0) { this.baeumeWachsen(); this.zielePruefen(); }
-    if (t % 4 === 0) this.lagerPull();
+    if (t % 4 === 0) { this.lagerPull(); this.bauleuteSchicken(); }
+    for (const b of [...this.bauleute.values()]) this.baumannSchritt(b);
     this.traegerPhase();
     if (t % 40 === 0) for (const s of this.segmente.values()) if (s.verkehr > 0) s.verkehr--;
     this._tick++;
@@ -238,7 +291,8 @@ export class Simulation {
     const l = this.lagerGebaeude();
     return {
       format: 1, karte: { ...karteInfo }, saat: this.saat,
-      start: { q: this.karte.qs[l.h], r: this.karte.rs[l.h] },
+      start: this.startBewohner === undefined ? { q: this.karte.qs[l.h], r: this.karte.rs[l.h] }
+        : { q: this.karte.qs[l.h], r: this.karte.rs[l.h], bewohner: this.startBewohner },
       befehle: this.log.map((e) => ({ tick: e.tick, spieler: e.spieler, befehl: JSON.parse(JSON.stringify(e.befehl)) as Befehl })),
       ticks: this._tick,
     };
@@ -402,16 +456,54 @@ export class Simulation {
           getrennt: g.getrennt, prioritaet: g.prio, zustand: this.zustandVon(g, t),
         };
         if (g.typ === 'lager') o.vorrat = g.vorrat.slice();
-        if (!g.fertig) o.bedarf = t.kosten.map((n, a) => Math.max(0, n - g.verbaut[a]));
-        if (t.pufferSumme > 0) o.puffer = g.puffer.slice();
+        if (!g.fertig) {
+          o.bedarf = t.kosten.map((n, a) => Math.max(0, n - g.verbaut[a]));
+          o.stapel = g.stapel.map((n, a) => n + (g.haende === a ? 1 : 0));
+          if (g.planSoll > 0) o.planiert = Math.min(PROMILLE, Math.floor((PROMILLE * g.planIst) / g.planSoll));
+        }
+        if (this.hatEingang(t)) o.puffer = g.puffer.slice();
         if (t.ausgangMax > 0) o.ausgang = g.ausgang.slice();
         const ar = this.arbeiterSicht(g, t);
         if (ar) o.arbeiter = ar;
         if (g.mitte >= 0) o.mitte = hx(g.mitte);
         return o;
       }),
-      freieTraeger: this.freieTraeger,
+      freieTraeger: this.frei,
       natur: this.naturSicht(),
+      bauleute: [...this.bauleute.values()].map((b) => this.baumannSicht(b)),
+      dorf: this.dorfSicht(),
+      ereignisse: this.ereignisse.map((e) => ({ ...e })),
+    };
+  }
+
+  private baumannSicht(b: Baumann): SichtBaumann {
+    const k = this.karte;
+    const hx = (h: number) => ({ q: k.qs[h], r: k.rs[h] });
+    const beruf = b.beruf === 0 ? 'bauarbeiter' : 'planierer';
+    if (b.phase === BM_GEHT && b.ri + 1 < b.route.length) {
+      return {
+        id: b.id, beruf, von: hx(b.route[b.ri]), nach: hx(b.route[b.ri + 1]), ziel: b.ziel, tut: 'geht',
+        fortschritt: b.dauer > 0 ? Math.min(PROMILLE - 1, Math.floor((PROMILLE * b.t) / b.dauer)) : 0,
+        schritt: b.dauer > 0 ? Math.max(1, Math.floor(PROMILLE / b.dauer)) : 0,
+      };
+    }
+    const h = hx(b.route[b.route.length - 1]);
+    return { id: b.id, beruf, von: h, nach: h, ziel: b.ziel, tut: b.phase === BM_ARBEIT ? 'arbeitet' : 'wartet', fortschritt: 0, schritt: 0 };
+  }
+
+  private dorfSicht(): SimSicht['dorf'] {
+    let arbeiter = 0, wohnraum = 0;
+    for (const g of this.gebaeude.values()) { arbeiter += g.ar; if (g.fertig) wohnraum += GEBAEUDE[g.typ].wohnraum; }
+    const ks = KIRMES[this.dorfStufe];
+    const platz = this.kirmesPlatz();
+    return {
+      stufe: this.dorfStufe, bewohner: this.bewohner, frei: this.frei, traeger: this.traeger.size, arbeiter, wohnraum,
+      bauarbeiter: { gesamt: this.bauGesamt, frei: this.bauFrei }, planierer: { gesamt: this.planGesamt, frei: this.planFrei },
+      kirmes: ks ? {
+        liste: ks.liste.slice(), geliefert: platz && platz.fertig ? platz.puffer.slice() : ks.liste.map(() => 0),
+        platz: platz ? platz.id : 0, fest: this.fest, festDauer: ks.festTicks,
+      } : null,
+      notnagel: this.notnagelGreift() ? NOTNAGEL_TICKS - this.notnagelT : -1,
     };
   }
 
@@ -434,17 +526,27 @@ export class Simulation {
     if (g.typ === 'lager') return 'bereit';
     if (g.getrennt) return 'getrennt';
     if (!g.fertig) {
-      let unterwegs = 0;
-      for (let a = 0; a < g.incoming.length; a++) unterwegs += g.incoming[a];
-      return unterwegs > 0 ? 'baustelle' : 'wartet_material';
+      if (g.planIst < g.planSoll) return g.planierer ? 'planieren' : 'kein_planierer';
+      if (g.bauer) return 'baustelle';
+      if (summe(g.stapel) > 0) return 'kein_bauarbeiter';
+      return summe(g.incoming) > 0 ? 'baustelle' : 'wartet_material';
     }
-    if (t.funktion === 'wohnen') return 'bereit';
+    if (t.funktion === 'wohnen') {
+      if (g.arbeit) return 'arbeitet';
+      if (!this.nahrungIn(g)) return 'hunger';
+      return 'wohnraum_voll';
+    }
+    if (t.funktion === 'kirmes') {
+      if (this.fest > 0) return 'fest';
+      return KIRMES[this.dorfStufe] ? 'wartet_material' : 'bereit';
+    }
     if (t.arbeiter && !g.ar) return 'kein_arbeiter';
-    if (t.funktion === 'saegewerk') {
+    if (t.funktion === 'verarbeiter') {
       if (g.arbeit) return 'arbeitet';
       if (g.ausgang[t.ausgangWare] >= t.ausgangMax) return 'voll';
-      return g.puffer[t.wandelt!.ein] > 0 ? 'arbeitet' : 'wartet_material';
+      return g.puffer[t.wandelt!.ein] >= t.wandelt!.menge ? 'arbeitet' : 'wartet_material';
     }
+    if (t.funktion === 'erzeuger') return g.ausgang[t.ausgangWare] >= t.ausgangMax ? 'voll' : 'arbeitet';
     if (g.ph === PH_SUCHE) {
       if (t.ausgangMax > 0 && g.ausgang[t.ausgangWare] >= t.ausgangMax) return 'voll';
       if (g.leer) return t.funktion === 'holzfaeller' ? 'kein_baum' : t.funktion === 'steinbruch' ? 'kein_fels' : 'kein_platz';
@@ -506,9 +608,9 @@ export class Simulation {
       for (let a = 0; a < WAREN.length; a++) {
         const soll = inc.get(`${g.id}:${a}`) ?? 0;
         if (g.incoming[a] !== soll) fehler.push(`Gebäude ${g.id} incoming[${a}] ${g.incoming[a]} statt ${soll}`);
-        if (g.verbaut[a] > t.kosten[a]) fehler.push(`Gebäude ${g.id}: mehr verbaut als nötig (Ware ${a})`);
+        if (g.verbaut[a] + g.stapel[a] + (g.haende === a ? 1 : 0) > t.kosten[a]) fehler.push(`Gebäude ${g.id}: mehr verbaut/angeliefert als nötig (Ware ${a})`);
         if (g.fertig && g.verbaut[a] < t.kosten[a]) fehler.push(`Gebäude ${g.id}: fertig ohne volles Material (Ware ${a})`);
-        if (g.typ !== 'lager' && g.puffer[a] > t.puffer[a]) fehler.push(`Gebäude ${g.id}: Input-Puffer ${a} über Maximum`);
+        if (g.typ !== 'lager' && g.puffer[a] > this.pufferMax(g, t, a)) fehler.push(`Gebäude ${g.id}: Input-Puffer ${a} über Maximum`);
         if (g.ausgang[a] > (a === t.ausgangWare ? t.ausgangMax : 0)) fehler.push(`Gebäude ${g.id}: Output-Puffer ${a} über Maximum`);
       }
       arbeiter += g.ar;
@@ -518,10 +620,22 @@ export class Simulation {
         if (t.funktion === 'steinbruch') fRes.set(g.zh, (fRes.get(g.zh) ?? 0) + 1);
       }
       if (g.prio < PRIO_MIN || g.prio > PRIO_MAX) fehler.push(`Gebäude ${g.id}: Priorität ${g.prio}`);
+      if (t.nahrungPlaetze && summe(g.puffer) > t.nahrungPlaetze) fehler.push(`Gebäude ${g.id}: zu viel Essen`);
+      if (g.bauer && this.bauleute.get(g.bauer)?.ziel !== g.id) fehler.push(`Gebäude ${g.id}: Bauarbeiter ${g.bauer}`);
+      if (g.planierer && this.bauleute.get(g.planierer)?.ziel !== g.id) fehler.push(`Gebäude ${g.id}: Planierer ${g.planierer}`);
+      if (g.fertig && (g.bauer || g.planierer || summe(g.stapel) || g.haende >= 0)) fehler.push(`Gebäude ${g.id}: fertig mit Baustellenresten`);
     }
-    if (this.freieTraeger + this.traeger.size + arbeiter !== TRAEGER_START) {
-      fehler.push(`Bewohner: ${this.freieTraeger} frei + ${this.traeger.size} Träger + ${arbeiter} Arbeiter statt ${TRAEGER_START}`);
+    if (this.frei < 0 || this.frei + this.traeger.size + arbeiter !== this.bewohner) {
+      fehler.push(`Bewohner: ${this.frei} frei + ${this.traeger.size} Träger + ${arbeiter} Arbeiter statt ${this.bewohner}`);
     }
+    let bau = 0, plan = 0;
+    for (const b of this.bauleute.values()) {
+      if (b.beruf === 0) bau++; else plan++;
+      const g = b.ziel ? this.gebaeude.get(b.ziel) : undefined;
+      if (b.ziel && (!g || (b.beruf === 0 ? g.bauer : g.planierer) !== b.id)) fehler.push(`Baumann ${b.id}: Ziel ${b.ziel}`);
+    }
+    if (this.bauFrei < 0 || this.bauFrei + bau !== this.bauGesamt) fehler.push(`Bauarbeiter: ${this.bauFrei} frei + ${bau} unterwegs statt ${this.bauGesamt}`);
+    if (this.planFrei < 0 || this.planFrei + plan !== this.planGesamt) fehler.push(`Planierer: ${this.planFrei} frei + ${plan} unterwegs statt ${this.planGesamt}`);
     for (const key of inc.keys()) {
       const id = Number(key.split(':')[0]);
       if (!this.gebaeude.has(id)) fehler.push(`Ware mit ungültigem Ziel ${id} (wird neu geroutet)`);
@@ -549,7 +663,9 @@ export class Simulation {
     const f = new Fnv2();
     const w = (v: number) => { v |= 0; f.byte(v); f.byte(v >>> 8); f.byte(v >>> 16); f.byte(v >>> 24); };
     const liste = (a: readonly number[]) => { w(a.length); for (const v of a) w(v); };
-    w(this._tick); w(this.rng); w(this.saat); w(this.naechsteId); w(this.freieTraeger); w(this.befehlZahl);
+    w(this._tick); w(this.rng); w(this.saat); w(this.naechsteId); w(this.frei); w(this.befehlZahl);
+    w(this.bewohner); w(this.bauGesamt); w(this.bauFrei); w(this.planGesamt); w(this.planFrei);
+    w(this.dorfStufe); w(this.fest); w(this.notnagelT); w(this.ereignisNr);
     w(this.stat.angekommen); w(this.stat.verbraucht); w(this.stat.erzeugt); w(this.stat.verbaut);
     liste(this.erzeugtJe);
     w(this.fahnen.size);
@@ -561,7 +677,7 @@ export class Simulation {
     for (const s of this.segmente.values()) { w(s.id); w(s.a); w(s.b); w(s.traeger); w(s.verkehr); w(s.kab); w(s.kba); liste(s.pfad); }
     w(this.traeger.size);
     for (const t of this.traeger.values()) {
-      w(t.id); w(t.seg); w(t.phase); w(t.ende); w(t.pos); w(t.dir); w(t.t); w(t.dauer); w(t.pause); w(t.art); w(t.ziel); w(t.baut); w(t.warte);
+      w(t.id); w(t.seg); w(t.phase); w(t.ende); w(t.pos); w(t.dir); w(t.t); w(t.dauer); w(t.pause); w(t.art); w(t.ziel); w(t.warte);
       liste(t.route); w(t.ri); liste(t.routeSegs);
     }
     w(this.gebaeude.size);
@@ -569,7 +685,10 @@ export class Simulation {
       w(g.id); f.text(g.typ); w(g.h); w(g.fahne); w(g.fertig); liste(g.verbaut); w(g.prio); w(g.getrennt ? 1 : 0);
       liste(g.puffer); liste(g.incoming); liste(g.ausgang); w(g.zeit); w(g.arbeit); liste(g.vorrat);
       w(g.ar); w(g.ph); w(g.pt); w(g.pd); w(g.wi); w(g.zh); liste(g.weg); w(g.traegt); w(g.leer); w(g.mitte);
+      liste(g.stapel); w(g.haende); w(g.planSoll); w(g.planIst); w(g.bauer); w(g.planierer);
     }
+    w(this.bauleute.size);
+    for (const b of this.bauleute.values()) { w(b.id); w(b.beruf); w(b.ziel); w(b.phase); liste(b.route); w(b.ri); w(b.t); w(b.dauer); }
     // Natur: nur bei Änderung neu gehasht
     w(this.natRev);
     if (!this.natHash || this.natHash.rev !== this.natRev) {
@@ -610,8 +729,24 @@ export class Simulation {
 
   private hexKannBauen(typ: string, h: number): boolean {
     const t = typVon(typ);
-    if (!t || typ === 'lager') return false;
+    if (!t || typ === 'lager' || !this.typFrei(t)) return false;
     return this.karte.bebaubar[h] >= t.groesse && this.hexFrei(h);
+  }
+
+  /** Typ ist schon freigeschaltet (Dorfstufe) und, wenn einmalig, noch nicht gebaut (auch nicht als Baustelle). */
+  private typFrei(t: GebaeudeTyp): boolean {
+    if (t.abStufe > this.dorfStufe) return false;
+    if (t.einmalig) for (const g of this.gebaeude.values()) if (g.typ === t.id) return false;
+    return true;
+  }
+
+  /** Dorfstufe und einmalige Gebäude: Darf man den Typ jetzt bauen (unabhängig vom Platz)? Grund in Klartext oder ''. */
+  sperrGrund(typ: string): '' | 'stufe' | 'einmalig' | 'unbekannt' {
+    const t = typVon(typ);
+    if (!t || typ === 'lager') return 'unbekannt';
+    if (t.abStufe > this.dorfStufe) return 'stufe';
+    if (!this.typFrei(t)) return 'einmalig';
+    return '';
   }
 
   // ------------------------------------------------------------------ Natur: Bäume und Felsen
@@ -704,7 +839,10 @@ export class Simulation {
       verbaut: sofort ? t.kosten.slice() : nul(), prio: PRIO_STANDARD, getrennt: typ !== 'lager',
       puffer: nul(), incoming: nul(), ausgang: nul(), zeit: 0, arbeit: 0, vorrat: nul(),
       ar: 0, ph: PH_SUCHE, pt: 0, pd: 0, wi: 0, zh: -1, weg: [], traegt: -1, leer: 0, mitte: -1,
+      stapel: nul(), haende: -1, planSoll: 0, planIst: 0, bauer: 0, planierer: 0,
     };
+    // Bauplätze am Hang muss erst ein Planierer ebnen (Drehbuch 4.5)
+    if (!g.fertig) g.planSoll = planierTicks(this.karte.neigung[h]);
     // gerodete ausgewachsene Bäume (höchstens RODUNG_STAMM_MAX) werden zu Stämmen an der Gebäudefahne
     const staemme = sofort ? 0 : Math.min(RODUNG_STAMM_MAX, this.baum[h]);
     const f = this.fahneErzeugen(h, g.id);
@@ -779,7 +917,7 @@ export class Simulation {
         const s = this.segmente.get(t.seg);
         if (s && s.traeger === t.id) s.traeger = 0;
         this.traeger.delete(t.id);
-        this.freieTraeger++;
+        this.frei++;
       }
     }
   }
@@ -838,7 +976,7 @@ export class Simulation {
         else this.wareVerloren(w);
       }
       this.traeger.delete(t.id);
-      this.freieTraeger++;
+      this.frei++;
     }
     for (let i = 1; i < s.pfad.length - 1; i++) this.hexWeg[s.pfad[i]] = 0;
     for (const fid of [s.a, s.b]) {
@@ -851,7 +989,7 @@ export class Simulation {
         const sx = this.segmente.get(x.seg);
         if (sx && sx.traeger === x.id) sx.traeger = 0;
         this.traeger.delete(x.id);
-        this.freieTraeger++;
+        this.frei++;
       }
     }
     this.netzGeaendert();
@@ -879,18 +1017,19 @@ export class Simulation {
     const f = this.fahnen.get(g.fahne)!;
     const t = GEBAEUDE[g.typ];
     for (let a = 0; a < WAREN.length; a++) {
-      const n = g.puffer[a] + g.ausgang[a] + (g.traegt === a ? 1 : 0) + Math.floor(g.verbaut[a] / 2);
+      const n = g.puffer[a] + g.ausgang[a] + g.stapel[a] + (g.haende === a ? 1 : 0) + (g.traegt === a ? 1 : 0) + Math.floor(g.verbaut[a] / 2);
       for (let i = 0; i < n; i++) if (f.waren.length < FLAG_CAP) f.waren.push({ art: a, ziel: 0 });
     }
-    if (g.ar) { this.freieTraeger++; this.reservierungFreigeben(g, t); }
-    // Träger, die gerade für diese Baustelle verbauen, behalten die Ware und legen sie an der Fahne ab
-    for (const x of this.traeger.values()) {
-      if (x.baut && x.ziel === id) { x.baut = 0; x.pause = 0; x.ziel = 0; }
-    }
+    if (g.ar) { this.frei++; this.reservierungFreigeben(g, t); }
     f.gebaeude = 0;
     this.hexGeb[g.h] = 0;
     this.gebaeude.delete(id);
     this.netzGeaendert();
+    // Bauarbeiter und Planierer der Baustelle suchen sich die nächste oder gehen heim (erst nach dem Löschen, damit sie nicht zurückkommen)
+    for (const bid of [g.bauer, g.planierer]) {
+      const b = bid ? this.bauleute.get(bid) : undefined;
+      if (b) this.baumannFertig(b);
+    }
   }
 
   private reservierungFreigeben(g: Gebaeude, t: GebaeudeTyp): void {
@@ -966,14 +1105,39 @@ export class Simulation {
 
   private wareVerloren(w: Ware): void { this.wareZielLoesen(w); }
 
-  /** Offener Bedarf einer Baustelle an Ware `art`: Kosten − verbaut − unterwegs. */
+  /** Offener Bedarf einer Baustelle an Ware `art`: Kosten − verbaut − am Stapel − in der Hand − unterwegs. */
   private offen(g: Gebaeude, art: number): number {
-    return GEBAEUDE[g.typ].kosten[art] - g.verbaut[art] - g.incoming[art];
+    return GEBAEUDE[g.typ].kosten[art] - g.verbaut[art] - g.stapel[art] - (g.haende === art ? 1 : 0) - g.incoming[art];
   }
 
-  /** Freier Platz im Input-Puffer eines fertigen Verarbeiters für Ware `art` (Puffer − vorhanden − unterwegs). */
+  /**
+   * Größe des Input-Puffers für Ware `art`: Verarbeiter laut Daten; Wohnhaus alle Nahrungsplätze (zusammen begrenzt, siehe pufferPlatz);
+   * Kirmesplatz die Warenliste der aktuellen Stufe (während des Fests nichts).
+   */
+  private pufferMax(_g: Gebaeude, t: GebaeudeTyp, art: number): number {
+    if (t.funktion === 'wohnen') return NAHRUNG[art] > 0 ? t.nahrungPlaetze : 0;
+    if (t.funktion === 'kirmes') { const k = KIRMES[this.dorfStufe]; return k ? k.liste[art] : 0; }
+    return t.puffer[art];
+  }
+
+  /** Freier Platz im Input-Puffer eines fertigen Gebäudes für Ware `art` (Puffer − vorhanden − unterwegs). */
   private pufferPlatz(g: Gebaeude, art: number): number {
-    return GEBAEUDE[g.typ].puffer[art] - g.puffer[art] - g.incoming[art];
+    const t = GEBAEUDE[g.typ];
+    if (t.funktion === 'kirmes' && this.fest > 0) return 0;
+    const p = this.pufferMax(g, t, art) - g.puffer[art] - g.incoming[art];
+    if (t.funktion !== 'wohnen' || p <= 0) return p;
+    // was die Kirmes noch braucht, isst keiner weg (nur der Überschuss im Lager)
+    if (this.kirmesBraucht(art) > 0) return 0;
+    let belegt = 0;
+    for (const a of NAHRUNG_REIHE) belegt += g.puffer[a] + g.incoming[a];
+    // ohne freien Wohnraum hält das Wohnhaus nur einen Bissen vor, der Rest bleibt für Küche, Käserei und Kirmes
+    if (this.wohnFrei <= 0 && belegt >= 1) return 0;
+    return t.nahrungPlaetze - belegt;
+  }
+
+  /** Gebäude nimmt Waren in den Input-Puffer (Verarbeiter, Wohnhaus, Kirmesplatz). */
+  private hatEingang(t: GebaeudeTyp): boolean {
+    return t.pufferSumme > 0 || t.funktion === 'wohnen' || t.funktion === 'kirmes';
   }
 
   /**
@@ -989,13 +1153,16 @@ export class Simulation {
       if (g.prio > bp || (g.prio === bp && d < bd)) { bp = g.prio; bd = d; best = g.id; }
     }
     if (best) return best;
-    bd = Infinity;
-    for (const g of this.gebaeude.values()) {
-      if (g.typ === 'lager' || !g.fertig || g.getrennt || this.pufferPlatz(g, art) <= 0) continue;
-      const d = this.distZu(g.fahne).get(z.id);
-      if (d !== undefined && d < bd) { bd = d; best = g.id; }
+    // 2. der Kirmesplatz (die Warenliste geht vor), dann Verarbeiter, dann Wohnhäuser mit Platz
+    for (const rang of [0, 1, 2]) {
+      bd = Infinity;
+      for (const g of this.gebaeude.values()) {
+        if (g.typ === 'lager' || !g.fertig || g.getrennt || abnehmerRang(GEBAEUDE[g.typ]) !== rang || this.pufferPlatz(g, art) <= 0) continue;
+        const d = this.distZu(g.fahne).get(z.id);
+        if (d !== undefined && d < bd) { bd = d; best = g.id; }
+      }
+      if (best) return best;
     }
-    if (best) return best;
     for (const g of this.gebaeude.values()) {
       if (g.typ !== 'lager') continue;
       const d = this.distZu(g.fahne).get(z.id);
@@ -1040,7 +1207,7 @@ export class Simulation {
   private inbNeu(): void {
     this.inb.clear();
     for (const t of this.traeger.values()) {
-      if (t.art < 0 || t.baut) continue;
+      if (t.art < 0) continue;
       const s = this.segmente.get(t.seg)!;
       this.inbAdd(t.phase === 2 ? (t.dir > 0 ? s.b : s.a) : (t.ende === 0 ? s.a : s.b), 1);
     }
@@ -1062,15 +1229,15 @@ export class Simulation {
     this.erzeugtJe[art]++;
   }
 
-  /** Ein Stück Material ist verbaut (vom Träger oder von der Fahne genommen). */
+  /** Ein Stück Material ist verbaut (vom Bauarbeiter). */
   private verbauen(g: Gebaeude, art: number): void {
     g.verbaut[art]++;
-    this.stat.angekommen++;
     this.stat.verbaut++;
     const t = GEBAEUDE[g.typ];
     for (let a = 0; a < t.kosten.length; a++) if (g.verbaut[a] < t.kosten[a]) return;
     g.fertig = 1;
     g.ph = PH_SUCHE; g.pt = 0; g.leer = 0;
+    this.ereignis('fertig', g.id, 0);
   }
 
   private gebaeudeTick(g: Gebaeude): void {
@@ -1081,9 +1248,10 @@ export class Simulation {
       if (w.ziel !== g.id) continue;
       f.waren.splice(i, 1);
       if (g.incoming[w.art] > 0) g.incoming[w.art]--;
-      if (g.typ === 'lager') { g.vorrat[w.art]++; this.stat.angekommen++; }
-      else if (!g.fertig) this.verbauen(g, w.art);
-      else { g.puffer[w.art]++; this.stat.angekommen++; }
+      if (g.typ === 'lager') g.vorrat[w.art]++;
+      else if (!g.fertig) g.stapel[w.art]++;
+      else g.puffer[w.art]++;
+      this.stat.angekommen++;
       break;
     }
     if (g.typ === 'lager' || !g.fertig || g.getrennt) return;
@@ -1094,22 +1262,34 @@ export class Simulation {
       this.wareAufFahne(f, t.ausgangWare);
     }
     if (t.arbeiter && !g.ar) {
-      if (this.freieTraeger <= 0) return;
-      this.freieTraeger--;
+      if (this.frei <= 0) return;
+      this.frei--;
       g.ar = 1; g.ph = PH_SUCHE; g.pt = 0; g.leer = 0;
     }
     switch (t.funktion) {
       case 'holzfaeller': case 'steinbruch': case 'foerster': this.laeuferTick(g, t); break;
-      case 'saegewerk': {
+      case 'verarbeiter': {
         const wd = t.wandelt!;
         if (!g.arbeit) {
-          if (g.puffer[wd.ein] > 0 && g.ausgang[wd.aus] < t.ausgangMax) { g.puffer[wd.ein]--; g.arbeit = 1; g.zeit = 0; }
+          if (g.puffer[wd.ein] >= wd.menge && g.ausgang[wd.aus] < t.ausgangMax) {
+            g.puffer[wd.ein] -= wd.menge; g.arbeit = 1; g.zeit = 0; this.stat.verbraucht += wd.menge;
+          }
         } else {
           g.zeit++;
           if (g.zeit >= wd.ticks) { this.produziert(g, wd.aus); g.arbeit = 0; g.zeit = 0; }
         }
         break;
       }
+      case 'erzeuger': {
+        // Feld, Wiese, Stall, Bienenstock: alle arbeitTicks eine Ware, solange der Output-Puffer Platz hat
+        if (g.ausgang[t.ausgangWare] >= t.ausgangMax) { g.arbeit = 0; break; }
+        g.arbeit = 1;
+        g.zeit++;
+        if (g.zeit >= t.arbeitTicks) { this.produziert(g, t.ausgangWare); g.zeit = 0; }
+        break;
+      }
+      case 'wohnen': this.wohnenTick(g, t); break;
+      case 'kirmes': this.kirmesTick(g); break;
       default: break;
     }
   }
@@ -1241,12 +1421,16 @@ export class Simulation {
     for (const g of this.gebaeude.values()) {
       if (g.typ === 'lager' || g.getrennt) continue;
       if (!g.fertig) baustellen.push(g);
-      else if (GEBAEUDE[g.typ].pufferSumme > 0) verarbeiter.push(g);
+      else if (this.hatEingang(GEBAEUDE[g.typ])) verarbeiter.push(g);
     }
     if (!baustellen.length && !verarbeiter.length) return;
     baustellen.sort((x, y) => y.prio - x.prio || x.id - y.id);
+    // der Kirmesplatz vor den Verarbeitern, die vor den Wohnhäusern (sonst nach Id)
+    verarbeiter.sort((x, y) => abnehmerRang(GEBAEUDE[x.typ]) - abnehmerRang(GEBAEUDE[y.typ]) || x.id - y.id);
     for (const g of baustellen.concat(verarbeiter)) {
-      for (let a = 0; a < WAREN.length; a++) {
+      // Wohnhäuser holen das beste Essen zuerst
+      const reihe = g.fertig && GEBAEUDE[g.typ].funktion === 'wohnen' ? NAHRUNG_REIHE : ALLE_WAREN;
+      for (const a of reihe) {
         if ((g.fertig ? this.pufferPlatz(g, a) : this.offen(g, a)) <= 0) continue;
         const dm = this.distZu(g.fahne);
         let best: Gebaeude | null = null, bd = Infinity;
@@ -1266,12 +1450,269 @@ export class Simulation {
     }
   }
 
+  // ------------------------------------------------------------------ Bewohner, Wohnhaus, Notnagel, Kirmes (Drehbuch 4.3, 5.2; DESIGN §5)
+
+  private ereignis(art: SichtEreignis['art'], gebaeude: Id, wert: number): void {
+    this.ereignisNr++;
+    this.ereignisse.push({ nr: this.ereignisNr, tick: this._tick, art, gebaeude, wert });
+    if (this.ereignisse.length > EREIGNISSE_MAX) this.ereignisse.shift();
+  }
+
+  /** Ein Bewohner kommt dazu (frei im Vorrat). */
+  private neuerBewohner(n = 1): void { this.bewohner += n; this.frei += n; }
+
+  private nahrungIn(g: Gebaeude): boolean {
+    for (const a of NAHRUNG_REIHE) if (g.puffer[a] > 0) return true;
+    return false;
+  }
+
+  /** Freier Wohnraum: Wohnraum fertiger Gebäude − Bewohner − laufende Wohnhaus-Zyklen. */
+  private wohnraumFrei(): number {
+    let n = -this.bewohner;
+    for (const g of this.gebaeude.values()) {
+      if (!g.fertig) continue;
+      const t = GEBAEUDE[g.typ];
+      n += t.wohnraum;
+      if (t.funktion === 'wohnen' && g.arbeit) n--;
+    }
+    return n;
+  }
+
+  /** Wohnhaus: isst die beste Ware im Puffer und bringt nach dem Zyklus ihrer Stufe einen Bewohner (nur mit freiem Wohnraum). arbeit = Ware + 1. */
+  private wohnenTick(g: Gebaeude, _t: GebaeudeTyp): void {
+    if (g.arbeit) {
+      const ware = g.arbeit - 1;
+      g.zeit++;
+      if (g.zeit < NAHRUNG_ZYKLUS[NAHRUNG[ware]]) return;
+      g.arbeit = 0; g.zeit = 0;
+      this.neuerBewohner();
+      this.ereignis('bewohner', g.id, ware);
+      // gleich weiter mit dem nächsten Bissen
+    }
+    if (!this.nahrungIn(g) || this.wohnraumFrei() <= 0) return;
+    for (const a of NAHRUNG_REIHE) {
+      if (g.puffer[a] <= 0) continue;
+      g.puffer[a]--; g.arbeit = a + 1; g.zeit = 0; this.stat.verbraucht++;
+      return;
+    }
+  }
+
+  /**
+   * Wie viel von Ware `art` die Kirmes der aktuellen Stufe noch braucht, über das hinaus, was schon geliefert, unterwegs oder im Lager
+   * ist (> 0: die Wohnhäuser lassen die Ware liegen). Ohne Kirmesplatz zählt nur die Liste gegen den Lagervorrat.
+   */
+  private kirmesBraucht(art: number): number {
+    const k = KIRMES[this.dorfStufe];
+    if (!k || !k.liste[art] || this.fest > 0) return 0;
+    let n = k.liste[art];
+    const p = this.kirmesPlatz();
+    if (p && p.fertig) n -= p.puffer[art] + p.incoming[art];
+    if (n <= 0) return 0;
+    for (const l of this.gebaeude.values()) if (l.typ === 'lager') n -= l.vorrat[art];
+    // 0 = es liegt mehr im Lager, als noch fehlt
+    return Math.max(0, n + 1);
+  }
+
+  private kirmesPlatz(): Gebaeude | undefined {
+    for (const g of this.gebaeude.values()) if (GEBAEUDE[g.typ].funktion === 'kirmes') return g;
+    return undefined;
+  }
+
+  /** Kirmesplatz: Ist die Warenliste geliefert, wird sie verbraucht und das Fest beginnt. */
+  private kirmesTick(g: Gebaeude): void {
+    const k = KIRMES[this.dorfStufe];
+    if (!k || this.fest > 0) return;
+    for (let a = 0; a < k.liste.length; a++) if (g.puffer[a] < k.liste[a]) return;
+    for (let a = 0; a < k.liste.length; a++) { g.puffer[a] -= k.liste[a]; this.stat.verbraucht += k.liste[a]; }
+    this.fest = Math.max(1, k.festTicks);
+    this.ereignis('kirmes', g.id, this.dorfStufe);
+  }
+
+  /** Bringt gerade ein Wohnhaus Nachwuchs (Zyklus läuft)? */
+  private nachwuchs(): boolean {
+    for (const g of this.gebaeude.values()) if (g.arbeit && g.fertig && GEBAEUDE[g.typ].funktion === 'wohnen') return true;
+    return false;
+  }
+
+  /**
+   * Notnagel (Drehbuch 4.3): kaum freie Bewohner und kein Nachwuchs in Sicht – weil kein Wohnhaus Essen hat oder weil kein Wohnraum frei
+   * ist. Essen nur im Lager zählt nicht, solange kein Wohnhaus es bekommt (keins gebaut, kein Träger frei): sonst könnte man sich festfahren.
+   */
+  private notnagelGreift(): boolean {
+    return this.frei < NOTNAGEL_FREI_UNTER && !this.nachwuchs();
+  }
+
+  /** Fest und Dorfstufe, Notnagel (Drehbuch 4.3: man kann sich nicht festfahren). */
+  private dorfTick(): void {
+    if (this.fest > 0) {
+      this.fest--;
+      if (this.fest === 0) {
+        const k = KIRMES[this.dorfStufe];
+        this.dorfStufe++;
+        this.ereignis('stufe', 0, this.dorfStufe);
+        if (k && k.zuzug > 0) { this.neuerBewohner(k.zuzug); this.ereignis('zuzug', 0, k.zuzug); }
+      }
+    }
+    if (this.notnagelGreift()) {
+      this.notnagelT++;
+      if (this.notnagelT >= NOTNAGEL_TICKS) { this.notnagelT = 0; this.neuerBewohner(); this.ereignis('notnagel', 0, 1); }
+    } else this.notnagelT = 0;
+  }
+
+  // ------------------------------------------------------------------ Bauarbeiter und Planierer (Drehbuch 4.5)
+
+  /** Nächstes verbundenes Lager zur Fahne `f` (Laufzeit), oder undefined. */
+  private naechstesLager(f: Id): Gebaeude | undefined {
+    let best: Gebaeude | undefined, bd = Infinity;
+    for (const l of this.gebaeude.values()) {
+      if (l.typ !== 'lager') continue;
+      const d = this.distZu(l.fahne).get(f);
+      if (d !== undefined && d < bd) { bd = d; best = l; }
+    }
+    return best;
+  }
+
+  /** Braucht die Baustelle gerade einen Baumann dieses Berufs (0 Bauarbeiter, 1 Planierer)? */
+  private brauchtBaumann(g: Gebaeude, beruf: 0 | 1): boolean {
+    if (g.fertig || g.getrennt) return false;
+    if (beruf === 1) return g.planIst < g.planSoll && !g.planierer;
+    return g.planIst >= g.planSoll && !g.bauer && summe(g.stapel) > 0;
+  }
+
+  /** Freie Bauleute aus dem Lager zu Baustellen schicken (Priorität absteigend, dann Id). */
+  private bauleuteSchicken(): void {
+    if (this.bauFrei <= 0 && this.planFrei <= 0) return;
+    const baustellen: Gebaeude[] = [];
+    for (const g of this.gebaeude.values()) if (!g.fertig && !g.getrennt) baustellen.push(g);
+    if (!baustellen.length) return;
+    baustellen.sort((x, y) => y.prio - x.prio || x.id - y.id);
+    for (const g of baustellen) {
+      for (const beruf of [1, 0] as const) {
+        if ((beruf === 0 ? this.bauFrei : this.planFrei) <= 0 || !this.brauchtBaumann(g, beruf)) continue;
+        const l = this.naechstesLager(g.fahne);
+        const r = l ? this.fahnenRoute(l.fahne, g.fahne) : null;
+        if (!r || r.hexe.length < 2) continue;
+        const b: Baumann = { id: this.naechsteId++, beruf, ziel: g.id, phase: BM_GEHT, route: r.hexe, ri: 0, t: 0, dauer: this.karte.schritt(r.hexe[0], r.hexe[1]) };
+        this.bauleute.set(b.id, b);
+        if (beruf === 0) { this.bauFrei--; g.bauer = b.id; } else { this.planFrei--; g.planierer = b.id; }
+      }
+    }
+  }
+
+  /** Baumann ist zurück im Lager (Vorrat). */
+  private baumannHeim(b: Baumann): void {
+    this.bauleute.delete(b.id);
+    if (b.beruf === 0) this.bauFrei++; else this.planFrei++;
+  }
+
+  /**
+   * An Fahne `f` angekommen ohne Auftrag: nächste Baustelle, die diesen Beruf braucht (Priorität, dann kürzester Weg), sonst Heimweg
+   * zum nächsten Lager. Ohne Verbindung geht er querfeldein nach Hause (sofort im Vorrat).
+   */
+  private baumannWeiter(b: Baumann, f: Id): void {
+    let ziel: Gebaeude | undefined, bp = 0, bd = Infinity;
+    for (const g of this.gebaeude.values()) {
+      if (!this.brauchtBaumann(g, b.beruf)) continue;
+      const d = this.distZu(g.fahne).get(f);
+      if (d === undefined) continue;
+      if (g.prio > bp || (g.prio === bp && d < bd)) { bp = g.prio; bd = d; ziel = g; }
+    }
+    if (ziel) {
+      const r = this.fahnenRoute(f, ziel.fahne);
+      if (r) {
+        b.ziel = ziel.id;
+        if (b.beruf === 0) ziel.bauer = b.id; else ziel.planierer = b.id;
+        this.baumannLos(b, r.hexe);
+        return;
+      }
+    }
+    const l = this.naechstesLager(f);
+    if (!l || l.fahne === f) { this.baumannHeim(b); return; }
+    const r = this.fahnenRoute(f, l.fahne);
+    if (!r) { this.baumannHeim(b); return; }
+    b.ziel = 0;
+    this.baumannLos(b, r.hexe);
+  }
+
+  private baumannLos(b: Baumann, route: number[]): void {
+    b.route = route; b.ri = 0; b.t = 0;
+    b.phase = BM_GEHT;
+    if (route.length < 2) { b.dauer = 0; this.baumannAngekommen(b); return; }
+    b.dauer = this.karte.schritt(route[0], route[1]);
+  }
+
+  /** Der Baumann gibt seine Baustelle ab (fertig, abgerissen, nichts mehr zu tun) und geht weiter. */
+  private baumannFertig(b: Baumann): void {
+    const g = b.ziel ? this.gebaeude.get(b.ziel) : undefined;
+    if (g) { if (g.bauer === b.id) g.bauer = 0; if (g.planierer === b.id) g.planierer = 0; }
+    b.ziel = 0;
+    if (b.phase === BM_GEHT && b.ri + 1 < b.route.length) {
+      // mitten auf dem Weg: umdrehen und zurück zum Ausgangspunkt (einer Fahne)
+      const rueck = b.route.slice(0, b.ri + 2).reverse();
+      const dauer = this.karte.schritt(rueck[0], rueck[1]);
+      b.route = rueck; b.ri = 0; b.t = Math.max(0, dauer - b.t); b.dauer = dauer;
+      return;
+    }
+    const f = this.hexFahne[b.route[b.route.length - 1]];
+    if (!f) { this.baumannHeim(b); return; }
+    this.baumannWeiter(b, f);
+  }
+
+  private baumannAngekommen(b: Baumann): void {
+    b.t = 0; b.dauer = 0;
+    if (b.ziel) { b.phase = BM_WARTET; return; }
+    const f = this.hexFahne[b.route[b.route.length - 1]];
+    const g = f ? this.gebaeude.get(this.fahnen.get(f)!.gebaeude) : undefined;
+    if (!f || (g && g.typ === 'lager')) { this.baumannHeim(b); return; }
+    b.phase = BM_WARTET;
+    this.baumannWeiter(b, f);
+  }
+
+  private baumannSchritt(b: Baumann): void {
+    if (b.phase === BM_GEHT) {
+      if (b.ziel && !this.gebaeude.has(b.ziel)) { this.baumannFertig(b); return; }
+      b.t++;
+      if (b.t < b.dauer) return;
+      b.t = 0; b.ri++;
+      if (b.ri >= b.route.length - 1) this.baumannAngekommen(b);
+      else b.dauer = this.karte.schritt(b.route[b.ri], b.route[b.ri + 1]);
+      return;
+    }
+    const g = this.gebaeude.get(b.ziel);
+    if (!g || g.fertig) { this.baumannFertig(b); return; }
+    if (b.beruf === 1) {
+      // Planierer: ebnet den Platz Tick für Tick
+      b.phase = BM_ARBEIT; b.dauer = g.planSoll;
+      g.planIst++; b.t = g.planIst;
+      if (g.planIst >= g.planSoll) this.baumannFertig(b);
+      return;
+    }
+    if (g.planIst < g.planSoll) { b.phase = BM_WARTET; return; }
+    if (b.phase === BM_ARBEIT) {
+      b.t++;
+      if (b.t < b.dauer) return;
+      const a = g.haende;
+      g.haende = -1;
+      b.phase = BM_WARTET; b.t = 0;
+      if (a >= 0) this.verbauen(g, a);
+      if (g.fertig) { this.baumannFertig(b); return; }
+    }
+    // nächste Ware vom Stapel nehmen; ist nichts da und nichts unterwegs, wird er woanders gebraucht
+    for (let a = 0; a < g.stapel.length; a++) {
+      if (g.stapel[a] <= 0) continue;
+      g.stapel[a]--; g.haende = a;
+      b.phase = BM_ARBEIT; b.t = 0; b.dauer = BAU_JE_WARE;
+      return;
+    }
+    if (summe(g.incoming) === 0) this.baumannFertig(b);
+  }
+
   // ------------------------------------------------------------------ Träger
 
   private traegerPhase(): void {
-    if (this.freieTraeger > 0) {
+    if (this.frei > 0) {
       for (const s of this.segmente.values()) {
-        if (this.freieTraeger <= 0) break;
+        if (this.frei <= 0) break;
         if (s.traeger === 0 && this.verbunden.has(s.a)) this.traegerAnfordern(s);
       }
     }
@@ -1289,12 +1730,30 @@ export class Simulation {
       }
     }
     if (!best) return;
-    // Route vom Lager entlang des Gradienten der Distanz zur Zielfahne e
-    const dm = this.distZu(best.e);
-    let cur = this.fahnen.get(best.l.fahne)!;
-    const route: number[] = [cur.h];
+    const r = this.fahnenRoute(best.l.fahne, best.e);
+    if (!r) return;
+    const route = r.hexe, segs = r.segs;
+    const ende: 0 | 1 = best.e === s.a ? 0 : 1;
+    const t: Traeger = {
+      id: this.naechsteId++, seg: s.id, phase: route.length > 1 ? 0 : 1, ende,
+      pos: ende === 0 ? 0 : s.pfad.length - 1, dir: 1, t: 0, dauer: route.length > 1 ? this.karte.schritt(route[0], route[1]) : 0,
+      pause: 0, art: -1, ziel: 0, warte: 0, route: route.length > 1 ? route : [], ri: 0, routeSegs: segs,
+    };
+    if (route.length <= 1) t.routeSegs = [];
+    this.traeger.set(t.id, t);
+    s.traeger = t.id;
+    this.frei--;
+  }
+
+  /** Weg über das Netz von Fahne `von` zu Fahne `nach` entlang des Gradienten der Distanz: Hex-Indizes (beide Fahnen eingeschlossen) und Segmente; null ohne Verbindung. */
+  private fahnenRoute(von: Id, nach: Id): { hexe: number[]; segs: Id[] } | null {
+    const dm = this.distZu(nach);
+    const start = this.fahnen.get(von);
+    if (!start || !dm.has(von)) return null;
+    let cur: Fahne = start;
+    const hexe: number[] = [cur.h];
     const segs: Id[] = [];
-    while (cur.id !== best.e) {
+    while (cur.id !== nach) {
       const cd = dm.get(cur.id)!;
       let weiter: Segment | null = null;
       for (const sid of cur.segmente) {
@@ -1303,31 +1762,18 @@ export class Simulation {
         const d = dm.get(o);
         if (d !== undefined && d + this.segmentKostenVon(x, cur.id) === cd) { weiter = x; break; }
       }
-      if (!weiter) return;
+      if (!weiter) return null;
       const pfad = weiter.a === cur.id ? weiter.pfad : weiter.pfad.slice().reverse();
-      for (let i = 1; i < pfad.length; i++) route.push(pfad[i]);
+      for (let i = 1; i < pfad.length; i++) hexe.push(pfad[i]);
       segs.push(weiter.id);
       cur = this.fahnen.get(weiter.a === cur.id ? weiter.b : weiter.a)!;
     }
-    const ende: 0 | 1 = best.e === s.a ? 0 : 1;
-    const t: Traeger = {
-      id: this.naechsteId++, seg: s.id, phase: route.length > 1 ? 0 : 1, ende,
-      pos: ende === 0 ? 0 : s.pfad.length - 1, dir: 1, t: 0, dauer: route.length > 1 ? this.karte.schritt(route[0], route[1]) : 0,
-      pause: 0, art: -1, ziel: 0, baut: 0, warte: 0, route: route.length > 1 ? route : [], ri: 0, routeSegs: segs,
-    };
-    if (route.length <= 1) t.routeSegs = [];
-    this.traeger.set(t.id, t);
-    s.traeger = t.id;
-    this.freieTraeger--;
+    return { hexe, segs };
   }
 
   private traegerSchritt(t: Traeger): void {
     const s = this.segmente.get(t.seg)!;
-    if (t.pause > 0) {
-      t.pause--;
-      if (t.pause === 0 && t.baut) this.traegerVerbaut(t);
-      return;
-    }
+    if (t.pause > 0) { t.pause--; return; }
     if (t.phase === 0) {
       t.t++;
       if (t.t >= t.dauer) {
@@ -1353,17 +1799,6 @@ export class Simulation {
     }
   }
 
-  /** Die Bau-Aktion des Trägers ist vorbei: Die getragene Ware ist verbaut. */
-  private traegerVerbaut(t: Traeger): void {
-    const g = this.gebaeude.get(t.ziel);
-    t.baut = 0;
-    if (g && !g.fertig) {
-      if (g.incoming[t.art] > 0) g.incoming[t.art]--;
-      this.verbauen(g, t.art);
-      t.art = -1; t.ziel = 0; t.warte = 0;
-    }
-  }
-
   /** Index der ersten Ware in z, die über Segment s weiterläuft, oder -1. */
   private findeWare(z: Fahne, s: Segment): number {
     for (let i = 0; i < z.waren.length; i++) if (this.wareHop(z, z.waren[i]) === s.id) return i;
@@ -1373,6 +1808,21 @@ export class Simulation {
   /** Kann z eine Ware vom Segment s annehmen: freier Platz (inkl. Unterwegs) oder Tauschpartner für s. */
   private darfZu(z: Fahne, s: Segment): boolean {
     return this.platz(z) || this.findeWare(z, s) >= 0;
+  }
+
+  /** Noch ein Notplatz frei an z (FLAG_CAP + NOTPLAETZE, inkl. Unterwegs)? */
+  private notPlatz(z: Fahne): boolean { return z.waren.length + this.inbGet(z.id) < FLAG_CAP + NOTPLAETZE; }
+
+  /** Ware ist an ihrer Zielfahne (das Gebäude dort nimmt sie gleich ab). */
+  private amZiel(w: Ware, z: Fahne): boolean {
+    const g = w.ziel ? this.gebaeude.get(w.ziel) : undefined;
+    return !!g && g.fahne === z.id;
+  }
+
+  /** Index der ersten Ware in z, die über s zu ihrer Zielfahne am anderen Ende o läuft (Direktlieferung), oder -1. */
+  private findeDirekt(z: Fahne, s: Segment, o: Fahne): number {
+    for (let i = 0; i < z.waren.length; i++) if (this.wareHop(z, z.waren[i]) === s.id && this.amZiel(z.waren[i], o)) return i;
+    return -1;
   }
 
   private losgehen(t: Traeger, s: Segment): void {
@@ -1388,13 +1838,9 @@ export class Simulation {
     const x = this.fahnen.get(t.ende === 0 ? s.a : s.b)!;
     const y = this.fahnen.get(t.ende === 0 ? s.b : s.a)!;
     if (t.art >= 0) {
-      // Ist die Baustelle erreicht, verbaut der Träger die Ware selbst (BUILD_ACTION), statt sie abzulegen
-      const gz = t.ziel ? this.gebaeude.get(t.ziel) : undefined;
-      if (gz && !gz.fertig && gz.fahne === x.id && this.zielOk({ art: t.art, ziel: t.ziel }, x)) {
-        t.baut = 1; t.pause = BUILD_ACTION;
-        return;
-      }
-      if (x.waren.length < FLAG_CAP) {
+      // Träger liefern nur (Drehbuch 4.5): auch an der Baustelle wird abgelegt, den Stapel holt sie sich von der Fahne
+      // Am Ziel darf er auch auf einen Notplatz ablegen: das Gebäude nimmt die Ware gleich ab (gegen Verklemmung)
+      if (x.waren.length < FLAG_CAP || (this.amZiel({ art: t.art, ziel: t.ziel }, x) && x.waren.length < FLAG_CAP + NOTPLAETZE)) {
         const w: Ware = { art: t.art, ziel: t.ziel };
         if (w.ziel && !this.zielOk(w, x)) { this.wareZielLoesen(w); this.wareZielSetzen(w, x); }
         x.waren.push(w);
@@ -1402,9 +1848,10 @@ export class Simulation {
         t.art = -1; t.ziel = 0; t.warte = 0; t.pause = UEBERGABE_TICKS;
         return;
       }
-      // Tausch an voller Fahne: ablegen (Notplatz) und im selben Schritt die Ware für die Rückrichtung mitnehmen
+      // Tausch an voller Fahne: ablegen (Notplatz) und im selben Schritt die Ware für die Rückrichtung mitnehmen; die andere Seite
+      // muss sie annehmen können, notfalls auf einem Notplatz (sonst drehen sich zwei volle Fahnen im Kreis nicht frei)
       const pi = this.findeWare(x, s);
-      if (pi >= 0 && this.darfZu(y, s)) {
+      if (pi >= 0 && (this.darfZu(y, s) || this.notPlatz(y))) {
         const v = x.waren[pi];
         x.waren.splice(pi, 1);
         const w: Ware = { art: t.art, ziel: t.ziel };
@@ -1420,8 +1867,8 @@ export class Simulation {
       if (t.warte > this.stat.maxWarte) this.stat.maxWarte = t.warte;
       return;
     }
-    if (this.darfZu(y, s)) {
-      const i = this.findeWare(x, s);
+    {
+      const i = this.darfZu(y, s) ? this.findeWare(x, s) : this.notPlatz(y) ? this.findeDirekt(x, s, y) : -1;
       if (i >= 0) {
         const v = x.waren[i];
         x.waren.splice(i, 1);
@@ -1432,7 +1879,7 @@ export class Simulation {
         return;
       }
     }
-    // leer zum anderen Ende, wenn dort etwas für dieses Segment liegt
-    if (this.darfZu(x, s) && this.findeWare(y, s) >= 0) this.losgehen(t, s);
+    // leer zum anderen Ende, wenn dort etwas für dieses Segment liegt (bei voller Fahne hier nur eine Direktlieferung)
+    if ((this.darfZu(x, s) && this.findeWare(y, s) >= 0) || (this.notPlatz(x) && this.findeDirekt(y, s, x) >= 0)) this.losgehen(t, s);
   }
 }
