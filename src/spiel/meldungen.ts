@@ -36,6 +36,8 @@ export interface Meldung {
   platt?: Spruch;
   /** Große Meldung (Kirmes, Dorfstufe): länger sichtbar. */
   gross: boolean;
+  /** Gebäude, um das es geht (Klick springt hin), sonst fehlt es. */
+  gebaeude?: number;
 }
 
 /** Werte für die Platzhalter. */
@@ -98,9 +100,12 @@ export class MeldungsFilter {
     wareName: (art: number) => string, stufeName: (n: number) => string, freigeschaltet: string, liste: string): Meldung[] {
     const aus: Meldung[] = [];
     const k = (x: Partial<MeldungsKontext>): MeldungsKontext => ({ ort: this.ort, liste, ...x });
-    const add = (anlass: string, ctx: MeldungsKontext, gross = false, platt = false) => {
+    const add = (anlass: string, ctx: MeldungsKontext, gross = false, platt = false, gebaeude = 0) => {
       const t = textFuer(anlass, this.zaehler++, ctx, this.e);
-      if (t) aus.push({ text: mitTick(t, this.e), gross, platt: platt ? this.e.sprueche[this.zaehler % this.e.sprueche.length] : undefined });
+      if (!t) return;
+      const m: Meldung = { text: mitTick(t, this.e), gross, platt: platt ? this.e.sprueche[this.zaehler % this.e.sprueche.length] : undefined };
+      if (gebaeude) m.gebaeude = gebaeude;
+      aus.push(m);
     };
     for (const ev of ereignisse) {
       if (ev.nr <= this.letzteNr) continue;
@@ -110,14 +115,14 @@ export class MeldungsFilter {
           const g = gebName(ev.gebaeude);
           if (!g || this.typenFertig.has(g.typ)) break;
           this.typenFertig.add(g.typ);
-          add(g.typ === 'kirmesplatz' ? 'kirmesplatz' : 'fertig', k({ gebaeude: g.name }), g.typ === 'kirmesplatz');
+          add(g.typ === 'kirmesplatz' ? 'kirmesplatz' : 'fertig', k({ gebaeude: g.name }), g.typ === 'kirmesplatz', false, ev.gebaeude);
           break;
         }
         case 'bewohner':
-          if (!this.ersterBewohner) { this.ersterBewohner = true; add('bewohner_erster', k({ ware: wareName(ev.wert) })); }
+          if (!this.ersterBewohner) { this.ersterBewohner = true; add('bewohner_erster', k({ ware: wareName(ev.wert) }), false, false, ev.gebaeude); }
           break;
         case 'notnagel': add('notnagel', k({}), false, true); break;
-        case 'kirmes': add('kirmes', k({}), true, true); break;
+        case 'kirmes': add('kirmes', k({}), true, true, ev.gebaeude); break;
         case 'stufe': add('stufe', k({ stufe: stufeName(ev.wert), liste: freigeschaltet }), true); break;
         case 'zuzug': add('zuzug', k({ n: ev.wert })); break;
       }

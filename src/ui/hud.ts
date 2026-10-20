@@ -124,6 +124,37 @@ export class Hud {
       if (e.code === 'F3') { e.preventDefault(); this.settings.perf = !this.settings.perf; this.changed(sync); }
     });
     sync();
+    this.sync = sync;
+    this.settingsPanel = set;
+  }
+
+  private sync: () => void = () => {};
+  private settingsPanel: HTMLElement | null = null;
+
+  /** Im Spiel liegen die Ansichts-Einstellungen im Einstellungsfenster (M7): die Ecke rechts oben wird frei. */
+  versteckeEinstellungen(): void {
+    if (this.settingsPanel) this.settingsPanel.style.display = 'none';
+  }
+
+  /** Felder für das Einstellungsfenster (Grafik). */
+  grafikFelder(): { id: string; text: string; typ: 'schalter' | 'auswahl' | 'regler'; wert: boolean | string | number; optionen?: { wert: string; text: string }[]; min?: number; max?: number; schritt?: number; einheit?: string }[] {
+    const s = this.settings;
+    return [
+      { id: 'quality', text: 'Qualität', typ: 'auswahl', wert: s.quality, optionen: QUALITAETEN.map((q) => ({ wert: q, text: QUALITAET_NAME[q] })) },
+      { id: 'shadows', text: 'Schatten', typ: 'schalter', wert: s.shadows },
+      { id: 'trees', text: 'Wald', typ: 'schalter', wert: s.trees },
+      { id: 'grid', text: 'Hex-Raster (G)', typ: 'schalter', wert: s.grid },
+      { id: 'perf', text: 'Leistung anzeigen (F3)', typ: 'schalter', wert: s.perf },
+      { id: 'exaggeration', text: 'Überhöhung', typ: 'regler', wert: s.exaggeration, min: 1, max: 5, schritt: 0.25, einheit: '×' },
+    ];
+  }
+
+  /** Eine Ansichts-Einstellung setzen (aus dem Einstellungsfenster). */
+  setze(k: string, v: boolean | string | number): void {
+    if (!(k in this.settings)) return;
+    if (k === 'quality' && !QUALITAETEN.includes(v as Qualitaet)) return;
+    (this.settings as unknown as Record<string, unknown>)[k] = v;
+    this.changed(this.sync);
   }
 
   private changed(sync: () => void) {

@@ -1,5 +1,5 @@
 {
- "hinweis": "Gebäude nach DESIGN §6.2 und Drehbuch 5.1 (Startwerte, werden beim Spielen eingestellt). Zeiten in Sekunden, Kosten und Waren über Waren-Ids (goods.json). 'funktion' wählt das Verhalten in der Simulation (lager, wohnen, holzfaeller, foerster, steinbruch, erzeuger, verarbeiter, kirmes); 'radius' ist der Arbeitsradius in Hexen um den Arbeitsmittelpunkt (außen „geht noch“), 'radiusGut' der innere Ring „gut“; 'eingang' der Input-Puffer je Ware, 'ausgang' der Output-Puffer; 'wandelt' macht aus 'menge' Stück 'ein' eine Ware 'aus'; ein Erzeuger macht alle 'arbeit_s' eine Ware; 'nahrung_plaetze' sind die Essensplätze des Wohnhauses; 'ab_stufe' die Dorfstufe, ab der man es bauen kann (0 Weiler, 1 Dorf); 'einmalig' heißt höchstens eins je Dorf.",
+ "hinweis": "Gebäude nach DESIGN §6.2 und Drehbuch 5.1 (Startwerte, werden beim Spielen eingestellt). Zeiten in Sekunden, Kosten und Waren über Waren-Ids (goods.json). 'funktion' wählt das Verhalten in der Simulation (lager, wohnen, holzfaeller, foerster, steinbruch, erzeuger, verarbeiter, kirmes); 'radius' ist der Arbeitsradius in Hexen um den Arbeitsmittelpunkt (außen „geht noch“), 'radiusGut' der innere Ring „gut“; 'eingang' der Input-Puffer je Ware, 'ausgang' der Output-Puffer; 'wandelt' macht aus 'menge' Stück 'ein' eine Ware 'aus'; ein Erzeuger macht alle 'arbeit_s' eine Ware; 'nahrung_plaetze' sind die Essensplätze des Wohnhauses; 'ab_stufe' die Dorfstufe, ab der man es bauen kann (0 Weiler, 1 Dorf); 'einmalig' heißt höchstens eins je Dorf; 'taste' wählt das Gebäude bei offenem Baumenü (nicht W, A, S, D, Q, E, B, X, P, G).",
  "gebaeude": [
   {
    "id": "lager",
@@ -21,7 +21,7 @@
    }
   },
   {
-   "id": "wohnhaus",
+   "id": "wohnhaus", "taste": "H",
    "name": "Wohnhaus",
    "gruppe": "Wohnen",
    "symbol": "🏠",
@@ -36,7 +36,7 @@
    "nahrung_plaetze": 4
   },
   {
-   "id": "holzfaeller",
+   "id": "holzfaeller", "taste": "F",
    "name": "Holzfällerhütte",
    "gruppe": "Holz & Stein",
    "symbol": "🪓",
@@ -59,7 +59,7 @@
    }
   },
   {
-   "id": "foerster",
+   "id": "foerster", "taste": "O",
    "name": "Försterei",
    "gruppe": "Holz & Stein",
    "symbol": "🌱",
@@ -78,7 +78,7 @@
    }
   },
   {
-   "id": "saegewerk",
+   "id": "saegewerk", "taste": "R",
    "name": "Sägewerk",
    "gruppe": "Holz & Stein",
    "symbol": "🪚",
@@ -105,7 +105,7 @@
    }
   },
   {
-   "id": "steinbruch",
+   "id": "steinbruch", "taste": "T",
    "name": "Steinbruch",
    "gruppe": "Holz & Stein",
    "symbol": "⛏️",
@@ -128,7 +128,7 @@
    }
   },
   {
-   "id": "kartoffelfeld",
+   "id": "kartoffelfeld", "taste": "K",
    "name": "Kartoffelfeld",
    "gruppe": "Essen",
    "symbol": "🥔",
@@ -148,7 +148,7 @@
    }
   },
   {
-   "id": "kueche",
+   "id": "kueche", "taste": "U",
    "name": "Küche",
    "gruppe": "Essen",
    "symbol": "🍳",
@@ -175,7 +175,7 @@
    }
   },
   {
-   "id": "obstwiese",
+   "id": "obstwiese", "taste": "N",
    "name": "Obstwiese",
    "gruppe": "Essen",
    "symbol": "🍏",
@@ -195,7 +195,7 @@
    }
   },
   {
-   "id": "mostkeller",
+   "id": "mostkeller", "taste": "M",
    "name": "Mostkeller",
    "gruppe": "Essen",
    "symbol": "🍺",
@@ -222,7 +222,7 @@
    }
   },
   {
-   "id": "schafstall",
+   "id": "schafstall", "taste": "L",
    "name": "Schafstall",
    "gruppe": "Essen",
    "symbol": "🐑",
@@ -243,7 +243,7 @@
    }
   },
   {
-   "id": "kaeserei",
+   "id": "kaeserei", "taste": "C",
    "name": "Käserei",
    "gruppe": "Essen",
    "symbol": "🧀",
@@ -270,7 +270,7 @@
    }
   },
   {
-   "id": "bienenstock",
+   "id": "bienenstock", "taste": "Z",
    "name": "Bienenstock",
    "gruppe": "Essen",
    "symbol": "🍯",
@@ -291,7 +291,7 @@
    }
   },
   {
-   "id": "reifekeller",
+   "id": "reifekeller", "taste": "Y",
    "name": "Reifekeller",
    "gruppe": "Essen",
    "symbol": "🏺",
@@ -319,7 +319,7 @@
    }
   },
   {
-   "id": "kirmesplatz",
+   "id": "kirmesplatz", "taste": "J",
    "name": "Kirmesplatz",
    "gruppe": "Feste",
    "symbol": "🎡",

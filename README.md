@@ -62,13 +62,13 @@ nach Gebrauch wieder. Unterbrochen? Einfach neu starten, es setzt fort. Details 
   Geistermodell am Ziel und den Arbeitsradius („36 Bäume in Reichweite“). Platzieren kostet nichts: Die Baustelle
   meldet Bedarf, Träger bringen Bretter und Steine einzeln und legen sie an der Baustelle ab, ein Bauarbeiter verbaut sie
   (seit M5), das Haus wächst in drei Phasen.
-  Gebäude anklicken öffnet eine Karte mit Zustand („Wartet auf Bretter“, „Kein Baum mehr in Reichweite“), Bedarf und
+  Gebäude anklicken öffnet sein Fenster (seit M7) mit Zustand („Wartet auf Bretter“, „Kein Baum mehr in Reichweite“), Bedarf und
   Priorität 1–3 (Rechtsklick auf eine Baustelle schaltet sie reihum). Holzfäller fällt Bäume im Arbeitsbereich (der Kartenwald
   im Spielfeld ist Simulationszustand: was man sieht, gibt es, auch die Einzelbäume auf der Wiese), Förster pflanzt nach, Jungbäume wachsen in drei Stufen, Sägewerk macht aus Stämmen Bretter,
   Steinbruch haut endliche Steine ab, je nach Art unterschiedlich gezeichnet: Felsgruppe (viel), Klippe (mittel),
   Lesesteinhaufen (wenig), alles schrumpft mit der Restmenge. Das Lager liefert auf Abruf (Pull), Abriss gibt die Hälfte
-  des verbauten Materials zurück. **Arbeitsbereich:** Bauvorschau und Gebäudekarte zeigen zwei Ringe, innen „gut“
-  (kurze Wege), außen „geht noch“, dazu den Hinweis „31 Bäume in Reichweite, 9 davon nah“. In der Gebäudekarte von
+  des verbauten Materials zurück. **Arbeitsbereich:** Bauvorschau und Gebäudefenster zeigen zwei Ringe, innen „gut“
+  (kurze Wege), außen „geht noch“, dazu den Hinweis „31 Bäume in Reichweite, 9 davon nah“. Im Gebäudefenster von
   Holzfäller, Förster und Steinbruch (auch als Baustelle) setzt „Arbeitsbereich“ einen Mittelpunkt (höchstens 6 Hexe
   vom Haus): Ringe folgen dem Zeiger, Klick setzt, am Handy zeigt der Tipp und „Setzen“ bzw. zweiter Tipp bestätigt,
   <kbd>Esc</kbd> bricht ab, „Zurücksetzen“ legt ihn wieder aufs Haus. Ein Fähnchen und eine dünne Linie zeigen den
@@ -98,6 +98,21 @@ nach Gebrauch wieder. Unterbrochen? Einfach neu starten, es setzt fort. Details 
 - **Speichern und Laden (M6):** „💾 Speichern“ lädt eine Datei mit dem ganzen Stand (Datenversion und Prüfsumme der Karte,
   alle Dörfer, Spielernamen, übrige Pausen) herunter. „📂 Spielstand laden“ (Kartenwahl oder im Spiel) lädt die passende
   Karte dazu; ein Stand mehrerer Spieler öffnet die Lobby, die Mitspieler kommen über den Link und spielen ihr Dorf weiter.
+- **Bedienung und Oberfläche (M7):** Ein Klick auf ein Gebäude, eine Fahne oder einen Weg öffnet sein **Fenster**. Fenster
+  lassen sich am Kopf verschieben, mit 📌 anpinnen (bleiben dann offen) und zeigen ihre Daten live (4× je Sekunde);
+  <kbd>Esc</kbd> bricht erst ab, schließt dann das oberste Fenster und öffnet zuletzt die Einstellungen. Das **Gebäudefenster**
+  ergibt sich nur aus `data/buildings.json` (Eingang, Ausgang, was es macht, Arbeitsbereich, Produktivität, Essen, Warenliste)
+  mit Hinsehen, Anhalten/Weiterarbeiten und Abreißen (zweimal drücken); das **Lager** zeigt den Bestand nach Kategorie, die
+  **Fahne** ihren Stapel mit Zielen und die Wege, der **Weg** seinen Träger. Das **Baumenü** hat Reiter je Gruppe, Tooltips
+  (Kosten, Bauplatz, „2 Kartoffeln → 1 Bratkartoffel in 12 s“, Spruch), Begründungen fürs Sperren und Knappheit und eine Taste
+  je Gebäude bei offenem Menü (z. B. <kbd>F</kbd> Holzfäller). Icons von Waren und Gebäuden sind aus den 3D-Modellen gerendert.
+  Statusleiste: 📦 **Waren** (<kbd>I</kbd>), ⚖️ **Warenverteilung** (<kbd>V</kbd>, wie in Siedler 2: je Ware, wer sie zuerst
+  bekommt – Baustellen, Kirmesplatz, Verarbeiter, Wohnhäuser; Standard wie in M5), 📈 **Statistik** (<kbd>T</kbd>, Bewohner,
+  Gebäude und Waren über die Zeit, alle Dörfer im Vergleich), 📜 **Ereignisprotokoll** (<kbd>L</kbd>, Klick springt zum Ort),
+  ⚙️ **Einstellungen** (Grafik, Oberflächengröße 80–150 %, Farbenblind-Modus, Kamera-Tempo, Autosave, Tipps) und ❓ **Hilfe**
+  (<kbd>H</kbd>). Störungen stehen zusammengefasst am rechten Rand („2× Gebäude ohne Weg zum Lager“), ein Klick springt hin.
+  **Autosave** alle 10 Spielminuten in den Browser (ein Platz), „⏱ Weiterspielen“ in der Kartenwahl. Am Handy kommen Fenster
+  als Blatt über der Bauleiste. Warenverteilung, Anhalten und Statistik sind Spielzustand und gehen auch im Mehrspieler.
 - **Simulation** (`src/sim/`): fester Tick (20/s), nur Ganzzahlen, jede Aktion ist ein Befehl mit Tick-Nummer,
   Prüfsumme über den Zustand (Statusleiste „Sim“), Befehlsprotokoll zum Abspielen (`spieleAb`). Der Smoke-Test
   prüft, dass Node und Browser dieselbe Prüfsumme bekommen und ein Replay im zweiten Browser-Fenster gleich ausgeht.

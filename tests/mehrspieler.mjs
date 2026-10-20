@@ -1,7 +1,8 @@
 // Testaufbau M6 im echten Browser: zwei Fenster (Browser-Kontexte) auf einem Rechner, Vermittlungs-Server lokal, WebRTC direkt
 // zwischen den Fenstern, simuliertes schlechtes Netz (#…&netz=schlecht). Ablauf: Gastgeber eröffnet einen Raum, Gast kommt über
 // den Einladungslink, beide laden die Karte (gleiche Prüfsumme), Start, beide bauen, Tempo 3, der Gast lädt die Seite neu und muss
-// in unter 30 Sekunden wieder drin sein, Pause, Prüfsummen gleich, Speichern.
+// in unter 30 Sekunden wieder drin sein, Pause, Prüfsummen gleich, Speichern. M7: Warenverteilung über das Fenster, Ruhen,
+// Statistik und Autosave im Mehrspieler.
 //
 // Läuft in npm run test:smoke mit; allein:  node tests/mehrspieler.mjs   (Server und Vite startet es selbst)
 import { existsSync, mkdirSync } from 'node:fs';
@@ -69,6 +70,7 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
     await ctx.addInitScript(() => { try { localStorage.setItem('eifeler.view', JSON.stringify({ quality: 'niedrig', shadows: false, trees: false })); } catch { /* egal */ } });
     const page = await ctx.newPage();
     page.on('pageerror', (e) => seitenfehler.push(`${wer}: ${e.message}`));
+    if (process.env.MP_LOG) page.on('console', (m) => console.log(`[${wer}] ${m.text()}`));
     page.on('console', (m) => { if (m.type() === 'error' && !/favicon|fonts\.g/.test(m.text() + (m.location()?.url ?? ''))) seitenfehler.push(`${wer} console: ${m.text()}`); });
     return page;
   };
@@ -114,6 +116,17 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
     info(`Mehrspieler: nach 15 s Tick ${sicht.map((x) => x.tick).join('/')}, Tempo ${sicht[1].tempo}, Holzfäller von ${JSON.stringify(sicht[1].hf)}`);
     if (sicht[1].tempo !== 3) fail('Tempo 3 kam beim Gast nicht an');
     for (const x of sicht) if (JSON.stringify(x.hf) !== '[0,1]') fail(`Nicht beide Holzfäller sichtbar: ${JSON.stringify(x.hf)}`);
+    // M7: Fenster im Mehrspieler – der Gast stellt die Warenverteilung um (Fensterknopf), der Gastgeber lässt seinen Holzfäller ruhen
+    await gast.evaluate(() => window.eifeler.spiel.fensterUmschalten('verteilung'));
+    await gast.waitForSelector('.fenster[data-fenster="verteilung"] .fe-platz:not([disabled])', { timeout: 10000 });
+    await gast.locator('.fenster[data-fenster="verteilung"] .fe-platz:not([disabled])').first().click();
+    const hfId = await host.evaluate(() => { const sp = window.eifeler.spiel; const g = sp.sicht.gebaeude.find((x) => x.sp === sp.ich && x.typ === 'holzfaeller'); sp.oeffneGebaeude(g.id); return g.id; });
+    await host.waitForSelector(`.fenster[data-fenster="geb:${hfId}"]`, { timeout: 10000 });
+    await host.evaluate(() => window.eifeler.spiel.fensterUmschalten('statistik'));
+    await host.waitForTimeout(500);
+    const m7 = await host.evaluate(() => ({ fenster: window.eifeler.spiel.fenster.ids, auto: window.eifeler.spiel.autosave(), da: !!localStorage.getItem('eifeler.autosave') }));
+    info(`Mehrspieler M7: Fenster beim Gastgeber ${m7.fenster.join(', ')}, Autosave ${m7.auto && m7.da ? 'geschrieben' : 'FEHLT'}`);
+    if (!m7.auto || !m7.da) fail('Mehrspieler M7: Autosave im Mehrspieler ging nicht');
     await host.evaluate(() => window.eifeler.skipIntro());
     await host.screenshot({ path: join(aus, 'mp-2-spiel.png') });
     // 5. Der Gast lädt die Seite neu: in unter 30 s wieder drin (Stand vom Mitspieler)
@@ -150,6 +163,21 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
       fail(`Das Wohnhaus des Gasts (nach dem Neuladen) fehlt: b2 ${JSON.stringify(b2)}, Befehle beim Gastgeber ${JSON.stringify(d)}, Gast ${JSON.stringify(g)}`);
     }
     for (const x of s) for (const e of x.abw) fail(`Partie meldet: ${JSON.stringify(e)}`);
+    // M7: Verteilung des Gasts und das Ruhen des Gastgebers sind bei beiden gleich (auch nach dem Neuladen des Gasts)
+    await gast.evaluate(() => window.eifeler.spiel.pauseUmschalten());
+    await host.waitForFunction(laeuft, null, { timeout: 10000 });
+    await host.evaluate(() => { const sp = window.eifeler.spiel; const g = sp.sicht.gebaeude.find((x) => x.sp === sp.ich && x.typ === 'holzfaeller'); sp.befehl({ art: 'ruhen', id: g.id, an: true }); });
+    await host.waitForTimeout(3000);
+    await gast.evaluate(() => window.eifeler.spiel.pauseUmschalten());
+    for (let i = 0; i < 40; i++) { const t = await Promise.all([host, gast].map((x) => x.evaluate(() => window.eifeler.partie.sim.tick))); if (t[0] === t[1]) break; await host.waitForTimeout(250); }
+    const m7b = await Promise.all([host, gast].map((x) => x.evaluate(() => {
+      const sim = window.eifeler.partie.sim;
+      return { vert: JSON.stringify(sim.sicht(1).dorf.verteilung), ruht: sim.sicht(0).gebaeude.some((g) => g.sp === 0 && g.typ === 'holzfaeller' && g.ruht), stat: sim.statistikVon(1).punkte.length };
+    })));
+    info(`Mehrspieler M7: Verteilung gleich ${m7b[0].vert === m7b[1].vert}, Holzfäller ruht ${m7b.map((x) => x.ruht).join('/')}, Statistik-Punkte ${m7b.map((x) => x.stat).join('/')}`);
+    if (m7b[0].vert !== m7b[1].vert) fail('Mehrspieler M7: Warenverteilung unterschiedlich');
+    if (!m7b[0].vert.includes('[0,1,3,2]') && !m7b[0].vert.includes('[0,2,1,3]')) fail(`Mehrspieler M7: Verteilung des Gasts kam nicht an: ${m7b[0].vert}`);
+    if (!m7b[0].ruht || !m7b[1].ruht) fail('Mehrspieler M7: Ruhen kam nicht bei beiden an');
     await gast.screenshot({ path: join(aus, 'mp-3-gast-pause.png') });
     // 7. Speichern (Gastgeber) und weiter
     const gespeichert = await host.evaluate(() => { const st = window.eifeler.spiel.speichern(); return { n: st.spieler.length, namen: st.spieler, tick: st.stand.zahlen[0] }; });
@@ -157,8 +185,8 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
     if (gespeichert.n !== 2 || gespeichert.namen[1] !== 'Pitter') fail(`Spielstand falsch: ${JSON.stringify(gespeichert)}`);
     await gast.evaluate(() => window.eifeler.spiel.pauseUmschalten());
     await host.waitForFunction(laeuft, null, { timeout: 10000 });
-    for (const f of seitenfehler) fail(f);
   } finally {
+    for (const f of seitenfehler) fail(f);
     await browser.close().catch(() => undefined);
   }
 }

@@ -76,3 +76,17 @@ Eingestellt wurde dabei:
 
 Offen für den Spieltest mit Menschen: Start mit 10 Bewohnern (eng, aber der Notnagel hilft), Bauzeit je Ware 2,5 s,
 Planieren ab 6° Steigung, Radien, Gebäudeabstand, Bäume je Hex, Wachstumszeit und Steinmengen (aus M4 übernommen).
+
+## Zusatz M7: Findet sich ein neuer Spieler ohne Hilfe zurecht?
+
+Abnahme von [ROADMAP M7](ROADMAP.md). Gleicher Ablauf wie oben, dazu auf die Oberfläche achten (nichts erklären, auch nicht die Fenster):
+
+| Frage | Darauf achten | Notiz |
+|---|---|---|
+| Öffnet er ein Gebäude von selbst? | Klickt er aufs Lager oder eine Baustelle? Liest er „Wartet auf …“ und „Fehlt noch“? | |
+| Findet er die Fenster oben links? | 📦 Waren, ⚖️ Verteilung, 📈 Statistik, 📜 Protokoll, ⚙️, ❓ – oder die Tasten I, V, T, L, H? | |
+| Nutzt er den Tooltip im Baumenü? | Hover über ein Gebäude: versteht er „2 Kartoffeln → 1 Bratkartoffel“ und warum etwas gesperrt ist? | |
+| Reagiert er auf Meldungen am rechten Rand? | Klickt er „Gebäude ohne Weg zum Lager“ an und baut den Weg? | |
+| Stellt er die Warenverteilung um, wenn die Kirmes hakt? | Zum Beispiel Käse für den Kirmesplatz statt fürs Wohnhaus | |
+| Pinnt oder verschiebt er Fenster, stören sie? | Werden zu viele Fenster lästig? Findet er Esc? | |
+| Handy oder Tablet (optional) | Gehen Fenster, Baumenü und Wegebau mit dem Finger? | |

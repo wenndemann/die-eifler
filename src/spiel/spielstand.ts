@@ -54,3 +54,21 @@ export function dateiname(ort: string, jetzt = new Date()): string {
   const p = (n: number) => String(n).padStart(2, '0');
   return `eifeler-${o}-${jetzt.getFullYear()}${p(jetzt.getMonth() + 1)}${p(jetzt.getDate())}-${p(jetzt.getHours())}${p(jetzt.getMinutes())}.json`;
 }
+
+/** Autosave im Browser-Speicher (ROADMAP M7; ein Platz, data/dorf.json: autosave): Ort und Spielstand. */
+export const AUTOSAVE_SPEICHER = 'eifeler.autosave';
+export interface Autosave { ort: string; stand: Spielstand }
+
+/** Liest den Autosave-Text (aus dem Browser-Speicher); null, wenn keiner da oder er kaputt ist. */
+export function leseAutosaveText(text: string | null): Autosave | null {
+  if (!text) return null;
+  try {
+    const d = JSON.parse(text) as Partial<Autosave>;
+    return { ort: typeof d.ort === 'string' ? d.ort : '', stand: leseSpielstand(JSON.stringify(d.stand)) };
+  } catch { return null; }
+}
+
+/** Autosave aus dem Browser-Speicher (oder null). */
+export function holeAutosave(): Autosave | null {
+  try { return leseAutosaveText(localStorage.getItem(AUTOSAVE_SPEICHER)); } catch { return null; }
+}

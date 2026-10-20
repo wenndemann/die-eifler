@@ -496,6 +496,11 @@ function modell(typ: string, phase: number): THREE.BufferGeometry {
   return g;
 }
 
+/** Fertiges Modell eines Gebäudetyps (Vertexfarben, Meter wie im Modell), z. B. für die Icons (src/render/icons.ts). */
+export function gebaeudeGeometrie(typ: string): THREE.BufferGeometry {
+  return modell(typ, 3);
+}
+
 /** Bauphase 1..3 aus bau (Formel wie in src/sim/typen.ts). */
 export function bauPhase(bau: number): 1 | 2 | 3 {
   return (1 + Math.min(2, Math.floor((3 * bau) / (PROMILLE + 1)))) as 1 | 2 | 3;

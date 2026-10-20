@@ -1,17 +1,17 @@
 {
- "hinweis": "Waren nach DESIGN §6.1. 'nahrung' ist die Nahrungsstufe (1 einfach, 2 veredelt, 3 edel; DESIGN §5). 'form' wählt das lesbare Modell, 'farbe' ist seine Hauptfarbe (Drehbuch 7.6: erst lesbar, dann schön). Die Reihenfolge ist die Warenart (Index in der Simulation) und darf nur am Ende ergänzt werden.",
+ "hinweis": "Waren nach DESIGN §6.1. 'nahrung' ist die Nahrungsstufe (1 einfach, 2 veredelt, 3 edel; DESIGN §5). 'form' wählt das lesbare Modell, 'farbe' ist seine Hauptfarbe, 'farbe_fb' die im Farbenblind-Modus (Okabe-Ito-Palette) (Drehbuch 7.6: erst lesbar, dann schön). Die Reihenfolge ist die Warenart (Index in der Simulation) und darf nur am Ende ergänzt werden.",
  "waren": [
-  { "id": "stamm", "name": "Eifeler Baumstamm", "gruppe": "Grundstoff", "form": "stamm", "farbe": "#8a6340" },
-  { "id": "bretter", "name": "Eifeler Bretterstapel", "gruppe": "Grundstoff", "form": "bretter", "farbe": "#e0c08a" },
-  { "id": "stein", "name": "Eifeler Stein", "gruppe": "Grundstoff", "form": "stein", "farbe": "#a7a49c" },
-  { "id": "setzling", "name": "Buchensetzling", "gruppe": "Grundstoff", "form": "setzling", "farbe": "#4f9a3a" },
-  { "id": "milch", "name": "Eifeler Milch", "gruppe": "Nahrung (einfach)", "nahrung": 1, "form": "kanne", "farbe": "#f4f4ee" },
-  { "id": "aepfel", "name": "Eifeler Äpfel", "gruppe": "Nahrung (einfach)", "nahrung": 1, "form": "korb", "farbe": "#d0312d" },
-  { "id": "kartoffeln", "name": "Eifeler Kartoffeln", "gruppe": "Nahrung (einfach)", "nahrung": 1, "form": "sack", "farbe": "#b08850" },
-  { "id": "kaese", "name": "Eifeler Schafkäse", "gruppe": "Nahrung (veredelt)", "nahrung": 2, "form": "rad", "farbe": "#f2c230" },
-  { "id": "most", "name": "Eifeler Most", "gruppe": "Nahrung (veredelt)", "nahrung": 2, "form": "krug", "farbe": "#a9b0b8" },
-  { "id": "bratkartoffeln", "name": "Eifeler Bratkartoffeln", "gruppe": "Nahrung (veredelt)", "nahrung": 2, "form": "pfanne", "farbe": "#e8a838" },
-  { "id": "honig", "name": "Eifeler Waldhonig", "gruppe": "Nahrung (veredelt)", "nahrung": 2, "form": "topf", "farbe": "#e8a020" },
-  { "id": "bergkaese", "name": "Eifeler Bergkäse", "gruppe": "Nahrung (edel)", "nahrung": 3, "form": "rad", "farbe": "#d98a1e" }
+  { "id": "stamm", "name": "Eifeler Baumstamm", "gruppe": "Grundstoff", "form": "stamm", "farbe": "#8a6340", "farbe_fb": "#8a6340" },
+  { "id": "bretter", "name": "Eifeler Bretterstapel", "gruppe": "Grundstoff", "form": "bretter", "farbe": "#e0c08a", "farbe_fb": "#e0c08a" },
+  { "id": "stein", "name": "Eifeler Stein", "gruppe": "Grundstoff", "form": "stein", "farbe": "#a7a49c", "farbe_fb": "#a7a49c" },
+  { "id": "setzling", "name": "Buchensetzling", "gruppe": "Grundstoff", "form": "setzling", "farbe": "#4f9a3a", "farbe_fb": "#009e73" },
+  { "id": "milch", "name": "Eifeler Milch", "gruppe": "Nahrung (einfach)", "nahrung": 1, "form": "kanne", "farbe": "#f4f4ee", "farbe_fb": "#f4f4ee" },
+  { "id": "aepfel", "name": "Eifeler Äpfel", "gruppe": "Nahrung (einfach)", "nahrung": 1, "form": "korb", "farbe": "#d0312d", "farbe_fb": "#d55e00" },
+  { "id": "kartoffeln", "name": "Eifeler Kartoffeln", "gruppe": "Nahrung (einfach)", "nahrung": 1, "form": "sack", "farbe": "#b08850", "farbe_fb": "#b08850" },
+  { "id": "kaese", "name": "Eifeler Schafkäse", "gruppe": "Nahrung (veredelt)", "nahrung": 2, "form": "rad", "farbe": "#f2c230", "farbe_fb": "#f0e442" },
+  { "id": "most", "name": "Eifeler Most", "gruppe": "Nahrung (veredelt)", "nahrung": 2, "form": "krug", "farbe": "#a9b0b8", "farbe_fb": "#56b4e9" },
+  { "id": "bratkartoffeln", "name": "Eifeler Bratkartoffeln", "gruppe": "Nahrung (veredelt)", "nahrung": 2, "form": "pfanne", "farbe": "#e8a838", "farbe_fb": "#e69f00" },
+  { "id": "honig", "name": "Eifeler Waldhonig", "gruppe": "Nahrung (veredelt)", "nahrung": 2, "form": "topf", "farbe": "#e8a020", "farbe_fb": "#0072b2" },
+  { "id": "bergkaese", "name": "Eifeler Bergkäse", "gruppe": "Nahrung (edel)", "nahrung": 3, "form": "rad", "farbe": "#d98a1e", "farbe_fb": "#cc79a7" }
  ]
 }

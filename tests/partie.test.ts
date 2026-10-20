@@ -209,6 +209,37 @@ describe('Gleichschritt', () => {
     expect(sim(r, 2).pruefsumme()).toBe(sim(r, 0).pruefsumme());
   });
 
+  it('M7: Warenverteilung und Ruhen wirken je Dorf bei allen gleich, auch nach dem Neuladen (Statistik inklusive)', () => {
+    const r = runde();
+    bauen(r);
+    r.lauf(5000);
+    p(r, 0).befehl({ art: 'verteilung', ware: 6, reihe: [3, 2, 1, 0] });
+    p(r, 1).befehl({ art: 'verteilung', ware: 1, reihe: [2, 0, 1, 3] });
+    r.lauf(3000);
+    const hf = sim(r, 1).sicht(1).gebaeude.find((g) => g.sp === 1 && g.typ === 'holzfaeller')!;
+    p(r, 1).befehl({ art: 'ruhen', id: hf.id, an: true });
+    r.lauf(70_000);
+    r.trenne(1);
+    r.lauf(2000);
+    const neu = r.starte(1);
+    r.verbindeAlle();
+    while (!neu.sim || neu.angehalten) r.lauf(16);
+    r.lauf(5000);
+    p(r, 0).pause(true);
+    r.lauf(3000);
+    r.gleichziehen();
+    for (const i of [0, 1]) {
+      const s = sim(r, i);
+      expect(s.sicht(0).dorf.verteilung[6]).toEqual([3, 2, 1, 0]);
+      expect(s.sicht(1).dorf.verteilung[6]).toEqual([0, 1, 2, 3]);
+      expect(s.sicht(1).dorf.verteilung[1]).toEqual([2, 0, 1, 3]);
+      expect(s.sicht(1).gebaeude.find((g) => g.id === hf.id)!.ruht).toBe(true);
+      expect(s.statistikVon(1).punkte.length).toBeGreaterThan(1);
+    }
+    expect(sim(r, 1).statistikVon(0)).toEqual(sim(r, 0).statistikVon(0));
+    expect(sim(r, 1).pruefsumme()).toBe(sim(r, 0).pruefsumme());
+  });
+
   it('kaputte und fremde Nachrichten ändern nichts', () => {
     const r = runde();
     r.lauf(2000);

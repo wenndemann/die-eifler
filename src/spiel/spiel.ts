@@ -11,9 +11,9 @@ import { Simulation } from '../sim/sim';
 import type { SimStand } from '../sim/stand';
 import type { Partie } from '../netz/partie';
 import { Partieleiste } from '../ui/partieleiste';
-import { baueSpielstand, dateiname, leseSpielstand, type Spielstand } from './spielstand';
+import { AUTOSAVE_SPEICHER, baueSpielstand, dateiname, holeAutosave, leseSpielstand, type Spielstand } from './spielstand';
 import { spieleAb } from '../sim/replay';
-import { ARBEIT_MITTE_MAX, DORFSTUFEN, FLAG_CAP, GEBAEUDE, GEBAEUDE_IDS, KIRMES, WAREN, WAREN_NAMEN } from '../sim/daten';
+import { ARBEIT_MITTE_MAX, AUTOSAVE_MIN, DORFSTUFEN, FLAG_CAP, GEBAEUDE, GEBAEUDE_IDS, KIRMES, WAREN, WAREN_NAMEN } from '../sim/daten';
 import { PROMILLE, TICK_HZ } from '../sim/typen';
 import type { Befehl, Id, Protokoll, SichtFahne, SichtGebaeude, SichtSegment, SimSicht } from '../sim/typen';
 import { Wege } from '../render/wege';
@@ -25,8 +25,16 @@ import { Gebaeude, type GebaeudeHaken } from '../render/gebaeude';
 import { Markierung, type RingArt } from '../render/markierung';
 import { Bauplaetze } from '../render/bauplaetze';
 import { Geist } from '../render/geist';
-import { Spielleiste, type KartenDaten, type MenueGruppeDaten, type StatusDaten, type Werkzeug } from '../ui/spielleiste';
+import { Spielleiste, type MenueGruppeDaten, type StatusDaten, type Werkzeug } from '../ui/spielleiste';
 import { Meldungen } from '../ui/meldungen';
+import { Meldeleiste } from '../ui/meldeleiste';
+import { Fensterflaeche, type Eingabe, type FensterArt, type FensterDaten } from '../ui/fenster';
+import { ladeEinstellungen, speichereEinstellungen, wendeAn, type Einstellungen } from '../ui/einstellungen';
+import { icons, wennIconsDa, type Icons } from '../render/icons';
+import {
+  bauTooltip, fahneFenster, gebaeudeFenster, hilfeFenster, Produktivitaet, protokollFenster, statistikFenster, verteilungFenster,
+  verteilungKnopf, warenFenster, warnungen, wegFenster, type FensterKontext, type ProtokollZeile, type StatMass,
+} from './fensterdaten';
 import { erzaehlerFuer, MeldungsFilter, type Erzaehler, type Meldung } from './meldungen';
 import {
   BAUPLATZ_NAMEN, bedarfNamen, fehlmengen, hexeImUmkreis, kostenText as kostenAlsText, menueGruppen, naechstePrioritaet, PRIO_NAMEN,
@@ -59,7 +67,13 @@ export interface SpielKontext {
   laden?: SimStand;
   /** Spielstand laden (Datei gewählt): die Seite lädt die Karte des Stands und setzt dort fort. */
   onLaden?: (s: Spielstand) => void;
+  /** Kamera zu einem Punkt (Ausschnitt-Meter) fahren (Sprung zum Ort aus Fenstern und Meldungen). */
+  springe?: (x: number, z: number) => void;
+  /** Grafik-Einstellungen (HUD) für das Einstellungsfenster und das Kamera-Tempo (Steuerung). */
+  grafik?: { felder: () => Eingabe[]; setze: (id: string, wert: boolean | string | number) => void };
+  kameraTempo?: (f: number) => void;
 }
+
 
 /** Anzeigenamen der Gebäude aus data/buildings.json. */
 const NAMEN: Record<string, string> = Object.fromEntries(Object.values(GEBAEUDE).map((t) => [t.id, t.name]));
@@ -84,15 +98,19 @@ function eingangNamen(g: SichtGebaeude): string {
   return bedarfNamen(t.puffer.map((n, a) => (n > 0 && (g.puffer?.[a] ?? 0) < (t.wandelt?.menge ?? 1) ? 1 : 0)), WARE_TEXT);
 }
 
-/** Baumenü aus den Daten: Gruppen und Gebäude wie in data/buildings.json (ohne Lager). */
-function menueDaten(): MenueGruppeDaten[] {
+/** Baumenü aus den Daten: Gruppen und Gebäude wie in data/buildings.json (ohne Lager), mit Icon, Taste und Tooltip. */
+function menueDaten(ic: Icons): MenueGruppeDaten[] {
   return menueGruppen(GEBAEUDE_IDS.map((id) => GEBAEUDE[id])).map((g) => ({
     gruppe: g.gruppe,
-    eintraege: g.typen.map((t) => ({
-      id: t.id, symbol: t.symbol, name: t.name, spruch: t.spruch,
-      kostenText: kostenAlsText(t.kosten, WARE_TEXT, true), kosten: t.kosten,
-      groesse: t.groesse, groesseText: `Bauplatz ${BAUPLATZ_NAMEN[t.groesse]}`, radius: t.radius,
-    })),
+    eintraege: g.typen.map((t) => {
+      const n = GEBAEUDE_WERKZEUGE.indexOf(t.id) + 3;
+      return {
+        id: t.id, symbol: t.symbol, name: t.name, spruch: t.spruch, bild: ic.gebaeude[t.id],
+        kostenText: kostenAlsText(t.kosten, WARE_TEXT, true), kosten: t.kosten,
+        groesse: t.groesse, groesseText: `Bauplatz ${BAUPLATZ_NAMEN[t.groesse]}`, radius: t.radius,
+        taste: t.taste || undefined, ziffer: n >= 3 && n <= 9 ? String(n) : undefined, tooltip: bauTooltip(t.id, WARE_TEXT),
+      };
+    }),
   }));
 }
 
@@ -179,6 +197,20 @@ export class Spiel {
   private tipps = new Set<number>();
   private begruesst = false;
   private gesperrtSig = '';
+  /** Fenster (M7): Fensterfläche, Meldungen am Rand, Produktivität, Protokoll, Statistik-Auswahl, Abrissfrage, Einstellungen. */
+  readonly fenster: Fensterflaeche;
+  private readonly meldeleiste: Meldeleiste;
+  private readonly produktiv = new Produktivitaet();
+  readonly protokollZeilen: ProtokollZeile[] = [];
+  private gemeldetBis = 0;
+  private statMass: StatMass = 'bewohner';
+  private abrissFrage: { id: string; bis: number } | null = null;
+  private warnTimer = 0;
+  einst: Einstellungen;
+  private readonly ic: Icons;
+  /** Nächster Autosave (Tick) und wann zuletzt gespeichert wurde. */
+  private autosaveTick: number;
+  autosaveZuletzt: string | null = null;
 
   constructor(private ctx: SpielKontext) {
     const { ausschnitt, map, grid, base, ex } = ctx;
@@ -214,17 +246,20 @@ export class Spiel {
     ctx.scene.add(this.group);
 
     this.zeiger = matchMedia('(pointer: coarse)').matches ? 'touch' : 'mouse';
+    this.einst = ladeEinstellungen();
+    wendeAn(this.einst);
+    ctx.kameraTempo?.(this.einst.kameraTempo / 100);
+    this.ic = icons();
+    this.autosaveTick = this._sim.tick + AUTOSAVE_MIN * 60 * TICK_HZ;
     this.leiste = new Spielleiste(ctx.root, {
       onWerkzeug: (w) => this.waehleWerkzeug(w === this.werkzeug ? 'keins' : w),
       onBestaetigen: () => this.bestaetigen(),
       onAbbrechen: () => this.abbrechen(),
       onZurueck: () => this.zurueck(),
       onTempo: (t) => (t === 0 ? this.pauseUmschalten() : this.setzeTempo(t)),
-      onPrioritaet: (stufe) => this.setzePrioritaet(stufe),
-      onKarteZu: () => { this.gewaehlt = null; this.karteSetzen(); },
-      onBereich: () => this.bereichUmschalten(),
-      onBereichZurueck: () => this.bereichZuruecksetzen(),
-    }, menueDaten());
+      onFenster: (id) => this.fensterUmschalten(id),
+    }, menueDaten(this.ic));
+    wennIconsDa(() => this.leiste.setzeBilder(this.ic.gebaeude));
     this._sicht = this._sim.sicht(this.ich);
     this.indizes();
     this.partieleiste = new Partieleiste(ctx.root, {
@@ -245,6 +280,10 @@ export class Spiel {
     const ort = map.info.start ?? ausschnitt.kerne[0]?.name ?? 'der Eifel';
     this.erzaehler = erzaehlerFuer(map.info.start, ausschnitt.kerne.map((k) => k.name));
     this.meldungen = new Meldungen(ctx.root);
+    this.fenster = new Fensterflaeche(ctx.root, {
+      name: (a) => WARE_TEXT[a]?.mehr ?? WAREN[a], bild: (a) => this.ic.ware[a], zeichen: (a) => WARE_TEXT[a]?.icon || '•',
+    });
+    this.meldeleiste = new Meldeleiste(ctx.root, (h) => this.springeZu(h));
     this.filter = new MeldungsFilter(this.erzaehler, ort);
     this.leiste.setTempo(this.tempo, this.pausiert);
     this.leiste.setWerkzeug(this.werkzeug);
@@ -412,18 +451,35 @@ export class Spiel {
 
     this.statusTimer -= dt;
     if (this.statusTimer <= 0) { this.statusTimer = 0.25; this.statusSetzen(); }
+    this.fenster.takt();
+    this.warnTimer -= dt;
+    if (this.warnTimer <= 0) {
+      this.warnTimer = 1;
+      for (const w of this.meldeleiste.setze(warnungen(this._sicht, this.ich))) this.insProtokoll(w.text, true, w.orte[0]);
+    }
+    if (this.abrissFrage && performance.now() > this.abrissFrage.bis) { this.abrissFrage = null; this.fenster.jetzt(); }
+    if (this._sim.tick >= this.autosaveTick) { this.autosaveTick = this._sim.tick + AUTOSAVE_MIN * 60 * TICK_HZ; if (this.einst.autosave) this.autosave(); }
     if (this.meldung && performance.now() > this.meldung.bis) { this.meldung = null; this.hinweisSetzen(); }
   }
 
   private neueSicht(): void {
     this._sicht = this._sim.sicht(this.ich);
     this.indizes();
-    if (this.gewaehlt !== null) this.karteSetzen();
+    this.produktiv.messe(this._sicht, this.ich);
     this.meldungenPruefen();
   }
 
   private zeigeMeldung(m: Meldung): void {
-    this.meldungen.zeige({ wer: this.erzaehler.name, text: m.text, platt: m.platt, gross: m.gross });
+    const g = m.gebaeude ? this._sicht.gebaeude.find((x) => x.id === m.gebaeude) : undefined;
+    const ort = g ? { q: g.q, r: g.r } : undefined;
+    this.meldungen.zeige({ wer: this.erzaehler.name, text: m.text, platt: m.platt, gross: m.gross, onKlick: ort ? () => this.springeZu(ort) : undefined });
+    this.insProtokoll(`${this.erzaehler.name}: ${m.text}`, false, ort);
+  }
+
+  /** Eintrag im Ereignisprotokoll (L). */
+  private insProtokoll(text: string, warn: boolean, ort?: Hx): void {
+    this.protokollZeilen.push({ tick: this._sicht.tick, text, warn, ort });
+    if (this.protokollZeilen.length > 500) this.protokollZeilen.splice(0, this.protokollZeilen.length - 500);
   }
 
   /** Verlauf der Meldungen (Tests). */
@@ -435,6 +491,18 @@ export class Spiel {
     const k = s.dorf.kirmes;
     const liste = k ? listeText(k.liste.map((n, a) => Math.max(0, n - k.geliefert[a]))) : '';
     const name = (id: number) => { const g = s.gebaeude.find((x) => x.id === id); return g ? { typ: g.typ, name: NAMEN[g.typ] ?? g.typ } : null; };
+    // jedes fertige Gebäude, Fest und jede neue Stufe ins Protokoll (die Erzählfigur meldet nur das Erste)
+    for (const e of s.ereignisse) {
+      if (e.nr <= this.gemeldetBis) continue;
+      this.gemeldetBis = e.nr;
+      const g = e.gebaeude ? s.gebaeude.find((x) => x.id === e.gebaeude) : undefined;
+      const ort = g ? { q: g.q, r: g.r } : undefined;
+      if (e.art === 'fertig' && g) this.insProtokoll(`${NAMEN[g.typ] ?? g.typ} ist fertig.`, false, ort);
+      else if (e.art === 'kirmes') this.insProtokoll('Die Kirmes beginnt!', false, ort);
+      else if (e.art === 'stufe') this.insProtokoll(`Das Dorf ist jetzt ${DORFSTUFEN[e.wert] ?? ''}.`, false);
+      else if (e.art === 'zuzug') this.insProtokoll(`${e.wert} Zugezogene kommen zur Kirmes.`, false);
+      else if (e.art === 'notnagel') this.insProtokoll('Ein Zugezogener kommt (Notnagel).', false);
+    }
     for (const m of this.filter.neue(s.ereignisse, s.dorf, name, (a) => WARE_TEXT[a]?.mehr ?? '', (n) => DORFSTUFEN[n] ?? '', FREI_TEXT, liste)) this.zeigeMeldung(m);
     // Begrüßung erst, wenn das Spiel läuft (beim Laden wäre sie schon wieder weg)
     if (!this.begruesst && s.tick >= 20) {
@@ -444,7 +512,7 @@ export class Spiel {
     const hat = (typ: string) => s.gebaeude.some((g) => g.sp === this.ich && g.typ === typ);
     const min = s.tick / (60 * 20);
     const tipp = (i: number, wann: boolean) => {
-      if (!wann || this.tipps.has(i)) return;
+      if (!wann || this.tipps.has(i) || !this.einst.tipps) return;
       this.tipps.add(i);
       const m = this.filter.tipp(i, liste);
       if (m) this.zeigeMeldung(m);
@@ -511,6 +579,11 @@ export class Spiel {
     const t = e.target;
     if (t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    // offenes Baumenü: die Taste des Gebäudes (data/buildings.json) wählt es
+    if (this.leiste.menueOffen && e.key.length === 1) {
+      const id = this.leiste.menueTaste(e.key);
+      if (id) { e.preventDefault(); this.leiste.menueZu(); this.waehleWerkzeug(id); return; }
+    }
     // 1 Weg, 2 Fahne, ab 3 die Gebäude in der Reihenfolge des Baumenüs
     const ziffer = /^(?:Digit|Numpad)([1-9])$/.exec(e.code);
     if (ziffer) {
@@ -523,7 +596,12 @@ export class Spiel {
       case 'KeyB': this.leiste.menueUmschalten(); return;
       case 'KeyP': this.zeigeBauplaetze = !this.zeigeBauplaetze; return;
       case 'Delete': case 'KeyX': this.leiste.menueZu(); this.waehleWerkzeug('abriss'); return;
-      case 'Escape': this.abbrechen(); return;
+      case 'Escape': this.esc(); return;
+      case 'KeyI': this.fensterUmschalten('waren'); return;
+      case 'KeyV': this.fensterUmschalten('verteilung'); return;
+      case 'KeyT': this.fensterUmschalten('statistik'); return;
+      case 'KeyL': this.fensterUmschalten('protokoll'); return;
+      case 'KeyH': this.fensterUmschalten('hilfe'); return;
       case 'Backspace': if (this.werkzeug === 'weg') { e.preventDefault(); this.zurueck(); } return;
       case 'Space': e.preventDefault(); this.pauseUmschalten(); return;
       case 'Enter': case 'NumpadEnter': this.bestaetigen(); return;
@@ -570,11 +648,14 @@ export class Spiel {
       return;
     }
     if (w === 'keins') {
+      // ohne Werkzeug: Fenster zum Gebäude, zur Fahne oder zum Weg (fremde Gebäude: nur ansehen, wem sie gehören)
       const g = this.gebAt.get(key(h));
-      // fremde Gebäude: nur ansehen, wem sie gehören
-      if (g && g.sp !== this.ich) { this.gewaehlt = null; this.melde(`${NAMEN[g.typ] ?? g.typ} von ${this.namen[g.sp] ?? 'einem Nachbarn'}.`, false); }
-      else this.gewaehlt = g?.id ?? null;
-      this.karteSetzen();
+      const f = this.fahneAt.get(key(h));
+      const sg = this.segAt.get(key(h));
+      if (g && g.sp !== this.ich) this.melde(`${NAMEN[g.typ] ?? g.typ} von ${this.namen[g.sp] ?? 'einem Nachbarn'}.`, false);
+      if (g) this.oeffneGebaeude(g.id);
+      else if (f && f.sp === this.ich) this.oeffneFahne(f.id);
+      else if (sg && sg.sp === this.ich) this.oeffneWeg(sg.id);
       return;
     }
     if (w === 'fahne') { this.aktion(h); return; }
@@ -670,18 +751,24 @@ export class Spiel {
   /** Esc, Rechtsklick, „Abbrechen“: erst das offene Ziel, dann den offenen Weg, dann das Werkzeug. */
   abbrechen(): void {
     if (this.leiste.menueOffen) { this.leiste.menueZu(); return; }
-    if (this.bereichId !== null) { this.bereichId = null; this.offen = null; this.karteSetzen(); }
+    if (this.bereichId !== null) { this.bereichId = null; this.offen = null; this.fenster.jetzt(); }
     else if (this.offen) this.offen = null;
     else if (this.weg.aktiv) this.weg.leeren();
     else if (this.werkzeug !== 'keins') this.waehleWerkzeug('keins');
-    else if (this.gewaehlt !== null) { this.gewaehlt = null; this.karteSetzen(); }
     this.meldung = null;
     this.hinweisSetzen();
   }
 
+  /** Esc: erst abbrechen (Menü, Modus, Werkzeug), dann das oberste Fenster schließen, sonst die Einstellungen öffnen. */
+  esc(): void {
+    if (this.leiste.menueOffen || this.bereichId !== null || this.offen || this.weg.aktiv || this.werkzeug !== 'keins') { this.abbrechen(); return; }
+    if (this.fenster.schliesseOberstes()) return;
+    this.fensterUmschalten('einstellungen');
+  }
+
   waehleWerkzeug(w: Werkzeug): void {
     this.werkzeug = w;
-    if (w !== 'keins') { this.bereichId = null; this.gewaehlt = null; this.karteSetzen(); }
+    if (w !== 'keins') { this.bereichId = null; this.gewaehlt = null; this.fenster.schliesseGruppe('auswahl'); }
     this.weg.leeren();
     this.offen = null;
     this.meldung = null;
@@ -935,7 +1022,7 @@ export class Spiel {
     this.offen = null;
     this.meldung = null;
     this.hinweisSetzen();
-    this.karteSetzen();
+    this.fenster.jetzt();
   }
 
   /** Mittelpunkt auf `h` setzen (Befehl 'arbeitsbereich'); zu weit weg oder unbegehbar → rote Meldung, Modus bleibt. */
@@ -949,7 +1036,7 @@ export class Spiel {
     this.befehl({ art: 'arbeitsbereich', id: g.id, q: h.q, r: h.r });
     this.bereichId = null;
     this.melde(gleich(h, g) ? 'Arbeitsbereich wieder ums Haus.' : 'Arbeitsbereich verlegt – der Weg dorthin kostet Zeit.', false);
-    this.karteSetzen();
+    this.fenster.jetzt();
   }
 
   private bereichZuruecksetzen(): void {
@@ -958,7 +1045,7 @@ export class Spiel {
     this.bereichId = null;
     this.befehl({ art: 'arbeitsbereich', id: g.id, q: g.q, r: g.r });
     this.melde('Arbeitsbereich wieder ums Haus.', false);
-    this.karteSetzen();
+    this.fenster.jetzt();
   }
 
   /** Vorrat aller Lager je Warenart. */
@@ -979,50 +1066,170 @@ export class Spiel {
     return this.schrittHexe;
   }
 
-  // ------------------------------------------------------------------ Gebäudekarte und Priorität
+  // ------------------------------------------------------------------ Fenster (M7): Gebäude, Fahne, Weg, Waren, Verteilung, Statistik …
 
-  /** Gebäudekarte der Oberfläche aus der Sicht füllen (Zustand in Klartext, Bedarf, Fortschritt, Priorität). */
-  private karteSetzen(): void {
-    const g = this.gewaehlt === null ? undefined : this._sicht.gebaeude.find((x) => x.id === this.gewaehlt);
-    if (!g) { this.gewaehlt = null; this.bereichId = null; this.leiste.setKarte(null); return; }
-    const t = GEBAEUDE[g.typ];
-    const baustelle = g.bau < PROMILLE;
-    const bedarf = g.bedarf ?? [];
-    const zt = zustandsText(g.getrennt ? 'getrennt' : g.zustand, baustelle, eingangNamen(g), t?.funktion);
-    const zeilen: string[] = [];
-    if (baustelle) {
-      const fehlt = kostenAlsText(bedarf, WARE_TEXT);
-      zeilen.push(fehlt === 'nichts' ? 'Material komplett – es wird verbaut.' : `Fehlt noch: ${fehlt}`);
-      zeilen.push(`Phase ${1 + Math.floor((3 * g.bau) / 1001)} von 3 · ${Math.floor(g.bau / 10)} % gebaut`);
-      if (g.planiert !== undefined) zeilen.push(g.planiert < PROMILLE ? `Am Hang: erst planieren (${Math.floor(g.planiert / 10)} %)` : 'Planiert.');
-      if (g.stapel?.some((n) => n > 0)) zeilen.push(`Liegt bereit: ${kostenAlsText(g.stapel, WARE_TEXT)}`);
-    } else {
-      if (t?.radius) {
-        zeilen.push(`Arbeitsbereich: gut bis ${t.radiusGut}, geht noch bis ${t.radius} Hexe${g.mitte ? ' – Mittelpunkt verlegt' : ''}`);
-        const ri = this.ringeFuer(g.typ, g.mitte ?? g);
-        const rw = ri ? reichweiteText(ri.art, ri.summe, ri.nah) : null;
-        if (rw) zeilen.push(rw.text);
-      }
-      if (t?.funktion === 'kirmes') {
-        const k = this._sicht.dorf.kirmes;
-        if (k) {
-          zeilen.push(`Warenliste: ${k.liste.map((n, a) => (n > 0 ? `${WARE_TEXT[a].icon} ${Math.min(n, k.geliefert[a])}/${n} ${WARE_TEXT[a].mehr}` : '')).filter(Boolean).join(' · ')}`);
-          zeilen.push(`Schaltet frei: ${FREI_TEXT}`);
-        } else zeilen.push(`Das Dorf ist jetzt ${DORFSTUFEN[this._sicht.dorf.stufe]}. Die nächste Kirmes kommt mit M8.`);
-      } else if (t?.funktion === 'wohnen') {
-        const d = this._sicht.dorf;
-        zeilen.push(`Essen im Haus: ${g.puffer?.some((n) => n > 0) ? kostenAlsText(g.puffer, WARE_TEXT) : 'nichts'}`);
-        zeilen.push(`Bewohner im Dorf: ${d.bewohner} von ${d.wohnraum} Plätzen · besseres Essen geht schneller`);
-      } else if (g.puffer?.some((n) => n > 0)) zeilen.push(`Eingang: ${kostenAlsText(g.puffer, WARE_TEXT)}`);
-      if (g.ausgang?.some((n) => n > 0)) zeilen.push(`Wartet auf Abholung: ${kostenAlsText(g.ausgang, WARE_TEXT)}`);
-    }
-    const d: KartenDaten = {
-      symbol: t?.symbol ?? '🏠', titel: t?.name ?? g.typ, status: zt.titel, warn: zt.warn,
-      spruch: baustelle || zt.warn || !t ? zt.spruch : t.spruch, zeilen,
-      fortschritt: baustelle ? Math.floor(g.bau / 10) : undefined, prio: baustelle ? g.prioritaet : undefined,
-      bereich: t?.radius > 0 ? { modus: this.bereichId === g.id, gesetzt: !!g.mitte } : undefined,
+  /** Was die Fensterinhalte brauchen (Sicht, Namen, Reichweite, Produktivität, Abrissfrage, Icons). */
+  private fensterKontext(): FensterKontext {
+    return {
+      sicht: this._sicht, ich: this.ich, ware: WARE_TEXT, namen: this.namen,
+      reichweite: (g) => { const ri = this.ringeFuer(g.typ, g.mitte ?? g); return ri ? reichweiteText(ri.art, ri.summe, ri.nah) : null; },
+      produktivitaet: (id) => this.produktiv.wert(id), bereichModus: this.bereichId, abrissFrage: this.abrissFrage?.id ?? null,
+      gebaeudeBild: (typ) => this.ic.gebaeude[typ],
     };
-    this.leiste.setKarte(d);
+  }
+
+  /** Gebäudefenster öffnen (das gewählte Gebäude zeigt auch seinen Arbeitsbereich). */
+  oeffneGebaeude(id: Id): void {
+    this.gewaehlt = id;
+    const fid = `geb:${id}`;
+    this.fenster.oeffne({
+      id: fid, gruppe: 'auswahl', daten: () => gebaeudeFenster(id, this.fensterKontext()),
+      onKnopf: (k) => this.gebaeudeKnopf(id, k),
+      onZu: () => { if (this.gewaehlt === id) { this.gewaehlt = null; if (this.bereichId === id) this.bereichId = null; } },
+    });
+  }
+
+  oeffneFahne(id: Id): void {
+    const fid = `fahne:${id}`;
+    this.fenster.oeffne({ id: fid, gruppe: 'auswahl', daten: () => fahneFenster(id, this.fensterKontext()), onKnopf: (k) => this.auswahlKnopf(fid, k) });
+  }
+
+  oeffneWeg(id: Id): void {
+    const fid = `weg:${id}`;
+    this.fenster.oeffne({ id: fid, gruppe: 'auswahl', daten: () => wegFenster(id, this.fensterKontext()), onKnopf: (k) => this.auswahlKnopf(fid, k) });
+  }
+
+  /** Knöpfe im Gebäudefenster. */
+  private gebaeudeKnopf(id: Id, k: string): void {
+    const g = this._sicht.gebaeude.find((x) => x.id === id);
+    if (!g || g.sp !== this.ich) { if (g && k === 'kamera') this.springeZu(g); return; }
+    this.gewaehlt = id;
+    if (k.startsWith('prio:')) this.setzePrioritaet(Number(k.slice(5)));
+    else if (k === 'bereich') this.bereichUmschalten();
+    else if (k === 'bereich_zurueck') this.bereichZuruecksetzen();
+    else if (k === 'ruhen') { this.befehl({ art: 'ruhen', id, an: !g.ruht }); this.melde(g.ruht ? `${NAMEN[g.typ]} arbeitet wieder.` : `${NAMEN[g.typ]} ruht.`, false); }
+    else if (k === 'kamera') this.springeZu(g);
+    else if (k === 'abriss') {
+      if (this.abrissFrage?.id === `geb:${id}`) { this.abrissFrage = null; this.befehl({ art: 'abriss_gebaeude', id }); this.melde('Abgerissen.', false); }
+      else this.abrissFrage = { id: `geb:${id}`, bis: performance.now() + 3000 };
+    }
+    this.fenster.jetzt();
+  }
+
+  /** Knöpfe in Fahnen- und Wegfenstern (fid = „fahne:3“ / „weg:5“). */
+  private auswahlKnopf(fid: string, k: string): void {
+    const [art, n] = fid.split(':');
+    const id = Number(n);
+    const m = /^(geb|fahne|weg):(\d+)$/.exec(k);
+    if (m) {
+      const z = Number(m[2]);
+      if (m[1] === 'geb') this.oeffneGebaeude(z); else if (m[1] === 'fahne') this.oeffneFahne(z); else this.oeffneWeg(z);
+      return;
+    }
+    const f = art === 'fahne' ? this._sicht.fahnen.find((x) => x.id === id) : undefined;
+    const sg = art === 'weg' ? this._sicht.segmente.find((x) => x.id === id) : undefined;
+    if (k === 'kamera') { const h = f ?? (sg ? sg.pfad[sg.pfad.length >> 1] : undefined); if (h) this.springeZu(h); }
+    else if (k === 'abriss') {
+      if (this.abrissFrage?.id === fid) {
+        this.abrissFrage = null;
+        this.befehl(art === 'fahne' ? { art: 'abriss_fahne', id } : { art: 'abriss_weg', id });
+        this.melde('Abgerissen.', false);
+      } else this.abrissFrage = { id: fid, bis: performance.now() + 3000 };
+    }
+    this.fenster.jetzt();
+  }
+
+  /** Kamera zu einem Hex. */
+  springeZu(h: Hx): void {
+    const w = this.ctx.grid.toWorld(h);
+    this.ctx.springe?.(w.x, w.z);
+  }
+
+  /** Fenster der Statusleiste (Taste oder Knopf) öffnen oder schließen. */
+  fensterUmschalten(id: string): void {
+    const art = this.fensterArt(id);
+    if (art) this.fenster.umschalten(art);
+  }
+
+  private fensterArt(id: string): FensterArt | null {
+    switch (id) {
+      case 'waren': return { id, gruppe: id, daten: () => warenFenster(this.fensterKontext()), breite: 380 };
+      case 'verteilung': return {
+        id, gruppe: id, breite: 360, daten: () => verteilungFenster(this.fensterKontext()),
+        onKnopf: (k) => { const v = verteilungKnopf(k, this._sicht.dorf.verteilung); if (v) { this.befehl({ art: 'verteilung', ...v }); this.fenster.jetzt(id); } },
+      };
+      case 'statistik': return {
+        id, gruppe: id, breite: 400,
+        daten: () => statistikFenster(this.fensterKontext(), this._sicht.spieler.map((_, sp) => this._sim.statistikVon(sp)), this.statMass),
+        onKnopf: (k) => { if (k.startsWith('m:')) { this.statMass = k.slice(2) as StatMass; this.fenster.jetzt(id); } },
+      };
+      case 'protokoll': return {
+        id, gruppe: id, breite: 380, daten: () => protokollFenster(this.protokollZeilen),
+        onKnopf: (k) => { const z = k.startsWith('ort:') ? this.protokollZeilen[Number(k.slice(4))] : undefined; if (z?.ort) this.springeZu(z.ort); },
+      };
+      case 'einstellungen': return {
+        id, gruppe: id, breite: 340, daten: () => this.einstellungsFenster(),
+        onEingabe: (k, v) => this.einstellen(k, v),
+        onKnopf: (k) => { if (k === 'autosave_laden') this.autosaveLaden(); },
+      };
+      case 'hilfe': return { id, gruppe: id, breite: 380, daten: () => hilfeFenster(this.zeiger === 'touch') };
+      default: return null;
+    }
+  }
+
+  private einstellungsFenster(): FensterDaten {
+    const e = this.einst;
+    const grafik = this.ctx.grafik?.felder() ?? [];
+    const ab: FensterDaten['abschnitte'] = [];
+    if (grafik.length) ab.push({ art: 'eingaben', titel: 'Grafik', felder: grafik });
+    ab.push({
+      art: 'eingaben', titel: 'Oberfläche', felder: [
+        { id: 'uiGroesse', text: 'Größe der Oberfläche', typ: 'regler', wert: e.uiGroesse, min: 80, max: 150, schritt: 10, einheit: ' %' },
+        { id: 'farbenblind', text: 'Farbenblind-Modus für Waren (nach Neuladen)', typ: 'schalter', wert: e.farbenblind, hilfe: 'Andere Warenfarben (Okabe-Ito), gut unterscheidbar auch bei Rot-Grün-Schwäche' },
+      ],
+    });
+    ab.push({ art: 'eingaben', titel: 'Steuerung', felder: [{ id: 'kameraTempo', text: 'Kamera-Tempo (Tasten)', typ: 'regler', wert: e.kameraTempo, min: 25, max: 300, schritt: 25, einheit: ' %' }] });
+    ab.push({
+      art: 'eingaben', titel: 'Spiel', felder: [
+        { id: 'autosave', text: `Autosave alle ${AUTOSAVE_MIN} Spielminuten`, typ: 'schalter', wert: e.autosave },
+        { id: 'tipps', text: `Tipps von ${this.erzaehler.name}`, typ: 'schalter', wert: e.tipps },
+      ],
+    });
+    const z = [this.autosaveZuletzt ? `Letzter Autosave: ${this.autosaveZuletzt}` : 'Noch kein Autosave in dieser Partie.'];
+    if (this.partie) z.push('Im Mehrspieler speichert jeder für sich; geladen wird über die Kartenwahl (dann geht es in die Lobby).');
+    ab.push({ art: 'zeilen', zeilen: z });
+    if (!this.partie && this.ctx.onLaden && holeAutosave()) ab.push({ art: 'knoepfe', knoepfe: [{ id: 'autosave_laden', text: '📂 Autosave laden' }] });
+    return { titel: 'Einstellungen', symbol: '⚙️', abschnitte: ab };
+  }
+
+  private einstellen(k: string, v: boolean | string | number): void {
+    const e = this.einst as unknown as Record<string, unknown>;
+    if (k in e) {
+      e[k] = v;
+      speichereEinstellungen(this.einst);
+      wendeAn(this.einst);
+      if (k === 'kameraTempo') this.ctx.kameraTempo?.(this.einst.kameraTempo / 100);
+    } else this.ctx.grafik?.setze(k, v);
+    this.fenster.jetzt('einstellungen');
+  }
+
+  /** Autosave: der ganze Stand in den Browser-Speicher (ein Platz). */
+  autosave(): boolean {
+    try {
+      const st = baueSpielstand(this.karteInfo, this.namen, this._sim.stand(), this.partie?.zug?.pausen);
+      localStorage.setItem(AUTOSAVE_SPEICHER, JSON.stringify({ ort: this.ctx.map.info.start ?? this.ctx.map.info.name ?? '', stand: st }));
+      this.autosaveZuletzt = `Spielzeit ${Math.floor(this._sim.tick / (60 * TICK_HZ))} min`;
+      this.insProtokoll('Automatisch gespeichert.', false);
+      return true;
+    } catch {
+      this.melde('Autosave ging nicht – der Browser-Speicher ist voll. Bitte von Hand speichern.', true);
+      return false;
+    }
+  }
+
+  private autosaveLaden(): void {
+    const st = holeAutosave()?.stand;
+    if (st) this.ctx.onLaden?.(st); else this.melde('Kein Autosave gefunden.', true);
   }
 
   /** Priorität der gewählten Baustelle setzen (Befehl 'prioritaet'). */
@@ -1030,7 +1237,7 @@ export class Spiel {
     const g = this.gewaehlt === null ? undefined : this._sicht.gebaeude.find((x) => x.id === this.gewaehlt);
     if (!g || g.bau >= PROMILLE) return;
     this.befehl({ art: 'prioritaet', id: g.id, stufe });
-    this.karteSetzen();
+    this.fenster.jetzt();
   }
 
   /** Rechtsklick auf eine Baustelle schaltet ihre Priorität durch (ohne Werkzeug); true, wenn dort eine Baustelle war. */
@@ -1040,10 +1247,9 @@ export class Spiel {
     const g = h ? this.gebAt.get(key(h)) : undefined;
     if (!g || g.sp !== this.ich || g.bau >= PROMILLE) return false;
     const stufe = naechstePrioritaet(g.prioritaet);
-    this.gewaehlt = g.id;
     this.befehl({ art: 'prioritaet', id: g.id, stufe });
     this.melde(`${NAMEN[g.typ] ?? g.typ}: Priorität ${PRIO_NAMEN[stufe]}.`, false);
-    this.karteSetzen();
+    this.oeffneGebaeude(g.id);
     return true;
   }
 
@@ -1089,10 +1295,12 @@ export class Spiel {
     this.partieGemeldet = p.ereignisse.length;
     for (const e of neu) {
       const wer = (sp: number) => this.namen[sp] ?? `Spieler ${sp + 1}`;
-      if (e.art === 'auseinander') this.melde(`${wer(e.spieler)} ist auseinandergelaufen (Tick ${e.tick}) – der Stand wird neu verteilt.`, true);
-      else if (e.art === 'neuer_stand' && e.grund !== 'start') this.melde(e.grund === 'wiederbeitritt' ? 'Wieder drin – Stand vom Mitspieler geholt.' : 'Stand vom Taktgeber neu bekommen.', false);
-      else if (e.art === 'taktgeber') this.melde(`${wer(e.spieler)} gibt jetzt den Takt.`, false);
-      else if (e.art === 'fehler') this.melde(e.text, true);
+      let t: [string, boolean] | null = null;
+      if (e.art === 'auseinander') t = [`${wer(e.spieler)} ist auseinandergelaufen (Tick ${e.tick}) – der Stand wird neu verteilt.`, true];
+      else if (e.art === 'neuer_stand' && e.grund !== 'start') t = [e.grund === 'wiederbeitritt' ? 'Wieder drin – Stand vom Mitspieler geholt.' : 'Stand vom Taktgeber neu bekommen.', false];
+      else if (e.art === 'taktgeber') t = [`${wer(e.spieler)} gibt jetzt den Takt.`, false];
+      else if (e.art === 'fehler') t = [e.text, true];
+      if (t) { this.melde(t[0], t[1]); this.insProtokoll(t[0], t[1]); }
     }
   }
 
@@ -1133,8 +1341,14 @@ export class Spiel {
       kirmes = { text: `🎡 ${DORFSTUFEN[d.stufe]}! Die nächste Kirmes kommt mit M8.`, prozent: 100, fest: false };
     }
     const zeigen = [0, 1, 2, 6, 5, 4, 9, 8, 7, 10, 11].map((a) => ({ art: a, icon: WARE_TEXT[a]?.icon ?? '', name: WARE_TEXT[a]?.mehr ?? '' }));
+    const vorrat = this.lagerVorrat();
+    const knappText: Record<string, string> = {};
+    for (const id of GEBAEUDE_WERKZEUGE) {
+      const f = fehlmengen(GEBAEUDE[id].kosten, vorrat);
+      if (f.some((n) => n > 0)) knappText[id] = kostenAlsText(f, WARE_TEXT);
+    }
     this.leiste.setStatus({
-      tick: s.tick, freieTraeger: s.freieTraeger, vorrat: this.lagerVorrat(), pruefsumme: this._sim.pruefsumme(), lagerZeigen: zeigen,
+      tick: s.tick, freieTraeger: s.freieTraeger, vorrat, pruefsumme: this._sim.pruefsumme(), lagerZeigen: zeigen, knappText,
       dorf: {
         stufe: DORFSTUFEN[d.stufe] ?? '', bewohner: d.bewohner, wohnraum: d.wohnraum, frei: d.frei,
         bauarbeiter: [d.bauarbeiter.frei, d.bauarbeiter.gesamt], planierer: [d.planierer.frei, d.planierer.gesamt], kirmes,

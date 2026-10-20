@@ -2,7 +2,11 @@
 // Übersetzung als Tooltip erscheint (Drehbuch 7.2). Höchstens drei auf einmal, sie verschwinden von selbst.
 // Reine HTML-Oberfläche: kennt weder Simulation noch Szene.
 
-export interface MeldungsDaten { wer: string; text: string; platt?: { platt: string; hoch: string }; gross: boolean }
+export interface MeldungsDaten {
+  wer: string; text: string; platt?: { platt: string; hoch: string }; gross: boolean;
+  /** Klick springt zum Ort (dann mit 🎯 markiert). */
+  onKlick?: () => void;
+}
 
 const MAX = 3;
 
@@ -33,7 +37,8 @@ export class Meldungen {
       p.title = `Auf Hochdeutsch: ${m.platt.hoch}`;
       d.append(p);
     }
-    d.addEventListener('click', () => this.weg(d));
+    if (m.onKlick) { d.classList.add('ort'); d.title = 'Klick: hinsehen'; }
+    d.addEventListener('click', () => { m.onKlick?.(); this.weg(d); });
     this.box.append(d);
     while (this.box.children.length > MAX) this.box.firstElementChild!.remove();
     this.verlauf.push(m.text);

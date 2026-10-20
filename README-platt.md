@@ -58,13 +58,13 @@ donoh widder fott. Ungebroche? Einfach neu starte, et määt do wigger wo et opj
   (<kbd>B</kbd>, Zeffere av <kbd>3</kbd> tirek) zeich de Jebäude us `data/buildings.json` met Koste un Bauplatzjrööß.
   Met jewähltem Jebäude zeich de Kaat de Bauplätz (kleen/mittel/jroß, <kbd>P</kbd> och söns), e Jeistermodell am Ziel
   un dä Arbeitsradius („36 Bäum en Reichwigg“). Platziere koss nix: De Baustell meld Bedarf, Dräjer bränge Brädder un
-  Steen einzel un läje se an d'r Baustell av, ene Bauarbeiter verbaut se (sick M5), et Huus wääß en drei Phase. Jebäude aanklicke maht en Kaat op met Zostand
+  Steen einzel un läje se an d'r Baustell av, ene Bauarbeiter verbaut se (sick M5), et Huus wääß en drei Phase. Jebäude aanklicke maht si Finster op (sick M7) met Zostand
   („Waat op Brädder“, „Kei Baum mieh en Reichwigg“), Bedarf un Priorität 1–3 (Räächsklick op en Baustell schalt se
   reihöm). Dä Holzfäller fällt Bäum em Arbeitsbereich (wat mer em Spillfeld süht, dat jitt et och), dä Förster planz
   noh, Jungbäum wahße en drei Stufe, et Sägewerk määt us Stämm Brädder, dä Steenbroch hau endlije Steen av:
   Felsjrupp (vill), Klipp (mittel), Lesesteenhaufe (winnich). Et Lager liefert op Avrof, Avress jitt de Hälfde vum
-  verbaute Material zeröck. **Arbeitsbereich:** zwei Ringe, enne „jot“ (koote Weech), usse „jeiht noch“. En d'r
-  Jebäudekaat vun Holzfäller, Förster un Steenbroch setz „Arbeitsbereich“ ene Meddeponk (hüchstens 6 Hexe vum Huus),
+  verbaute Material zeröck. **Arbeitsbereich:** zwei Ringe, enne „jot“ (koote Weech), usse „jeiht noch“. Em
+  Jebäudefinster vun Holzfäller, Förster un Steenbroch setz „Arbeitsbereich“ ene Meddeponk (hüchstens 6 Hexe vum Huus),
   „Zeröcksetze“ läät en widder op et Huus.
 - **Lück, Ääße, eetste Kirmes (M5):** Mer fängk aan met 10 Lück, 4 Bauarbeiter un 2 Planierer (`data/dorf.json`).
   Dräjer liefere nur; Planierer maache de Bauplätz am Hang jlatt (mer süht de Äd jlatt weede), dann kütt ene
@@ -89,6 +89,19 @@ donoh widder fott. Ungebroche? Einfach neu starte, et määt do wigger wo et opj
   Stand vum Taktjevver. Zahle: `data/mehrspieler.json`.
 - **Spiechere un Lade (M6):** „💾 Speichern“ läät en Datei met d'm janze Stand erunger (Kaat, all Dörfer, Name, Pause).
   „📂 Spielstand laden“ läät de passende Kaat dobei; ene Stand met mieh Spiller määt de Lobby op.
+- **Bedeenung un Ovverfläch (M7):** Ene Klick op e Jebäude, en Fahn oder ene Wääch maht si **Finster** op. Finster
+  kann mer am Kopp verschiebe, met 📌 aanpenne (dann blieve se op), un se zeije alles live (4× en d'r Sekund);
+  <kbd>Esc</kbd> bricht eets av, maht dann et bovverschte Finster zo un zoletz de Enstellunge op. Et **Jebäudefinster** kütt
+  janz us `data/buildings.json` (Engang, Usjang, wat et määt, Arbeitsbereich, Produktivität, Ääße, Warelist), met Hinluure,
+  Aanhalde/Wiggerarbeide un Avresse (zweimol drücke); et **Lager** zeich d'r Bestand noh Sorte, de **Fahn** ehre Stapel met
+  Ziele, d'r **Wääch** singe Dräjer. Et **Baumenü** hät Reiter, Tooltips (Koste, Bauplatz, „2 Ääpel → 1 Bratäppel en 12 s“,
+  Sproch), Jründ för Jesperrtes un e Taas för jedes Jebäude (z. B. <kbd>F</kbd> Holzfäller). De Bildcher vun Ware un
+  Jebäude sin us de 3D-Modelle jemolt. Bovve links: 📦 **Ware** (<kbd>I</kbd>), ⚖️ **Wareverdeilung** (<kbd>V</kbd>, wie en
+  Siedler 2: för jede Waar, wä se eets kritt – Baustelle, Kirmesplatz, Verarbeider, Wonnhüüser), 📈 **Statistik**
+  (<kbd>T</kbd>, all Dörfer zom Verjliche), 📜 **Protokoll** (<kbd>L</kbd>, Klick sprengk hin), ⚙️ **Enstellunge** (Jrafik,
+  Jrööß vun d'r Ovverfläch, Färveblind-Modus, Kamera-Tempo, Autosave, Tipps) un ❓ **Hölp** (<kbd>H</kbd>). Wat hängk, steiht
+  rääts am Rand („2× Jebäude ohne Wääch zom Lager“), ene Klick sprengk hin. **Autosave** alle 10 Spillminütte em Browser,
+  „⏱ Weiterspielen“ en d'r Kaatewahl. Am Handy kumme de Finster unge övver de Bauleiss. Jeiht och em Mehrspiller.
 - **Simulation** (`src/sim/`): faste Tick (20/s), nur janze Zahle, jede Aktion es ene Befehl met Tick-Nummer,
   Prüfsumm övver dä Zostand, Befehlsprotokoll zom Avspille. Dä Smoke-Test pröf, dat Node un Browser de selve
   Prüfsumm krije.

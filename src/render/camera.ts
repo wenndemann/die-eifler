@@ -130,6 +130,8 @@ export class RtsCamera {
   /** Neigung aus dem Zoom: nah 26°, fern 56° über dem Horizont. */
   /** Entwicklungswerkzeug: feste Neigung in Grad (Screenshots), sonst aus dem Zoom. */
   pitchOverride: number | null = null;
+  /** Tasten-Tempo (Einstellungen, Steuerung): Faktor auf Verschieben und Drehen. */
+  tempo = 1;
 
   get pitch() {
     if (this.pitchOverride !== null) return THREE.MathUtils.degToRad(this.pitchOverride);
@@ -138,15 +140,15 @@ export class RtsCamera {
   }
 
   update(dt: number) {
-    const speed = this.goal.distance * 0.9 * dt;
+    const speed = this.goal.distance * 0.9 * dt * this.tempo;
     let r = 0, f = 0;
     if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) r -= 1;
     if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) r += 1;
     if (this.keys.has('KeyW') || this.keys.has('ArrowUp')) f -= 1;
     if (this.keys.has('KeyS') || this.keys.has('ArrowDown')) f += 1;
     if (r || f) this.pan(r * speed, f * speed);
-    if (this.keys.has('KeyQ')) this.goal.yaw += 1.4 * dt;
-    if (this.keys.has('KeyE')) this.goal.yaw -= 1.4 * dt;
+    if (this.keys.has('KeyQ')) this.goal.yaw += 1.4 * dt * this.tempo;
+    if (this.keys.has('KeyE')) this.goal.yaw -= 1.4 * dt * this.tempo;
 
     const k = 1 - Math.exp(-dt * 10);
     this.target.x += (this.goal.x - this.target.x) * k;

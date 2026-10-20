@@ -52,6 +52,13 @@ export type Befehl =
    * setzt zurück. Ungültig → wirkungslos.
    */
   | { art: 'arbeitsbereich'; id: Id; q: number; r: number }
+  /**
+   * Warenverteilung (ROADMAP M7): Rangfolge der Abnehmer-Arten für Warenart `ware` im eigenen Dorf (ABNEHMER in src/sim/daten.ts,
+   * z. B. [1, 0, 2, 3] = Kirmesplatz vor Baustellen). Muss jede Art genau einmal nennen, sonst wirkungslos.
+   */
+  | { art: 'verteilung'; ware: number; reihe: number[] }
+  /** Gebäude ruhen lassen (an) oder weiterarbeiten (aus); nur eigene Gebäude mit Arbeiter oder Wohnhäuser (GEBAEUDE_PAUSIERBAR). */
+  | { art: 'ruhen'; id: Id; an: boolean }
   | { art: 'abriss_fahne'; id: Id }
   | { art: 'abriss_weg'; id: Id }
   | { art: 'abriss_gebaeude'; id: Id }
@@ -88,6 +95,8 @@ export interface SichtFahne {
   id: Id; sp: number; q: number; r: number;
   /** Waren im Stapel (Warenart-Index in WAREN), unterste zuerst; bis 8 + 2 Notplätze. */
   waren: number[];
+  /** Ziel-Gebäude je Ware im Stapel (gleiche Reihenfolge wie waren; 0 = noch keins). */
+  ziele: Id[];
   gebaeude: Id;
 }
 
@@ -129,13 +138,14 @@ export interface SichtTraeger {
  * - 'kein_fels'       Steinbruch findet im Radius keinen Felsen mehr
  * - 'kein_platz'      Förster findet im Radius keinen freien Pflanzplatz
  * - 'voll'            Output-Puffer voll (Rückstau), die Arbeit ruht
+ * - 'ruht'            vom Spieler angehalten (Befehl 'ruhen')
  * - 'arbeitet'        arbeitet gerade (auch auf dem Weg zur Arbeit)
  * - 'bereit'          fertig und nichts zu tun (Lager, Kirmesplatz ohne weitere Stufe)
  */
 export type GebaeudeZustand =
   | 'baustelle' | 'wartet_material' | 'getrennt' | 'kein_arbeiter' | 'kein_baum' | 'kein_fels' | 'kein_platz' | 'voll'
   | 'kein_planierer' | 'planieren' | 'kein_bauarbeiter' | 'hunger' | 'wohnraum_voll' | 'fest'
-  | 'arbeitet' | 'bereit';
+  | 'ruht' | 'arbeitet' | 'bereit';
 
 /** Der Arbeiter eines Holzfällers, Försters oder Steinbruchs (Figur in der Welt). */
 export interface SichtArbeiter {
@@ -168,6 +178,10 @@ export interface SichtGebaeude {
   planiert?: number;
   /** Baustellen-Priorität 1..3 (Standard 2; bei fertigen Gebäuden ohne Bedeutung). */
   prioritaet: number;
+  /** Vom Spieler angehalten (Befehl 'ruhen'). */
+  ruht: boolean;
+  /** Bisher hier erzeugte Waren (für die Produktivität im Gebäudefenster). */
+  erzeugt: number;
   /** Input-Puffer je Warenart (nur Gebäude mit Eingang, z. B. Sägewerk). */
   puffer?: number[];
   /** Output-Puffer je Warenart (nur Erzeuger/Verarbeiter). */
@@ -237,7 +251,18 @@ export interface SichtDorf {
   kirmes: { liste: number[]; geliefert: number[]; platz: Id; fest: number; festDauer: number } | null;
   /** Ticks bis zum nächsten Zugezogenen (Notnagel) oder -1, wenn der Notnagel nicht greift. */
   notnagel: number;
+  /** Warenverteilung: je Warenart die Rangfolge der Abnehmer-Arten (ABNEHMER in src/sim/daten.ts). */
+  verteilung: number[][];
+  /** Erzeugte Waren je Warenart in diesem Dorf seit Spielbeginn. */
+  erzeugt: number[];
 }
+
+/**
+ * Statistik eines Dorfs (ROADMAP M7): Messpunkte in festem Takt. Ein Punkt ist [tick, bewohner, stufe, gebäude, …vorrat je Ware,
+ * …erzeugt je Ware (seit Spielbeginn)]; STAT_KOPF Kopfwerte, dann zweimal WAREN.length.
+ */
+export interface SichtStatistik { takt: number; punkte: number[][] }
+export const STAT_KOPF = 4;
 
 /** Kurzüberblick über ein Dorf im Mehrspieler (für alle sichtbar). */
 export interface SichtSpieler {
@@ -271,5 +296,5 @@ export const KEINE_NATUR: SichtNatur = { rev: 0, baum: new Uint8Array(0), jung: 
 /** Leeres Dorf für Darstellungen ohne Simulation (Demo). */
 export const KEIN_DORF: SichtDorf = {
   stufe: 0, bewohner: 0, frei: 0, traeger: 0, arbeiter: 0, wohnraum: 0,
-  bauarbeiter: { gesamt: 0, frei: 0 }, planierer: { gesamt: 0, frei: 0 }, kirmes: null, notnagel: -1,
+  bauarbeiter: { gesamt: 0, frei: 0 }, planierer: { gesamt: 0, frei: 0 }, kirmes: null, notnagel: -1, verteilung: [], erzeugt: [],
 };

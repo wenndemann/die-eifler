@@ -1,6 +1,6 @@
 // Bauleiste unten (Weg, Fahne, „Bauen“-Menü, Abriss) mit Hinweiszeile und Knöpfen „Bauen“/„Abbrechen“, dem Baumenü
-// (Gebäude nach Gruppe aus den Daten), der Gebäudekarte (Zustand, Bedarf, Priorität) und der schmalen Statusleiste
-// oben links (Tempo, Spielzeit, Träger, Lagervorrat, Prüfsumme).
+// (Gebäude nach Gruppe aus den Daten, mit Tooltip, Begründung und Taste) und der schmalen Statusleiste oben links (Tempo,
+// Spielzeit, Dorf, Lagervorrat, Prüfsumme, Knöpfe für die Fenster). Gebäude, Fahnen und Wege zeigen ihre Fenster (src/ui/fenster.ts).
 // Reine HTML-Oberfläche: kennt weder Simulation noch Szene, meldet nur Bedienung zurück.
 
 import './spielleiste.css';
@@ -18,9 +18,25 @@ export const WERKZEUGE: readonly WerkzeugInfo[] = [
   { id: 'abriss', taste: 'X', label: 'Abriss', icon: '🔨', titel: 'Abriss: Gebäude, Fahne oder Weg anklicken (Entf oder X). Das Lager bleibt stehen.' },
 ];
 
+/** Fenster-Knöpfe in der Statusleiste (Taste, Zeichen, Titel). */
+export const FENSTER_KNOEPFE: readonly { id: string; taste: string; icon: string; titel: string }[] = [
+  { id: 'waren', taste: 'I', icon: '📦', titel: 'Warenübersicht: Lager, unterwegs, gemacht' },
+  { id: 'verteilung', taste: 'V', icon: '⚖️', titel: 'Warenverteilung: wer eine Ware zuerst bekommt' },
+  { id: 'statistik', taste: 'T', icon: '📈', titel: 'Statistik: Bewohner, Gebäude und Waren über die Zeit' },
+  { id: 'protokoll', taste: 'L', icon: '📜', titel: 'Ereignisprotokoll: was bisher geschah, mit Sprung zum Ort' },
+  { id: 'einstellungen', taste: 'Esc', icon: '⚙️', titel: 'Einstellungen: Grafik, Oberfläche, Steuerung, Spiel' },
+  { id: 'hilfe', taste: 'H', icon: '❓', titel: 'Hilfe: So geht das Spiel, alle Tasten' },
+];
+
 /** Ein Gebäude im Baumenü (aus GEBAEUDE gebaut). */
 export interface MenueEintrag {
   id: string; symbol: string; name: string; spruch: string;
+  /** Icon aus dem 3D-Modell (data:-URL), sonst das Zeichen. */
+  bild?: string;
+  /** Taste bei offenem Menü (data/buildings.json) und Ziffer für alle Fälle (3–9), falls vergeben. */
+  taste?: string; ziffer?: string;
+  /** Zeilen des Tooltips (Kosten, Bauplatz, Ein- und Ausgang). */
+  tooltip: string[];
   /** Kosten als Text („2 🪵 Bretter · 1 🪨 Stein“) und je Warenart (für „knapp“). */
   kostenText: string; kosten: readonly number[];
   groesse: number; groesseText: string;
@@ -28,20 +44,6 @@ export interface MenueEintrag {
   radius: number;
 }
 export interface MenueGruppeDaten { gruppe: string; eintraege: MenueEintrag[] }
-
-/** Inhalt der Gebäudekarte. */
-export interface KartenDaten {
-  symbol: string; titel: string;
-  /** Zustand in Klartext und Spruch. */
-  status: string; spruch: string; warn: boolean;
-  zeilen: string[];
-  /** Baufortschritt in Prozent (nur Baustelle). */
-  fortschritt?: number;
-  /** Baustellen-Priorität 1..3 (nur Baustelle). */
-  prio?: number;
-  /** Arbeitsbereich (Holzfäller, Förster, Steinbruch): Modus läuft, Mittelpunkt ist gesetzt (dann „Zurücksetzen“). */
-  bereich?: { modus: boolean; gesetzt: boolean };
-}
 
 export interface StatusDaten {
   tick: number;
@@ -57,6 +59,8 @@ export interface StatusDaten {
   };
   /** Kurznamen der Waren im Lager, die gezeigt werden (Index, Symbol, Name). */
   lagerZeigen?: { art: number; icon: string; name: string }[];
+  /** Je Gebäudetyp, was im Lager für den Bau fehlt („2 Bretter“). */
+  knappText?: Record<string, string>;
 }
 
 export interface LeistenAufrufe {
@@ -67,14 +71,8 @@ export interface LeistenAufrufe {
   onZurueck(): void;
   /** 0 = Pause umschalten, sonst Tempo 1..3 setzen. */
   onTempo(t: number): void;
-  /** Priorität der gewählten Baustelle setzen (1..3). */
-  onPrioritaet(stufe: number): void;
-  /** Gebäudekarte schließen. */
-  onKarteZu(): void;
-  /** Arbeitsbereich-Modus ein- oder ausschalten (Mittelpunkt wählen). */
-  onBereich(): void;
-  /** Arbeitsmittelpunkt auf das Gebäude zurücksetzen. */
-  onBereichZurueck(): void;
+  /** Fenster öffnen oder schließen (FENSTER_KNOEPFE). */
+  onFenster(id: string): void;
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, html = ''): HTMLElementTagNameMap[K] {
@@ -105,15 +103,13 @@ export class Spielleiste {
   private abbrechen = el('button', 'aktion abbrechen', 'Abbrechen');
   private knoepfe = new Map<string, HTMLButtonElement>();
   private menue = el('div', 'panel baumenue');
-  private eintraege = new Map<string, { knopf: HTMLButtonElement; daten: MenueEintrag; kosten: HTMLElement }>();
+  private eintraege = new Map<string, { knopf: HTMLButtonElement; daten: MenueEintrag; kosten: HTMLElement; grund: string; knapp: string }>();
   private menueIcon!: HTMLElement;
-  private karte = el('div', 'panel gebkarte');
-  private k = {
-    sym: el('span', 'gk-sym'), titel: el('b', 'gk-titel'), status: el('div', 'gk-status'), balken: el('div', 'gk-balken', '<i></i>'),
-    zeilen: el('div', 'gk-zeilen'), spruch: el('div', 'gk-spruch'), prio: el('div', 'gk-prio'), prioKnoepfe: [] as HTMLButtonElement[],
-    bereich: el('div', 'gk-bereich'), bereichKnopf: el('button', 'gk-knopf gk-bereich-an', '🚩 Arbeitsbereich'), zuruecksetzen: el('button', 'gk-knopf gk-bereich-aus', 'Zurücksetzen'),
-  };
-  private karteSig = '';
+  private tipp = el('div', 'bm-tipp');
+  private tippFuer: string | null = null;
+  private reiter = new Map<string, HTMLButtonElement>();
+  private gruppenEl = new Map<string, HTMLElement>();
+  readonly fensterKnoepfe = new Map<string, HTMLButtonElement>();
   private status = el('div', 'panel spielstatus');
   private tempoKnoepfe = new Map<number, HTMLButtonElement>();
   private zeit = el('span', 'zeit');
@@ -145,8 +141,7 @@ export class Spielleiste {
       reihe.append(b);
     }
     this.baueMenue(menue);
-    this.baueKarte();
-    this.leiste.append(this.menue, this.karte, this.hinweis, reihe);
+    this.leiste.append(this.menue, this.hinweis, reihe);
     root.append(this.leiste);
 
     // Statusleiste
@@ -160,8 +155,16 @@ export class Spielleiste {
       z1.append(b);
     }
     z1.append(this.zeit);
+    const fk = el('div', 'fensterknoepfe');
+    for (const f of FENSTER_KNOEPFE) {
+      const b = el('button', 'fk', f.icon);
+      b.type = 'button'; b.dataset.f = f.id; b.title = `${f.titel} [${f.taste}]`; b.setAttribute('aria-label', f.titel);
+      b.addEventListener('click', () => { auf.onFenster(f.id); b.blur(); });
+      this.fensterKnoepfe.set(f.id, b);
+      fk.append(b);
+    }
     this.kirmes.title = 'Kirmes: Warenliste am Kirmesplatz abliefern, dann wird gefeiert und das Dorf steigt eine Stufe auf';
-    this.status.append(z1, this.zeileDorf, this.kirmes, this.zeile2);
+    this.status.append(z1, fk, this.zeileDorf, this.kirmes, this.zeile2);
     root.append(this.status);
     this.setHinweis(null);
     this.setAktionen(null, false);
@@ -175,7 +178,16 @@ export class Spielleiste {
     const zu = mit('button', 'bm-zu', '✕');
     zu.type = 'button'; zu.title = 'Menü schließen (Esc)'; zu.setAttribute('aria-label', 'Menü schließen');
     zu.addEventListener('click', () => this.menueZu());
-    kopf.append(mit('b', 'bm-titel', 'Bauen'), mit('span', 'bm-hilfe', 'Gebäude wählen, dann auf der Karte setzen'), zu);
+    kopf.append(mit('b', 'bm-titel', 'Bauen'), mit('span', 'bm-hilfe', 'Gebäude wählen (Taste rechts oben), dann auf der Karte setzen'), zu);
+    // Reiter: alle Gruppen oder eine (DESIGN §9.2)
+    const reiter = el('div', 'bm-reiter');
+    for (const name of ['Alle', ...gruppen.map((g) => g.gruppe)]) {
+      const r = mit('button', 'bm-reiter-knopf', name);
+      r.type = 'button'; r.dataset.gruppe = name;
+      r.addEventListener('click', () => { this.zeigeGruppe(name); r.blur(); });
+      this.reiter.set(name, r);
+      reiter.append(r);
+    }
     const liste = el('div', 'bm-liste');
     for (const g of gruppen) {
       const sek = el('section', 'bm-gruppe');
@@ -183,21 +195,76 @@ export class Spielleiste {
       const raster = el('div', 'bm-raster');
       for (const e of g.eintraege) {
         const b = el('button', 'bm-eintrag');
-        b.type = 'button'; b.dataset.id = e.id; b.title = e.spruch;
+        b.type = 'button'; b.dataset.id = e.id;
+        b.setAttribute('aria-label', `${e.name}: ${e.tooltip.join('. ')}`);
         const kosten = mit('span', 'bm-kosten', e.kostenText);
         const name = el('span', 'bm-name');
         name.append(mit('span', '', e.name), mit('em', `bm-platz p${e.groesse}`, e.groesseText));
         const text = el('span', 'bm-text');
         text.append(name, kosten, mit('span', 'bm-spruch', e.spruch));
-        b.append(mit('span', 'bm-sym', e.symbol), text);
+        const sym = el('span', 'bm-sym');
+        if (e.bild) { const img = el('img', ''); img.src = e.bild; img.alt = ''; sym.append(img); } else sym.textContent = e.symbol;
+        b.append(sym, text);
+        if (e.taste || e.ziffer) b.append(mit('kbd', 'bm-taste', [e.taste, e.ziffer].filter(Boolean).join(' · ')));
         b.addEventListener('click', () => { this.menueZu(); this.auf.onWerkzeug(e.id); });
-        this.eintraege.set(e.id, { knopf: b, daten: e, kosten });
+        b.addEventListener('pointerenter', (ev) => { if (ev.pointerType === 'mouse') this.zeigeTipp(e.id); });
+        b.addEventListener('pointerleave', () => this.zeigeTipp(null));
+        b.addEventListener('focus', () => this.zeigeTipp(e.id));
+        b.addEventListener('blur', () => this.zeigeTipp(null));
+        this.eintraege.set(e.id, { knopf: b, daten: e, kosten, grund: '', knapp: '' });
         raster.append(b);
       }
       sek.append(raster);
+      this.gruppenEl.set(g.gruppe, sek);
       liste.append(sek);
     }
-    this.menue.append(kopf, liste);
+    this.tipp.hidden = true;
+    this.tipp.setAttribute('role', 'tooltip');
+    this.menue.append(kopf, reiter, liste, this.tipp);
+    this.zeigeGruppe('Alle');
+  }
+
+  /** Reiter wählen: nur diese Gruppe zeigen („Alle“ = alle). */
+  zeigeGruppe(name: string) {
+    for (const [g, r] of this.reiter) r.classList.toggle('an', g === name);
+    for (const [g, sek] of this.gruppenEl) sek.hidden = name !== 'Alle' && g !== name;
+  }
+
+  /** Tooltip eines Eintrags: Name, Kosten, Bauplatz, Ein-/Ausgang, Spruch, dazu Sperr- oder Knappheitsgrund. */
+  private zeigeTipp(id: string | null) {
+    this.tippFuer = id;
+    const e = id ? this.eintraege.get(id) : undefined;
+    if (!e) { this.tipp.hidden = true; return; }
+    this.tipp.replaceChildren(mit('b', '', e.daten.name), ...e.daten.tooltip.map((z) => mit('div', '', z)));
+    if (e.grund) this.tipp.append(mit('div', 'warn', `🔒 Gesperrt: ${e.grund}`));
+    else if (e.knapp) this.tipp.append(mit('div', 'knapp', e.knapp));
+    this.tipp.append(mit('div', 'bm-tipp-spruch', `„${e.daten.spruch}“`));
+    if (e.daten.taste) this.tipp.append(mit('div', 'bm-tipp-taste', `Taste ${e.daten.taste}${e.daten.ziffer ? ` (immer: ${e.daten.ziffer})` : ''}`));
+    this.tipp.hidden = false;
+    const r = e.knopf.getBoundingClientRect(), m = this.menue.getBoundingClientRect();
+    const z = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui-zoom')) || 1;
+    this.tipp.style.left = `${Math.max(0, Math.min(m.width - 250 * z, r.left - m.left)) / z}px`;
+    this.tipp.style.bottom = `${(m.bottom - r.top + 6) / z}px`;
+  }
+
+  /** Icons aus den Modellen nachreichen (sie werden nach dem Start gerendert). */
+  setzeBilder(bilder: Readonly<Record<string, string | undefined>>) {
+    for (const [id, e] of this.eintraege) {
+      const b = bilder[id];
+      if (!b || e.daten.bild === b) continue;
+      e.daten.bild = b;
+      const sym = e.knopf.querySelector('.bm-sym')!;
+      const img = el('img', '');
+      img.src = b; img.alt = '';
+      sym.replaceChildren(img);
+    }
+  }
+
+  /** Taste bei offenem Menü: Id des Gebäudes mit dieser Taste oder null. */
+  menueTaste(taste: string): string | null {
+    const t = taste.toUpperCase();
+    for (const [id, e] of this.eintraege) if (e.daten.taste === t && !e.knopf.disabled) return id;
+    return null;
   }
 
   get menueOffen(): boolean { return !this.menue.hidden; }
@@ -217,67 +284,6 @@ export class Spielleiste {
 
   menueUmschalten() {
     if (this.menueOffen) this.menueZu(); else this.menueAuf();
-  }
-
-  // ------------------------------------------------------------------ Gebäudekarte
-
-  private baueKarte() {
-    this.karte.hidden = true;
-    const kopf = el('div', 'gk-kopf');
-    const zu = mit('button', 'gk-zu', '✕');
-    zu.type = 'button'; zu.title = 'Schließen (Esc)'; zu.setAttribute('aria-label', 'Karte schließen');
-    zu.addEventListener('click', () => this.auf.onKarteZu());
-    kopf.append(this.k.sym, this.k.titel, zu);
-    this.k.prio.append(mit('span', 'gk-prio-label', 'Priorität'));
-    ([[1, 'Später'], [2, 'Normal'], [3, 'Zuerst']] as const).forEach(([stufe, name]) => {
-      const b = el('button', 'gk-prio-knopf');
-      b.type = 'button';
-      b.dataset.p = String(stufe);
-      b.title = `Priorität ${stufe}: ${name}${stufe === 3 ? ' – wird zuerst beliefert' : ''}`;
-      b.append(mit('b', '', String(stufe)), mit('span', '', name));
-      b.addEventListener('click', () => { this.auf.onPrioritaet(stufe); b.blur(); });
-      this.k.prioKnoepfe.push(b);
-      this.k.prio.append(b);
-    });
-    this.k.bereichKnopf.type = 'button'; this.k.zuruecksetzen.type = 'button';
-    this.k.bereichKnopf.title = 'Mittelpunkt des Arbeitsbereichs wählen: Ringe folgen dem Zeiger, Klick setzt (höchstens 6 Hexe vom Gebäude)';
-    this.k.zuruecksetzen.title = 'Arbeitsbereich wieder um das Gebäude legen';
-    this.k.bereichKnopf.addEventListener('click', () => { this.auf.onBereich(); this.k.bereichKnopf.blur(); });
-    this.k.zuruecksetzen.addEventListener('click', () => { this.auf.onBereichZurueck(); this.k.zuruecksetzen.blur(); });
-    this.k.bereich.append(this.k.bereichKnopf, this.k.zuruecksetzen);
-    this.karte.append(kopf, this.k.status, this.k.balken, this.k.zeilen, this.k.spruch, this.k.bereich, this.k.prio);
-  }
-
-  /** Gebäudekarte zeigen oder (null) ausblenden. */
-  setKarte(d: KartenDaten | null) {
-    if (!d) {
-      if (!this.karte.hidden) { this.karte.hidden = true; this.karteSig = ''; this.hoeheMelden(); }
-      return;
-    }
-    const sig = JSON.stringify(d);
-    const warAus = this.karte.hidden;
-    this.karte.hidden = false;
-    if (sig !== this.karteSig) {
-      this.karteSig = sig;
-      this.k.sym.textContent = d.symbol;
-      this.k.titel.textContent = d.titel;
-      this.k.status.textContent = d.status;
-      this.k.status.classList.toggle('warn', d.warn);
-      this.k.spruch.textContent = d.spruch;
-      this.k.zeilen.replaceChildren(...d.zeilen.map((z) => mit('div', '', z)));
-      const hatBalken = d.fortschritt !== undefined;
-      this.k.balken.style.display = hatBalken ? '' : 'none';
-      if (hatBalken) (this.k.balken.firstElementChild as HTMLElement).style.width = `${Math.max(2, Math.min(100, d.fortschritt!))}%`;
-      this.k.prio.style.display = d.prio !== undefined ? '' : 'none';
-      for (const b of this.k.prioKnoepfe) b.classList.toggle('an', Number(b.dataset.p) === d.prio);
-      this.k.bereich.style.display = d.bereich ? '' : 'none';
-      if (d.bereich) {
-        this.k.bereichKnopf.classList.toggle('an', d.bereich.modus);
-        this.k.bereichKnopf.textContent = d.bereich.modus ? '🚩 Mittelpunkt wählen …' : '🚩 Arbeitsbereich';
-        this.k.zuruecksetzen.style.display = d.bereich.gesetzt ? '' : 'none';
-      }
-    }
-    if (warAus) this.hoeheMelden();
   }
 
   // ------------------------------------------------------------------ Werkzeuge, Hinweis
@@ -343,10 +349,13 @@ export class Spielleiste {
       .map((w) => `<span title="${w.name}">${w.icon ? w.icon + ' ' : w.name + ' '}<b>${s.vorrat[w.art] ?? 0}</b></span>`).join(' · ');
     this.zeile2.innerHTML = `${d ? '' : `Träger frei <b>${s.freieTraeger}</b> · `}Lager: ${lager}` +
       ` · Sim <i class="simsumme" title="Prüfsumme des Spielzustands">${s.pruefsumme.slice(0, 8)}</i>`;
-    // Baumenü: Gebäude, deren Material das Lager gerade nicht deckt, gedämpft zeigen (bauen geht trotzdem)
-    for (const { knopf, daten } of this.eintraege.values()) {
-      knopf.classList.toggle('knapp', daten.kosten.some((n, i) => n > (s.vorrat[i] ?? 0)));
+    // Baumenü: Gebäude, deren Material das Lager gerade nicht deckt, gedämpft zeigen (bauen geht trotzdem), mit Begründung im Tooltip
+    for (const e of this.eintraege.values()) {
+      const knapp = e.daten.kosten.some((n, i) => n > (s.vorrat[i] ?? 0));
+      e.knopf.classList.toggle('knapp', knapp);
+      e.knapp = knapp ? `⚠ Im Lager fehlt gerade Material (${s.knappText?.[e.daten.id] ?? 'siehe Kosten'}) – die Baustelle wartet dann.` : '';
     }
+    if (this.tippFuer && !this.menue.hidden) this.zeigeTipp(this.tippFuer);
   }
 
   /**
@@ -355,6 +364,7 @@ export class Spielleiste {
   setGesperrt(gesperrt: Readonly<Record<string, string>>) {
     for (const [id, e] of this.eintraege) {
       const grund = gesperrt[id];
+      e.grund = grund ?? '';
       e.knopf.disabled = !!grund;
       e.knopf.classList.toggle('gesperrt', !!grund);
       e.kosten.textContent = grund ? `🔒 ${grund}` : e.daten.kostenText;
