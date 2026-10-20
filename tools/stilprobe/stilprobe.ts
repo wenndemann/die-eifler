@@ -6,16 +6,17 @@
 //   ?v=c1 C mit viel Wimmel-Kleinkram (Hühner, Zäune, Wäsche, Gärten, Brunnen, mehr Leute)
 //   ?v=c2 C mit kräftigeren Farben und klarerem Licht
 //   ?v=c3 C gemalt: feine braune Linie, Papierkorn, Unschärfe oben und unten (Miniatur-Blick)
+//   ?v=m  gewählte Mischung: Kleinkram aus C1, Farben und Licht aus C2, feine Linie aus C3, ohne Unschärfe und Papier
 //   &nah=1 Kamera nah an den Figuren
 // Eigenständig (nutzt das Spiel nicht), nur zum Anschauen und für Screenshots (tools/stilprobe/aufnahme.mjs).
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 
-type Variante = 'a' | 'b' | 'c' | 'c1' | 'c2' | 'c3';
+type Variante = 'a' | 'b' | 'c' | 'c1' | 'c2' | 'c3' | 'm';
 const url = new URLSearchParams(location.search);
-const V = (['a', 'b', 'c', 'c1', 'c2', 'c3'].includes(url.get('v') ?? '') ? url.get('v') : 'a') as Variante;
+const V = (['a', 'b', 'c', 'c1', 'c2', 'c3', 'm'].includes(url.get('v') ?? '') ? url.get('v') : 'a') as Variante;
 /** Bilderbuch-Familie (C und ihre Verfeinerungen). */
-const BUCH = V.startsWith('c');
+const BUCH = V.startsWith('c') || V === 'm';
 const NAH = url.get('nah') === '1';
 
 interface Stil {
@@ -65,6 +66,10 @@ const STILE: Record<Variante, Stil> = {
   c2: {
     ...C0(), name: 'C2 – Kräftig', text: 'wie C, aber satter und mit klarerem Licht, etwas Kleinkram', wimmel: 1, satt: 1.35,
     sonneI: 2.5, himmelI: 1.1, nebel: 0.002, himmel: '#cfe3f2',
+  },
+  m: {
+    ...C0(), name: 'Gewählt – Wimmelbuch kräftig mit Linie', text: 'Kleinkram aus C1, Farben und Licht aus C2, feine braune Linie aus C3', wimmel: 2, satt: 1.35,
+    sonneI: 2.5, himmelI: 1.1, nebel: 0.002, himmel: '#cfe3f2', linie: '#5a3b26',
   },
   c3: { ...C0(), name: 'C3 – Gemalt', text: 'wie C, mit feiner brauner Linie, Papierkorn und Miniatur-Unschärfe, etwas Kleinkram', wimmel: 1, linie: '#5a3b26', papier: true },
 };

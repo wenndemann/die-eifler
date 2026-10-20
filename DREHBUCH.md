@@ -366,7 +366,7 @@ Lustiger Siedler-Look: übertriebene Proportionen, krummbeinige Figuren, Gebäud
 
 **Beschlossen:** Der Stil wird in einem eigenen Meilenstein umgesetzt (ROADMAP M9), nicht erst am Ende. Grundlage ist eine Stilprobe in drei Varianten, aus der der Nutzer wählt; daraus entsteht ein Stil-Leitfaden (`STIL.md`). Geprüft wird über eine feste Bildstrecke, die Gutachter-Agenten nach einem Bewertungsbogen aus diesem Kapitel benoten (4 von 5 „Stilziel erreicht“, kein Punkt unter 7); das letzte Wort hat der Mensch.
 
-**Gewählt: Bilderbuch-Diorama (Wimmelbuch-Optik)**, Variante C der Stilprobe (`tools/stilprobe/`, `?v=c`): runde, weiche Formen ohne harte Kanten, gemalte Farben mit Verlauf (unten dunkler, oben heller), pastellig-warme Palette, weiches warmes Licht mit Gegenlicht und leichtem Dunst, weiche Schatten, Häuser leicht schief, Figuren mit großem Kopf und rundem Bauch. Daraus entsteht in M9 der Stil-Leitfaden.
+**Gewählt: Wimmelbuch kräftig mit Linie** (Stilprobe `tools/stilprobe/`, `?v=m`), eine Mischung aus dem Bilderbuch-Diorama (C) und seinen Verfeinerungen: runde, weiche Formen ohne harte Kanten, gemalte Farben mit Verlauf (unten dunkler, oben heller), **kräftige, satte Farben und klares warmes Licht** (C2), **viel Leben und Kleinkram** wie im Wimmelbuch – Gärten, Zäune, Hühner, Katzen, Wäsche, Brunnen, Kürbisse, Leute bei der Arbeit (C1) – und eine **feine braune Linie** um alle Formen wie in einem gezeichneten Bilderbuch (C3). Keine Unschärfe und kein Papierkorn (stören beim Bauen). Häuser leicht schief, Figuren mit großem Kopf und rundem Bauch. Daraus entsteht in M9 der Stil-Leitfaden.
 
 ### 7.1 Figuren
 

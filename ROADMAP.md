@@ -222,7 +222,7 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 
 **Ziel:** Der Stil aus Drehbuch 7 wird verbindlich und überall umgesetzt, bevor die 2-Stunden-Partien beginnen: Siedler-2-Look mit Asterix-Comic-Einschlag, knubbelige Figuren, bunte, schiefe Fachwerkhäuser mit Charakter und Kleinkram, lesbare Waren. Damit der Stil nicht untergeht, ist er ein eigener Meilenstein mit messbarer Abnahme.
 
-- [x] **Stilprobe** (Wohnhaus, Träger, Ware) in drei Varianten, der Nutzer wählt eine aus (`tools/stilprobe/`): **gewählt C – Bilderbuch-Diorama** (Wimmelbuch-Optik)
+- [x] **Stilprobe** (Wohnhaus, Träger, Ware) in drei Varianten, der Nutzer wählt eine aus (`tools/stilprobe/`): **gewählt: Wimmelbuch kräftig mit Linie** (`?v=m`: Kleinkram aus C1, Farben und Licht aus C2, feine Linie aus C3, ohne Unschärfe)
 - [ ] **Stil-Leitfaden** (`STIL.md`): Proportionen der Figuren, Farbpalette je Region, Dachneigung und „Schiefe“, Konturen/Schattierung, Licht und Farb-Grading, Oberfläche
 - [ ] **Alle Gebäude** im gewählten Stil neu, mit kleinen Animationen (Rauch, Mühlrad, Bienen, Schafe, Fässer), drei Bauphasen
 - [ ] **Figuren** (Träger, Arbeiter, Bauleute, Boten) im gewählten Stil, Mimik und Gesten in der Grundform
