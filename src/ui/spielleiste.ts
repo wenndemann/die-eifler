@@ -247,6 +247,19 @@ export class Spielleiste {
     this.tipp.style.bottom = `${(m.bottom - r.top + 6) / z}px`;
   }
 
+  /** Icons aus den Modellen nachreichen (sie werden nach dem Start gerendert). */
+  setzeBilder(bilder: Readonly<Record<string, string | undefined>>) {
+    for (const [id, e] of this.eintraege) {
+      const b = bilder[id];
+      if (!b || e.daten.bild === b) continue;
+      e.daten.bild = b;
+      const sym = e.knopf.querySelector('.bm-sym')!;
+      const img = el('img', '');
+      img.src = b; img.alt = '';
+      sym.replaceChildren(img);
+    }
+  }
+
   /** Taste bei offenem Menü: Id des Gebäudes mit dieser Taste oder null. */
   menueTaste(taste: string): string | null {
     const t = taste.toUpperCase();

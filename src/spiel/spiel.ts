@@ -30,7 +30,7 @@ import { Meldungen } from '../ui/meldungen';
 import { Meldeleiste } from '../ui/meldeleiste';
 import { Fensterflaeche, type Eingabe, type FensterArt, type FensterDaten } from '../ui/fenster';
 import { ladeEinstellungen, speichereEinstellungen, wendeAn, type Einstellungen } from '../ui/einstellungen';
-import { icons, type Icons } from '../render/icons';
+import { icons, wennIconsDa, type Icons } from '../render/icons';
 import {
   bauTooltip, fahneFenster, gebaeudeFenster, hilfeFenster, Produktivitaet, protokollFenster, statistikFenster, verteilungFenster,
   verteilungKnopf, warenFenster, warnungen, wegFenster, type FensterKontext, type ProtokollZeile, type StatMass,
@@ -259,6 +259,7 @@ export class Spiel {
       onTempo: (t) => (t === 0 ? this.pauseUmschalten() : this.setzeTempo(t)),
       onFenster: (id) => this.fensterUmschalten(id),
     }, menueDaten(this.ic));
+    wennIconsDa(() => this.leiste.setzeBilder(this.ic.gebaeude));
     this._sicht = this._sim.sicht(this.ich);
     this.indizes();
     this.partieleiste = new Partieleiste(ctx.root, {

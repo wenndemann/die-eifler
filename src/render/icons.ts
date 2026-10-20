@@ -1,21 +1,63 @@
-// Icons aus den 3D-Modellen (DESIGN §9.1, ROADMAP M7): Waren und Gebäude einmal beim Start mit demselben Licht und denselben
-// Vertexfarben wie in der Welt in kleine Bilder gerendert, damit Welt und Oberfläche aus einem Guss sind. Ohne WebGL bleiben die
-// Zeichen aus den Daten (Emoji) als Ersatz.
+// Icons aus den 3D-Modellen (DESIGN §9.1, ROADMAP M7): Waren und Gebäude mit demselben Licht und denselben Vertexfarben wie in der
+// Welt in kleine Bilder gerendert, damit Welt und Oberfläche aus einem Guss sind. Das Rendern blockiert das Laden nicht: Es läuft
+// kurz nach dem Start Stück für Stück und landet im Browser-Speicher (Schlüssel aus den Daten), beim nächsten Laden – auch beim
+// Wiederbeitritt im Mehrspieler – sind die Icons sofort da. Bis dahin und ohne WebGL zeigen die Fenster die Zeichen aus den Daten.
 import * as THREE from 'three';
-import { GEBAEUDE_IDS, WAREN } from '../sim/daten';
+import { GEBAEUDE_IDS, WAREN, WAREN_FARBE, WAREN_FORM } from '../sim/daten';
+import { Fnv2 } from '../welt/pruefsumme';
 import { gebaeudeGeometrie } from './gebaeude';
 import { warenGeometrie } from './waren';
 
 export interface Icons { ware: (string | undefined)[]; gebaeude: Record<string, string | undefined> }
 
 const GROESSE = 96;
-let fertig: Icons | null = null;
+const SPEICHER = 'eifeler.icons';
+/** Schlüssel: ändert sich mit Waren (Form, Farbe), Gebäuden und Größe. */
+const SCHLUESSEL = (() => {
+  const f = new Fnv2();
+  f.text(`${GROESSE}|${WAREN.join(',')}|${WAREN_FORM.join(',')}|${WAREN_FARBE.join(',')}|${GEBAEUDE_IDS.join(',')}`);
+  return f.hex();
+})();
 
-/** Alle Icons (beim ersten Aufruf gerendert, dann aus dem Speicher). */
+const aktuell: Icons = { ware: [], gebaeude: {} };
+let gestartet = false;
+const warten: (() => void)[] = [];
+
+/** Die Icons, soweit schon da (sonst leer: dann gelten die Zeichen). Startet beim ersten Aufruf das Laden bzw. Rendern. */
 export function icons(): Icons {
-  if (fertig) return fertig;
-  fertig = { ware: [], gebaeude: {} };
+  if (!gestartet) starte();
+  return aktuell;
+}
+
+/** Ruft `f` auf, sobald alle Icons da sind (sofort, wenn sie es schon sind). */
+export function wennIconsDa(f: () => void): void {
+  if (gestartet && fertig) f(); else warten.push(f);
+}
+
+let fertig = false;
+
+function melde(): void {
+  fertig = true;
+  for (const f of warten.splice(0)) f();
+}
+
+function starte(): void {
+  gestartet = true;
+  try {
+    const d = JSON.parse(localStorage.getItem(SPEICHER) ?? 'null') as { schluessel: string; icons: Icons } | null;
+    if (d && d.schluessel === SCHLUESSEL && Array.isArray(d.icons?.ware)) {
+      aktuell.ware = d.icons.ware; aktuell.gebaeude = d.icons.gebaeude ?? {};
+      fertig = true;
+      return;
+    }
+  } catch { /* neu rendern */ }
+  // erst rendern, wenn das Spiel läuft (nicht beim Laden der Karte oder beim Wiederbeitritt)
+  setTimeout(() => void rendere(), 1500);
+}
+
+async function rendere(): Promise<void> {
   let renderer: THREE.WebGLRenderer | null = null;
+  const pause = () => new Promise<void>((ok) => setTimeout(ok, 0));
   try {
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = GROESSE;
@@ -29,29 +71,29 @@ export function icons(): Icons {
     sonne.position.set(-0.6, 1, 0.8);
     szene.add(sonne, new THREE.HemisphereLight('#c4d8ea', '#3e4a2a', 0.9));
     const kamera = new THREE.PerspectiveCamera(28, 1, 0.1, 1000);
-    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, flatShading: true, side: THREE.DoubleSide });
-    const bild = (geo: THREE.BufferGeometry): string | undefined => {
+    const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, side: THREE.DoubleSide });
+    const richt = new THREE.Vector3(0.45, 0.62, 1).normalize();
+    const bild = (geo: THREE.BufferGeometry): string => {
       const m = new THREE.Mesh(geo, mat);
       szene.add(m);
       geo.computeBoundingSphere();
       const k = geo.boundingSphere!;
-      const d = k.radius / Math.sin(THREE.MathUtils.degToRad(14)) * 1.02;
       // Blick wie die Spielkamera: von Süden schräg oben, leicht gedreht
-      const richt = new THREE.Vector3(0.45, 0.62, 1).normalize();
-      kamera.position.copy(k.center).addScaledVector(richt, d);
+      kamera.position.copy(k.center).addScaledVector(richt, (k.radius / Math.sin(THREE.MathUtils.degToRad(14))) * 1.02);
       kamera.lookAt(k.center);
       renderer!.render(szene, kamera);
       szene.remove(m);
       return renderer!.domElement.toDataURL('image/png');
     };
-    WAREN.forEach((_, a) => { fertig!.ware[a] = bild(warenGeometrie(a)); });
-    for (const id of GEBAEUDE_IDS) fertig.gebaeude[id] = bild(gebaeudeGeometrie(id));
+    const neu: Icons = { ware: [], gebaeude: {} };
+    for (let a = 0; a < WAREN.length; a++) { neu.ware[a] = bild(warenGeometrie(a)); await pause(); }
+    for (const id of GEBAEUDE_IDS) { neu.gebaeude[id] = bild(gebaeudeGeometrie(id)); await pause(); }
     mat.dispose();
-  } catch {
-    fertig = { ware: [], gebaeude: {} };
-  } finally {
+    aktuell.ware = neu.ware; aktuell.gebaeude = neu.gebaeude;
+    try { localStorage.setItem(SPEICHER, JSON.stringify({ schluessel: SCHLUESSEL, icons: neu })); } catch { /* Speicher voll: nächstes Mal neu */ }
+  } catch { /* ohne WebGL: Zeichen */ } finally {
     renderer?.dispose();
     renderer?.forceContextLoss();
   }
-  return fertig;
+  melde();
 }

@@ -70,6 +70,7 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
     await ctx.addInitScript(() => { try { localStorage.setItem('eifeler.view', JSON.stringify({ quality: 'niedrig', shadows: false, trees: false })); } catch { /* egal */ } });
     const page = await ctx.newPage();
     page.on('pageerror', (e) => seitenfehler.push(`${wer}: ${e.message}`));
+    if (process.env.MP_LOG) page.on('console', (m) => console.log(`[${wer}] ${m.text()}`));
     page.on('console', (m) => { if (m.type() === 'error' && !/favicon|fonts\.g/.test(m.text() + (m.location()?.url ?? ''))) seitenfehler.push(`${wer} console: ${m.text()}`); });
     return page;
   };
@@ -184,8 +185,8 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
     if (gespeichert.n !== 2 || gespeichert.namen[1] !== 'Pitter') fail(`Spielstand falsch: ${JSON.stringify(gespeichert)}`);
     await gast.evaluate(() => window.eifeler.spiel.pauseUmschalten());
     await host.waitForFunction(laeuft, null, { timeout: 10000 });
-    for (const f of seitenfehler) fail(f);
   } finally {
+    for (const f of seitenfehler) fail(f);
     await browser.close().catch(() => undefined);
   }
 }
