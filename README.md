@@ -23,6 +23,7 @@ Voraussetzungen: Node.js ≥ 20, Python ≥ 3.10, Internet (die Geodaten werden 
 
     tools/welt-laden.sh nideggen            # oder nordeifel
 
+In Cloud-Sessions von Claude Code passiert das beim Start von selbst (`.claude/hooks/session-start.sh`: `npm ci` und beide Gebiete).
 Die Releases rechnet der Workflow „Weltdaten“ (`.github/workflows/weltdaten.yml`) auf GitHub: im Tab „Actions“
 starten oder einen Branch `weltdaten/<gebiet>` pushen.
 
