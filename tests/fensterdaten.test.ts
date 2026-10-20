@@ -52,6 +52,7 @@ describe('Gebäudefenster aus den Daten (Abnahme M7: jedes Gebäude hat ein Fens
         expect(b.titel, id).toBe(`${t.name} (Baustelle)`);
         expect(knoepfe(b), id).toEqual(expect.arrayContaining(['prio:1', 'prio:2', 'prio:3', 'abriss']));
         expect(art(b, 'balken').length, id).toBe(1);
+        if (t.radius > 0) expect(knoepfe(b), id).toContain('bereich');
       }
       expect(gebaeudeFenster(9999, kontext(sim))).toBeNull();
     }

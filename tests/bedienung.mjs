@@ -117,7 +117,7 @@ export async function bedienungsTest({ browser, url, aus, info, fail }) {
   await page.locator('.fenster [data-knopf="prio:3"]').click();
   await page.waitForFunction((h) => window.eifeler.spiel.sicht.gebaeude.find((g) => g.q === h.q && g.r === h.r)?.prioritaet === 3, ziel.hex, { timeout: 30000, polling: 200 });
   // das Fenster zeigt den neuen Stand mit der nächsten Aktualisierung (4× je Sekunde)
-  await page.waitForSelector('.fenster .fe-knopf.an[data-knopf="prio:3"]', { timeout: 5000 }).catch(() => undefined);
+  await page.waitForSelector('.fenster .fe-knopf.an[data-knopf="prio:3"]', { timeout: 20000 }).catch(() => undefined);
   const karte = await page.evaluate(() => ({
     status: document.querySelector('.fenster .fe-zustand')?.textContent, zeilen: [...document.querySelectorAll('.fenster .fe-zeile, .fenster .fe-balkentext')].map((d) => d.textContent),
     an: document.querySelector('.fenster .fe-knopf.an[data-knopf^="prio:"]')?.dataset.knopf.slice(5),
@@ -264,12 +264,14 @@ export async function bedienungsTest({ browser, url, aus, info, fail }) {
     sp.pause(false);
     sp.fenster.messung = { ms: 0, max: 0, n: 0 };
     const t0 = performance.now(), f0 = sp.fenster.messung.n;
-    await new Promise((ok) => setTimeout(ok, 4000));
+    let bilder = 0;
+    await new Promise((ok) => { const f = () => { bilder++; if (performance.now() - t0 < 4000) requestAnimationFrame(f); else ok(); }; requestAnimationFrame(f); });
     const lager = document.querySelector('.fenster[data-fenster="geb:1"]').textContent;
-    return { ms: sp.fenster.messung.ms, max: sp.fenster.messung.max, n: sp.fenster.messung.n - f0, s: (performance.now() - t0) / 1000, lager };
+    return { ms: sp.fenster.messung.ms, max: sp.fenster.messung.max, n: sp.fenster.messung.n - f0, s: (performance.now() - t0) / 1000, lager, bilder };
   });
-  info(`Bedienung M7: 5 Fenster, ${mess.n} Aktualisierungen in ${mess.s.toFixed(1)} s, im Mittel ${mess.ms.toFixed(2)} ms (max ${mess.max.toFixed(1)} ms)`);
-  if (mess.n < 8) fail(`Bedienung M7: Fenster werden kaum aktualisiert (${mess.n} in ${mess.s.toFixed(1)} s)`);
+  info(`Bedienung M7: 5 Fenster, ${mess.n} Aktualisierungen in ${mess.s.toFixed(1)} s (${mess.bilder} Bilder), im Mittel ${mess.ms.toFixed(2)} ms (max ${mess.max.toFixed(1)} ms)`);
+  // 4× je Sekunde, aber höchstens einmal je Bild (Software-Grafik im Test ist langsam)
+  if (mess.n < Math.min(14, mess.bilder) - 2) fail(`Bedienung M7: Fenster werden kaum aktualisiert (${mess.n} in ${mess.s.toFixed(1)} s)`);
   if (mess.ms > 4) fail(`Bedienung M7: Fenster-Aktualisierung zu teuer (${mess.ms.toFixed(2)} ms im Mittel)`);
   if (!/Bretter|Stein/.test(mess.lager)) fail('Bedienung M7: Lagerfenster ohne Bestand');
   await bild(page, '13-fuenf-fenster.png');

@@ -171,16 +171,17 @@ export function gebaeudeFenster(id: Id, k: FensterKontext): FensterDaten | null 
       if (t.ausgangWare >= 0) leistung.push(`bisher ${mengeText(g.erzeugt, w[t.ausgangWare])} gemacht`);
     }
     if (leistung.length) ab.push({ art: 'zeilen', titel: 'Was es macht', zeilen: leistung });
-    if (t.radius > 0) {
-      const z = [`gut bis ${t.radiusGut}, geht noch bis ${t.radius} Hexe${g.mitte ? ' – Mittelpunkt verlegt' : ''}`];
-      const rw = k.reichweite?.(g);
-      if (rw) z.push(rw.text);
-      ab.push({ art: 'zeilen', titel: 'Arbeitsbereich', zeilen: z });
-      const modus = k.bereichModus === g.id;
-      const kn: Knopf[] = [{ id: 'bereich', text: modus ? '🚩 Mittelpunkt wählen …' : '🚩 Arbeitsbereich', an: modus, titel: 'Mittelpunkt des Arbeitsbereichs wählen: Ringe folgen dem Zeiger, Klick setzt' }];
-      if (g.mitte) kn.push({ id: 'bereich_zurueck', text: 'Zurücksetzen', titel: 'Arbeitsbereich wieder um das Gebäude legen' });
-      ab.push({ art: 'knoepfe', knoepfe: kn });
-    }
+  }
+  // Arbeitsbereich auch schon an der Baustelle setzbar
+  if (t.radius > 0) {
+    const z = [`gut bis ${t.radiusGut}, geht noch bis ${t.radius} Hexe${g.mitte ? ' – Mittelpunkt verlegt' : ''}`];
+    const rw = k.reichweite?.(g);
+    if (rw) z.push(rw.text);
+    ab.push({ art: 'zeilen', titel: 'Arbeitsbereich', zeilen: z });
+    const modus = k.bereichModus === g.id;
+    const kn: Knopf[] = [{ id: 'bereich', text: modus ? '🚩 Mittelpunkt wählen …' : '🚩 Arbeitsbereich', an: modus, titel: 'Mittelpunkt des Arbeitsbereichs wählen: Ringe folgen dem Zeiger, Klick setzt' }];
+    if (g.mitte) kn.push({ id: 'bereich_zurueck', text: 'Zurücksetzen', titel: 'Arbeitsbereich wieder um das Gebäude legen' });
+    ab.push({ art: 'knoepfe', knoepfe: kn });
   }
   if (g.getrennt) ab.push({ art: 'zeilen', zeilen: ['⚠ Keine Wegverbindung zum Lager – einen Weg zur Fahne bauen.'] });
   const knoepfe: Knopf[] = [{ id: 'kamera', text: '🎯 Hinsehen', titel: 'Kamera zum Gebäude' }];

@@ -412,11 +412,11 @@ export class Fensterflaeche {
     for (const f of [...this.fenster]) if (!id || f.art.id === id) if (!f.aktualisiere()) this.weg(f);
   }
 
-  /** Live-Daten: alle TAKT_S Sekunden (4× je Sekunde) alle offenen Fenster aktualisieren. */
-  takt(dt: number): void {
-    this.uhr += dt;
-    if (this.uhr < TAKT_S) return;
-    this.uhr = 0;
+  /** Live-Daten: alle TAKT_S Sekunden echter Zeit (4× je Sekunde) alle offenen Fenster aktualisieren; aus jedem Frame aufrufen. */
+  takt(): void {
+    const jetzt = performance.now();
+    if (jetzt - this.uhr < TAKT_S * 1000) return;
+    this.uhr = jetzt;
     if (!this.fenster.length) return;
     const t0 = performance.now();
     for (const f of [...this.fenster]) if (!f.aktualisiere()) this.weg(f);

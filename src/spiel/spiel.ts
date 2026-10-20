@@ -450,7 +450,7 @@ export class Spiel {
 
     this.statusTimer -= dt;
     if (this.statusTimer <= 0) { this.statusTimer = 0.25; this.statusSetzen(); }
-    this.fenster.takt(dt);
+    this.fenster.takt();
     this.warnTimer -= dt;
     if (this.warnTimer <= 0) {
       this.warnTimer = 1;
