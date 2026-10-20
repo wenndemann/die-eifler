@@ -366,6 +366,8 @@ Lustiger Siedler-Look: übertriebene Proportionen, krummbeinige Figuren, Gebäud
 
 **Beschlossen:** Der Stil wird in einem eigenen Meilenstein umgesetzt (ROADMAP M9), nicht erst am Ende. Grundlage ist eine Stilprobe in drei Varianten, aus der der Nutzer wählt; daraus entsteht ein Stil-Leitfaden (`STIL.md`). Geprüft wird über eine feste Bildstrecke, die Gutachter-Agenten nach einem Bewertungsbogen aus diesem Kapitel benoten (4 von 5 „Stilziel erreicht“, kein Punkt unter 7); das letzte Wort hat der Mensch.
 
+**Gewählt: Bilderbuch-Diorama (Wimmelbuch-Optik)**, Variante C der Stilprobe (`tools/stilprobe/`, `?v=c`): runde, weiche Formen ohne harte Kanten, gemalte Farben mit Verlauf (unten dunkler, oben heller), pastellig-warme Palette, weiches warmes Licht mit Gegenlicht und leichtem Dunst, weiche Schatten, Häuser leicht schief, Figuren mit großem Kopf und rundem Bauch. Daraus entsteht in M9 der Stil-Leitfaden.
+
 ### 7.1 Figuren
 
 - **Mischung aus Siedler 2 und Asterix-Comic:** knubbelig wie in Siedler (großer Kopf, krumme Beine, dicke Nase, Kappe oder Kopftuch), dazu mehr Mimik und übertriebene Gesten wie im Comic.
