@@ -50,6 +50,7 @@ export interface Zug {
 
 export type Nachricht =
   | { t: 'hallo' }
+  | { t: 'standBitte' }
   | { t: 'befehl'; id: string; befehl: Befehl }
   | { t: 'zug'; zug: Zug }
   | { t: 'quittung'; tick: number; pruef: { tick: number; wert: string }[] }
@@ -78,7 +79,10 @@ export interface PartieOptionen {
   /** Prüfsumme der Kartendaten (M2): ein Stand wird nur auf derselben Karte angenommen. */
   kartePruef: string;
   senden: (an: number, n: Nachricht) => void;
-  /** Nur beim Taktgeber zum Start: die Simulation, mit der alle beginnen (neu oder geladen). */
+  /**
+   * Nur beim Taktgeber zum Start: die Simulation, mit der alle beginnen (neu oder geladen). Fehlt sie beim Taktgeber (er hat die
+   * Seite neu geladen), holt er sich den Stand vom ersten Mitspieler, der sich verbindet, und übernimmt dann den Takt.
+   */
   sim?: Simulation;
   /** Übrige Pausen je Spieler (aus einem Spielstand), sonst PAUSEN_JE_SPIELER. */
   pausen?: number[];
@@ -160,8 +164,7 @@ export class Partie {
     this.da = new Array<boolean>(o.spielerZahl).fill(false);
     this.da[this.ich] = true;
     this._sim = null;
-    if (this.ich === this._taktgeber) {
-      if (!o.sim) throw new Error('Der Taktgeber braucht die Start-Simulation');
+    if (this.ich === this._taktgeber && o.sim) {
       this._sim = o.sim;
       const pausen = o.pausen ?? new Array<number>(o.spielerZahl).fill(PAUSEN_JE_SPIELER);
       const verwalter = new Array<boolean>(o.spielerZahl).fill(false);
@@ -188,6 +191,8 @@ export class Partie {
   /** Vorsprung des Zugs vor der eigenen Simulation in Ticks (für die Anzeige). */
   get puffer(): number { return this._sim && this.letzter ? this.letzter.bis - this._sim.tick : 0; }
   istDa(sp: number): boolean { return this.da[sp]; }
+  /** Bruchteil des nächsten Ticks (0..1) für weiche Bewegungen; 0, wenn die Zeit steht. */
+  get anteil(): number { return this._sim && this.letzter && this._sim.tick < this.letzter.bis ? Math.min(0.999, this.acc) : 0; }
 
   // ------------------------------------------------------------------ Eingaben der Oberfläche
 
@@ -216,6 +221,8 @@ export class Partie {
     if (tg && !da) { tg.bereit[sp] = false; tg.fehltSeit[sp] = tg.uhr; }
     // zum Taktgeber verbunden: hallo (holt den Stand: Start oder Wiederbeitritt) und offene Befehle neu
     if (da && sp === this._taktgeber) this.halloSagen();
+    // selbst Taktgeber, aber ohne Stand (neu geladen): den Stand beim Mitspieler holen
+    if (da && this.ich === this._taktgeber && !this._sim) this.an(sp, { t: 'standBitte' });
     this.abarbeiten();
   }
 
@@ -225,7 +232,18 @@ export class Partie {
     const alt = this._taktgeber;
     this._taktgeber = neu;
     this.ereignisse.push({ art: 'taktgeber', spieler: neu });
-    if (neu === this.ich && this._sim && this.letzter) {
+    if (neu === this.ich && this._sim && this.letzter) this.uebernehmen(alt);
+    else this.takt = null; // der neue Taktgeber meldet sich mit „uebernahme“; offene Befehle gehen mit dem Nachtrag
+    this.abarbeiten();
+  }
+
+  /**
+   * Den Takt übernehmen (nach einem Wechsel oder als neu geladener Taktgeber mit dem Stand eines Mitspielers): ab dem eigenen letzten
+   * Zug weiter; erst die Nachträge der anderen abwarten (Züge, die ich nicht kenne, und ihre offenen Befehle).
+   */
+  private uebernehmen(alt: number): void {
+    if (!this._sim || !this.letzter) return;
+    {
       const z = this.letzter;
       const verwalter = this._sim.sicht(0).spieler.map((s) => s.verwalter);
       const tg = new Takt(this.spielerZahl, z.nr, z.bis, z.tempo, z.pause, z.pausen, verwalter);
@@ -245,8 +263,7 @@ export class Partie {
       for (const sp of tg.uebernahme) this.an(sp, { t: 'uebernahme', nr: z.nr });
       // eigene offene Befehle gehen jetzt an mich selbst
       for (const [id, befehl] of this.offen) this.an(this.ich, { t: 'befehl', id, befehl });
-    } else this.takt = null; // der neue Taktgeber meldet sich mit „uebernahme“; offene Befehle gehen mit dem Nachtrag
-    this.abarbeiten();
+    }
   }
 
   /** Eine Nachricht von Spieler `von`. Unbekannte oder kaputte Nachrichten werden verworfen. */
@@ -258,7 +275,7 @@ export class Partie {
 
   /** Zeit vergeht (ms). Rechnet die erlaubten Ticks; liefert deren Zahl. */
   vor(dtMs: number): number {
-    const dt = Math.max(0, Math.min(1000, dtMs));
+    const dt = Math.max(0, Math.min(2000, dtMs));
     if (this.takt) this.taktgeberVor(this.takt, dt);
     this.abarbeiten();
     const n = this.rechnen(dt);
@@ -291,6 +308,12 @@ export class Partie {
     switch (n.t) {
       // an den Taktgeber
       case 'hallo': if (tg) this.taktHallo(tg, von); return;
+      case 'standBitte':
+        // der Taktgeber hat neu geladen: ihm meinen Stand geben
+        if (von === this._taktgeber && von !== this.ich && this._sim && this.letzter) {
+          this.an(von, { t: 'stand', stand: this._sim.stand(), karte: this.kartePruef, zug: { ...this.letzter, befehle: [] }, grund: 'wiederbeitritt' });
+        }
+        return;
       case 'befehl': if (tg) this.taktBefehl(tg, von, n.id, n.befehl); return;
       case 'quittung': if (tg) this.taktQuittung(tg, von, n.tick, n.pruef); return;
       case 'pause': if (tg) this.taktPause(tg, von, n.an); return;
@@ -298,7 +321,10 @@ export class Partie {
       case 'nachtrag': if (tg) this.taktNachtrag(tg, von, n); return;
       // vom Taktgeber
       case 'zug': if (von === this._taktgeber) this.zugAnnehmen(n.zug); return;
-      case 'stand': if (von === this._taktgeber) this.standAnnehmen(n); return;
+      case 'stand':
+        if (von === this._taktgeber) this.standAnnehmen(n);
+        else if (this.ich === this._taktgeber && !this._sim) { this.standAnnehmen(n); this.uebernehmen(-1); }
+        return;
       case 'meldung': if (von === this._taktgeber) this.ereignisse.push({ art: 'auseinander', spieler: n.spieler, tick: n.tick }); return;
       case 'uebernahme':
         if (von !== this._taktgeber) this.taktgeberWechsel(von);

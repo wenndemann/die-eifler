@@ -23,7 +23,12 @@ function weltDaten(): Plugin {
   return { name: 'welt-daten', configureServer: serve, configurePreviewServer: serve as Plugin['configurePreviewServer'] };
 }
 
+// Vermittlungs-Server (npm run vermittlung) unter /vermittlung durchreichen, damit Einladungslinks auf dieselbe Seite zeigen
+const vermittlung = { '/vermittlung': { target: `ws://127.0.0.1:${process.env.VERMITTLUNG_PORT ?? 8787}`, ws: true } };
+
 export default defineConfig({
   plugins: [weltDaten()],
+  server: { proxy: vermittlung },
+  preview: { proxy: vermittlung },
   test: { exclude: ['**/node_modules/**', '.claude/**', 'dist/**'] },
 });

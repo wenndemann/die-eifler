@@ -10,6 +10,10 @@ import {
 } from '../welt/hexwelt';
 import { holeBildUrl, holeBytes, holeJson, type Welt } from '../welt/laden';
 import { VORSCHLAEGE } from '../map/presets';
+import { leseSpielstand, type Spielstand } from '../spiel/spielstand';
+
+/** Ergebnis der Kartenwahl: allein siedeln, mit Freunden (Lobby) oder einen Spielstand laden. */
+export type KartenwahlErgebnis = { art: 'allein' | 'freunde'; param: AusschnittParam } | { art: 'laden'; spielstand: Spielstand };
 
 /* ------------------------------------------------------------------ Reine Logik (getestet) */
 
@@ -198,8 +202,8 @@ const OFF_FLAGS = OFF_BUILD + 4096;
 
 /* ------------------------------------------------------------------ Die Kartenwahl */
 
-export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<AusschnittParam> {
-  return new Promise<AusschnittParam>((fertig) => {
+export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<KartenwahlErgebnis> {
+  return new Promise<KartenwahlErgebnis>((fertig) => {
     const man = welt.manifest;
     const kacheln = man.kacheln;
     const kachelSet = new Set(kacheln.map(([a, b]) => kachelKey(a, b)));
@@ -308,7 +312,17 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Ausschni
     const kurz = el('div', 'kw-kurz');
     const los = el('button', 'kw-los', 'Hier siedeln!');
     los.type = 'button';
-    fuss.append(kurz, los);
+    // Mehrspieler (M6) und Spielstand
+    const extra = el('div', 'kw-extra');
+    const freunde = el('button', 'kw-freunde', '👥 Mit Freunden spielen');
+    freunde.type = 'button';
+    freunde.title = 'Raum eröffnen und Freunde per Link einladen – ohne Konto, nur mit Namen';
+    const laden = el('label', 'kw-freunde', '📂 Spielstand laden');
+    const datei = el('input');
+    datei.type = 'file'; datei.accept = '.json,application/json'; datei.hidden = true;
+    laden.append(datei);
+    extra.append(freunde, laden);
+    fuss.append(kurz, los, extra);
 
     // Zoom-Knöpfe
     const mkZoom = (text: string, titel: string, f: () => void, cls = '') => {
@@ -602,6 +616,7 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Ausschni
       kurz.textContent = kurzText;
       kurz.className = 'kw-kurz ' + klasse;
       los.disabled = !los_ok;
+      freunde.disabled = !los_ok;
       los.textContent = losText;
     }
 
@@ -1124,12 +1139,24 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Ausschni
     const onResize = () => { /* ResizeObserver reicht; Platzhalter für Geräte ohne */ };
     window.addEventListener('resize', onResize);
 
-    los.addEventListener('click', () => {
+    const waehle = (art: 'allein' | 'freunde') => {
       if (los.disabled || !fertigGeladen) return;
       const a: AusschnittParam = { version: welt.version, q, r, size };
       merke(a);
       schliesse();
-      fertig(a);
+      fertig({ art, param: a });
+    };
+    los.addEventListener('click', () => waehle('allein'));
+    freunde.addEventListener('click', () => waehle('freunde'));
+    datei.addEventListener('change', async () => {
+      const f = datei.files?.[0];
+      datei.value = '';
+      if (!f) return;
+      try {
+        const st = leseSpielstand(await f.text());
+        schliesse();
+        fertig({ art: 'laden', spielstand: st });
+      } catch (e) { toastZeigen((e as Error).message); }
     });
 
     /* --- Start: gemerkte Wahl oder Vorschlag --- */

@@ -32,7 +32,7 @@ const CODE_ZEICHEN = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 /**
  * Raum: Plätze mit Name, Token (zum Wiederkommen), Verbindung und Karten-Prüfsumme. Vor dem Start können Plätze frei werden;
  * beim Start werden sie lückenlos durchnummeriert (Platz = Spieler-Index der Simulation).
- * @typedef {{ name: string, token: string, ws: import('ws').WebSocket | null, pruefsumme: string, wegSeit: number }} Platz
+ * @typedef {{ name: string, token: string, ws: import('ws').WebSocket | null, pruefsumme: string, wegSeit: number, sitzung: number }} Platz
  * @typedef {{ code: string, plaetze: (Platz | null)[], gastgeber: number, taktgeber: number, gestartet: boolean, einstellungen: unknown, leerSeit: number, start: number }} Raum
  */
 
@@ -68,7 +68,7 @@ export function erzeugeServer(o = {}) {
 
   const sicht = (raum) => ({
     code: raum.code, gastgeber: raum.gastgeber, taktgeber: raum.taktgeber, gestartet: raum.gestartet, einstellungen: raum.einstellungen,
-    spieler: raum.plaetze.map((p, platz) => (p ? { platz, name: p.name, da: !!p.ws, pruefsumme: p.pruefsumme } : null)),
+    spieler: raum.plaetze.map((p, platz) => (p ? { platz, name: p.name, da: !!p.ws, sitzung: p.sitzung, pruefsumme: p.pruefsumme } : null)),
   });
 
   const schicke = (ws, n) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(n)); };
@@ -102,7 +102,7 @@ export function erzeugeServer(o = {}) {
   function setzeEin(raum, platz, ws, token) {
     const p = raum.plaetze[platz];
     if (p.ws && p.ws !== ws) { schicke(p.ws, { typ: 'fehler', text: 'Dieser Platz wurde in einem anderen Fenster übernommen.' }); p.ws.close(); }
-    p.ws = ws; p.wegSeit = 0;
+    p.ws = ws; p.wegSeit = 0; p.sitzung = (p.sitzung ?? 0) + 1;
     ws.raum = raum; ws.platz = platz;
     schicke(ws, { typ: 'raum', code: raum.code, du: platz, token, ice: iceServer(p.name), raum: sicht(raum) });
     verteile(raum);
@@ -115,7 +115,7 @@ export function erzeugeServer(o = {}) {
       case 'anlegen': {
         if (raum) return;
         const token = randomBytes(18).toString('base64url');
-        const r = { code: neuerCode(), plaetze: [{ name: name(n.name), token, ws: null, pruefsumme: '', wegSeit: 0 }], gastgeber: 0, taktgeber: 0, gestartet: false, einstellungen: null, leerSeit: 0, start: 0 };
+        const r = { code: neuerCode(), plaetze: [{ name: name(n.name), token, ws: null, pruefsumme: '', wegSeit: 0, sitzung: 0 }], gastgeber: 0, taktgeber: 0, gestartet: false, einstellungen: null, leerSeit: 0, start: 0 };
         raeume.set(r.code, r);
         setzeEin(r, 0, ws, token);
         return;
@@ -132,7 +132,7 @@ export function erzeugeServer(o = {}) {
         if (platz < 0) platz = r.plaetze.length;
         if (platz >= SPIELER_MAX) { schicke(ws, { typ: 'fehler', text: `Der Raum ist voll (${SPIELER_MAX} Spieler).` }); return; }
         const token = randomBytes(18).toString('base64url');
-        r.plaetze[platz] = { name: name(n.name), token, ws: null, pruefsumme: '', wegSeit: 0 };
+        r.plaetze[platz] = { name: name(n.name), token, ws: null, pruefsumme: '', wegSeit: 0, sitzung: 0 };
         setzeEin(r, platz, ws, token);
         return;
       }

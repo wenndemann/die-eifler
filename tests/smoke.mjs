@@ -3,6 +3,7 @@
 // Dazu (M3–M5): Determinismus Node = Browser (30-Segment-Szenario, Holzwirtschaft M4, Spieltest-Bot M5), Spiel auf der echten Karte
 // (Aufbau per Befehle mit Holz und Stein, 5 Spielminuten, Screenshot nah am Lager) und Replay des Protokolls in einem
 // zweiten Browser-Kontext. Dazu die Bedienung (tests/bedienung.mjs): Baumenü, Geist, Bauplätze, Klick-Bau, Priorität, Handy.
+// M6 (tests/mehrspieler.mjs): zwei Fenster, Vermittlungs-Server, WebRTC, schlechtes Netz, Neuladen, Pause, Prüfsummen, Speichern.
 //
 // Aufruf:  WELT_DATEN=/pfad/zu/daten npm run test:smoke
 //   WELT_DATEN   Weltdaten (Standard welt-daten/), werden auch vom selbst gestarteten Vite-Server ausgeliefert
@@ -20,6 +21,7 @@ import { build } from 'esbuild';
 import { chromium } from 'playwright';
 import { createServer } from 'vite';
 import { bedienungsTest } from './bedienung.mjs';
+import { mehrspielerTest, starteVermittlung } from './mehrspieler.mjs';
 
 const WURZEL = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DATEN = resolve(process.env.WELT_DATEN ?? join(WURZEL, 'welt-daten'));
@@ -63,6 +65,8 @@ export function pruefsumme() { const { karte, protokoll } = ${name}(); return sp
 
 let vite = null;
 let basis = process.env.SMOKE_URL;
+// Vermittlungs-Server für den Mehrspieler-Test (der Vite-Server reicht /vermittlung an ihn durch)
+const vermittlung = basis ? null : await starteVermittlung();
 if (!basis) {
   const port = await freierPort();
   vite = await createServer({ root: WURZEL, logLevel: 'warn', server: { port, strictPort: true, host: '127.0.0.1' } });
@@ -385,12 +389,20 @@ try {
   await page.goto('about:blank');   // die schwere Szene der Hauptseite nicht weiterrechnen lassen
   await bedienungsTest({ browser, url, aus: AUS, info, fail });
 
+  // ---- M6 Mehrspieler: zwei Fenster über den Vermittlungs-Server und WebRTC (Screenshots mp-1 bis mp-3)
+  if (vermittlung) {
+    const mitte = plan.art === 'kartenwahl' ? plan.vorschlag : plan.param;
+    const mpParam = L.klemmeAusschnitt(manifest, { version, q: mitte.q, r: mitte.r, size: 'klein' });
+    await mehrspielerTest({ basis, param: mpParam, aus: AUS, info, fail, exe });
+  } else info('Mehrspieler-Test übersprungen (SMOKE_URL: kein eigener Vermittlungs-Server)');
+
   for (const s of seitenfehler) fail(s);
 } catch (e) {
   fail(e.stack ?? String(e));
 } finally {
   await browser?.close().catch(() => undefined);
   await vite?.close().catch(() => undefined);
+  await vermittlung?.schliessen().catch(() => undefined);
 }
 
 if (fehler.length) {

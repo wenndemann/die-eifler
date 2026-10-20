@@ -1,0 +1,43 @@
+/* Lobby über der Karte (Mehrspieler) und Namensfrage */
+.lobby-huelle { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; background: rgba(10, 12, 14, 0.55); padding: 16px; }
+.lobby {
+  position: relative; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; color: var(--ink);
+  width: min(520px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto;
+}
+.lobby-raum { position: fixed; right: 16px; top: 72px; z-index: 6; max-height: calc(100dvh - 90px); }
+.lobby h2 { margin: 0; font: 700 22px 'Alegreya SC', serif; color: var(--gold); letter-spacing: 0.03em; }
+.lobby-karte, .lobby-text { margin: 0; color: var(--ink-dim); }
+.lobby-label { font-size: 13px; color: var(--gold-dim); margin-top: 4px; }
+.lobby-eingabe, .lobby-wahl {
+  min-height: 40px; padding: 0 10px; border-radius: 8px; font: 15px 'Alegreya Sans', sans-serif; color: var(--ink);
+  background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(231, 194, 122, 0.45); min-width: 0;
+}
+.lobby-link { display: flex; gap: 6px; }
+.lobby-link .lobby-eingabe { flex: 1; font-size: 13px; }
+.lobby-knopf {
+  min-height: 40px; padding: 0 12px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+  font: 600 14px 'Alegreya Sans', sans-serif; color: var(--ink); background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(231, 194, 122, 0.45);
+}
+.lobby-knopf:hover { filter: brightness(1.2); }
+.lobby-spieler { display: flex; flex-direction: column; gap: 6px; }
+.lobby-sp { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 8px; border-radius: 8px; background: rgba(0, 0, 0, 0.22); }
+.lobby-sp.ich b { color: var(--gold); }
+.lobby-sp .lobby-wahl { margin-left: auto; min-height: 34px; font-size: 14px; }
+.lobby-farbe { width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5); flex: none; }
+.lobby-zustand { font-size: 13px; color: var(--ink-dim); }
+.lobby-zustand.ok { color: #a6e08a; }
+.lobby-zustand.warn { color: #f0c878; }
+.lobby-ort { margin-left: auto; color: var(--ink-dim); font-size: 13px; }
+.lobby-reihe { display: flex; gap: 6px; flex-wrap: wrap; }
+.lobby-stand { font-size: 13px; color: var(--ink-dim); }
+.lobby-stand:empty, .lobby-hinweis:empty { display: none; }
+.lobby-hinweis { font-size: 14px; color: var(--ink); }
+.lobby-hinweis.warn { color: #f0c878; }
+.lobby-los {
+  min-height: 50px; border-radius: 12px; font: 700 21px 'Alegreya SC', serif; letter-spacing: 0.03em; color: #2a1f14; cursor: pointer;
+  background: linear-gradient(180deg, #f6dc9e, #c4954c); border: 1px solid #ffe7ae; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+}
+.lobby-los:disabled { filter: grayscale(0.8) brightness(0.6); cursor: default; }
+@media (max-width: 699px) {
+  .lobby-raum { left: 8px; right: 8px; top: auto; bottom: 8px; width: auto; max-height: 60dvh; }
+}

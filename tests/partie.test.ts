@@ -186,6 +186,29 @@ describe('Gleichschritt', () => {
     expect(sim(r, 0).pruefsumme()).toBe(sim(r, 1).pruefsumme());
   });
 
+  it('der Taktgeber lädt selbst neu: holt den Stand vom Mitspieler und gibt weiter den Takt', () => {
+    const r = runde(3);
+    bauen(r);
+    r.lauf(15_000);
+    p(r, 2).befehl({ art: 'gebaeude', typ: 'wohnhaus', q: 9, r: -12 });
+    r.trenne(0);
+    r.lauf(4000);
+    const t0 = r.uhr;
+    const neu = r.starte(0, { sim: undefined });
+    r.verbindeAlle();
+    while (!neu.sim || neu.angehalten) r.lauf(16);
+    expect(r.uhr - t0).toBeLessThan(8000);
+    expect(neu.istTaktgeber).toBe(true);
+    p(r, 0).befehl({ art: 'gebaeude', typ: 'wohnhaus', q: 3, r: 3 });
+    r.lauf(20_000);
+    for (const i of [0, 1, 2]) expect(sim(r, i).sicht(i).gebaeude.filter((g) => g.typ === 'wohnhaus').map((g) => g.sp).sort()).toEqual([0, 2]);
+    p(r, 1).pause(true);
+    r.lauf(3000);
+    r.gleichziehen();
+    expect(sim(r, 1).pruefsumme()).toBe(sim(r, 0).pruefsumme());
+    expect(sim(r, 2).pruefsumme()).toBe(sim(r, 0).pruefsumme());
+  });
+
   it('kaputte und fremde Nachrichten ändern nichts', () => {
     const r = runde();
     r.lauf(2000);

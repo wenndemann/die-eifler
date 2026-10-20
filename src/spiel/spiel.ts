@@ -8,6 +8,10 @@ import type { HexGrid } from '../map/hex';
 import type { Ausschnitt } from '../welt/ausschnitt';
 import { FLAG, HEX } from '../welt/format';
 import { Simulation } from '../sim/sim';
+import type { SimStand } from '../sim/stand';
+import type { Partie } from '../netz/partie';
+import { Partieleiste } from '../ui/partieleiste';
+import { baueSpielstand, dateiname, leseSpielstand, type Spielstand } from './spielstand';
 import { spieleAb } from '../sim/replay';
 import { ARBEIT_MITTE_MAX, DORFSTUFEN, FLAG_CAP, GEBAEUDE, GEBAEUDE_IDS, KIRMES, WAREN, WAREN_NAMEN } from '../sim/daten';
 import { PROMILLE, TICK_HZ } from '../sim/typen';
@@ -49,6 +53,12 @@ export interface SpielKontext {
   pick: (clientX: number, clientY: number) => { x: number; z: number } | null;
   /** Geländehöhe wie gezeichnet (mit Überhöhung), für die Projektion in der Testschnittstelle. */
   yAt: (x: number, z: number) => number;
+  /** Mehrspieler (M6): die Partie im Gleichschritt (hat schon ihren Stand) und die Namen der Spieler. */
+  mehrspieler?: { partie: Partie; namen: string[]; anwesend: (sp: number) => boolean };
+  /** Einzelspiel aus einem Spielstand fortsetzen. */
+  laden?: SimStand;
+  /** Spielstand laden (Datei gewählt): die Seite lädt die Karte des Stands und setzt dort fort. */
+  onLaden?: (s: Spielstand) => void;
 }
 
 /** Anzeigenamen der Gebäude aus data/buildings.json. */
@@ -99,7 +109,14 @@ export class Spiel {
   readonly group = new THREE.Group();
   readonly lagerHex: Hx;
   readonly karteInfo: Protokoll['karte'];
-  private readonly _sim: Simulation;
+  /** Eigener Spieler (0 im Einzelspiel). */
+  readonly ich: number;
+  private _sim: Simulation;
+  private readonly partie: Partie | null;
+  private readonly partieleiste: Partieleiste;
+  /** Letzte Partie-Ereignisse, schon gemeldet. */
+  private partieGemeldet = 0;
+  private letzterTakt = performance.now();
   private readonly wege: Wege;
   private readonly fahnen: Fahnen;
   private readonly traeger: Traeger;
@@ -165,10 +182,21 @@ export class Spiel {
 
   constructor(private ctx: SpielKontext) {
     const { ausschnitt, map, grid, base, ex } = ctx;
-    this.lagerHex = waehleLagerHex(ausschnitt.hex, ausschnitt.kerne, map.info.start);
     const p = ausschnitt.param;
     this.karteInfo = { version: p.version, q: p.q, r: p.r, size: p.size, pruefsumme: ausschnitt.pruefsumme };
-    this._sim = new Simulation(ausschnitt.hex, saatAusPruefsumme(ausschnitt.pruefsumme), this.lagerHex);
+    this.partie = ctx.mehrspieler?.partie ?? null;
+    if (this.partie) {
+      if (!this.partie.sim) throw new Error('Die Partie hat noch keinen Stand');
+      this._sim = this.partie.sim;
+      this.ich = this.partie.ich;
+      this.partie.onNeueSim = (sim) => this.simErsetzt(sim);
+      setInterval(() => { if (performance.now() - this.letzterTakt > 200) this.netzTakt(); }, 100);
+    } else {
+      this._sim = ctx.laden ? Simulation.ausStand(ausschnitt.hex, ctx.laden)
+        : new Simulation(ausschnitt.hex, saatAusPruefsumme(ausschnitt.pruefsumme), waehleLagerHex(ausschnitt.hex, ausschnitt.kerne, map.info.start));
+      this.ich = 0;
+    }
+    this.lagerHex = this._sim.startDaten()[this.ich];
 
     this.wege = new Wege(map, grid, base, ex);
     this.fahnen = new Fahnen(map, grid, base, ex);
@@ -191,17 +219,24 @@ export class Spiel {
       onBestaetigen: () => this.bestaetigen(),
       onAbbrechen: () => this.abbrechen(),
       onZurueck: () => this.zurueck(),
-      onTempo: (t) => (t === 0 ? this.pause(!this.pausiert) : this.setzeTempo(t)),
+      onTempo: (t) => (t === 0 ? this.pauseUmschalten() : this.setzeTempo(t)),
       onPrioritaet: (stufe) => this.setzePrioritaet(stufe),
       onKarteZu: () => { this.gewaehlt = null; this.karteSetzen(); },
       onBereich: () => this.bereichUmschalten(),
       onBereichZurueck: () => this.bereichZuruecksetzen(),
     }, menueDaten());
-    this._sicht = this._sim.sicht();
+    this._sicht = this._sim.sicht(this.ich);
     this.indizes();
+    this.partieleiste = new Partieleiste(ctx.root, {
+      onSpeichern: () => this.speichern(),
+      onLaden: this.partie || !ctx.onLaden ? undefined : (datei) => void this.ladeDatei(datei),
+      onWeiter: () => this.partie?.pause(false),
+    }, !!this.partie);
     // Zustand in Klartext über den Gebäuden (nur, wenn etwas fehlt oder wartet)
     this.gebaeude.schild = (g) => {
       const z = g.getrennt ? 'getrennt' : g.zustand;
+      // fremde Dörfer: nur der Name am Lager
+      if (g.sp !== this.ich) return g.typ === 'lager' ? { text: this.namen[g.sp] ?? `Spieler ${g.sp + 1}`, warn: false } : null;
       if (z === 'arbeitet' || z === 'bereit' || z === 'baustelle' || z === 'wohnraum_voll' || g.typ === 'lager') return null;
       const zt = zustandsText(z, g.bau < PROMILLE, eingangNamen(g), GEBAEUDE[g.typ]?.funktion);
       return { text: zt.titel, warn: zt.warn };
@@ -225,10 +260,45 @@ export class Spiel {
 
   get sicht(): SimSicht { return this._sicht; }
 
-  /** Jede Aktion der Oberfläche: Befehl mit Tick-Nummer. Bei Pause laufen 2 Ticks, damit die Welt reagiert. */
+  /**
+   * Jede Aktion der Oberfläche: Befehl mit Tick-Nummer. Bei Pause laufen 2 Ticks, damit die Welt reagiert. Im Mehrspieler geht er an
+   * den Taktgeber und wirkt, sobald er in einem Zug zurückkommt (bei allen am selben Tick).
+   */
   befehl(b: Befehl): void {
+    if (this.partie) { this.partie.befehl(b); return; }
     this._sim.befehl(this._sim.tick + 1, 0, b);
     if (this.pausiert) this.schritte(2);
+  }
+
+  /** Namen der Spieler (Einzelspiel: „Du“). */
+  get namen(): string[] { return this.ctx.mehrspieler?.namen ?? ['Du']; }
+
+  /** Die Partie (Mehrspieler) oder null. */
+  get netz(): Partie | null { return this.partie; }
+
+  /** Neuer Stand vom Taktgeber (Start, Wiederbeitritt, Abgleich): Simulation tauschen, Sicht neu. */
+  private simErsetzt(sim: Simulation): void {
+    this._sim = sim;
+    this.neueSicht();
+  }
+
+  /** Spielstand als Datei herunterladen. */
+  speichern(): Spielstand {
+    const st = baueSpielstand(this.karteInfo, this.namen, this._sim.stand(), this.partie?.zug?.pausen);
+    const blob = new Blob([JSON.stringify(st)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = dateiname(this.ctx.map.info.start ?? this.ctx.map.info.name ?? 'eifel');
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    this.melde('Gespeichert – die Datei liegt bei den Downloads.', false);
+    return st;
+  }
+
+  private async ladeDatei(datei: File): Promise<void> {
+    try { this.ctx.onLaden?.(leseSpielstand(await datei.text())); } catch (e) { this.melde((e as Error).message, true); }
   }
 
   /** n Ticks sofort rechnen (Tests). */
@@ -246,13 +316,25 @@ export class Spiel {
 
   protokoll(): Protokoll { return this._sim.protokoll(this.karteInfo); }
 
+  /** Pause an/aus (Knopf, Leertaste). Im Mehrspieler zählt nur die echte Pause, nicht das Warten auf andere. */
+  pauseUmschalten(): void {
+    if (this.partie) this.partie.pause(!this.partie.zug?.pause);
+    else this.pause(!this.pausiert);
+  }
+
   pause(an: boolean): void {
+    if (this.partie) { this.partie.pause(an); return; }
     this.pausiert = an;
     this.takt.zuruecksetzen();
     this.leiste.setTempo(this.tempo, this.pausiert);
   }
 
   setzeTempo(t: number): void {
+    if (this.partie) {
+      if (this.partie.ich !== this.partie.gastgeber) { this.melde('Das Tempo stellt der Gastgeber ein.', true); return; }
+      this.partie.setzeTempo(Math.min(TEMPI[TEMPI.length - 1], Math.max(TEMPI[0], Math.round(t))));
+      return;
+    }
     this.tempo = Math.min(TEMPI[TEMPI.length - 1], Math.max(TEMPI[0], Math.round(t)));
     this.leiste.setTempo(this.tempo, this.pausiert);
   }
@@ -274,11 +356,36 @@ export class Spiel {
 
   // ------------------------------------------------------------------ Frame
 
+  /**
+   * Gleichschritt weiterdrehen mit der echten Zeit seit dem letzten Mal: Auch ein langsamer Rechner muss mit den anderen Schritt halten
+   * (er holt Ticks nach, statt in Zeitlupe zu laufen). Läuft aus dem Frame und, wenn keine Bilder kommen (Tab im Hintergrund, sehr
+   * langsame Grafik), aus einem Zeitgeber – sonst bremst ein Taktgeber im Hintergrund alle.
+   */
+  private netzTakt(): void {
+    const jetzt = performance.now();
+    this.partie!.vor(jetzt - this.letzterTakt);
+    this.letzterTakt = jetzt;
+  }
+
+  /** Ein Frame: `dt` in Sekunden (für Bewegungen begrenzt). */
   update(dt: number): void {
-    const { ticks, alpha } = this.takt.vor(dt, this.tempo, this.pausiert);
-    if (ticks > 0) {
-      for (let i = 0; i < ticks; i++) this._sim.schritt();
-      this.neueSicht();
+    let alpha: number;
+    if (this.partie) {
+      const vorher = this.pausiert || this.tempo;
+      this.netzTakt();
+      if (this._sicht.tick !== this._sim.tick) this.neueSicht();
+      this.pausiert = this.partie.angehalten;
+      this.tempo = this.partie.tempo;
+      alpha = this.partie.anteil;
+      if (vorher !== (this.pausiert || this.tempo)) this.leiste.setTempo(this.tempo, this.pausiert);
+      this.partieMeldungen();
+    } else {
+      const t = this.takt.vor(dt, this.tempo, this.pausiert);
+      alpha = t.alpha;
+      if (t.ticks > 0) {
+        for (let i = 0; i < t.ticks; i++) this._sim.schritt();
+        this.neueSicht();
+      }
     }
     const a = this.pausiert ? 0 : alpha;
     this.gebaeude.update(this._sicht, a, dt);
@@ -309,7 +416,7 @@ export class Spiel {
   }
 
   private neueSicht(): void {
-    this._sicht = this._sim.sicht();
+    this._sicht = this._sim.sicht(this.ich);
     this.indizes();
     if (this.gewaehlt !== null) this.karteSetzen();
     this.meldungenPruefen();
@@ -334,7 +441,7 @@ export class Spiel {
       this.begruesst = true;
       this.zeigeMeldung(this.filter.begruessung(KIRMES[0] ? listeText(KIRMES[0].liste) : ''));
     }
-    const hat = (typ: string) => s.gebaeude.some((g) => g.typ === typ);
+    const hat = (typ: string) => s.gebaeude.some((g) => g.sp === this.ich && g.typ === typ);
     const min = s.tick / (60 * 20);
     const tipp = (i: number, wann: boolean) => {
       if (!wann || this.tipps.has(i)) return;
@@ -418,7 +525,7 @@ export class Spiel {
       case 'Delete': case 'KeyX': this.leiste.menueZu(); this.waehleWerkzeug('abriss'); return;
       case 'Escape': this.abbrechen(); return;
       case 'Backspace': if (this.werkzeug === 'weg') { e.preventDefault(); this.zurueck(); } return;
-      case 'Space': e.preventDefault(); this.pause(!this.pausiert); return;
+      case 'Space': e.preventDefault(); this.pauseUmschalten(); return;
       case 'Enter': case 'NumpadEnter': this.bestaetigen(); return;
       case 'NumpadAdd': this.setzeTempo(this.tempo + 1); return;
       case 'NumpadSubtract': this.setzeTempo(this.tempo - 1); return;
@@ -462,10 +569,17 @@ export class Spiel {
       this.bereichSetzen(h);
       return;
     }
-    if (w === 'keins') { this.gewaehlt = this.gebAt.get(key(h))?.id ?? null; this.karteSetzen(); return; }
+    if (w === 'keins') {
+      const g = this.gebAt.get(key(h));
+      // fremde Gebäude: nur ansehen, wem sie gehören
+      if (g && g.sp !== this.ich) { this.gewaehlt = null; this.melde(`${NAMEN[g.typ] ?? g.typ} von ${this.namen[g.sp] ?? 'einem Nachbarn'}.`, false); }
+      else this.gewaehlt = g?.id ?? null;
+      this.karteSetzen();
+      return;
+    }
     if (w === 'fahne') { this.aktion(h); return; }
     if (w === 'weg' && !this.weg.aktiv) {
-      if (this.fahneAt.has(key(h))) { this.weg.beginne(h); this.offen = null; this.hinweisSetzen(); }
+      if (this.fahneAt.get(key(h))?.sp === this.ich) { this.weg.beginne(h); this.offen = null; this.hinweisSetzen(); }
       else this.melde('Ein Weg beginnt an einer Fahne – erst eine Fahne wählen.', true);
       return;
     }
@@ -479,7 +593,7 @@ export class Spiel {
 
   /** Ist der Hex ein Endziel des Wegs (Fahne oder Weg-Hex), das den Weg sofort baut? */
   private istEndziel(h: Hx): boolean {
-    return this.fahneAt.has(key(h)) || this.segAt.has(key(h));
+    return this.fahneAt.get(key(h))?.sp === this.ich || this.segAt.get(key(h))?.sp === this.ich;
   }
 
   /** Klick auf einen Hex bei laufendem Wegbau. */
@@ -503,7 +617,7 @@ export class Spiel {
 
   /** Teilstück vom letzten Punkt nach `h` anhängen; bei `bauen` den ganzen Weg bauen, sonst `h` als Zwischenpunkt behalten. */
   private wegZu(h: Hx, bauen: boolean): void {
-    const stueck = this._sim.wegAbschnitt(this.weg.letzter!, h, this.weg.pfad, this.weg.rest);
+    const stueck = this._sim.wegAbschnitt(this.weg.letzter!, h, this.weg.pfad, this.weg.rest, this.ich);
     if (!stueck) { this.melde(this.weg.rest < 1 ? 'Der Weg ist am Limit (60 Schritte) – bauen oder zurück.' : 'Dorthin führt kein Weg (Hindernis, zu weit oder Fahne voll).', true); return; }
     if (!this.weg.haengeAn(stueck)) { this.melde('Dorthin führt kein Weg.', true); return; }
     if (bauen) this.wegBauen();
@@ -582,28 +696,29 @@ export class Spiel {
   private aktion(h: Hx): void {
     const w = this.werkzeug;
     if (w === 'fahne') {
-      if (this._sim.kannFahne(h.q, h.r)) { this.befehl({ art: 'fahne', q: h.q, r: h.r }); this.hinweisSetzen(); }
+      if (this._sim.kannFahne(h.q, h.r, this.ich)) { this.befehl({ art: 'fahne', q: h.q, r: h.r }); this.hinweisSetzen(); }
       else this.melde(`Hier geht keine Fahne: ${this.grundFahne(h)}.`, true);
     } else if (GEBAEUDE_WERKZEUGE.includes(w)) {
-      if (this._sim.kannBauen(w, h.q, h.r)) {
+      if (this._sim.kannBauen(w, h.q, h.r, this.ich)) {
         this.befehl({ art: 'gebaeude', typ: w, q: h.q, r: h.r });
         this.melde(`${NAMEN[w]} wird gebaut – Material kommt aus dem Lager (${this.kostenText(w)}).`, false);
       } else this.melde(`${NAMEN[w]} geht hier nicht: ${this.grundBauen(w, h)}.`, true);
     } else if (w === 'abriss') {
       const b = this.abrissBefehl(h);
       if (b === 'lager') this.melde('Das Lager bleibt stehen – ohne Lager geht es nicht.', true);
+      else if (b === 'fremd') this.melde('Das gehört einem Nachbarn – abreißen kann man nur Eigenes.', true);
       else if (b) { this.befehl(b); this.melde('Abgerissen.', false); }
       else this.melde('Hier ist nichts zum Abreißen.', true);
     }
   }
 
-  private abrissBefehl(h: Hx): Befehl | 'lager' | null {
+  private abrissBefehl(h: Hx): Befehl | 'lager' | 'fremd' | null {
     const g = this.gebAt.get(key(h));
-    if (g) return g.typ === 'lager' ? 'lager' : { art: 'abriss_gebaeude', id: g.id };
+    if (g) return g.sp !== this.ich ? 'fremd' : g.typ === 'lager' ? 'lager' : { art: 'abriss_gebaeude', id: g.id };
     const f = this.fahneAt.get(key(h));
-    if (f && !f.gebaeude) return { art: 'abriss_fahne', id: f.id };
+    if (f && !f.gebaeude) return f.sp !== this.ich ? 'fremd' : { art: 'abriss_fahne', id: f.id };
     const s = this.segAt.get(key(h));
-    if (s) return { art: 'abriss_weg', id: s.id };
+    if (s) return s.sp !== this.ich ? 'fremd' : { art: 'abriss_weg', id: s.id };
     return null;
   }
 
@@ -651,15 +766,15 @@ export class Spiel {
             const sig = `${this.weg.sig}>${key(ziel)}|${this.netzSig}`;
             if (sig !== this.vorschauSig) {
               this.vorschauSig = sig;
-              this.vorschauPfad = this._sim.wegAbschnitt(l, ziel, this.weg.pfad, this.weg.rest);
+              this.vorschauPfad = this._sim.wegAbschnitt(l, ziel, this.weg.pfad, this.weg.rest, this.ich);
             }
             pfadOk = !!this.vorschauPfad;
             pfad = this.vorschauPfad ?? hexLinie(l, ziel, Math.max(1, this.weg.rest));
             art = pfadOk ? 'gut' : 'schlecht';
           } else art = 'neutral';
         } else art = this.fahneAt.has(key(ziel)) ? 'gut' : 'neutral';
-      } else if (w === 'fahne') art = this._sim.kannFahne(ziel.q, ziel.r) ? 'gut' : 'schlecht';
-      else if (GEBAEUDE_WERKZEUGE.includes(w)) art = this._sim.kannBauen(w, ziel.q, ziel.r) ? 'gut' : 'schlecht';
+      } else if (w === 'fahne') art = this._sim.kannFahne(ziel.q, ziel.r, this.ich) ? 'gut' : 'schlecht';
+      else if (GEBAEUDE_WERKZEUGE.includes(w)) art = this._sim.kannBauen(w, ziel.q, ziel.r, this.ich) ? 'gut' : 'schlecht';
       else if (w === 'abriss') art = this.abrissBefehl(ziel) ? 'schlecht' : 'neutral';
       else if (this.bereichId !== null) { const g = this.bereichGebaeude(); art = g && this.mitteGueltig(g, ziel) ? 'gut' : 'schlecht'; }
       else if (this.zeiger === 'touch') art = 'neutral';
@@ -747,7 +862,7 @@ export class Spiel {
     const sig = `${typ}|${key(ziel)}|${this._sicht.natur.rev}|${this.netzSig}|${vorrat.join(',')}`;
     if (this.vorschauDaten && sig === this.vorschauDatenSig) return this.vorschauDaten;
     const t = GEBAEUDE[typ];
-    const ok = this._sim.kannBauen(typ, ziel.q, ziel.r);
+    const ok = this._sim.kannBauen(typ, ziel.q, ziel.r, this.ich);
     const ringe = ok ? this.ringeFuer(typ, ziel) : null;
     let text: string, warn = false;
     if (!ok) {
@@ -849,7 +964,7 @@ export class Spiel {
   /** Vorrat aller Lager je Warenart. */
   private lagerVorrat(): number[] {
     const vorrat = new Array<number>(WAREN.length).fill(0);
-    for (const g of this._sicht.gebaeude) if (g.vorrat) for (let i = 0; i < vorrat.length; i++) vorrat[i] += g.vorrat[i] ?? 0;
+    for (const g of this._sicht.gebaeude) if (g.vorrat && g.sp === this.ich) for (let i = 0; i < vorrat.length; i++) vorrat[i] += g.vorrat[i] ?? 0;
     return vorrat;
   }
 
@@ -859,7 +974,7 @@ export class Spiel {
     if (sig !== this.schrittSig) {
       this.schrittSig = sig;
       const belegt = this.weg.pfad;
-      this.schrittHexe = naechsteSchritte(this.weg, (von, nach) => this._sim.wegAbschnitt(von, nach, belegt, 1));
+      this.schrittHexe = naechsteSchritte(this.weg, (von, nach) => this._sim.wegAbschnitt(von, nach, belegt, 1, this.ich));
     }
     return this.schrittHexe;
   }
@@ -923,7 +1038,7 @@ export class Spiel {
     if (this.werkzeug !== 'keins' || this.bereichId !== null) return false;
     const h = this.hexUnter(x, y);
     const g = h ? this.gebAt.get(key(h)) : undefined;
-    if (!g || g.bau >= PROMILLE) return false;
+    if (!g || g.sp !== this.ich || g.bau >= PROMILLE) return false;
     const stufe = naechstePrioritaet(g.prioritaet);
     this.gewaehlt = g.id;
     this.befehl({ art: 'prioritaet', id: g.id, stufe });
@@ -966,7 +1081,44 @@ export class Spiel {
     this.leiste.setHinweis(t);
   }
 
+  /** Was die Partie meldet (Auseinanderlaufen, neuer Stand, neuer Taktgeber) als Meldung der Erzählfigur. */
+  private partieMeldungen(): void {
+    const p = this.partie;
+    if (!p) return;
+    const neu = p.ereignisse.slice(this.partieGemeldet);
+    this.partieGemeldet = p.ereignisse.length;
+    for (const e of neu) {
+      const wer = (sp: number) => this.namen[sp] ?? `Spieler ${sp + 1}`;
+      if (e.art === 'auseinander') this.melde(`${wer(e.spieler)} ist auseinandergelaufen (Tick ${e.tick}) – der Stand wird neu verteilt.`, true);
+      else if (e.art === 'neuer_stand' && e.grund !== 'start') this.melde(e.grund === 'wiederbeitritt' ? 'Wieder drin – Stand vom Mitspieler geholt.' : 'Stand vom Taktgeber neu bekommen.', false);
+      else if (e.art === 'taktgeber') this.melde(`${wer(e.spieler)} gibt jetzt den Takt.`, false);
+      else if (e.art === 'fehler') this.melde(e.text, true);
+    }
+  }
+
+  /** Partieleiste: Spieler, Pause, Warten (Mehrspieler); im Einzelspiel nur die Knöpfe. */
+  private partieSetzen(): void {
+    const p = this.partie, z = p?.zug;
+    if (!p || !z) { this.partieleiste.setze({ spieler: [], status: '', warn: false, weiter: false, pausen: null }); return; }
+    const zeit = (ms: number) => { const s = Math.ceil(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+    const wer = (sp: number) => (sp === this.ich ? 'dir' : this.namen[sp] ?? `Spieler ${sp + 1}`);
+    let status = '', warn = false;
+    if (z.warten.length) {
+      status = z.warten.map((w) => `Warten auf ${wer(w.spieler)} – Verwalter übernimmt in ${zeit(w.restMs)}`).join(' · ');
+      warn = true;
+    } else if (z.pause) status = `Pause von ${wer(z.pause.spieler)} – geht in ${zeit(z.pause.restMs)} von selbst weiter`;
+    else if (!this.ctx.mehrspieler!.anwesend(p.taktgeber) && p.taktgeber !== this.ich) { status = 'Verbindung zum Taktgeber weg – warte …'; warn = true; }
+    this.partieleiste.setze({
+      spieler: this._sicht.spieler.map((d, sp) => ({
+        name: this.namen[sp] ?? `Spieler ${sp + 1}`, ich: sp === this.ich, da: sp === this.ich || this.ctx.mehrspieler!.anwesend(sp),
+        verwalter: d.verwalter, dorf: `${DORFSTUFEN[d.stufe] ?? ''} · ${d.bewohner} 👥`, taktgeber: sp === p.taktgeber,
+      })),
+      status, warn, weiter: !!z.pause && (z.pause.spieler === this.ich || this.ich === p.gastgeber), pausen: z.pausen[this.ich] ?? 0,
+    });
+  }
+
   private statusSetzen(): void {
+    this.partieSetzen();
     const s = this._sicht, d = s.dorf;
     const k = d.kirmes;
     let kirmes: NonNullable<StatusDaten['dorf']>['kirmes'] = null;
@@ -991,7 +1143,7 @@ export class Spiel {
     // Baumenü: noch nicht freigeschaltete und schon gebaute einmalige Gebäude sperren
     const gesperrt: Record<string, string> = {};
     for (const id of GEBAEUDE_WERKZEUGE) {
-      const g = this._sim.sperrGrund(id);
+      const g = this._sim.sperrGrund(id, this.ich);
       if (g === 'stufe') gesperrt[id] = `ab ${DORFSTUFEN[GEBAEUDE[id].abStufe] ?? 'später'}`;
       else if (g === 'einmalig') gesperrt[id] = 'steht schon';
     }
@@ -1033,11 +1185,11 @@ export class Spiel {
       const i = this.ctx.ausschnitt.hex.index(h.q, h.r);
       if (i >= 0) {
         const platz = this._sim.karte.bebaubar[this._sim.karte.index(h.q, h.r)];
-        const ok = this._sim.kannBauen(w, h.q, h.r);
+        const ok = this._sim.kannBauen(w, h.q, h.r, this.ich);
         z.push(`<span class="${ok ? 'gut' : 'warn'}">${NAMEN[w]}: ${ok ? `passt hier (Bauplatz ${BAUPLATZ_NAMEN[platz]}, nötig ${BAUPLATZ_NAMEN[GEBAEUDE[w].groesse]})` : 'geht hier nicht – ' + this.grundBauen(w, h)}</span>`);
       }
     } else if (w === 'fahne' && this.ctx.ausschnitt.hex.index(h.q, h.r) >= 0) {
-      const ok = this._sim.kannFahne(h.q, h.r);
+      const ok = this._sim.kannFahne(h.q, h.r, this.ich);
       z.push(`<span class="${ok ? 'gut' : 'warn'}">Fahne: ${ok ? 'passt hier' : 'geht hier nicht – ' + this.grundFahne(h)}</span>`);
     }
     return z;

@@ -12,8 +12,12 @@
   "max_s": 120
  },
  "verwalter_nach_s": 300,
+ "farben": {
+  "hinweis": "Farbe je Spieler (Platz 1–4): Fahnentuch der Mitspieler und Namen in der Partieleiste. Die eigenen Fahnen bleiben rot und gold.",
+  "liste": ["#c8402e", "#2e6fc8", "#d8a21c", "#3a9a48"]
+ },
  "start": {
-  "hinweis": "Startplätze in verschiedenen Ortskernen: mindestens so viele Hex-Schritte zwischen zwei Lagern (wird verringert, wenn der Ausschnitt nicht genug Kerne hat).",
+  "hinweis": "Startplätze in verschiedenen Ortskernen: die Lobby verteilt die Spieler auf Orte, die möglichst weit auseinanderliegen, und warnt, wenn zwei Lager näher als so viele Hex-Schritte liegen.",
   "abstand_min_hex": 12
  },
  "netz": {
