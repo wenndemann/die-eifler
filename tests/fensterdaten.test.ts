@@ -131,9 +131,9 @@ describe('Warenverteilung im Fenster', () => {
     const d = verteilungFenster(kontext(sim));
     const r = art(d, 'rangliste')[0].zeilen;
     expect(r.some((z) => z.ware === WARE.kartoffeln)).toBe(true);
-    expect(r.some((z) => z.ware === WARE.bretter)).toBe(false); // nur Baustellen
+    expect(r.some((z) => z.ware === WARE.stein)).toBe(false); // nur Baustellen
     const kart = r.find((z) => z.ware === WARE.kartoffeln)!;
-    expect(kart.plaetze.map((p) => p.name)).toEqual(['Verarbeiter', 'Wohnhäuser']);
+    expect(kart.plaetze.map((p) => p.name)).toEqual(['Kirmesplatz', 'Verarbeiter', 'Wohnhäuser']); // Kirmesplatz: Erntedank
     expect(kart.standard).toBe(true);
     expect(betroffen(WARE.kaese)).toEqual(ABNEHMER.map((a) => a.id !== 'baustelle'));
   });
@@ -144,8 +144,9 @@ describe('Warenverteilung im Fenster', () => {
     expect(verteilungKnopf(`v:${WARE.kartoffeln}:3`, v)).toEqual({ ware: WARE.kartoffeln, reihe: [0, 1, 3, 2] });
     // Käse: Verarbeiter (Rang 2) vor Kirmesplatz (Rang 1)
     expect(verteilungKnopf(`v:${WARE.kaese}:2`, v)).toEqual({ ware: WARE.kaese, reihe: [0, 2, 1, 3] });
-    // Kartoffeln: Verarbeiter ist schon der erste, der sie nimmt
-    expect(verteilungKnopf(`v:${WARE.kartoffeln}:2`, v)).toBeNull();
+    // Kartoffeln: Verarbeiter vor Kirmesplatz (Erntedank); der Kirmesplatz ist schon der erste, der sie nimmt
+    expect(verteilungKnopf(`v:${WARE.kartoffeln}:2`, v)).toEqual({ ware: WARE.kartoffeln, reihe: [0, 2, 1, 3] });
+    expect(verteilungKnopf(`v:${WARE.kartoffeln}:1`, v)).toBeNull();
     expect(verteilungKnopf(`v:${WARE.most}:std`, v)).toEqual({ ware: WARE.most, reihe: [...VERTEILUNG_STANDARD] });
     expect(verteilungKnopf('v:99:1', v)).toBeNull();
     expect(verteilungKnopf('quatsch', v)).toBeNull();

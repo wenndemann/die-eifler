@@ -4,8 +4,10 @@ import { TICK_HZ } from './typen';
 import warenJson from '../../data/goods.json';
 import gebaeudeJson from '../../data/buildings.json';
 import dorfJson from '../../data/dorf.json';
+import jahrJson from '../../data/jahr.json';
+import festeJson from '../../data/feste.json';
 
-interface WareJson { id: string; name: string; gruppe: string; nahrung?: number; form?: string; farbe?: string; farbe_fb?: string }
+interface WareJson { id: string; name: string; gruppe: string; nahrung?: number; mischkorb?: boolean; form?: string; farbe?: string; farbe_fb?: string }
 interface GebaeudeJson {
   id: string; name: string; gruppe: string; symbol: string; spruch: string;
   funktion: string; groesse: number; kosten: Record<string, number>;
@@ -13,9 +15,10 @@ interface GebaeudeJson {
   vorrat?: Record<string, number>;
   eingang?: Record<string, number>;
   ausgang?: { ware: string; max: number };
-  wandelt?: { ein: string; menge?: number; aus: string; dauer_s: number };
+  wandelt?: { ein: string | Record<string, number>; menge?: number; aus: string; dauer_s: number };
   zeiten?: { arbeit_s?: number; ruhe_s?: number };
   nahrung_plaetze?: number; ab_stufe?: number; einmalig?: boolean; taste?: string;
+  saison?: string; werkzeug?: number; boten?: number;
 }
 
 const warenListe = (warenJson as { waren: WareJson[] }).waren;
@@ -32,6 +35,8 @@ export const WAREN_GRUPPEN: readonly string[] = warenListe.map((w) => w.gruppe);
 export const NAHRUNG: readonly number[] = warenListe.map((w) => w.nahrung ?? 0);
 /** Nahrungs-Warenarten, die beste Stufe zuerst (bei Gleichstand kleinere Warenart). */
 export const NAHRUNG_REIHE: readonly number[] = WAREN.map((_, i) => i).filter((i) => NAHRUNG[i] > 0).sort((a, b) => NAHRUNG[b] - NAHRUNG[a] || a - b);
+/** Zählt im Mischkorb der Marktflecken-Kirmes (veredelt: Nahrung ab Stufe 2 oder 'mischkorb' in goods.json). */
+export const MISCHKORB: readonly boolean[] = warenListe.map((w) => (w.nahrung ?? 0) >= 2 || !!w.mischkorb);
 /** Lesbares Modell je Warenart (Drehbuch 7.6): Form und Hauptfarbe. */
 export const WAREN_FORM: readonly string[] = warenListe.map((w) => w.form ?? 'sack');
 export const WAREN_FARBE: readonly string[] = warenListe.map((w) => w.farbe ?? '#b08850');
@@ -52,12 +57,14 @@ export const STEIGUNG_DM = 5;
 export const GEFAELLE_DM = 20;
 /** Dauer einer Übergabe an der Fahne. */
 export const UEBERGABE_TICKS = 6;
-const dorf = dorfJson as {
+const dorf = dorfJson as unknown as {
   start: { bewohner: number; bauarbeiter: number; planierer: number };
   wohnen: { zyklus_s: number[]; notnagel_frei_unter: number; notnagel_s: number };
   bauen: { je_ware_s: number; planieren_ab_grad: number; planieren_s: number; planieren_je_grad_s: number };
   stufen: string[];
-  kirmes: { liste: Record<string, number>; fest_s: number; zuzug: number; schaltet_frei: string[] }[];
+  kirmes: { liste: Record<string, number>; fest_s: number; zuzug: number; schaltet_frei: string[]; geschenk?: Record<string, number>; mischkorb?: number }[];
+  bauleute: { takt_s: number; max: number };
+  boten: { dauer_s: number; ab_hex: number; torkeln_prozent: number; verliert_jede: number; aufsammeln_s: number };
   verteilung: { abnehmer: { id: string; name: string; symbol: string }[]; standard: string[] };
   statistik: { takt_s: number; max_punkte: number };
   autosave: { takt_min: number };
@@ -85,7 +92,13 @@ export function planierTicks(grad: number): number {
 export const DORFSTUFEN: readonly string[] = dorf.stufen;
 
 /** Kirmes je Dorfstufe (Index = Stufe, von der aus gefeiert wird): Warenliste je Warenart, Festdauer in Ticks, Zuzug, Freischaltungen. */
-export interface KirmesStufe { liste: readonly number[]; festTicks: number; zuzug: number; schaltetFrei: readonly string[] }
+export interface KirmesStufe {
+  liste: readonly number[]; festTicks: number; zuzug: number; schaltetFrei: readonly string[];
+  /** Kommt nach dem Fest ins Lager (je Warenart). */
+  geschenk: readonly number[];
+  /** So viele beliebige veredelte Waren (MISCHKORB) zusätzlich zur Liste. */
+  mischkorb: number;
+}
 
 /** Bäume (DESIGN §12): höchstens so viele je Hex (ausgewachsen + Jungbäume). */
 export const TREE_MAX = 3;
@@ -117,7 +130,7 @@ export const PRIO_STANDARD = 2;
 /** Wartezeit, bis ein Arbeiter ohne Ziel (kein Baum, kein Fels, kein Platz) neu sucht. */
 export const SUCHE_WARTE = 2 * TICK_HZ;
 
-export type Funktion = 'lager' | 'wohnen' | 'holzfaeller' | 'foerster' | 'steinbruch' | 'erzeuger' | 'verarbeiter' | 'kirmes';
+export type Funktion = 'lager' | 'wohnen' | 'holzfaeller' | 'foerster' | 'steinbruch' | 'erzeuger' | 'verarbeiter' | 'kirmes' | 'schaenke';
 
 export interface GebaeudeTyp {
   id: string; name: string; gruppe: string; symbol: string; spruch: string;
@@ -137,8 +150,8 @@ export interface GebaeudeTyp {
   /** Output-Puffer (Warenart, Größe); -1 bei keiner. */
   ausgangWare: number;
   ausgangMax: number;
-  /** Verarbeiter: macht aus `menge` Waren `ein` in `ticks` eine Ware `aus`. */
-  wandelt?: { ein: number; menge: number; aus: number; ticks: number };
+  /** Verarbeiter: macht aus den Waren `ein` (Warenart a, Menge n) in `ticks` eine Ware `aus`. */
+  wandelt?: { ein: readonly { a: number; n: number }[]; aus: number; ticks: number };
   /** Arbeitsdauer (Fällen, Pflanzen, Hauen) und Ruhe danach in Ticks. */
   arbeitTicks: number;
   ruheTicks: number;
@@ -155,6 +168,12 @@ export interface GebaeudeTyp {
   pausierbar: boolean;
   /** Taste im offenen Baumenü (Großbuchstabe) oder ''. */
   taste: string;
+  /** Feld (saison 'feld'): ruht im Winter, Aussaat im Frühjahr, Ernte im Herbst (data/jahr.json). */
+  feld: boolean;
+  /** Werkzeug, das die Fachkraft braucht, bevor sie anfängt (0 = keins). */
+  werkzeug: number;
+  /** Schänke: höchstens so viele Boten zugleich. */
+  boten: number;
 }
 
 const ticks = (s: number | undefined) => Math.round((s ?? 0) * TICK_HZ);
@@ -174,6 +193,8 @@ function jeWare(m: Record<string, number> | undefined): number[] {
 function baue(j: GebaeudeJson): GebaeudeTyp {
   const kosten = jeWare(j.kosten);
   const puffer = jeWare(j.eingang);
+  // Werkzeug der Fachkraft kommt wie jede Zutat über den Eingang
+  if (j.werkzeug) puffer[ausId('werkzeug')] += j.werkzeug;
   return {
     id: j.id, name: j.name, gruppe: j.gruppe, symbol: j.symbol, spruch: j.spruch,
     funktion: j.funktion as Funktion,
@@ -185,7 +206,10 @@ function baue(j: GebaeudeJson): GebaeudeTyp {
     puffer, pufferSumme: puffer.reduce((s, n) => s + n, 0),
     ausgangWare: j.ausgang ? ausId(j.ausgang.ware) : -1,
     ausgangMax: j.ausgang ? j.ausgang.max : 0,
-    wandelt: j.wandelt ? { ein: ausId(j.wandelt.ein), menge: j.wandelt.menge ?? 1, aus: ausId(j.wandelt.aus), ticks: ticks(j.wandelt.dauer_s) } : undefined,
+    wandelt: j.wandelt ? {
+      ein: typeof j.wandelt.ein === 'string' ? [{ a: ausId(j.wandelt.ein), n: j.wandelt.menge ?? 1 }] : Object.entries(j.wandelt.ein).map(([id, n]) => ({ a: ausId(id), n })),
+      aus: ausId(j.wandelt.aus), ticks: ticks(j.wandelt.dauer_s),
+    } : undefined,
     arbeitTicks: ticks(j.zeiten?.arbeit_s),
     ruheTicks: ticks(j.zeiten?.ruhe_s),
     wohnraum: j.wohnraum ?? 0,
@@ -195,7 +219,15 @@ function baue(j: GebaeudeJson): GebaeudeTyp {
     vorrat: jeWare(j.vorrat),
     pausierbar: (j.arbeiter ?? 0) > 0 || j.funktion === 'wohnen',
     taste: (j.taste ?? '').toUpperCase(),
+    feld: j.saison === 'feld',
+    werkzeug: j.werkzeug ?? 0,
+    boten: j.boten ?? 0,
   };
+}
+
+/** Wie viel von Ware `a` ein Verarbeiter je Arbeitsgang braucht (Werkzeug der Fachkraft: das Werkzeug; sonst 1). */
+export function zutatMenge(t: GebaeudeTyp, a: number): number {
+  return t.wandelt?.ein.find((z) => z.a === a)?.n ?? (a === WARE.werkzeug && t.werkzeug ? t.werkzeug : 1);
 }
 
 const typen = (gebaeudeJson as { gebaeude: GebaeudeJson[] }).gebaeude.map(baue);
@@ -208,10 +240,83 @@ export const GEBAEUDE_IDS: readonly string[] = typen.map((t) => t.id);
 /** Startvorrat des Lagers je Warenart (12 bretter, 8 stein, 8 kartoffeln). */
 export const START_VORRAT: readonly number[] = GEBAEUDE.lager.vorrat;
 
-/** Kirmes-Stufen aus data/dorf.json (Weiler → Dorf; weitere kommen in M8). */
+/** Kirmes-Stufen aus data/dorf.json (Weiler → Dorf → Kirchdorf → Marktflecken). */
 export const KIRMES: readonly KirmesStufe[] = dorf.kirmes.map((k) => ({
   liste: jeWare(k.liste), festTicks: sek(k.fest_s), zuzug: k.zuzug, schaltetFrei: k.schaltet_frei.slice(),
+  geschenk: jeWare(k.geschenk), mischkorb: k.mischkorb ?? 0,
 }));
+
+/** Neue Bauleute aus Werkzeug (Drehbuch 4.5): Takt in Ticks und Höchstzahl je Beruf. */
+export const BAULEUTE_TAKT = sek(dorf.bauleute.takt_s);
+export const BAULEUTE_MAX = dorf.bauleute.max;
+
+/** Beschwipste Boten (DESIGN §10.3): Dauer in Ticks, ab welchem Abstand (Hexe) sie tragen, Torkeln, Verlust, Aufsammeln. */
+export const BOTE_TICKS = sek(dorf.boten.dauer_s);
+export const BOTE_AB_HEX = dorf.boten.ab_hex;
+export const BOTE_TORKELN_PROZENT = dorf.boten.torkeln_prozent;
+export const BOTE_VERLIERT_JEDE = Math.max(1, dorf.boten.verliert_jede);
+export const AUFSAMMELN_TICKS = sek(dorf.boten.aufsammeln_s);
+
+// ---------------------------------------------------------------- Jahreszeiten und Wetter (data/jahr.json, Drehbuch 7.4)
+
+interface WetterJson {
+  name: string; symbol: string; wege?: number; arbeit?: number; felder?: number; missernte?: number; hochwasser?: boolean; wegschwimmen?: number; wo: string;
+}
+const jahr = jahrJson as unknown as {
+  jahr_min: number; jahreszeiten: string[];
+  feld: { saat_s: number; ernte_prozent: number };
+  winter: { essen_s: number; je_bewohner: number; frieren_prozent: number; schnee_prozent: number };
+  wetter: {
+    je_jahreszeit_min: number; je_jahreszeit_max: number; dauer_min_s: number; dauer_max_s: number; ankuendigung_s: number;
+    tal_dm: number; hoehe_prozent: number; aue_dm: number;
+    arten: Record<string, WetterJson>; je_jahreszeit: string[][];
+  };
+};
+/** Ein Spieljahr in Ticks (Startwert 60 min) und eine Jahreszeit (ein Viertel). */
+export const JAHR_TICKS = Math.max(4, sek(jahr.jahr_min * 60) - (sek(jahr.jahr_min * 60) % 4));
+export const JAHRESZEIT_TICKS = JAHR_TICKS / 4;
+export const JAHRESZEITEN: readonly string[] = jahr.jahreszeiten;
+export const WINTER = 3;
+export const SAAT_TICKS = sek(jahr.feld.saat_s);
+export const ERNTE_PROZENT = jahr.feld.ernte_prozent;
+export const WINTER_ESSEN_TICKS = sek(jahr.winter.essen_s);
+export const WINTER_JE_BEWOHNER = Math.max(1, jahr.winter.je_bewohner);
+export const FRIEREN_PROZENT = jahr.winter.frieren_prozent;
+export const SCHNEE_PROZENT = jahr.winter.schnee_prozent;
+
+/** Wetterart (Index = Art in der Simulation). wo: 0 alle, 1 Tal, 2 Höhe, 3 Aue. */
+export interface WetterArt {
+  id: string; name: string; symbol: string;
+  wege: number; arbeit: number; felder: number; missernte: number; hochwasser: boolean; wegschwimmen: number; wo: 0 | 1 | 2 | 3;
+}
+const WO: Record<string, 0 | 1 | 2 | 3> = { alle: 0, tal: 1, hoehe: 2, aue: 3 };
+export const WETTER: readonly WetterArt[] = Object.entries(jahr.wetter.arten).map(([id, w]) => ({
+  id, name: w.name, symbol: w.symbol, wege: w.wege ?? 0, arbeit: w.arbeit ?? 0, felder: w.felder ?? 0, missernte: w.missernte ?? 0,
+  hochwasser: !!w.hochwasser, wegschwimmen: w.wegschwimmen ?? 0, wo: WO[w.wo] ?? 0,
+}));
+/** Mögliche Wetterarten je Jahreszeit (Indizes in WETTER). */
+export const WETTER_JE_JAHRESZEIT: readonly (readonly number[])[] = jahr.wetter.je_jahreszeit.map((l) => l.map((id) => {
+  const i = WETTER.findIndex((w) => w.id === id);
+  if (i < 0) throw new Error(`Unbekanntes Wetter "${id}" in data/jahr.json`);
+  return i;
+}));
+export const WETTER_MIN = jahr.wetter.je_jahreszeit_min;
+export const WETTER_MAX = Math.max(WETTER_MIN, jahr.wetter.je_jahreszeit_max);
+export const WETTER_DAUER_MIN = sek(jahr.wetter.dauer_min_s);
+export const WETTER_DAUER_MAX = Math.max(WETTER_DAUER_MIN, sek(jahr.wetter.dauer_max_s));
+export const WETTER_ANKUENDIGUNG = sek(jahr.wetter.ankuendigung_s);
+/** Tal: Hex mindestens TAL_DM tiefer als der Schnitt im Umkreis 4; Höhe: oberes Drittel der Höhen; Aue: am Wasser und höchstens AUE_DM darüber. */
+export const TAL_DM = jahr.wetter.tal_dm;
+export const HOEHE_PROZENT = jahr.wetter.hoehe_prozent;
+export const AUE_DM = jahr.wetter.aue_dm;
+
+// ---------------------------------------------------------------- Kleine Feste (data/feste.json, Drehbuch 6 „Feste“)
+
+export interface KleinesFest { id: string; name: string; symbol: string; jahreszeit: number; liste: readonly number[]; punkte: number }
+const feste = festeJson as unknown as { obergrenze: number; fest_s: number; feste: { id: string; name: string; symbol: string; jahreszeit: number; liste: Record<string, number>; punkte: number }[] };
+export const KLEINE_FESTE: readonly KleinesFest[] = feste.feste.map((f) => ({ id: f.id, name: f.name, symbol: f.symbol, jahreszeit: f.jahreszeit, liste: jeWare(f.liste), punkte: f.punkte }));
+export const FEST_OBERGRENZE = feste.obergrenze;
+export const KLEINES_FEST_TICKS = sek(feste.fest_s);
 
 /**
  * Warenverteilung (ROADMAP M7, wie Siedler 2): Abnehmer-Arten in der Reihenfolge von data/dorf.json (Index = Art: 0 Baustellen,

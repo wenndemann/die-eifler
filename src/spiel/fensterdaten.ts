@@ -3,7 +3,7 @@
 // data/buildings.json (Eingang, Ausgang, wandelt, Radius, Wohnraum, Vorrat, Funktion) – ohne Code für einzelne Gebäude.
 // Gezeichnet wird in src/ui/fenster.ts. Einzeln testbar (tests/fensterdaten.test.ts).
 import {
-  ABNEHMER, DORFSTUFEN, FLAG_CAP, GEBAEUDE, GEBAEUDE_IDS, KIRMES, NAHRUNG, VERTEILUNG_STANDARD, WAREN, WAREN_GRUPPEN,
+  ABNEHMER, DORFSTUFEN, FLAG_CAP, GEBAEUDE, GEBAEUDE_IDS, KIRMES, KLEINE_FESTE, MISCHKORB, NAHRUNG, VERTEILUNG_STANDARD, WAREN, WAREN_GRUPPEN, zutatMenge,
 } from '../sim/daten';
 import type { GebaeudeTyp } from '../sim/daten';
 import { PROMILLE, STAT_KOPF, TICK_HZ } from '../sim/typen';
@@ -87,7 +87,7 @@ function gebName(s: SimSicht, id: Id): string {
 /** Kurztext, was ein Gebäudetyp aus den Daten macht („2 Kartoffeln → 1 Bratkartoffeln in 12 s“). */
 export function leistungText(t: GebaeudeTyp, w: readonly WareText[]): string[] {
   const z: string[] = [];
-  if (t.wandelt) z.push(`${mengeText(t.wandelt.menge, w[t.wandelt.ein])} → 1 ${w[t.wandelt.aus]?.eins ?? ''} in ${Math.round(t.wandelt.ticks / TICK_HZ)} s`);
+  if (t.wandelt) z.push(`${t.wandelt.ein.map((x) => mengeText(x.n, w[x.a])).join(' + ')} → 1 ${w[t.wandelt.aus]?.eins ?? ''} in ${Math.round(t.wandelt.ticks / TICK_HZ)} s`);
   else if (t.funktion === 'erzeuger' && t.ausgangWare >= 0) z.push(`alle ${Math.round(t.arbeitTicks / TICK_HZ)} s 1 ${w[t.ausgangWare]?.eins ?? ''}`);
   else if (t.radius > 0 && t.ausgangWare >= 0) z.push(`holt ${w[t.ausgangWare]?.mehr ?? ''} im Umkreis von ${t.radius} Hexen`);
   else if (t.radius > 0) z.push(`arbeitet im Umkreis von ${t.radius} Hexen (pflanzt, wo Platz ist)`);
@@ -122,7 +122,7 @@ export function gebaeudeFenster(id: Id, k: FensterKontext): FensterDaten | null 
   if (baustelle) eingang = bedarfNamen(g.bedarf ?? []);
   else if (t.funktion === 'wohnen') eingang = 'Essen';
   else if (t.funktion === 'kirmes') eingang = 'die Warenliste';
-  else eingang = bedarfNamen(t.puffer.map((n, a) => (n > 0 && (g.puffer?.[a] ?? 0) < (t.wandelt?.menge ?? 1) ? 1 : 0)));
+  else eingang = bedarfNamen(t.puffer.map((n, a) => (n > 0 && (g.puffer?.[a] ?? 0) < zutatMenge(t, a) ? 1 : 0)));
   const zt = zustandsText(g.getrennt ? 'getrennt' : g.zustand, baustelle, eingang, t.funktion);
   ab.push({ art: 'status', text: zt.titel, warn: zt.warn, spruch: baustelle || zt.warn ? zt.spruch : t.spruch });
 
@@ -287,12 +287,12 @@ export function warenFenster(k: FensterKontext): FensterDaten {
   return { titel: 'Waren', symbol: '📦', abschnitte: ab };
 }
 
-/** Welche Abnehmer-Arten eine Ware überhaupt nehmen (aus den Daten): Baukosten, Kirmeslisten, Eingang der Verarbeiter, Essen. */
+/** Welche Abnehmer-Arten eine Ware überhaupt nehmen (aus den Daten): Baukosten, Kirmeslisten und Mischkorb, kleine Feste, Eingang der Verarbeiter, Essen. */
 export function betroffen(a: number): boolean[] {
   const typen = GEBAEUDE_IDS.map((id) => GEBAEUDE[id]);
   return ABNEHMER.map((ab) => {
     if (ab.id === 'baustelle') return typen.some((t) => t.kosten[a] > 0);
-    if (ab.id === 'kirmes') return KIRMES.some((x) => x.liste[a] > 0);
+    if (ab.id === 'kirmes') return KIRMES.some((x) => x.liste[a] > 0 || (x.mischkorb > 0 && MISCHKORB[a])) || KLEINE_FESTE.some((f) => f.liste[a] > 0);
     if (ab.id === 'verarbeiter') return typen.some((t) => t.funktion !== 'wohnen' && t.funktion !== 'kirmes' && t.puffer[a] > 0);
     if (ab.id === 'wohnen') return NAHRUNG[a] > 0;
     return false;

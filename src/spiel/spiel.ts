@@ -13,7 +13,7 @@ import type { Partie } from '../netz/partie';
 import { Partieleiste } from '../ui/partieleiste';
 import { AUTOSAVE_SPEICHER, baueSpielstand, dateiname, holeAutosave, leseSpielstand, type Spielstand } from './spielstand';
 import { spieleAb } from '../sim/replay';
-import { ARBEIT_MITTE_MAX, AUTOSAVE_MIN, DORFSTUFEN, FLAG_CAP, GEBAEUDE, GEBAEUDE_IDS, KIRMES, WAREN, WAREN_NAMEN } from '../sim/daten';
+import { ARBEIT_MITTE_MAX, AUTOSAVE_MIN, DORFSTUFEN, FLAG_CAP, GEBAEUDE, GEBAEUDE_IDS, KIRMES, WAREN, WAREN_NAMEN, zutatMenge } from '../sim/daten';
 import { PROMILLE, TICK_HZ } from '../sim/typen';
 import type { Befehl, Id, Protokoll, SichtFahne, SichtGebaeude, SichtSegment, SimSicht } from '../sim/typen';
 import { Wege } from '../render/wege';
@@ -95,7 +95,7 @@ function eingangNamen(g: SichtGebaeude): string {
   if (!t || g.bau < PROMILLE) return bedarfNamen(g.bedarf ?? [], WARE_TEXT);
   if (t.funktion === 'wohnen') return 'Essen';
   if (t.funktion === 'kirmes') return 'die Warenliste';
-  return bedarfNamen(t.puffer.map((n, a) => (n > 0 && (g.puffer?.[a] ?? 0) < (t.wandelt?.menge ?? 1) ? 1 : 0)), WARE_TEXT);
+  return bedarfNamen(t.puffer.map((n, a) => (n > 0 && (g.puffer?.[a] ?? 0) < zutatMenge(t, a) ? 1 : 0)), WARE_TEXT);
 }
 
 /** Baumenü aus den Daten: Gruppen und Gebäude wie in data/buildings.json (ohne Lager), mit Icon, Taste und Tooltip. */
