@@ -251,12 +251,12 @@ export async function bedienungsTest({ browser, url, aus, info, fail }) {
   info(`Bedienung M7: offene Fenster ${offen.join(', ')}`);
   if (offen.length !== 5) fail(`Bedienung M7: 5 Fenster erwartet, offen: ${offen.join(', ')}`);
   // Fenster verschieben (Kopf ziehen)
-  const kopf = await page.locator('.fenster[data-fenster="waren"] .fe-kopf').boundingBox();
+  const kopf = await page.locator('.fenster[data-fenster="protokoll"] .fe-kopf').boundingBox();
   await page.mouse.move(kopf.x + 60, kopf.y + 15);
   await page.mouse.down();
   await page.mouse.move(kopf.x - 240, kopf.y + 140, { steps: 5 });
   await page.mouse.up();
-  const neu = await page.locator('.fenster[data-fenster="waren"]').boundingBox();
+  const neu = await page.locator('.fenster[data-fenster="protokoll"]').boundingBox();
   if (Math.abs(neu.x - (kopf.x - 300)) > 12 || Math.abs(neu.y - (kopf.y + 125)) > 12) fail(`Bedienung M7: Fenster nicht verschoben (${Math.round(neu.x)},${Math.round(neu.y)})`);
   // Leistungsbudget (DESIGN §11.2: Frame-CPU unter 8 ms): mit 5 Fenstern kostet ihre Aktualisierung (4× je Sekunde) fast nichts
   const mess = await page.evaluate(async () => {
@@ -266,7 +266,7 @@ export async function bedienungsTest({ browser, url, aus, info, fail }) {
     const t0 = performance.now(), f0 = sp.fenster.messung.n;
     let bilder = 0;
     await new Promise((ok) => { const f = () => { bilder++; if (performance.now() - t0 < 4000) requestAnimationFrame(f); else ok(); }; requestAnimationFrame(f); });
-    const lager = document.querySelector('.fenster[data-fenster="geb:1"]').textContent;
+    const lager = [...document.querySelectorAll('.fenster[data-fenster="geb:1"] .fe-ware')].map((w) => w.title).join(' ');
     return { ms: sp.fenster.messung.ms, max: sp.fenster.messung.max, n: sp.fenster.messung.n - f0, s: (performance.now() - t0) / 1000, lager, bilder };
   });
   info(`Bedienung M7: 5 Fenster, ${mess.n} Aktualisierungen in ${mess.s.toFixed(1)} s (${mess.bilder} Bilder), im Mittel ${mess.ms.toFixed(2)} ms (max ${mess.max.toFixed(1)} ms)`);
