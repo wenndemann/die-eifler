@@ -1,4 +1,4 @@
-// Screenshots der Stilprobe (ROADMAP M8b): je Variante A, B, C eine Übersicht und eine Nahaufnahme der Figuren.
+// Screenshots der Stilprobe (ROADMAP M9): je Variante A, B, C eine Übersicht und eine Nahaufnahme der Figuren.
 // Aufruf: node tools/stilprobe/aufnahme.mjs [Ausgabeordner]
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';

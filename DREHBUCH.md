@@ -250,7 +250,7 @@ Die Mengen werden beim Spielen eingestellt, die Zeitziele bleiben.
 - **Werkzeug:** eine Ware „Werkzeug“. Es brauchen die Fachkräfte von Erzgrube und Eisenhütte (später die Spezialketten), Schmiede und Köhlerei nicht. Die Kirchdorf-Kirmes schenkt 2 Werkzeug. Neue Bauarbeiter und Planierer: Wunschzahl im Lagerfenster, je 1 Werkzeug und 1 freier Bewohner.
 - **Lagerhaus:** Regeln je Lager wie in Siedler 2: normal / nicht einlagern / auslagern je Ware.
 - **Landbier** ist veredelte Nahrung, **Schnaps** keine Nahrung, zählt aber im Mischkorb.
-- **Marktflecken bis M10:** Bergkäse steht als Platzhalter für die Spezialität des Völkchens.
+- **Marktflecken bis M11:** Bergkäse steht als Platzhalter für die Spezialität des Völkchens.
 - **Schänke und Boten:** 1 Schnaps macht einen freien Bewohner für 3 Spielminuten zum Boten; Boten tragen querfeldein zu Abnehmern weiter als 8 Hexe, torkeln (30 % Umweg), verlieren jede zehnte Ware (liegt, bis sie einer aufliest), höchstens 4 je Schänke.
 - Mengen nach dem 2-Stunden-Lauf: Dorf → Kirchdorf 15 Bergkäse, 20 Honig, 25 Landbier, 10 Schnaps; Kirchdorf → Marktflecken 10 Bergkäse, 10 Werkzeug, Mischkorb 20.
 
@@ -346,7 +346,7 @@ Gebäude werden nie zerstört. Wechselt ein Hex mit Gebäude den Besitzer, steht
 - **Kein Dauerfeiern:** Jedes kleine Fest gibt es höchstens einmal je Spieljahr und Ort, dazu eine Obergrenze für die Punkte aus kleinen Festen (Startwert beim Spielen). Kein Bereich allein reicht zum Sieg (6.4).
 - **Die Kirmes bleibt das Tor zur nächsten Dorfstufe**, das Schützenfest das Kräftemessen. Kleine Feste schalten nichts frei.
 
-**Beschlossen in M8 (Startwerte):** gefeiert am Kirmesplatz, nur in der eigenen Jahreszeit, einmal je Spieljahr; Maifest (Frühjahr: 8 Landbier, 6 Bratkartoffeln, 20 P.), Viehmarkt (Sommer: 6 Käse, 6 Milch, 4 Honig, 15 P.), Erntedank (Herbst: 8 Kartoffeln, 8 Äpfel, 4 Gerste, 20 P.), Martinsfeuer (Herbst: 6 Bratkartoffeln, 4 Schnaps, 2 Holzkohle, 25 P.), Fastelovend (Winter: 6 Most, 4 Schnaps, 15 P.); Obergrenze 200 Punkte. Waren, die die Kirmes braucht, gehen zuerst an die Kirmes. Weinfest mit den Ahrtalern (M10).
+**Beschlossen in M8 (Startwerte):** gefeiert am Kirmesplatz, nur in der eigenen Jahreszeit, einmal je Spieljahr; Maifest (Frühjahr: 8 Landbier, 6 Bratkartoffeln, 20 P.), Viehmarkt (Sommer: 6 Käse, 6 Milch, 4 Honig, 15 P.), Erntedank (Herbst: 8 Kartoffeln, 8 Äpfel, 4 Gerste, 20 P.), Martinsfeuer (Herbst: 6 Bratkartoffeln, 4 Schnaps, 2 Holzkohle, 25 P.), Fastelovend (Winter: 6 Most, 4 Schnaps, 15 P.); Obergrenze 200 Punkte. Waren, die die Kirmes braucht, gehen zuerst an die Kirmes. Weinfest mit den Ahrtalern (M11).
 
 **Kirmes und Schützenfest** funktionieren ähnlich: Man baut einen Festplatz, liefert eine Warenliste, dann wird gefeiert. Vorschlag zur Abgrenzung:
 
@@ -364,7 +364,7 @@ Gebäude werden nie zerstört. Wechselt ein Hex mit Gebäude den Besitzer, steht
 
 Lustiger Siedler-Look: übertriebene Proportionen, krummbeinige Figuren, Gebäude mit Charakter, Sprüche und Animationen.
 
-**Beschlossen:** Der Stil wird in einem eigenen Meilenstein umgesetzt (ROADMAP M8b), nicht erst am Ende. Grundlage ist eine Stilprobe in drei Varianten, aus der der Nutzer wählt; daraus entsteht ein Stil-Leitfaden (`STIL.md`). Geprüft wird über eine feste Bildstrecke, die Gutachter-Agenten nach einem Bewertungsbogen aus diesem Kapitel benoten (4 von 5 „Stilziel erreicht“, kein Punkt unter 7); das letzte Wort hat der Mensch.
+**Beschlossen:** Der Stil wird in einem eigenen Meilenstein umgesetzt (ROADMAP M9), nicht erst am Ende. Grundlage ist eine Stilprobe in drei Varianten, aus der der Nutzer wählt; daraus entsteht ein Stil-Leitfaden (`STIL.md`). Geprüft wird über eine feste Bildstrecke, die Gutachter-Agenten nach einem Bewertungsbogen aus diesem Kapitel benoten (4 von 5 „Stilziel erreicht“, kein Punkt unter 7); das letzte Wort hat der Mensch.
 
 ### 7.1 Figuren
 
@@ -404,7 +404,7 @@ Lustiger Siedler-Look: übertriebene Proportionen, krummbeinige Figuren, Gebäud
 Alle Waren sind sichtbar unterwegs (4.1). Ihre Optik kommt in zwei Schritten:
 
 - **Erst lesbar (M5):** Jede Ware hat eine klare Form und Farbe und ist auf Wegen, an Fahnen und in Warenlisten sofort zu erkennen. Der Stamm ist ein Stamm, das Brett ein Brett, der Käse ein gelbes Rad. Aus diesen Modellen entstehen auch die Icons (M7).
-- **Dann schön (M11):** feine Modelle, Holzmaserung, Steine mit Moos, Wackeln beim Tragen.
+- **Dann schön (M12):** feine Modelle, Holzmaserung, Steine mit Moos, Wackeln beim Tragen.
 
 ## 8. Technik und Mehrspieler
 

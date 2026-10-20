@@ -8,7 +8,7 @@ Leitideen:
 
 - **Erst die Welt, dann die Wirtschaft.** Die echte Eifel ist das Fundament. Optik und Leistung werden von Anfang an mitgebaut.
 - **Deterministisch ab dem ersten Tick.** Die Simulation ist von M3 an befehlsbasiert, rechnet nur mit Ganzzahlen und hat eine Prüfsumme (Drehbuch 8.3). Mehrspieler kommt deshalb schon in M6, nicht am Ende.
-- **Früh eine echte Partie.** Ab M5 macht eine Stunde Spaß, ab **M9 läuft die erste volle 2-Stunden-Partie** mit Nachbarn, Finden und Eifel-Punkten, allein und zu mehreren.
+- **Früh eine echte Partie.** Ab M5 macht eine Stunde Spaß, ab **M10 läuft die erste volle 2-Stunden-Partie** mit Nachbarn, Finden und Eifel-Punkten, allein und zu mehreren.
 - **Freies Spiel und Mehrspieler vor der Kampagne.** Der Eifelsteig kommt zuletzt (Drehbuch 2.1).
 
 | | Meilenstein | Vorzeigbar am Ende |
@@ -21,11 +21,11 @@ Leitideen:
 | M6 | Mehrspieler-Grundgerüst | zwei Browser bauen zusammen |
 | M7 | Bedienung und Speichern | spielbar ohne Erklärung |
 | M8 | Volle Grundwirtschaft und Jahreszeiten | 3 Dorfstufen, Winter, Schnaps |
-| M8b | Stil: Siedler trifft Comic | das Spiel sieht aus wie im Drehbuch (Kapitel 7) |
-| M9 | Gebiet, Nachbarn, Finden, Ziele | **erste 2-Stunden-Partie** |
-| M10 | Die 10 Völkchen | jeder Startort spielt sich anders |
-| M11 | Feinschliff Figuren, Wetter, Klang, Erzählerin | Version 1.0 (freies Spiel + Mehrspieler) |
-| M12 | Kampagne „Der Eifelsteig“ | 15 Etappen von Aachen nach Trier |
+| M9 | Stil: Siedler trifft Comic | das Spiel sieht aus wie im Drehbuch (Kapitel 7) |
+| M10 | Gebiet, Nachbarn, Finden, Ziele | **erste 2-Stunden-Partie** |
+| M11 | Die 10 Völkchen | jeder Startort spielt sich anders |
+| M12 | Feinschliff Figuren, Wetter, Klang, Erzählerin | Version 1.0 (freies Spiel + Mehrspieler) |
+| M13 | Kampagne „Der Eifelsteig“ | 15 Etappen von Aachen nach Trier |
 
 ---
 
@@ -50,8 +50,8 @@ Offen (wird zusammen mit M2 erledigt):
 - [x] Playwright-Smoke-Test (`npm run test:smoke`): Kartenwahl → Ausschnitt lädt, Screenshots aus 3 festen Kamerapositionen, Prüfsumme Browser = Python
 
 Verschoben:
-- Hecken im Monschauer Heckenland → M10 (Monschauer Spezialität)
-- Post-Processing (SSAO, Bloom, Farb-Grading, Qualitätsstufen) und Talnebel → M11
+- Hecken im Monschauer Heckenland → M11 (Monschauer Spezialität)
+- Post-Processing (SSAO, Bloom, Farb-Grading, Qualitätsstufen) und Talnebel → M12
 
 **Abnahme:** Rursee, Obersee, Urftsee, Rur durch Monschau und Hohes Venn sind klar erkennbar. Mit F3 zeigt sich 60 fps bei „Mittel“. Die Screenshots sind auf der Projektseite vorzeigbar.
 
@@ -170,7 +170,7 @@ Nachgezogen beim Einstellen: Zwei volle Fahnen, die sich gegenseitig blockieren,
 → Automatisch: `tests/m6.test.ts` (zwei Spieltest-Bots über schlechtes Netz, beide Kirmes nach rund 22 Spielminuten, Neuladen nach 12 Minuten, keine Abweichung, Replay gleich) und im Browser `tests/mehrspieler.mjs` (zwei Fenster, Neuladen in rund 20 s selbst mit Software-Grafik, Prüfsummen gleich). Node = Browser auch für zwei Dörfer im Smoke-Test.
 Offen: eine Partie zwischen zwei Menschen an verschiedenen Orten über das echte Internet mit eingerichtetem coturn.
 
-Noch nicht drin (kommt später): Gebiet und Grenzen zwischen den Dörfern (M9) – bis dahin darf jeder überall bauen, nur nichts Fremdes anfassen; Variante „Verbundene Regionen“ (Drehbuch 2.3); Wechsel des Gastgebers.
+Noch nicht drin (kommt später): Gebiet und Grenzen zwischen den Dörfern (M10) – bis dahin darf jeder überall bauen, nur nichts Fremdes anfassen; Variante „Verbundene Regionen“ (Drehbuch 2.3); Wechsel des Gastgebers.
 
 ---
 
@@ -202,8 +202,8 @@ Noch nicht drin (kommt später): „nicht einlagern/auslagern“ je Ware im Lage
 - [x] Reifekeller (Bergkäse), Bier (Gerstenfeld → Brauerei → Landbier), Schnaps (Wacholderheide → Brennerei), Schänke, Lagerhaus (Drehbuch 6.2); neue Waren Gerste, Landbier (veredelte Nahrung), Wacholder, Schnaps (zählt im Mischkorb), Erz, Holzkohle, Eisen, Werkzeug, jede mit eigenem Modell
 - [x] **Lagerhaus und Lagerregeln** (wie Siedler 2, je Lager): normal / nicht einlagern / auslagern je Ware (Befehl `lagerregel`, Lagerfenster); Abriss trägt den Bestand ins nächste Lager
 - [x] Eisen schlank ab Stufe 2: Erzgrube, Köhlerei, Eisenhütte (zwei Zutaten), Schmiede → Werkzeug; Fachkräfte von Erzgrube und Eisenhütte brauchen Werkzeug, die Kirchdorf-Kirmes schenkt 2; neue Bauarbeiter und Planierer über die **Wunschzahl** im Lagerfenster (Befehl `bauleute`, je 1 Werkzeug und 1 Bewohner); Werkzeug geht zuerst an Fachkräfte, an die Kirmes erst, wenn das Dorf selbst schmiedet (sonst Verklemmung)
-- [x] **Kleine Feste** am Kirmesplatz zu ihrer Jahreszeit (Maifest, Viehmarkt, Erntedank, Martinsfeuer, Fastelovend; Weinfest mit M10): Warenliste, Fest, 15–25 Punkte, einmal je Spieljahr, Obergrenze 200 (`data/feste.json`); Waren, die die Kirmes braucht, gehen erst an die Kirmes
-- [x] Kirmes-Stufen **Dorf → Kirchdorf** und **Kirchdorf → Marktflecken** mit Mischkorb (Bergkäse als Platzhalter für die Spezialität bis M10)
+- [x] **Kleine Feste** am Kirmesplatz zu ihrer Jahreszeit (Maifest, Viehmarkt, Erntedank, Martinsfeuer, Fastelovend; Weinfest mit M11): Warenliste, Fest, 15–25 Punkte, einmal je Spieljahr, Obergrenze 200 (`data/feste.json`); Waren, die die Kirmes braucht, gehen erst an die Kirmes
+- [x] Kirmes-Stufen **Dorf → Kirchdorf** und **Kirchdorf → Marktflecken** mit Mischkorb (Bergkäse als Platzhalter für die Spezialität bis M11)
 - [x] Beschwipste Boten: Schänke macht aus Schnaps Boten (3 min), die weite Lieferungen querfeldein tragen, torkeln und jede zehnte Ware verlieren (liest nach 2 min einer auf); **sofort erkennbar** (rote Nase, Flasche, schiefe Mütze, Schlagseite, Hicks-Bläschen; Pegel 1–3)
 - [x] **Jahreszeiten mit Wirkung:** Spieljahr 60 min ab Frühjahr; Felder ruhen im Winter, säen im Frühjahr, ernten im Herbst schneller; Winter mit Schnee (Gelände und Wald), langsameren Wegen und Wintervorrat (frieren statt sterben); alles aus dem Tick
 - [x] **Wetter stark, aber fair:** Regen, Talnebel, Venn-Wind, Dürre, Missernte, Hochwasser in der Aue; aus der gemeinsamen Saat, 2 Minuten vorher als Bauernregel der Erzählfigur, nie zerstörerisch (`data/jahr.json`)
@@ -214,11 +214,11 @@ Noch nicht drin (kommt später): „nicht einlagern/auslagern“ je Ware im Lage
 → Automatisch: `tests/m8.test.ts` (Bot allein: Dorf nach 27, Kirchdorf nach 52, Marktflecken nach 75 Spielminuten, 95 Festpunkte, mit Vorrat 2 Minuten gefroren; dasselbe Dorf ohne Vorrat friert den ganzen Winter und schafft rund 30 % weniger; Replay gleich), `tests/m8-sim.test.ts` (Ketten, Lagerregeln, Bauleute, Kirmes-Stufen, Feste, Jahreszeiten, Winter, Wetterplan, Hochwasser, Boten, alte Spielstände), `tests/partie.test.ts` (Lagerregel, Bauleute, Jahreszeit und Wetter über schlechtes Netz, nach Neuladen gleich), im Browser `tests/mehrspieler.mjs` (Lagerregel und Bauleute per Klick, Jahreszeit gleich) und Node = Browser für 55 Minuten Bot im Smoke-Test.
 Offen: Spieltest mit Menschen (Zeitziele ~30–45 / ~75 / ~110 min; der Bot ist wie in M5 schneller).
 
-Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M9), Regler Boten/Finder in der Schänke (mit den Findern, M9), Spezialität der Völkchen (M10), Regen-, Nebel- und Hochwasser-Optik (M11).
+Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler Boten/Finder in der Schänke (mit den Findern, M10), Spezialität der Völkchen (M11), Regen-, Nebel- und Hochwasser-Optik (M12).
 
 ---
 
-## M8b – Stil: Siedler trifft Comic
+## M9 – Stil: Siedler trifft Comic
 
 **Ziel:** Der Stil aus Drehbuch 7 wird verbindlich und überall umgesetzt, bevor die 2-Stunden-Partien beginnen: Siedler-2-Look mit Asterix-Comic-Einschlag, knubbelige Figuren, bunte, schiefe Fachwerkhäuser mit Charakter und Kleinkram, lesbare Waren. Damit der Stil nicht untergeht, ist er ein eigener Meilenstein mit messbarer Abnahme.
 
@@ -236,7 +236,7 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M9), Regler Bo
 
 ---
 
-## M9 – Gebiet, Nachbarn, Finden, Ziele → erste 2-Stunden-Partie
+## M10 – Gebiet, Nachbarn, Finden, Ziele → erste 2-Stunden-Partie
 
 **Ziel:** Man misst sich ohne Krieg. Danach ist **eine volle Partie von 2 Stunden** allein und zu mehreren spielbar (Drehbuch 6).
 
@@ -255,7 +255,7 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M9), Regler Bo
 
 ---
 
-## M10 – Die 10 Völkchen
+## M11 – Die 10 Völkchen
 
 **Ziel:** Jeder Startort spielt sich anders (Drehbuch 5.3).
 
@@ -271,12 +271,12 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M9), Regler Bo
 
 ---
 
-## M11 – Feinschliff Figuren, Wetter, Klang → Version 1.0
+## M12 – Feinschliff Figuren, Wetter, Klang → Version 1.0
 
 **Ziel:** Charme und Fertigstellung. Freies Spiel und Mehrspieler sind fertig (Drehbuch 1, 7).
 
-- [ ] Figuren fertig im Stil aus M8b: volle Mimik, übertriebene Gesten, alle Berufe
-- [ ] **Waren schön** (Drehbuch 7.6, Grundstil aus M8b): feine Modelle, Holzmaserung, Steine mit Moos, Wackeln beim Tragen
+- [ ] Figuren fertig im Stil aus M9: volle Mimik, übertriebene Gesten, alle Berufe
+- [ ] **Waren schön** (Drehbuch 7.6, Grundstil aus M9): feine Modelle, Holzmaserung, Steine mit Moos, Wackeln beim Tragen
 - [ ] **Gebrabbel** mit Eifeler Klang statt Sprecher, Betrunkene singen (Drehbuch 7.2)
 - [ ] Wetter- und Jahreszeiten-Optik: Talnebel (Höhennebel im Shader), Regen, Schnee, Wolkenschatten, Tageszeiten
 - [ ] Post-Processing: SSAO, dezentes Bloom, Farb-Grading, Qualitätsstufen (aus M1)
@@ -285,11 +285,11 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M9), Regler Bo
 - [ ] Running Gags aus Drehbuch 1.2 durchgehend eingebaut
 - [ ] Startmenü, Credits mit Quellenangaben, Leistungsdurchgang auf echter Hardware
 
-**Abnahme:** Eine Gruppe Fremder spielt über den Link eine Partie ohne Hilfe von uns. Die Leistung hält 60 fps bei „Mittel“. Die Bildstrecke aus M8b besteht die Gutachter-Bewertung weiterhin.
+**Abnahme:** Eine Gruppe Fremder spielt über den Link eine Partie ohne Hilfe von uns. Die Leistung hält 60 fps bei „Mittel“. Die Bildstrecke aus M9 besteht die Gutachter-Bewertung weiterhin.
 
 ---
 
-## M12 – Kampagne „Der Eifelsteig“
+## M13 – Kampagne „Der Eifelsteig“
 
 **Ziel:** Mit dem eigenen Völkchen den Eifelsteig entlang wandern (Drehbuch 2.1).
 
@@ -314,5 +314,5 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M9), Regler Bo
 - **Determinismus-Test** (Replay → gleiche Prüfsumme) läuft ab M3 bei jeder Änderung an der Simulation
 - Ab M6 wird jedes neue Feature auch im Mehrspieler angespielt
 - Screenshot-Test (`tools/shot.mjs`) aus festen Kamerapositionen, damit die Optik nicht unbemerkt kaputtgeht
-- Ab M8b: neue Gebäude, Figuren und Waren folgen dem Stil-Leitfaden (`STIL.md`); an jedem Meilenstein läuft die Bildstrecke mit Gutachter-Bewertung
+- Ab M9: neue Gebäude, Figuren und Waren folgen dem Stil-Leitfaden (`STIL.md`); an jedem Meilenstein läuft die Bildstrecke mit Gutachter-Bewertung
 - Leistungsanzeige (F3) im Blick: Draw-Calls, Dreiecke, CPU-Zeit

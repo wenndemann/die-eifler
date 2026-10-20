@@ -1,4 +1,4 @@
-// Stilprobe (ROADMAP M8b): dieselbe kleine Szene – Fachwerk-Wohnhaus, Schuppen, Träger mit Waren, beschwipster Bote, Warenstapel
+// Stilprobe (ROADMAP M9): dieselbe kleine Szene – Fachwerk-Wohnhaus, Schuppen, Träger mit Waren, beschwipster Bote, Warenstapel
 // an der Fahne, Bäume – in drei Stil-Varianten, damit der Stil vor dem Umbau aller Modelle gewählt werden kann.
 //   ?v=a  Siedler-Klassik: warm und satt, weich schattiert, mäßig übertrieben (nah an Siedler 2 Gold / 10th Anniversary)
 //   ?v=b  Comic mit Kontur: Toon-Schattierung in drei Stufen, schwarze Umrisse, stark übertrieben und schief (Asterix-Einschlag)

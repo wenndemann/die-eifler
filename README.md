@@ -118,7 +118,7 @@ nach Gebrauch wieder. Unterbrochen? Einfach neu starten, es setzt fort. Details 
   Werkzeug). Erzgrube und Eisenhütte brauchen Werkzeug für ihre Fachkraft, die Kirchdorf-Kirmes schenkt 2 Stück. Im Lagerfenster
   stellt man die **Wunschzahl Bauarbeiter und Planierer** ein (je neuer: 1 Werkzeug + 1 Bewohner) und je Ware die
   **Lagerregel** normal / nicht einlagern / auslagern (Zeile antippen). Kirmes **Dorf → Kirchdorf** (15 Bergkäse, 20 Honig,
-  25 Landbier, 10 Schnaps) und **Kirchdorf → Marktflecken** (10 Bergkäse als Platzhalter der Völkchen-Spezialität bis M10,
+  25 Landbier, 10 Schnaps) und **Kirchdorf → Marktflecken** (10 Bergkäse als Platzhalter der Völkchen-Spezialität bis M11,
   10 Werkzeug, Mischkorb aus 20 beliebigen veredelten Waren). **Kleine Feste** am Kirmesplatz, jedes in seiner Jahreszeit und
   einmal im Jahr: Maifest, Viehmarkt, Erntedank, Martinsfeuer, Fastelovend, 15–25 Punkte, höchstens 200 (`data/feste.json`).
   **Jahreszeiten:** ein Spieljahr = 60 Spielminuten, Start im Frühjahr. Felder (Kartoffel, Obst, Bienen, Gerste, Wacholder)

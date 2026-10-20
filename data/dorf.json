@@ -50,7 +50,7 @@
    ]
   },
   {
-   "hinweis": "Dorf → Kirchdorf (Drehbuch 5.2). Die Spezialkette des Völkchens kommt mit M10. Das Geschenk (2 Werkzeug) bringt die Eisenkette in Gang (beschlossen M8). Mengen beim Balancing (M8, 2-Stunden-Lauf des Bots) über die Startwerte 10/12/15/5 gehoben: der Bot erreicht das Kirchdorf nach rund 52 min, ein Mensch braucht erfahrungsgemäß länger (Ziel ~75 min).",
+   "hinweis": "Dorf → Kirchdorf (Drehbuch 5.2). Die Spezialkette des Völkchens kommt mit M11. Das Geschenk (2 Werkzeug) bringt die Eisenkette in Gang (beschlossen M8). Mengen beim Balancing (M8, 2-Stunden-Lauf des Bots) über die Startwerte 10/12/15/5 gehoben: der Bot erreicht das Kirchdorf nach rund 52 min, ein Mensch braucht erfahrungsgemäß länger (Ziel ~75 min).",
    "liste": {
     "bergkaese": 15,
     "honig": 20,
@@ -71,7 +71,7 @@
    ]
   },
   {
-   "hinweis": "Kirchdorf → Marktflecken (Drehbuch 5.2). Bis M10 steht Bergkäse als Platzhalter für die Spezialität des Völkchens (beschlossen M8). Werkzeug nimmt der Kirmesplatz erst, wenn das Dorf selbst welches geschmiedet hat (sonst fehlt es Erzgrube und Eisenhütte). Der Bot schafft es nach rund 75 min (Ziel für Menschen ~110 min).",
+   "hinweis": "Kirchdorf → Marktflecken (Drehbuch 5.2). Bis M11 steht Bergkäse als Platzhalter für die Spezialität des Völkchens (beschlossen M8). Werkzeug nimmt der Kirmesplatz erst, wenn das Dorf selbst welches geschmiedet hat (sonst fehlt es Erzgrube und Eisenhütte). Der Bot schafft es nach rund 75 min (Ziel für Menschen ~110 min).",
    "liste": {
     "bergkaese": 10,
     "werkzeug": 10
@@ -80,7 +80,7 @@
    "fest_s": 60,
    "zuzug": 20,
    "schaltet_frei": [
-    "besserer Handel (M9)"
+    "besserer Handel (M10)"
    ]
   }
  ],
