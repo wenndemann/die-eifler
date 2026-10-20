@@ -372,6 +372,146 @@ const TYPEN: Record<string, Typ> = {
         walze(0.55, 0.4, 3, G + 0.25, t.d / 2 + 1.2, '#d98a1e', 0, 0, 10), walze(0.55, 0.4, 3, G + 0.65, t.d / 2 + 1.2, '#c97a14', 0, 0, 10)];
     },
   },
+  // ---- M8: Bier, Schnaps, Schänke, Eisen, Lagerhaus
+  gerstenfeld: {
+    w: 4.5, d: 4, floors: 1, wand: '#efe2c6', dach: '#7a5a3a', laden: '#c9a227', skala: 1, hoehe: 7,
+    grund: [-5, 23, -5, 14],
+    fertig() {
+      const t = TYPEN.gerstenfeld;
+      const out: THREE.BufferGeometry[] = [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach), ...laeden(t.w, t.d, t.floors, t.laden)];
+      // goldenes Gerstenfeld mit Ähren in Reihen, ein paar Garben am Rand, Sense an der Hütte
+      const ax = 13, az = 4.5;
+      out.push(boxR(17, 0.4, 16, ax, G + 0.15, az, '#8a6a3c'));
+      for (let r = 0; r < 8; r++) for (let k = 0; k < 9; k++) {
+        out.push(paint(new THREE.ConeGeometry(0.55, 1.9, 4).translate(ax - 7.6 + k * 1.9, G + 1.25, az - 7 + r * 2), (k + r) % 3 ? '#d8b45a' : '#e6c46a'));
+      }
+      for (const [gx, gz] of [[4.6, -4], [4.6, -1.8]]) out.push(walze(0.5, 1.8, gx, G + 0.9, gz, '#c9a24a', 0, 0, 7), walze(0.55, 0.15, gx, G + 1.1, gz, '#8a6038', 0, 0, 7));
+      out.push(boxR(0.14, 2.8, 0.14, -2.6, G + 1.4, 3.4, HOLZ, 0, 0, 0.25), boxR(1.4, 0.1, 0.3, -2.1, G + 2.7, 3.4, '#b0b8c0', 0, 0, -0.4));
+      return out;
+    },
+  },
+  brauerei: {
+    w: 10, d: 7, floors: 2, wand: '#f2e2c0', dach: '#7a3a2a', laden: '#2f6db5', skala: 0.95, hoehe: 14,
+    grund: [-7.5, 9, -5, 8],
+    fertig() {
+      const t = TYPEN.brauerei;
+      return [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach), ...laeden(t.w, t.d, t.floors, t.laden),
+        // Schornstein mit Dampf, Bierfässer gestapelt, Aushängeschild mit Krug
+        boxR(1.2, 5, 1.2, 3, G + 10, -1.5, '#8a5a4a'), paint(new THREE.SphereGeometry(0.9, 5, 4).translate(3.2, G + 13.2, -1.5), '#eeeeee'),
+        ...fass(-6.2, 4.8), ...fass(-7.6, 4.2), ...fass(-6.9, 5.6, G + 1.3), ...fass(6.5, 4.6),
+        boxR(0.2, 3.2, 0.2, -3.6, G + 1.6, t.d / 2 + 0.8, HOLZ), boxR(1.8, 0.18, 0.18, -2.8, G + 3.1, t.d / 2 + 0.8, HOLZ),
+        walze(0.45, 0.8, -2.2, G + 2.4, t.d / 2 + 0.8, '#9a6a3a', 0, 0, 8), walze(0.5, 0.18, -2.2, G + 2.85, t.d / 2 + 0.8, '#f4f1e8', 0, 0, 8)];
+    },
+  },
+  wacholderheide: {
+    w: 4, d: 3.6, floors: 1, wand: '#e3d6b6', dach: '#5a4a3c', laden: '#3f4f8a', skala: 1, hoehe: 6,
+    grund: [-4.5, 21, -6, 12],
+    fertig() {
+      const t = TYPEN.wacholderheide;
+      const out: THREE.BufferGeometry[] = [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach)];
+      // Heide mit Wacholdersäulen (schmale dunkelgrüne Kegel), Erika in Lila, Körbe mit Beeren
+      out.push(boxR(17, 0.25, 16, 12, G + 0.08, 3, '#8a7a52'));
+      const busch = [[6, -3], [9, 1], [12.5, -4], [15, 0.5], [18, -3], [7.5, 5.5], [11, 7], [14.5, 5], [18.5, 7.5], [16.5, -6]];
+      busch.forEach(([bx, bz], i) => {
+        out.push(paint(new THREE.ConeGeometry(0.9 + (i % 3) * 0.2, 4 + (i % 4) * 0.8, 6).translate(bx, G + 2 + (i % 4) * 0.4, bz), i % 2 ? '#2f5a3a' : '#3b6a44'));
+        out.push(paint(new THREE.SphereGeometry(0.7, 5, 4).scale(1.4, 0.4, 1.2).translate(bx + 1.4, G + 0.3, bz + 1.2), '#9a5aa8'));
+      });
+      out.push(walze(0.8, 0.7, -2.4, G + 0.35, 3.4, '#b0844e', 0, 0, 9));
+      for (let k = 0; k < 5; k++) out.push(paint(new THREE.SphereGeometry(0.25, 4, 3).translate(-2.6 + (k % 3) * 0.3, G + 0.8, 3.2 + (k % 2) * 0.3), '#3f4f8a'));
+      return out;
+    },
+  },
+  brennerei: {
+    w: 7, d: 6, floors: 1, wand: '#c9bca4', dach: '#4d5f7a', laden: '#7a2a2a', skala: 1, hoehe: 10,
+    grund: [-6, 8, -4.5, 8],
+    fertig() {
+      const t = TYPEN.brennerei;
+      return [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach), ...laeden(t.w, t.d, t.floors, t.laden),
+        // kupferne Brennblase mit Helm und Rohr vor dem Haus, Schornstein
+        walze(1.2, 1.8, 5, G + 0.9, 3, '#b8733a', 0, 0, 12), paint(new THREE.SphereGeometry(1.2, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2).translate(5, G + 1.8, 3), '#c8834a'),
+        walze(0.25, 1.4, 5, G + 3.2, 3, '#c8834a', 0, 0, 8), boxR(2.4, 0.22, 0.22, 6.1, G + 3.8, 3, '#c8834a', 0, 0, -0.35),
+        walze(0.6, 1.6, 7.2, G + 0.8, 3, '#8a6340', 0, 0, 9),
+        boxR(1, 4, 1, -2, G + 7, -1, '#8a6a5a'), paint(new THREE.SphereGeometry(0.7, 5, 4).translate(-2, G + 9.4, -1), '#e6e6e6'),
+        ...fass(-5, 4.5)];
+    },
+  },
+  schaenke: {
+    w: 9, d: 7, floors: 2, wand: '#f4e2c2', dach: '#2f3a4a', laden: '#c8402e', skala: 0.95, hoehe: 13,
+    grund: [-7, 9, -5, 9],
+    fertig() {
+      const t = TYPEN.schaenke;
+      return [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach), ...laeden(t.w, t.d, t.floors, t.laden), ...blumenkasten(t.w, t.d, t.floors),
+        // Wirtshausschild mit Flasche, Biertische vor der Tür, Fässer
+        boxR(0.2, 0.2, 2, -3.5, G + 4.6, t.d / 2 + 1, '#2a2a2a'), boxR(1.5, 1.2, 0.12, -3.5, G + 3.8, t.d / 2 + 1.9, '#e0a830'),
+        walze(0.2, 0.9, -3.5, G + 3.8, t.d / 2 + 2, '#cfe6dc', 0, 0, 7),
+        boxR(3, 0.2, 1.3, 1.5, G + 1.1, t.d / 2 + 2.3, HOLZ), boxR(3, 0.15, 0.4, 1.5, G + 0.6, t.d / 2 + 1.4, HOLZ), boxR(3, 0.15, 0.4, 1.5, G + 0.6, t.d / 2 + 3.2, HOLZ),
+        ...fass(5.8, 4.4), ...fass(6.6, 5.6)];
+    },
+  },
+  erzgrube: {
+    w: 5, d: 4, floors: 1, wand: '#b0a08a', dach: '#5a4a3c', laden: '#8a4a32', skala: 1, hoehe: 9,
+    grund: [-6, 9, -6, 8],
+    fertig() {
+      const t = TYPEN.erzgrube;
+      // Stolleneingang im Hügel mit Holzrahmen, Förderturm, Lore auf Schienen, Erzhaufen
+      return [paint(new THREE.SphereGeometry(5, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2).scale(1.2, 0.8, 1).translate(0, G, -2), '#7a6a52'),
+        boxR(2.8, 3, 0.5, 0, G + 1.5, 2.6, '#1a1410'), boxR(0.4, 3.4, 0.4, -1.5, G + 1.7, 2.9, HOLZ), boxR(0.4, 3.4, 0.4, 1.5, G + 1.7, 2.9, HOLZ), boxR(3.6, 0.4, 0.5, 0, G + 3.4, 2.9, HOLZ),
+        boxR(0.3, 7, 0.3, -4, G + 3.5, 2, HOLZ), boxR(0.3, 7, 0.3, -2.6, G + 3.5, 2, HOLZ), walze(0.8, 0.3, -3.3, G + 7, 2, DUNKEL, Math.PI / 2, 0, 10),
+        boxR(0.15, 0.15, 6, -0.6, G + 0.1, 5.5, '#6a6a6a'), boxR(0.15, 0.15, 6, 0.6, G + 0.1, 5.5, '#6a6a6a'),
+        boxR(1.6, 0.9, 1.2, 0, G + 0.7, 6, '#5a4a3a'), ...steinHaufen(4, 5, 7, 1.6, 0.6).map((g) => paint(g, '#8a4a32')),
+        ...fachwerk(t.w, t.d, t.floors, t.wand, t.dach).map((g) => g.translate(5.5, 0, -1))];
+    },
+  },
+  koehlerei: {
+    w: 4.5, d: 4, floors: 1, wand: '#d8c8a8', dach: '#4a3a2a', laden: '#2b2b2b', skala: 1, hoehe: 7,
+    grund: [-5, 13, -6, 8],
+    fertig() {
+      const t = TYPEN.koehlerei;
+      // Kohlenmeiler: rauchender Erdkegel, Holzstapel, kleine Köhlerhütte
+      return [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach),
+        paint(new THREE.SphereGeometry(3.4, 9, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.9, 1).translate(8, G, 0), '#3a3028'),
+        paint(new THREE.SphereGeometry(0.9, 5, 4).translate(8, G + 3.6, 0), '#9a9a9a'), paint(new THREE.SphereGeometry(1.2, 5, 4).translate(8.6, G + 5, -0.3), '#b8b8b8'),
+        ...logPile(8, 5.5, 6).map((g) => g.translate(0, G, 0)), ...kiste(-3.5, 3.8, 1.2).map((g) => paint(g, '#2b2b2b'))];
+    },
+  },
+  eisenhuette: {
+    w: 10, d: 7, floors: 1, wand: '#a8a092', dach: '#3a3a3a', laden: '#8a4a32', skala: 1, hoehe: 15,
+    grund: [-8, 10, -5, 8],
+    fertig() {
+      const t = TYPEN.eisenhuette;
+      // Hochofen aus Bruchstein mit Glut, Blasebalg-Rad am Bach, Eisenbarren davor (Schleidener Tal)
+      return [boxR(t.w, 5, t.d, 0, G + 2.5, 0, '#8f897f'), ...roof(t.w, t.d, 2.4, G + 5, t.dach, '#8f897f'),
+        walze(1.9, 9, 3, G + 4.5, -0.5, '#7a7268', 0, 0, 8), walze(1.4, 0.6, 3, G + 9.3, -0.5, '#5a524a', 0, 0, 8),
+        boxR(1.4, 1.4, 0.3, 3, G + 1.2, 1.5, '#ff7a1a'), paint(new THREE.SphereGeometry(1, 5, 4).translate(3.3, G + 10.6, -0.5), '#8a8a8a'),
+        walze(2.2, 0.5, -t.w / 2 - 0.6, G + 2.4, 0, HOLZ, 0, Math.PI / 2, 12), walze(0.3, 1.2, -t.w / 2 - 0.4, G + 2.4, 0, DUNKEL, 0, Math.PI / 2, 6),
+        boxR(1.4, 0.3, 0.5, -2, G + 0.35, t.d / 2 + 1.2, '#7d8a96'), boxR(1.4, 0.3, 0.5, -2, G + 0.65, t.d / 2 + 1.2, '#6d7a86')];
+    },
+  },
+  schmiede: {
+    w: 7, d: 6, floors: 1, wand: '#d8c8a8', dach: '#4a3a2a', laden: '#5a5a5a', skala: 1, hoehe: 10,
+    grund: [-6, 8, -4.5, 8],
+    fertig() {
+      const t = TYPEN.schmiede;
+      return [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach), ...laeden(t.w, t.d, t.floors, t.laden),
+        // offene Esse mit Glut unter Vordach, Amboss auf Holzklotz, Hufeisen über der Tür
+        boxR(4, 0.25, 3, 5, G + 3.2, 2.5, t.dach), boxR(0.25, 3.2, 0.25, 6.8, G + 1.6, 3.8, HOLZ),
+        boxR(1.6, 1.1, 1.4, 4.4, G + 0.55, 2, '#7a7268'), boxR(1.0, 0.25, 0.8, 4.4, G + 1.2, 2, '#ff7a1a'),
+        walze(0.5, 0.9, 5.8, G + 0.45, 4.6, HOLZ, 0, 0, 8), boxR(1.1, 0.4, 0.45, 5.8, G + 1.1, 4.6, '#3a3a3a'),
+        boxR(1, 4, 1, -2, G + 7, -1, '#7a6a5a'), paint(new THREE.TorusGeometry(0.45, 0.1, 4, 8, Math.PI * 1.4).rotateZ(-0.5).translate(0, G + 3.2, t.d / 2 + 0.2), '#9aa0a6')];
+    },
+  },
+  lagerhaus: {
+    w: 13, d: 8, floors: 1, wand: '#ece0c8', dach: '#5a4a3c', laden: '#2f7a55', skala: 1, hoehe: 10,
+    grund: [-8, 8.5, -5, 8],
+    fertig() {
+      const t = TYPEN.lagerhaus;
+      // Scheune mit großem Tor, Rampe und Kisten (Lager ohne Dorf drumherum)
+      return [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach), ...laeden(t.w, t.d, t.floors, t.laden),
+        box(4.4, 3.4, 0.35, 0, G + 1.7 + 0.3, t.d / 2 + 0.22, '#6a4426'), boxR(0.3, 4.2, 0.4, 0, G + 2, t.d / 2 + 0.42, DUNKEL, 0, 0, 0.7), boxR(0.3, 4.2, 0.4, 0, G + 2, t.d / 2 + 0.42, DUNKEL, 0, 0, -0.7),
+        boxR(5, 0.4, 2.2, 0, G + 0.2, t.d / 2 + 1.4, '#9a7a52'),
+        ...kiste(5.6, 5.4, 1.5, 0.2), ...kiste(-5.4, 5.6, 1.3, -0.3), ...fass(-6.8, 4.4), ...stapelBretter(6.5, -2, 3.4, 1.2, 0.9)];
+    },
+  },
   kirmesplatz: {
     w: 6, d: 4, floors: 1, wand: '#f4e2c2', dach: '#c8402e', laden: '#2f7a55', skala: 1, hoehe: 14,
     grund: [-14, 14, -12, 9],
@@ -533,10 +673,12 @@ function warnTextur(): THREE.CanvasTexture {
 }
 
 /** Symbole für Stillstand: Abzeichen mit gezeichnetem Bild (ohne Schriftzeichen, damit es überall gleich aussieht). */
-type Symbol = 'kein_baum' | 'kein_fels' | 'kein_platz' | 'kein_arbeiter' | 'voll' | 'hunger' | 'kein_bauarbeiter' | 'kein_planierer';
+type Symbol = 'kein_baum' | 'kein_fels' | 'kein_platz' | 'kein_arbeiter' | 'voll' | 'hunger' | 'kein_bauarbeiter' | 'kein_planierer'
+  | 'kein_werkzeug' | 'hochwasser' | 'winter';
 const SYMBOL_ZUSTAENDE: Partial<Record<GebaeudeZustand, Symbol>> = {
   kein_baum: 'kein_baum', kein_fels: 'kein_fels', kein_platz: 'kein_platz', kein_arbeiter: 'kein_arbeiter', voll: 'voll',
   hunger: 'hunger', kein_bauarbeiter: 'kein_bauarbeiter', kein_planierer: 'kein_planierer',
+  kein_werkzeug: 'kein_werkzeug', hochwasser: 'hochwasser', winter: 'winter',
 };
 function symbolTextur(art: Symbol): THREE.CanvasTexture {
   const c = document.createElement('canvas');
@@ -565,7 +707,17 @@ function symbolTextur(art: Symbol): THREE.CanvasTexture {
     g.fillStyle = '#ffffff'; g.lineWidth = 5; g.beginPath(); g.ellipse(64, 70, 34, 26, 0, 0, Math.PI * 2); g.fill(); g.stroke();
     g.beginPath(); g.ellipse(64, 70, 20, 14, 0, 0, Math.PI * 2); g.stroke();
     g.fillStyle = '#8f949c'; g.fillRect(96, 30, 6, 52); g.fillRect(92, 26, 3, 16); g.fillRect(99, 26, 3, 16);
-  } else if (art === 'kein_bauarbeiter') {
+  } else if (art === 'hochwasser') {
+    // Wellen
+    g.fillStyle = '#d8ecff'; g.beginPath(); g.arc(64, 64, 52, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#2f6db5'; g.lineWidth = 9;
+    for (const y of [48, 70, 92]) { g.beginPath(); g.moveTo(24, y); for (let x = 24; x <= 104; x += 4) g.lineTo(x, y + Math.sin((x - 24) / 10) * 7); g.stroke(); }
+  } else if (art === 'winter') {
+    // Schneeflocke
+    g.strokeStyle = '#4a8ac8'; g.lineWidth = 8;
+    for (let k = 0; k < 3; k++) { g.save(); g.translate(64, 64); g.rotate((k * Math.PI) / 3); g.beginPath(); g.moveTo(0, -38); g.lineTo(0, 38); g.stroke();
+      for (const sy of [-1, 1]) { g.beginPath(); g.moveTo(-12, sy * 26); g.lineTo(0, sy * 16); g.lineTo(12, sy * 26); g.stroke(); } g.restore(); }
+  } else if (art === 'kein_bauarbeiter' || art === 'kein_werkzeug') {
     // Hammer
     g.save(); g.translate(64, 64); g.rotate(-0.6);
     g.fillStyle = '#8a6340'; g.fillRect(-5, -10, 10, 50);
@@ -580,7 +732,7 @@ function symbolTextur(art: Symbol): THREE.CanvasTexture {
     g.fillStyle = '#b98b55'; g.fillRect(30, 44, 68, 50); g.lineWidth = 5; g.strokeRect(30, 44, 68, 50);
     g.fillStyle = '#3a2a10'; g.fillRect(30, 62, 68, 6); g.fillRect(61, 44, 6, 50);
   }
-  if (art !== 'voll') {
+  if (art !== 'voll' && art !== 'hochwasser' && art !== 'winter') {
     // roter Querstrich: „kein …“
     g.lineWidth = 12; g.strokeStyle = '#d4291f';
     g.beginPath(); g.moveTo(26, 26); g.lineTo(102, 102); g.stroke();

@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { PAUSE_MAX_MS, PAUSEN_JE_SPIELER, VERWALTER_NACH_MS, type Partie } from '../src/netz/partie';
 import type { Befehl } from '../src/sim/typen';
+import { wetterPlan } from '../src/sim/jahr';
 import { baueTestKarte, gerade } from './sim-szenario';
 import { GUT, Runde, SCHLECHT } from './netz-sim';
 
@@ -237,6 +238,44 @@ describe('Gleichschritt', () => {
       expect(s.statistikVon(1).punkte.length).toBeGreaterThan(1);
     }
     expect(sim(r, 1).statistikVon(0)).toEqual(sim(r, 0).statistikVon(0));
+    expect(sim(r, 1).pruefsumme()).toBe(sim(r, 0).pruefsumme());
+  });
+
+  it('M8: Lagerregeln und Bauleute je Dorf, Jahreszeit und Wetter bei allen gleich, auch nach dem Neuladen', () => {
+    const r = runde();
+    bauen(r);
+    r.lauf(3000);
+    // Spieler 1 lagert Steine aus (kein zweites Lager: bleibt liegen), Spieler 0 wünscht sich Bauleute
+    p(r, 1).befehl({ art: 'lagerregel', id: sim(r, 1).sicht(1).gebaeude.find((g) => g.sp === 1 && g.typ === 'lager')!.id, ware: 2, regel: 1 });
+    p(r, 0).befehl({ art: 'bauleute', bauarbeiter: 6, planierer: 3 });
+    r.lauf(3000);
+    // im Zeitraffer über das erste Frühjahr hinaus in den Sommer (dort kommt das erste Wetter)
+    p(r, 0).setzeTempo(3);
+    const plan = wetterPlan((sim(r, 0) as unknown as { saat: number }).saat, 0, 1);
+    const ziel = plan[0].start + 200;
+    while (sim(r, 0).tick < ziel) r.lauf(5000);
+    r.trenne(1);
+    r.lauf(2000);
+    const neu = r.starte(1);
+    r.verbindeAlle();
+    while (!neu.sim || neu.angehalten) r.lauf(16);
+    r.lauf(3000);
+    p(r, 0).pause(true);
+    r.lauf(3000);
+    r.gleichziehen();
+    const j0 = sim(r, 0).sicht(0).jahr, j1 = sim(r, 1).sicht(1).jahr;
+    expect(j0.jahreszeit).toBe(1);
+    expect(j1).toEqual(j0);
+    for (const i of [0, 1]) {
+      const s = sim(r, i);
+      expect(s.sicht(i).ereignisse.some((e) => e.art === 'jahreszeit')).toBe(true);
+      expect(s.sicht(0).dorf).toMatchObject({ bauSoll: 6, planSoll: 3 });
+      expect(s.sicht(1).dorf).toMatchObject({ bauSoll: 4, planSoll: 2 });
+      expect(s.sicht(1).gebaeude.find((g) => g.sp === 1 && g.typ === 'lager')!.regel![2]).toBe(1);
+      expect(s.sicht(0).gebaeude.find((g) => g.sp === 0 && g.typ === 'lager')!.regel![2]).toBe(0);
+    }
+    // die Ankündigung des ersten Wetters kam bei Spieler 0 an (vor dem Neuladen von Spieler 1)
+    expect(sim(r, 0).sicht(0).ereignisse.some((e) => e.art === 'wetter' && e.wert === plan[0].art)).toBe(true);
     expect(sim(r, 1).pruefsumme()).toBe(sim(r, 0).pruefsumme());
   });
 

@@ -14,7 +14,7 @@ import { Partieleiste } from '../ui/partieleiste';
 import { AUTOSAVE_SPEICHER, baueSpielstand, dateiname, holeAutosave, leseSpielstand, type Spielstand } from './spielstand';
 import { spieleAb } from '../sim/replay';
 import {
-  ARBEIT_MITTE_MAX, AUTOSAVE_MIN, BAULEUTE_MAX, DORFSTUFEN, FEST_OBERGRENZE, FLAG_CAP, GEBAEUDE, GEBAEUDE_IDS, JAHRESZEITEN, KIRMES, KLEINE_FESTE,
+  ARBEIT_MITTE_MAX, AUTOSAVE_MIN, BAULEUTE_MAX, DORFSTUFEN, FEST_OBERGRENZE, FLAG_CAP, GEBAEUDE, GEBAEUDE_IDS, JAHRESZEIT_TICKS, JAHRESZEITEN, KIRMES, KLEINE_FESTE,
   WAREN, WAREN_NAMEN, WETTER, WETTER_ANKUENDIGUNG, zutatMenge,
 } from '../sim/daten';
 import { PROMILLE, TICK_HZ } from '../sim/typen';
@@ -23,6 +23,8 @@ import { Wege } from '../render/wege';
 import { Fahnen } from '../render/fahnen';
 import { Traeger } from '../render/traeger';
 import { Arbeiter } from '../render/arbeiter';
+import { Boten } from '../render/boten';
+import { setzeSchnee } from '../render/kulisse';
 import { Natur } from '../render/natur';
 import { Gebaeude, type GebaeudeHaken } from '../render/gebaeude';
 import { Markierung, type RingArt } from '../render/markierung';
@@ -151,6 +153,7 @@ export class Spiel {
   private readonly fahnen: Fahnen;
   private readonly traeger: Traeger;
   private readonly arbeiter: Arbeiter;
+  private readonly boten: Boten;
   private readonly natur: Natur;
   private readonly gebaeude: Gebaeude;
   private readonly markierung: Markierung;
@@ -247,13 +250,14 @@ export class Spiel {
     this.traeger = new Traeger(map, grid, base, ex);
     this.gebaeude = new Gebaeude(map, grid, base, ex, ctx.haken);
     this.arbeiter = new Arbeiter(map, grid, base, ex);
+    this.boten = new Boten(map, grid, base, ex);
     this.natur = new Natur(map, grid, base, ex, ctx.haken.trees);
     this.markierung = new Markierung(map, grid, base, ex);
     this.bauplaetze = new Bauplaetze(map, grid, base, ex);
     this.geist = new Geist(map, grid, base, ex);
     this.wege.wald = ctx.haken.trees ?? null;
-    this.fahnen.kamera = ctx.camera; this.traeger.kamera = ctx.camera; this.gebaeude.kamera = ctx.camera; this.arbeiter.kamera = ctx.camera;
-    this.group.add(this.wege.group, this.fahnen.group, this.traeger.group, this.gebaeude.group, this.arbeiter.group, this.natur.group,
+    this.fahnen.kamera = ctx.camera; this.traeger.kamera = ctx.camera; this.gebaeude.kamera = ctx.camera; this.arbeiter.kamera = ctx.camera; this.boten.kamera = ctx.camera;
+    this.group.add(this.wege.group, this.fahnen.group, this.traeger.group, this.gebaeude.group, this.arbeiter.group, this.boten.group, this.natur.group,
       this.bauplaetze.group, this.geist.group, this.markierung.group);
     ctx.scene.add(this.group);
 
@@ -401,7 +405,7 @@ export class Spiel {
     this.ctx.ex = ex;
     this.wege.setExaggeration(ex); this.fahnen.setExaggeration(ex); this.traeger.setExaggeration(ex);
     this.gebaeude.setExaggeration(ex); this.markierung.setExaggeration(ex);
-    this.arbeiter.setExaggeration(ex); this.natur.setExaggeration(ex);
+    this.arbeiter.setExaggeration(ex); this.natur.setExaggeration(ex); this.boten.setExaggeration(ex);
     this.bauplaetze.setExaggeration(ex); this.geist.setExaggeration(ex);
   }
 
@@ -445,6 +449,10 @@ export class Spiel {
     this.traeger.update(this._sicht, a, dt);
     this.natur.update(this._sicht);
     this.arbeiter.update(this._sicht, a, dt);
+    this.boten.update(this._sicht, a, dt);
+    // Schnee kommt mit dem Winter und taut in den ersten Minuten des Frühjahrs (Drehbuch 7.4)
+    const j = this._sicht.jahr, zt = JAHRESZEIT_TICKS - j.rest;
+    setzeSchnee(j.jahreszeit === 3 ? Math.min(1, zt / (90 * 20)) : j.jahreszeit === 0 && j.jahr > 0 ? Math.max(0, 1 - zt / (120 * 20)) : 0);
 
     // Maus: Hex unter dem Zeiger (gedrosselt, folgt auch der bewegten Kamera)
     this.mausTimer -= dt;

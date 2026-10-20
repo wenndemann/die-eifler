@@ -417,6 +417,7 @@ float inPlay(vec2 a){ return 1.0 - step(uKPlay.z + 0.5, kDist(a)); }`)
   vec2 nb = ax + nbr(int(mod(floor(ang / 1.0471976 + 0.5), 6.0)));
   float rand = uKOn * play * (1.0 - inPlay(nb)) * smoothstep(edge - uLine * 1.6, edge - uLine * 0.6, hd);
   float kul = uKOn * (1.0 - play);
+  diffuseColor.rgb = kSchnee(diffuseColor.rgb, 0.72 + 0.28 * n);
   diffuseColor.rgb = kGrau(diffuseColor.rgb, kul);
   diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0, 0.96, 0.82), line * uGrid * 0.55 * (1.0 - kul));
   diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.95, 0.74, 0.3), rand * 0.8);
