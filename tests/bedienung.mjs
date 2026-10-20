@@ -116,6 +116,8 @@ export async function bedienungsTest({ browser, url, aus, info, fail }) {
   await page.waitForSelector('.fenster[data-gruppe="auswahl"]', { timeout: 10000 });
   await page.locator('.fenster [data-knopf="prio:3"]').click();
   await page.waitForFunction((h) => window.eifeler.spiel.sicht.gebaeude.find((g) => g.q === h.q && g.r === h.r)?.prioritaet === 3, ziel.hex, { timeout: 30000, polling: 200 });
+  // das Fenster zeigt den neuen Stand mit der nächsten Aktualisierung (4× je Sekunde)
+  await page.waitForSelector('.fenster .fe-knopf.an[data-knopf="prio:3"]', { timeout: 5000 }).catch(() => undefined);
   const karte = await page.evaluate(() => ({
     status: document.querySelector('.fenster .fe-zustand')?.textContent, zeilen: [...document.querySelectorAll('.fenster .fe-zeile, .fenster .fe-balkentext')].map((d) => d.textContent),
     an: document.querySelector('.fenster .fe-knopf.an[data-knopf^="prio:"]')?.dataset.knopf.slice(5),
