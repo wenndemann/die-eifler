@@ -116,6 +116,9 @@ function erdMaterial(): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({
     color: '#a98b62', roughness: 1, metalness: 0, transparent: true, depthWrite: false, side: THREE.DoubleSide,
     polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4,
+    // Alpha des Geländes (0) bleibt stehen: der Bilderbuch-Pass zieht an Wegen keine Linie (buchpass.ts)
+    blending: THREE.CustomBlending, blendSrc: THREE.SrcAlphaFactor, blendDst: THREE.OneMinusSrcAlphaFactor,
+    blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor,
   });
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, kulisseUniforms);

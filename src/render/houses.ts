@@ -14,9 +14,9 @@ import { HAUS_SKALE, NEBENBAU_P, NACHBAR_P } from './massstab';
 
 /** Bautypen (echte Maße in m: Breite entlang des Firsts, Tiefe, Stockwerke). */
 const TYPEN = [
-  { w: 14, d: 9, floors: 2, wall: C.wand },   // Hofhaus
-  { w: 11, d: 8, floors: 2, wall: C.wand },   // Wohnhaus
-  { w: 10, d: 8, floors: 1, wall: C.wand },   // Nebenbau (Stall, Scheune)
+  { w: 14, d: 9, floors: 2, wall: C.wand, dach: '#b0563e' },   // Hofhaus (Ziegel)
+  { w: 11, d: 8, floors: 2, wall: C.wand, dach: C.dach },      // Wohnhaus (Schiefer)
+  { w: 10, d: 8, floors: 1, wall: '#efd9b8', dach: '#8a5a3a' }, // Nebenbau (Stall, Scheune)
 ] as const;
 const HAUPT = [0, 1], NEBEN = 2;
 /** Platz um den Grundriss (echte m): Dachüberstand + Sockel. */
@@ -150,8 +150,7 @@ export class Houses {
     TYPEN.forEach((ty, n) => {
       const liste = haeuser.filter((h) => h.typ === n);
       if (!liste.length) return;
-      const geo = mergeGeometries(fachwerk(ty.w, ty.d, ty.floors, ty.wall))!;
-      geo.computeVertexNormals();
+      const geo = mergeGeometries(fachwerk(ty.w, ty.d, ty.floors, ty.wall, ty.dach))!;
       const data = new Float32Array(liste.length * 5);
       liste.forEach((h, t) => data.set([h.x, h.h0 - base, h.z, h.rot, h.s], t * 5));
       const mesh = new THREE.InstancedMesh(geo, mat, liste.length);

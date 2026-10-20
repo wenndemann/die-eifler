@@ -364,7 +364,7 @@ async function main() {
     }
 
     stage.renderer.info.reset();
-    stage.renderer.render(stage.scene, cam.camera);
+    stage.zeichne(cam.camera);
     if (bench.aktiv) bench.nachFrame(stage.renderer.info.render.calls, stage.renderer.info.render.triangles);
     hud.updateLabels(cam.camera, yAt, cam.distance);
     hud.updateMinimap(corners());

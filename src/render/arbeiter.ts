@@ -100,7 +100,7 @@ export class Arbeiter {
   constructor(private map: MapData, private grid: HexGrid, private base: number, ex: number) {
     this.ex = ex;
     this.figuren = new Instanzen(this.group, figur(), material(), true, true, [{ name: 'aAnim', size: 3 }], 32);
-    const matte = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7, flatShading: true });
+    const matte = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7, flatShading: false });
     this.werkzeuge = {
       holzfaeller: new Instanzen(this.group, WERKZEUG.holzfaeller(), matte, false, true, [], 32),
       foerster: new Instanzen(this.group, WERKZEUG.foerster(), matte, false, true, [], 32),
@@ -108,7 +108,7 @@ export class Arbeiter {
       bauarbeiter: new Instanzen(this.group, WERKZEUG.bauarbeiter(), matte, false, true, [], 8),
       planierer: new Instanzen(this.group, WERKZEUG.planierer(), matte, false, true, [], 8),
     };
-    const waren = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: true });
+    const waren = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: false });
     for (let a = 0; a < WAREN_ANZAHL; a++) this.waren.push(new Instanzen(this.group, warenGeometrie(a), waren, false, true, [], 32));
   }
 
@@ -203,7 +203,7 @@ export class Arbeiter {
     if (traegt && a.ware >= 0 && a.ware < WAREN_ANZAHL) {
       const wip = Math.abs(Math.sin(st.phase)) * 0.05 * sk;
       s.set(k, k, k);
-      mw.compose(p.set(x, y + 1.06 * sk + wip, z), q, s);
+      mw.compose(p.set(x, y + 1.18 * sk + wip, z), q, s);
       this.waren[a.ware].fuege(mw);
     }
   }

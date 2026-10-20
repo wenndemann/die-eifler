@@ -64,7 +64,7 @@ export class Boten {
     this.figuren = new Instanzen(this.group, botenFigur(), material(), true, true, [{ name: 'aAnim', size: 3 }], 16);
     const glas = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.2, transparent: true, opacity: 0.75 });
     this.blasen = new Instanzen(this.group, new THREE.SphereGeometry(0.5, 8, 6), glas, false, false, [], 32);
-    const matte = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: true });
+    const matte = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: false });
     for (let a = 0; a < WAREN_ANZAHL; a++) {
       this.waren.push(new Instanzen(this.group, warenGeometrie(a), matte, false, true, [], 8));
       this.liegend.push(new Instanzen(this.group, warenGeometrie(a), matte, false, true, [], 8));
@@ -113,7 +113,7 @@ export class Boten {
       this.figuren.fuege(m, this.farbe, [st.phase, b.ware >= 0 ? 1 : 0, geht ? 1.2 : 0.2]);
       if (b.ware >= 0 && b.ware < WAREN_ANZAHL) {
         s.set(k, k, k);
-        m.compose(p.set(x, y + 1.06 * sk, z), q, s);
+        m.compose(p.set(x, y + 1.18 * sk, z), q, s);
         this.waren[b.ware].fuege(m);
       }
       // Hicks-Bläschen steigen über dem Kopf auf
@@ -121,7 +121,7 @@ export class Boten {
         const t = (this.zeit * 0.6 + i / b.pegel + b.id * 0.37) % 1;
         const r = (0.07 + 0.04 * i) * sk * (1 - t * 0.4);
         s.set(r, r, r);
-        m.compose(p.set(x + Math.sin(t * 6 + i) * 0.15 * sk, y + (1.15 + t * 0.7) * sk, z), q.identity(), s);
+        m.compose(p.set(x + Math.sin(t * 6 + i) * 0.15 * sk, y + (1.3 + t * 0.7) * sk, z), q.identity(), s);
         this.blasen.fuege(m);
       }
     }

@@ -65,6 +65,13 @@ export function figur(): THREE.BufferGeometry {
     add(rohr(sch, [sx * 0.32, 0.3, 0.03], 0.065, 0.06, '#ffffff'), i, sch, 1);
     add(paint(new THREE.SphereGeometry(0.07, 5, 4).translate(sx * 0.32, 0.27, 0.03), HAUT), i, sch);
   }
+  // Stil (STIL.md): großer Kopf und runder Bauch – Kopfteile um den Hals vergrößert, Bauch breiter
+  for (const t of teile) {
+    t.geo.computeBoundingBox();
+    const b = t.geo.boundingBox!, cy = (b.min.y + b.max.y) / 2;
+    if (t.teil === 0 && cy > 0.6) t.geo.translate(0, -0.6, 0).scale(KOPF, KOPF, KOPF).translate(0, 0.6 + 0.02, 0);
+    else if (t.teil === 0 && cy > 0.3) t.geo.translate(0, -0.42, 0).scale(BAUCH, 1.04, BAUCH).translate(0, 0.42, 0);
+  }
   const geos = teile.map((t) => {
     const g = t.geo;
     const n = g.attributes.position.count;
@@ -76,10 +83,13 @@ export function figur(): THREE.BufferGeometry {
   return mergeGeometries(geos)!;
 }
 
+/** Kopf- und Bauchfaktor der Figuren (STIL.md). */
+export const KOPF = 1.2, BAUCH = 1.12;
+
 const TRACHT = ['#3f6fb5', '#b5463f', '#4f8a4a', '#d0a030', '#7a4fa0', '#3a8a8a', '#d9d2c0', '#c8642f'].map((c) => new THREE.Color(c));
 
 export function material(): THREE.MeshStandardMaterial {
-  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75, flatShading: true });
+  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75, flatShading: false });
   mat.onBeforeCompile = (shader) => {
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', `#include <common>
@@ -135,7 +145,7 @@ export class Traeger {
   constructor(private map: MapData, private grid: HexGrid, private base: number, ex: number) {
     this.ex = ex;
     this.figuren = new Instanzen(this.group, figur(), material(), true, true, [{ name: 'aAnim', size: 3 }], 256);
-    const matte = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: true });
+    const matte = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: false });
     for (let a = 0; a < WAREN_ANZAHL; a++) this.waren.push(new Instanzen(this.group, warenGeometrie(a), matte, false, true, [], 256));
   }
 
@@ -213,7 +223,7 @@ export class Traeger {
         const wip = lauf ? Math.abs(Math.sin(st.phase)) * 0.05 * sk : 0;
         const ws = k;
         s.set(ws, ws, ws);
-        m.compose(p.set(x, y + 1.06 * sk + wip, z), q, s);
+        m.compose(p.set(x, y + 1.18 * sk + wip, z), q, s);
         this.waren[t.ware].fuege(m);
       }
     }

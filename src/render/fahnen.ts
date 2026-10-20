@@ -41,7 +41,7 @@ function stangeGeo(): THREE.BufferGeometry {
     paint(new THREE.BoxGeometry(1.0, 0.7, 1.2).rotateY(1.1).translate(-2.0, 0.4, 1.8), '#8c887f'),
   ];
   const g = mergeGeometries(teile)!;
-  g.computeVertexNormals();
+  if (!g.attributes.normal) g.computeVertexNormals();
   return g;
 }
 
@@ -70,8 +70,8 @@ export class Fahnen {
 
   constructor(private map: MapData, private grid: HexGrid, private base: number, ex: number) {
     this.ex = ex;
-    const matte = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: true });
-    const tuch = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, flatShading: true, side: THREE.DoubleSide });
+    const matte = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: false });
+    const tuch = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, flatShading: false, side: THREE.DoubleSide });
     tuch.onBeforeCompile = (shader) => {
       shader.uniforms.uZeit = this.zeit;
       shader.vertexShader = shader.vertexShader

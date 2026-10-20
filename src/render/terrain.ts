@@ -21,15 +21,15 @@ const UNUSED_MS = 8000;                  // ungenutzte Netze nach dieser Zeit fr
 // Farben je Bedeckung (sRGB), Reihenfolge wie MapInfo.cover
 const COVER_COLORS = [
   '#5e5a40', // wasser (Grund)
-  '#7c9c46', // wiese
-  '#b3a25a', // acker
-  '#2e4826', // wald (Waldboden)
-  '#8a7468', // heide
-  '#8e8456', // moor
-  '#8b877e', // fels
-  '#7c9c46', // siedlung außerhalb der Kerne: wie Wiese
+  '#93b85e', // wiese (STIL.md: warmes Wimmelbuch-Grün)
+  '#c9b06a', // acker
+  '#4a6a3a', // wald (Waldboden)
+  '#a08a78', // heide
+  '#9a9468', // moor
+  '#9a9284', // fels
+  '#93b85e', // siedlung außerhalb der Kerne: wie Wiese
 ];
-const KERN_COLOR = '#8f9a5e';            // Ortskern-Hex: Gärten, Höfe
+const KERN_COLOR = '#a3ac6a';            // Ortskern-Hex: Gärten, Höfe
 /** Einheitliche Felsfarbe: grau mit leichtem Rotstich (Buntsandstein der Rureifel, ohne Geologie-Daten überall gleich). */
 const ROCK = new THREE.Color('#867465');
 
@@ -425,6 +425,8 @@ float inPlay(vec2 a){ return 1.0 - step(uKPlay.z + 0.5, kDist(a)); }`)
   diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0, 0.86, 0.45), hov * (0.18 + 0.7 * line));
   vKFade = kFade(vWPos.xz);
 }`)
+        // Alpha 0: der Bilderbuch-Pass zieht am Gelände keine Linie (buchpass.ts); nach opaque_fragment, das sonst 1 setzt
+        .replace('#include <opaque_fragment>', '#include <opaque_fragment>\ngl_FragColor.a = 0.0;')
         .replace('#include <fog_fragment>', KULISSE_FOG);
       // hexRound steht schon in KULISSE_GLSL als kHexRound; für den Shader eine Kurzform bereitstellen
       shader.fragmentShader = shader.fragmentShader.replace('float inPlay', 'vec2 hexRound(vec2 a){ return kHexRound(a); }\nfloat inPlay');
