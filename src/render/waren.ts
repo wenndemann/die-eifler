@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { paint } from './mockup';
 import { WARE_M } from './massstab';
-import { WAREN, WAREN_FARBE, WAREN_FORM } from '../sim/daten';
+import { WAREN, WAREN_FARBE, WAREN_FARBE_FB, WAREN_FORM } from '../sim/daten';
 
 /** Warenarten wie in der Simulation (data/goods.json). */
 export const WAREN_ANZAHL = WAREN.length;
@@ -147,8 +147,12 @@ const FORMEN: Record<string, Form> = {
   }),
 };
 
+/** Farbenblind-Modus (Einstellungen): andere Hauptfarben; gilt für Modelle, die danach gebaut werden. */
+let farbenblind = false;
+export function setzeFarbenblind(an: boolean): void { farbenblind = an; }
+
 function form(art: number) {
-  return (FORMEN[WAREN_FORM[art]] ?? FORMEN.sack)(WAREN_FARBE[art] ?? '#b08850');
+  return (FORMEN[WAREN_FORM[art]] ?? FORMEN.sack)((farbenblind ? WAREN_FARBE_FB : WAREN_FARBE)[art] ?? '#b08850');
 }
 
 /** Geometrie einer Ware (Farben als Vertexfarben). */

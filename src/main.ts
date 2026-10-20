@@ -29,6 +29,8 @@ import { GROESSEN, type AusschnittParam, type Groesse } from './welt/format';
 import { SimDemo } from './render/simdemo';
 import { Spiel, type SpielKontext } from './spiel/spiel';
 import { hexToWorld } from './welt/hexwelt';
+import { setzeFarbenblind } from './render/waren';
+import { ladeEinstellungen } from './ui/einstellungen';
 
 const TERRAIN_NAMES: Record<string, string> = {
   wasser: 'Wasser', wiese: 'Wiese', wald: 'Wald', heide: 'Heide', moor: 'Moor (Venn)', stein: 'Fels', siedlung: 'Ortskern',
@@ -180,6 +182,9 @@ async function main() {
     },
     yAt,
     // Spielstand aus dem laufenden Spiel laden: Seite mit dessen Karte neu laden und dort fortsetzen
+    springe: (x, z) => { intro = null; api.ready = true; cam.lookAt(...clamp(x, z + 350)); },
+    grafik: { felder: () => hud.grafikFelder(), setze: (k, v) => hud.setze(k, v) },
+    kameraTempo: (f) => { cam.tempo = f; },
     onLaden: (st) => {
       try { sessionStorage.setItem(LADEN_SPEICHER, JSON.stringify(st)); } catch { alert('Der Spielstand ist zu groß für diesen Browser.'); return; }
       history.replaceState(null, '', location.pathname + location.search);
@@ -187,7 +192,10 @@ async function main() {
     },
     ...extra,
   });
+  // Farbenblind-Modus (Einstellungen): vor dem Bau der Warenmodelle
+  setzeFarbenblind(ladeEinstellungen().farbenblind);
   let spiel = simdemo || mehrspieler ? null : new Spiel(spielKontext({ laden: spielstand?.stand }));
+  if (spiel) hud.versteckeEinstellungen();
   const lagerW = spiel ? grid.toWorld(spiel.lagerHex) : null;
   const start = lagerW ?? map.info.places.find((p) => p.name === map.info.start) ?? { x: cx, z: cz };
 
@@ -371,7 +379,8 @@ async function main() {
         `Draw-Calls ${r.calls} · Dreiecke ${(r.triangles / 1e6).toFixed(2)} M\n` +
         `Gelände-Knoten ${ts.chunks} · Stufen ${ts.lod.join('/')}\n` +
         `Bäume ${(trees.count / 1000).toFixed(0)}k · nah ${(trees.visibleNear / 1000).toFixed(1)}k · Häuser ${houses.count}\n` +
-        `Gitter ${map.info.width}×${map.info.height} · Ladezeit ${(ladezeit / 1000).toFixed(1)} s`);
+        `Gitter ${map.info.width}×${map.info.height} · Ladezeit ${(ladezeit / 1000).toFixed(1)} s` +
+        (spiel ? `\nFenster ${spiel.fenster.anzahl} · Aktualisierung ${spiel.fenster.messung.ms.toFixed(2)} ms (max ${spiel.fenster.messung.max.toFixed(1)})` : ''));
     }
     requestAnimationFrame(frame);
   };
@@ -423,6 +432,7 @@ async function main() {
       } : undefined;
       const lauf = await startePartie({ v, du: start.du, raum: start.raum, karte: ausschnitt.hex, kartePruef: ausschnitt.pruefsumme, neu });
       spiel = new Spiel(spielKontext({ mehrspieler: { partie: lauf.partie, namen: lauf.namen, anwesend: (sp) => lauf.netz.istOffen(sp) } }));
+      hud.versteckeEinstellungen();
       Object.assign(api, { spiel, partie: lauf.partie, netz: lauf.netz });
       intro = null; api.ready = true;
       const w = grid.toWorld(spiel.lagerHex);

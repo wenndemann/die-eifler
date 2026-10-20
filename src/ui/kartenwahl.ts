@@ -10,7 +10,7 @@ import {
 } from '../welt/hexwelt';
 import { holeBildUrl, holeBytes, holeJson, type Welt } from '../welt/laden';
 import { VORSCHLAEGE } from '../map/presets';
-import { leseSpielstand, type Spielstand } from '../spiel/spielstand';
+import { holeAutosave, leseSpielstand, type Spielstand } from '../spiel/spielstand';
 
 /** Ergebnis der Kartenwahl: allein siedeln, mit Freunden (Lobby) oder einen Spielstand laden. */
 export type KartenwahlErgebnis = { art: 'allein' | 'freunde'; param: AusschnittParam } | { art: 'laden'; spielstand: Spielstand };
@@ -322,6 +322,12 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Kartenwa
     datei.type = 'file'; datei.accept = '.json,application/json'; datei.hidden = true;
     laden.append(datei);
     extra.append(freunde, laden);
+    // Autosave (M7): der letzte automatisch gespeicherte Stand
+    const auto = holeAutosave();
+    const fortsetzen = el('button', 'kw-freunde kw-autosave', `⏱ Weiterspielen${auto?.ort ? ` (${auto.ort})` : ''}`);
+    fortsetzen.type = 'button';
+    fortsetzen.title = auto ? `Autosave vom ${new Date(auto.stand.gespeichert).toLocaleString('de-DE')}` : '';
+    if (auto) extra.append(fortsetzen);
     fuss.append(kurz, los, extra);
 
     // Zoom-Knöpfe
@@ -1148,6 +1154,12 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Kartenwa
     };
     los.addEventListener('click', () => waehle('allein'));
     freunde.addEventListener('click', () => waehle('freunde'));
+    fortsetzen.addEventListener('click', () => {
+      const a = holeAutosave();
+      if (!a) { toastZeigen('Kein Autosave mehr da.'); return; }
+      schliesse();
+      fertig({ art: 'laden', spielstand: a.stand });
+    });
     datei.addEventListener('change', async () => {
       const f = datei.files?.[0];
       datei.value = '';

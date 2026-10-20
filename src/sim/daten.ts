@@ -5,7 +5,7 @@ import warenJson from '../../data/goods.json';
 import gebaeudeJson from '../../data/buildings.json';
 import dorfJson from '../../data/dorf.json';
 
-interface WareJson { id: string; name: string; gruppe: string; nahrung?: number; form?: string; farbe?: string }
+interface WareJson { id: string; name: string; gruppe: string; nahrung?: number; form?: string; farbe?: string; farbe_fb?: string }
 interface GebaeudeJson {
   id: string; name: string; gruppe: string; symbol: string; spruch: string;
   funktion: string; groesse: number; kosten: Record<string, number>;
@@ -15,7 +15,7 @@ interface GebaeudeJson {
   ausgang?: { ware: string; max: number };
   wandelt?: { ein: string; menge?: number; aus: string; dauer_s: number };
   zeiten?: { arbeit_s?: number; ruhe_s?: number };
-  nahrung_plaetze?: number; ab_stufe?: number; einmalig?: boolean;
+  nahrung_plaetze?: number; ab_stufe?: number; einmalig?: boolean; taste?: string;
 }
 
 const warenListe = (warenJson as { waren: WareJson[] }).waren;
@@ -35,6 +35,8 @@ export const NAHRUNG_REIHE: readonly number[] = WAREN.map((_, i) => i).filter((i
 /** Lesbares Modell je Warenart (Drehbuch 7.6): Form und Hauptfarbe. */
 export const WAREN_FORM: readonly string[] = warenListe.map((w) => w.form ?? 'sack');
 export const WAREN_FARBE: readonly string[] = warenListe.map((w) => w.farbe ?? '#b08850');
+/** Hauptfarbe im Farbenblind-Modus (Einstellungen). */
+export const WAREN_FARBE_FB: readonly string[] = warenListe.map((w, i) => w.farbe_fb ?? WAREN_FARBE[i]);
 
 /** Stapel an einer Fahne und Notplätze (nur für den Tausch der Träger). */
 export const FLAG_CAP = 8;
@@ -151,6 +153,8 @@ export interface GebaeudeTyp {
   vorrat: readonly number[];
   /** Kann ruhen (Befehl 'ruhen'): Gebäude mit Arbeiter und Wohnhäuser. */
   pausierbar: boolean;
+  /** Taste im offenen Baumenü (Großbuchstabe) oder ''. */
+  taste: string;
 }
 
 const ticks = (s: number | undefined) => Math.round((s ?? 0) * TICK_HZ);
@@ -190,6 +194,7 @@ function baue(j: GebaeudeJson): GebaeudeTyp {
     einmalig: !!j.einmalig,
     vorrat: jeWare(j.vorrat),
     pausierbar: (j.arbeiter ?? 0) > 0 || j.funktion === 'wohnen',
+    taste: (j.taste ?? '').toUpperCase(),
   };
 }
 
