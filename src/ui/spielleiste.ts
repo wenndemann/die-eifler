@@ -56,6 +56,11 @@ export interface StatusDaten {
     stufe: string; bewohner: number; wohnraum: number; frei: number;
     bauarbeiter: [number, number]; planierer: [number, number];
     kirmes: { text: string; prozent: number; fest: boolean } | null;
+    /** Kleines Fest der Jahreszeit (wie die Kirmes-Zeile), Punkte aus kleinen Festen, Winter ohne Essen (friert). */
+    fest?: { text: string; prozent: number; fest: boolean } | null;
+    punkte?: number; friert?: boolean;
+    /** Jahreszeit und Wetter als fertiger Text; Winter (Leiste in Winterfarben). */
+    jahr?: string; winter?: boolean;
   };
   /** Kurznamen der Waren im Lager, die gezeigt werden (Index, Symbol, Name). */
   lagerZeigen?: { art: number; icon: string; name: string }[];
@@ -115,6 +120,8 @@ export class Spielleiste {
   private zeit = el('span', 'zeit');
   private zeileDorf = el('div', 'zeile-dorf');
   private kirmes = el('div', 'zeile-kirmes', '<span class="txt"></span><span class="balken"><i></i></span>');
+  private festZeile = el('div', 'zeile-kirmes zeile-fest', '<span class="txt"></span><span class="balken"><i></i></span>');
+  private jahrZeile = el('div', 'zeile-jahr');
   private zeile2 = el('div', 'zeile2');
   private letzteStatus = '';
 
@@ -164,7 +171,9 @@ export class Spielleiste {
       fk.append(b);
     }
     this.kirmes.title = 'Kirmes: Warenliste am Kirmesplatz abliefern, dann wird gefeiert und das Dorf steigt eine Stufe auf';
-    this.status.append(z1, fk, this.zeileDorf, this.kirmes, this.zeile2);
+    this.festZeile.title = 'Kleines Fest der Jahreszeit: Warenliste am Kirmesplatz, einmal im Jahr, bringt Punkte';
+    this.jahrZeile.title = 'Jahreszeit und Wetter: im Winter ruhen die Felder und das Dorf isst aus dem Lager; Wetter kündigt die Erzählfigur an';
+    this.status.append(z1, fk, this.jahrZeile, this.zeileDorf, this.kirmes, this.festZeile, this.zeile2);
     root.append(this.status);
     this.setHinweis(null);
     this.setAktionen(null, false);
@@ -332,12 +341,23 @@ export class Spielleiste {
     const d = s.dorf;
     this.zeileDorf.style.display = d ? '' : 'none';
     this.kirmes.style.display = d?.kirmes ? '' : 'none';
+    this.festZeile.style.display = d?.fest ? '' : 'none';
+    this.jahrZeile.style.display = d?.jahr ? '' : 'none';
     if (d) {
+      this.jahrZeile.textContent = d.jahr ?? '';
+      this.status.classList.toggle('winter', !!d.winter);
+      if (d.fest) {
+        (this.festZeile.firstElementChild as HTMLElement).textContent = d.fest.text;
+        (this.festZeile.querySelector('i') as HTMLElement).style.width = `${Math.max(2, Math.min(100, d.fest.prozent))}%`;
+        this.festZeile.classList.toggle('fest', d.fest.fest);
+      }
       const voll = d.bewohner >= d.wohnraum;
       this.zeileDorf.innerHTML = `<b class="stufe">${d.stufe}</b> · <span title="Bewohner / Wohnraum (Wohnhäuser bauen für mehr Platz)"${voll ? ' class="warn"' : ''}>👪 <b>${d.bewohner}</b>/${d.wohnraum}</span>` +
         ` · <span title="freie Bewohner (werden Träger und Arbeiter)">frei <b>${d.frei}</b></span>` +
         ` · <span title="Bauarbeiter frei / gesamt">🔨 <b>${d.bauarbeiter[0]}</b>/${d.bauarbeiter[1]}</span>` +
-        ` · <span title="Planierer frei / gesamt">⛏️ <b>${d.planierer[0]}</b>/${d.planierer[1]}</span>`;
+        ` · <span title="Planierer frei / gesamt">⛏️ <b>${d.planierer[0]}</b>/${d.planierer[1]}</span>` +
+        (d.punkte !== undefined ? ` · <span title="Punkte aus kleinen Festen">🎉 <b>${d.punkte}</b></span>` : '') +
+        (d.friert ? ` · <span class="warn" title="Im Winter fehlt Essen im Lager: Gebäude arbeiten langsamer, kein Nachwuchs">🥶 friert</span>` : '');
       if (d.kirmes) {
         (this.kirmes.firstElementChild as HTMLElement).textContent = d.kirmes.text;
         (this.kirmes.querySelector('i') as HTMLElement).style.width = `${Math.max(2, Math.min(100, d.kirmes.prozent))}%`;

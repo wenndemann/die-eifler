@@ -38,6 +38,8 @@ export interface Meldung {
   gross: boolean;
   /** Gebäude, um das es geht (Klick springt hin), sonst fehlt es. */
   gebaeude?: number;
+  /** Ort ohne Gebäude (z. B. verlorene Ware), Klick springt hin. */
+  ort?: { q: number; r: number };
 }
 
 /** Werte für die Platzhalter. */
@@ -48,6 +50,16 @@ export interface MeldungsKontext {
   stufe?: string;
   n?: number;
   liste?: string;
+  fest?: string;
+  wetter?: string;
+  feld?: string;
+}
+
+/** Namen für die Meldungen ab M8: kleine Feste, Wetterarten (Id und Anzeigename), Feldtypen. */
+export interface MeldungsNamen {
+  fest: (nr: number) => string;
+  wetter: (art: number) => { id: string; name: string };
+  feld: (typ: string) => string;
 }
 
 /** Text Nummer `nr` (reihum) eines Anlasses mit ersetzten Platzhaltern. */
@@ -97,7 +109,8 @@ export class MeldungsFilter {
    * `wareName(art)` den Namen einer Ware, `stufeName(n)` den der Dorfstufe; `freigeschaltet` und `liste` für Stufe und Kirmesplatz.
    */
   neue(ereignisse: readonly SichtEreignis[], dorf: SichtDorf, gebName: (id: number) => { typ: string; name: string } | null,
-    wareName: (art: number) => string, stufeName: (n: number) => string, freigeschaltet: string, liste: string): Meldung[] {
+    wareName: (art: number) => string, stufeName: (n: number) => string, freigeschaltet: string, liste: string, namen?: MeldungsNamen,
+    kommt: readonly { art: number; feld: string }[] = []): Meldung[] {
     const aus: Meldung[] = [];
     const k = (x: Partial<MeldungsKontext>): MeldungsKontext => ({ ort: this.ort, liste, ...x });
     const add = (anlass: string, ctx: MeldungsKontext, gross = false, platt = false, gebaeude = 0) => {
@@ -125,6 +138,24 @@ export class MeldungsFilter {
         case 'kirmes': add('kirmes', k({}), true, true, ev.gebaeude); break;
         case 'stufe': add('stufe', k({ stufe: stufeName(ev.wert), liste: freigeschaltet }), true); break;
         case 'zuzug': add('zuzug', k({ n: ev.wert })); break;
+        case 'jahreszeit': add(`jahreszeit_${ev.wert}`, k({}), ev.wert === 3); break;
+        case 'wetter': {
+          // Bauernregel der Erzählfigur (Drehbuch 7.4): kündigt das Wetter an
+          const w = namen?.wetter(ev.wert);
+          const feld = kommt.find((x) => x.art === ev.wert)?.feld ?? '';
+          if (w) add(`wetter_${w.id}`, k({ wetter: w.name, feld: feld && namen ? namen.feld(feld) : 'Feld' }), true);
+          break;
+        }
+        case 'kleines_fest': add('kleines_fest', k({ fest: namen?.fest(ev.wert) ?? 'Fest' }), true, true, ev.gebaeude); break;
+        case 'friert': add('friert', k({}), true); break;
+        case 'satt': add('satt', k({})); break;
+        case 'bauleute': add('bauleute', k({ gebaeude: ev.wert === 0 ? 'Bauarbeiter' : 'Planierer' })); break;
+        case 'verloren': {
+          const n = aus.length;
+          add('verloren', k({ ware: wareName(ev.wert) }));
+          if (aus.length > n && ev.q !== undefined && ev.r !== undefined) aus[n].ort = { q: ev.q, r: ev.r };
+          break;
+        }
       }
     }
     // runde Bewohnerzahlen (alle 10) und einmal „Wohnraum voll“

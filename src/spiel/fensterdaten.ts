@@ -3,7 +3,7 @@
 // data/buildings.json (Eingang, Ausgang, wandelt, Radius, Wohnraum, Vorrat, Funktion) – ohne Code für einzelne Gebäude.
 // Gezeichnet wird in src/ui/fenster.ts. Einzeln testbar (tests/fensterdaten.test.ts).
 import {
-  ABNEHMER, DORFSTUFEN, FLAG_CAP, GEBAEUDE, GEBAEUDE_IDS, KIRMES, KLEINE_FESTE, MISCHKORB, NAHRUNG, VERTEILUNG_JE_WARE, WAREN, WAREN_GRUPPEN, zutatMenge,
+  ABNEHMER, DORFSTUFEN, FEST_OBERGRENZE, FLAG_CAP, GEBAEUDE, GEBAEUDE_IDS, JAHRESZEITEN, KIRMES, KLEINE_FESTE, MISCHKORB, NAHRUNG, VERTEILUNG_JE_WARE, WAREN, WAREN_GRUPPEN, zutatMenge,
 } from '../sim/daten';
 import type { GebaeudeTyp } from '../sim/daten';
 import { PROMILLE, STAT_KOPF, TICK_HZ } from '../sim/typen';
@@ -32,6 +32,10 @@ export interface FensterKontext {
 }
 
 const PROD_FENSTER = 2 * 60;
+
+/** Lagerregeln (ROADMAP M8): 0 normal, 1 nicht einlagern, 2 auslagern. */
+export const LAGERREGEL_NAMEN = ['normal', 'nicht einlagern', 'auslagern'] as const;
+const LAGERREGEL_SYMBOL = ['📥', '🚫', '📤'];
 
 /**
  * Produktivität je Gebäude: Anteil der Messungen (eine je Spielsekunde) der letzten zwei Spielminuten, in denen es gearbeitet hat.
@@ -92,6 +96,10 @@ export function leistungText(t: GebaeudeTyp, w: readonly WareText[]): string[] {
   else if (t.radius > 0 && t.ausgangWare >= 0) z.push(`holt ${w[t.ausgangWare]?.mehr ?? ''} im Umkreis von ${t.radius} Hexen`);
   else if (t.radius > 0) z.push(`arbeitet im Umkreis von ${t.radius} Hexen (pflanzt, wo Platz ist)`);
   if (t.funktion === 'wohnen') z.push(`${t.nahrungPlaetze} Essensplätze · besseres Essen bringt schneller Nachwuchs`);
+  if (t.feld) z.push('Feld: ruht im Winter, im Frühjahr erst Aussaat, im Herbst Ernte (schneller); Wetter wirkt mit');
+  if (t.werkzeug) z.push(`die Fachkraft braucht ${mengeText(t.werkzeug, w[WAREN.indexOf('werkzeug')])}, bevor sie anfängt`);
+  if (t.boten) z.push(`macht aus 1 Schnaps einen beschwipsten Boten (höchstens ${t.boten}): trägt querfeldein zu weiten Abnehmern`);
+  if (t.funktion === 'lager' && !t.wohnraum) z.push('Lager für lange Wege: nimmt Waren auf und gibt sie aus, Lagerregeln je Ware');
   if (t.wohnraum > 0) z.push(`Wohnraum für ${t.wohnraum}`);
   if (t.arbeiter) z.push(`braucht ${t.arbeiter} Bewohner als Arbeiter`);
   return z;
@@ -150,19 +158,51 @@ export function gebaeudeFenster(id: Id, k: FensterKontext): FensterDaten | null 
         zeilen: [
           `${DORFSTUFEN[d.stufe] ?? ''} · ${d.bewohner} Bewohner, ${d.frei} frei, ${d.traeger} Träger, ${d.arbeiter} Arbeiter`,
           `Bauarbeiter ${d.bauarbeiter.frei}/${d.bauarbeiter.gesamt} frei · Planierer ${d.planierer.frei}/${d.planierer.gesamt} frei`,
+          `Wunsch: ${d.bauSoll} Bauarbeiter, ${d.planSoll} Planierer – fehlen welche, wird aus 1 Werkzeug und 1 freien Bewohner einer`,
         ],
       });
+      ab.push({
+        art: 'knoepfe', titel: 'Bauleute',
+        knoepfe: [
+          { id: 'bau:-', text: '🔨 −', titel: 'Einen Bauarbeiter weniger wünschen', aus: d.bauSoll <= 0 },
+          { id: 'bau:+', text: `🔨 ${d.bauSoll} +`, titel: 'Einen Bauarbeiter mehr wünschen (kostet 1 Werkzeug und 1 Bewohner)' },
+          { id: 'plan:-', text: '⛏️ −', titel: 'Einen Planierer weniger wünschen', aus: d.planSoll <= 0 },
+          { id: 'plan:+', text: `⛏️ ${d.planSoll} +`, titel: 'Einen Planierer mehr wünschen (kostet 1 Werkzeug und 1 Bewohner)' },
+        ],
+      });
+      // Lagerregeln je Ware (wie Siedler 2): antippen schaltet normal → nicht einlagern → auslagern
+      if (g.regel) {
+        ab.push({
+          art: 'tabelle', titel: 'Lagerregeln (antippen schaltet um)', kopf: ['Ware', 'Bestand', 'Regel'],
+          zeilen: WAREN.map((_, a) => {
+            const r = g.regel![a] ?? 0;
+            return { zellen: [{ text: w[a]?.mehr ?? WAREN[a], ware: a }, { text: String(g.vorrat![a] ?? 0) }, { text: `${LAGERREGEL_SYMBOL[r]} ${LAGERREGEL_NAMEN[r]}`, warn: r !== 0 }], knopf: `regel:${a}`, aktiv: r !== 0 };
+          }),
+        });
+      }
     }
     if (t.pufferSumme > 0) ab.push({ art: 'waren', titel: 'Eingang', waren: warenListe(g.puffer, t.puffer) });
     if (t.funktion === 'wohnen') ab.push({ art: 'waren', titel: 'Essen im Haus', waren: warenListe(g.puffer), leer: 'nichts – ein Träger bringt es' });
     if (t.funktion === 'kirmes') {
       const kirmes = s.dorf.kirmes;
       if (kirmes) {
-        ab.push({ art: 'waren', titel: 'Warenliste der Kirmes', waren: warenListe(kirmes.geliefert.map((n, a) => Math.min(n, kirmes.liste[a])), kirmes.liste) });
+        ab.push({ art: 'waren', titel: `Warenliste der Kirmes → ${DORFSTUFEN[s.dorf.stufe + 1] ?? ''}`, waren: warenListe(kirmes.geliefert.map((n, a) => Math.min(n, kirmes.liste[a])), kirmes.liste) });
         const k0 = KIRMES[s.dorf.stufe];
-        if (k0) ab.push({ art: 'zeilen', zeilen: [`Schaltet frei: ${k0.schaltetFrei.join(', ')}`] });
-      } else ab.push({ art: 'zeilen', zeilen: [`Das Dorf ist jetzt ${DORFSTUFEN[s.dorf.stufe] ?? ''}. Die nächste Kirmes kommt mit M8.`] });
+        const z: string[] = [];
+        if (kirmes.mischkorb.soll) {
+          z.push(`Mischkorb: ${kirmes.mischkorb.da} von ${kirmes.mischkorb.soll} beliebigen veredelten Waren (${WAREN.map((_, a) => (MISCHKORB[a] ? w[a]?.mehr : '')).filter(Boolean).join(', ')})`);
+        }
+        if (k0) z.push(`Schaltet frei: ${k0.schaltetFrei.join(', ')}`);
+        ab.push({ art: 'zeilen', zeilen: z });
+      } else ab.push({ art: 'zeilen', zeilen: [`Das Dorf ist ${DORFSTUFEN[s.dorf.stufe] ?? ''} – höher geht es nicht. Kleine Feste gibt es weiter.`] });
+      const fest = s.dorf.fest;
+      if (fest) {
+        const f = KLEINE_FESTE[fest.nr];
+        ab.push({ art: 'waren', titel: `${f.symbol} ${f.name} (${JAHRESZEITEN[f.jahreszeit]}, +${f.punkte} Punkte)${fest.laeuft ? ' – es wird gefeiert!' : ''}`, waren: warenListe(fest.geliefert, fest.liste) });
+      }
+      ab.push({ art: 'zeilen', zeilen: [`Punkte aus kleinen Festen: ${s.dorf.festPunkte} von höchstens ${FEST_OBERGRENZE} · jedes Fest einmal im Jahr, nur in seiner Jahreszeit`] });
     }
+    if (t.boten) ab.push({ art: 'zeilen', titel: 'Boten', zeilen: [`${g.boten ?? 0} von höchstens ${t.boten} unterwegs`] });
     if (t.ausgangMax > 0) ab.push({ art: 'waren', titel: 'Ausgang (wartet auf Abholung)', waren: [{ ware: t.ausgangWare, n: g.ausgang?.[t.ausgangWare] ?? 0, max: t.ausgangMax }] });
     const leistung = leistungText(t, w);
     if (t.arbeiter) {
@@ -423,6 +463,8 @@ export function warnungen(s: SimSicht, ich: number): Warnung[] {
     ['kein_baum', 'ohne Bäume in Reichweite', (g) => !g.getrennt && g.zustand === 'kein_baum'],
     ['kein_fels', 'ohne Fels in Reichweite', (g) => !g.getrennt && g.zustand === 'kein_fels'],
     ['kein_platz', 'ohne Pflanzplatz', (g) => !g.getrennt && g.zustand === 'kein_platz'],
+    ['kein_werkzeug', 'ohne Werkzeug', (g) => !g.getrennt && g.zustand === 'kein_werkzeug'],
+    ['hochwasser', 'im Hochwasser', (g) => g.zustand === 'hochwasser'],
   ];
   const aus: Warnung[] = [];
   for (const [art, text, pruef] of arten) {
@@ -457,7 +499,9 @@ export function hilfeFenster(touch: boolean): FensterDaten {
     '2. „Bauen“ öffnet das Baumenü. Grüne Plätze passen, das Geistermodell zeigt das Haus. Jedes Haus braucht einen Weg zum Lager.',
     '3. Holzfäller und Sägewerk machen Bretter, der Steinbruch Steine – daraus wachsen die Baustellen.',
     '4. Kartoffelfeld und Wohnhaus bringen neue Bewohner. Küche, Mostkeller und Käserei füllen die Warenliste der Kirmes.',
-    '5. Am Kirmesplatz die Warenliste abliefern: Es wird gefeiert, und aus dem Weiler wird ein Dorf.',
+    '5. Am Kirmesplatz die Warenliste abliefern: Es wird gefeiert, und aus dem Weiler wird ein Dorf – später Kirchdorf und Marktflecken.',
+    '6. Ein Jahr dauert eine Stunde. Im Winter ruhen die Felder und das Dorf isst aus dem Lager – im Herbst vorsorgen. Wetter kündigt die Erzählfigur als Bauernregel an.',
+    `7. Kleine Feste (${KLEINE_FESTE.map((f) => f.name).join(', ')}) feiert man am Kirmesplatz zu ihrer Jahreszeit – das bringt Punkte.`,
     'Ein Klick auf ein Gebäude, eine Fahne oder einen Weg öffnet sein Fenster. 📌 pinnt es an, Esc schließt das oberste.',
   ];
   const tasten: TabZeile[] = (touch ? [

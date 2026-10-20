@@ -1,5 +1,5 @@
 {
- "hinweis": "Meldungen der Erzählfigur (Drehbuch 1.1, 1.4, 4.4): Hochdeutsch, der Sprachtick der Figur kommt aus regions.json dazu. Platzhalter: {name} Erzählfigur, {ort} Startort, {gebaeude} Gebäude, {ware} Ware, {stufe} Dorfstufe, {n} Zahl, {liste} Kirmes-Warenliste. Mehrere Texte je Anlass werden der Reihe nach verwendet.",
+ "hinweis": "Meldungen der Erzählfigur (Drehbuch 1.1, 1.4, 4.4): Hochdeutsch, der Sprachtick der Figur kommt aus regions.json dazu. Platzhalter: {name} Erzählfigur, {ort} Startort, {gebaeude} Gebäude, {ware} Ware, {stufe} Dorfstufe, {n} Zahl, {liste} Kirmes-Warenliste, {fest} Name eines kleinen Fests, {wetter} Wetter, {feld} betroffenes Feld. Bauernregeln (wetter_<art>) kündigen das Wetter an (Drehbuch 7.4). Mehrere Texte je Anlass werden der Reihe nach verwendet.",
  "begruessung": [
   "Willkommen in {ort}! Hier fängt die Eifel an. Erst Holz und Stein, dann Kartoffeln – und dann feiern wir Kirmes.",
   "Na, da seid ihr ja. {ort} wartet. Holzfäller an den Wald, Weg dahin, und dann sehen wir weiter."
@@ -38,9 +38,56 @@
   "Kirmes! Musik, Karussell, Feuerwerk – und keiner arbeitet. Wie es sich gehört."
  ],
  "stufe": [
-  "Aus dem Weiler ist ein {stufe} geworden! Neue Gebäude sind frei: {liste}."
+  "Jetzt sind wir {stufe}! Neue Gebäude sind frei: {liste}.",
+  "{stufe}! Wer hätte das gedacht. Frei ist jetzt: {liste}."
  ],
  "zuzug": [
   "Die Kirmes hat {n} Neue angelockt. Hat sich rumgesprochen."
+ ],
+ "jahreszeit_0": [
+  "Frühjahr! Die Felder werden gesät – erst in ein paar Minuten gibt es wieder Ertrag."
+ ],
+ "jahreszeit_1": [
+  "Sommer in der Eifel. Also: Regenjacke griffbereit."
+ ],
+ "jahreszeit_2": [
+  "Herbst! Erntezeit – die Felder geben jetzt mehr her. Vorrat für den Winter anlegen!"
+ ],
+ "jahreszeit_3": [
+  "Winter! Felder, Obstwiesen und Bienen ruhen. Jetzt lebt das Dorf vom Vorrat im Lager."
+ ],
+ "wetter_regen": [
+  "Bauernregel: Hängt der Nebel über'm Venn, regnet's bald – ganz ohne Wenn. (Regen: Wege langsamer, Felder wachsen besser.)"
+ ],
+ "wetter_talnebel": [
+  "Bauernregel: Liegt der Morgen still im Tal, bleibt der Nebel – allemal. (Talnebel: in den Tälern geht's langsamer.)"
+ ],
+ "wetter_wind": [
+  "Bauernregel: Pfeift der Wind vom Venn herab, wird's auf den Höhen knapp. (Venn-Wind: Gebäude auf den Höhen arbeiten langsamer.)"
+ ],
+ "wetter_duerre": [
+  "Bauernregel: Ist der Himmel lang zu blau, wird das Korn im Felde grau. (Dürre: Felder und Obst wachsen langsamer – Vorrat hilft.)"
+ ],
+ "wetter_missernte": [
+  "Bauernregel: Schwarze Schnecken auf dem Pfad, magre Ernte – schad, schad, schad. (Missernte beim {feld}: halbe Ernte.)"
+ ],
+ "wetter_hochwasser": [
+  "Bauernregel: Schmilzt der Schnee und regnet's drauf, nimmt der Bach den eigenen Lauf. (Hochwasser: Gebäude in der Aue stehen still, an den Fahnen am Ufer schwimmt Ware weg.)"
+ ],
+ "kleines_fest": [
+  "{fest}! Ganz klein, ganz fein – und es gibt Punkte.",
+  "{fest} gefeiert. Das Dorf ist zufrieden, und das will was heißen."
+ ],
+ "friert": [
+  "Es fehlt Essen für den Winter – die Leute frieren und arbeiten langsamer. Schnell Essen ins Lager!"
+ ],
+ "satt": [
+  "Alle wieder satt. Hat schlimmer kommen können."
+ ],
+ "bauleute": [
+  "Ein neuer {gebaeude} ist da – mit eigenem Werkzeug."
+ ],
+ "verloren": [
+  "Ein Bote hat {ware} verloren. Liegt jetzt irgendwo im Gras. Wird schon einer finden."
  ]
 }

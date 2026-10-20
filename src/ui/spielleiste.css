@@ -181,3 +181,8 @@
   .minimap { bottom: calc(var(--leiste-h, 0px) + 16px + env(safe-area-inset-bottom, 0px)); }
   .info { max-width: calc(100vw - 160px); }
 }
+
+/* M8: Jahreszeit und Wetter, kleines Fest */
+.spielstatus .zeile-jahr { color: var(--ink); opacity: 0.9; line-height: 1.35; }
+.spielstatus.winter .zeile-jahr { color: #cfe6ff; }
+.spielstatus .zeile-fest .balken i { background: linear-gradient(90deg, #2f7a55, #e0a830); }
