@@ -54,9 +54,14 @@ export type Befehl =
   | { art: 'arbeitsbereich'; id: Id; q: number; r: number }
   | { art: 'abriss_fahne'; id: Id }
   | { art: 'abriss_weg'; id: Id }
-  | { art: 'abriss_gebaeude'; id: Id };
+  | { art: 'abriss_gebaeude'; id: Id }
+  /**
+   * Mehrspieler (Drehbuch 8.3): Der Verwalter übernimmt das Dorf von `spieler` (an) oder gibt es zurück. Solange er verwaltet, läuft die
+   * Wirtschaft weiter, aber Bau- und Abrissbefehle für dieses Dorf werden verworfen. Schickt nur der Taktgeber.
+   */
+  | { art: 'verwalter'; spieler: number; an: boolean };
 
-/** Start einer Partie: Lager-Hex und (optional, sonst data/dorf.json) die Zahl der Bewohner. */
+/** Start eines Dorfs: Lager-Hex und (optional, sonst data/dorf.json) die Zahl der Bewohner. Spieler i startet mit Eintrag i. */
 export interface StartDaten { q: number; r: number; bewohner?: number }
 
 export interface ProtokollEintrag { tick: number; spieler: number; befehl: Befehl }
@@ -67,8 +72,10 @@ export interface Protokoll {
   /** Ausschnitt wie in FORMAT.md und dessen Karten-Prüfsumme (zur Kontrolle). */
   karte: { version: string; q: number; r: number; size: string; pruefsumme: string };
   saat: number;
-  /** Lager-Hex (Ortskern) des Startspielers; bewohner nur, wenn abweichend von data/dorf.json (Tests). */
+  /** Lager-Hex (Ortskern) von Spieler 0; bewohner nur, wenn abweichend von data/dorf.json (Tests). */
   start: StartDaten;
+  /** Mehrspieler: Lager-Hexe der Spieler 1, 2, … (fehlt im Einzelspiel). */
+  mitspieler?: StartDaten[];
   befehle: ProtokollEintrag[];
   /** Zahl der gerechneten Ticks. */
   ticks: number;
@@ -77,14 +84,15 @@ export interface Protokoll {
 // ---------------------------------------------------------------- Sicht für die Darstellung (nur lesen)
 
 export interface SichtFahne {
-  id: Id; q: number; r: number;
+  /** sp: Spieler, dem die Fahne gehört (0 im Einzelspiel). Gilt ebenso für Segmente, Träger, Gebäude und Bauleute. */
+  id: Id; sp: number; q: number; r: number;
   /** Waren im Stapel (Warenart-Index in WAREN), unterste zuerst; bis 8 + 2 Notplätze. */
   waren: number[];
   gebaeude: Id;
 }
 
 export interface SichtSegment {
-  id: Id; a: Id; b: Id;
+  id: Id; sp: number; a: Id; b: Id;
   /** Hexe von Fahne a bis Fahne b (beide eingeschlossen), axial. */
   pfad: { q: number; r: number }[];
   traeger: Id;
@@ -93,7 +101,7 @@ export interface SichtSegment {
 }
 
 export interface SichtTraeger {
-  id: Id;
+  id: Id; sp: number;
   /** Er läuft gerade von Hex von nach Hex nach; fortschritt 0..PROMILLE, je Tick um schritt weiter. */
   von: { q: number; r: number };
   nach: { q: number; r: number };
@@ -145,7 +153,7 @@ export interface SichtArbeiter {
 }
 
 export interface SichtGebaeude {
-  id: Id; typ: string; q: number; r: number; fahne: Id;
+  id: Id; sp: number; typ: string; q: number; r: number; fahne: Id;
   /** 0..PROMILLE Baufortschritt = verbautes Material / Gesamtbedarf; Bauphase = 1 + floor(3·bau/1001) (1, 2, 3), fertig bei PROMILLE. */
   bau: number;
   /** ⚠ keine Wegverbindung zu einem Lager. */
@@ -193,7 +201,7 @@ export interface SichtNatur {
 
 /** Bauarbeiter oder Planierer (Drehbuch 4.5), als Figur in der Welt. */
 export interface SichtBaumann {
-  id: Id;
+  id: Id; sp: number;
   beruf: 'bauarbeiter' | 'planierer';
   von: { q: number; r: number };
   nach: { q: number; r: number };
@@ -231,8 +239,19 @@ export interface SichtDorf {
   notnagel: number;
 }
 
+/** Kurzüberblick über ein Dorf im Mehrspieler (für alle sichtbar). */
+export interface SichtSpieler {
+  stufe: number; bewohner: number;
+  /** Der Verwalter führt das Dorf (Spieler fehlt länger als 5 Minuten). */
+  verwalter: boolean;
+}
+
 export interface SimSicht {
   tick: number;
+  /** Für wen die Sicht gilt: dorf, freieTraeger und ereignisse sind die dieses Spielers. Die Welt (Fahnen, Gebäude …) enthält alle. */
+  ich: number;
+  /** Alle Dörfer, Index = Spieler. */
+  spieler: SichtSpieler[];
   fahnen: SichtFahne[];
   segmente: SichtSegment[];
   traeger: SichtTraeger[];
