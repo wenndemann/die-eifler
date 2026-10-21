@@ -237,20 +237,23 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 
 ---
 
-## M10 – Gebiet, Nachbarn, Finden, Ziele → erste 2-Stunden-Partie
+## M10 – Gebiet, Nachbarn, Finden, Ziele → erste 2-Stunden-Partie ✅ (erster Stand) → 🔨 Spieltest einer vollen Partie
 
 **Ziel:** Man misst sich ohne Krieg. Danach ist **eine volle Partie von 2 Stunden** allein und zu mehreren spielbar (Drehbuch 6).
 
-- [ ] **Einfluss:** Lager, Höfe, Kirche und Festplätze strahlen aus, gut versorgt weiter; Grenzen wachsen wie in Siedler
-- [ ] Erkundung und Nebel in Kartenpapier-Optik (DESIGN §8, im Drehbuch noch nicht festgelegt)
-- [ ] **Grenzsteine versetzen** (nachts, mit Risiko) und **Abwerben** über Kirmes und Essen; Gebäude werden nie zerstört, sie stehen still
-- [ ] **Orte mit Einstand** (Drehbuch 6.2): Dorfzentrum an jedem Eifel-Ort, Wunschliste je Ort, Einstand-Fest, dann Lager, kleines Gebiet, Bewohner und Fundkiste; danach feiert jeder Ort einmal im Jahr sein Fest; im Mehrspieler gewinnt, wer zuerst liefert
-- [ ] **Flachländer am Kartenrand** (KI): Marktposten mit Wegweiser zur echten Stadt außerhalb der Eifel (Aachen, Düren, Euskirchen, Bonn, Koblenz, Trier, Lüttich); Lager, Wachsamkeit, Handel sofort (ab Marktflecken besser), keine eigene Bauerei, nicht zu gewinnen
-- [ ] Finderhütte, **Finden mit Gegenwehr** (Wachhund, Dorfpolizist), **Ausredenstube** mit Sprüchen, Fundbüro
-- [ ] Zöllner an der Staatsgrenze, Kaffeeschmuggel
-- [ ] **Schützenfest** mit Schützenhaus, Schießstand und **Vogelschuss** (Vorbereitung + etwas Glück), Schützenkönig zahlt die Runde
-- [ ] Siegbedingungen: **Eifel-Punkte** bis zur Zielpunktzahl aus der Lobby (Standard, kein Zeitlimit, Zwischenstand jederzeit), wählbar **Wettlauf** zum Marktflecken und **Der Große Fund**, allein auch **„ohne Ende“**
-- [ ] Abschluss-Bildschirm mit Statistik
+- [x] **Einfluss:** Lager (+1 je Dorfstufe), Wohnhäuser, Kirmesplatz, Schützenhaus und Dorfpolizist strahlen aus, gut versorgt (friert nicht) +1, Schützenkönig +1; bauen und Fahnen nur auf eigenem Gebiet, Wege auch über freies Land, nie über fremdes; Gebäude auf fremdem Gebiet stehen still; Grenzband und Grenzsteine in Spielerfarbe (`data/nachbarn.json`: gebiet). Eine Kirche gibt es noch nicht
+- [ ] Erkundung und Nebel in Kartenpapier-Optik (DESIGN §8, im Drehbuch noch nicht festgelegt) – offen
+- [ ] **Grenzsteine versetzen** (nachts, mit Risiko) und **Abwerben** über Kirmes und Essen – offen; Gebäude werden nie zerstört, sie stehen still (umgesetzt)
+- [x] **Orte mit Einstand** (Drehbuch 6.2): jeder Ortskern im Spielfeld ist ein Ort (Weiler/Dorf/Städtchen nach Größe), Ortsschild, Wunschliste je Ort, Weg bis an den Ortskern, „Einstand liefern“ aus dem Lager, dann Lager mit Fundkiste, Gebiet, Bewohner und Punkte; im Mehrspieler gewinnt, wer zuerst ankommt, der andere hat umsonst geliefert
+- [ ] Jahresfest je gewonnenem Ort – offen
+- [x] **Flachländer am Kartenrand:** die zwei nächsten Städte (Aachen, Düren, Euskirchen, Bonn, Koblenz, Trier, Lüttich) als Marktposten mit Wegweiser in ihre echte Richtung und echter Entfernung; Handel sofort (6 Tauschangebote, ab Marktflecken je Tausch 1 Stück mehr), Wachsamkeit gegen Finder, nicht zu gewinnen
+- [x] Finderhütte, **Finden mit Gegenwehr** (Wachhund, Dorfpolizist), **Ausredenstube** mit Sprüchen (Gänge abstrakt, ohne Figur auf der Karte)
+- [ ] Fundbüro, Finder als Figur – offen
+- [ ] Zöllner an der Staatsgrenze, Kaffeeschmuggel – offen
+- [x] **Schützenfest** mit Schützenhaus, Schießstand und **Vogelschuss** (Vorbereitung + etwas Glück), Schützenkönig zahlt die Runde, bringt Punkte und Einfluss
+- [x] Siegbedingungen: **Eifel-Punkte** bis zur Zielpunktzahl (kurz 600, normal 1000, lang 1500) aus Lobby bzw. Einstellungen, Zwischenstand im Status, **Wettlauf** zum Marktflecken, allein auch **„ohne Ende“**
+- [ ] **Der Große Fund** – offen
+- [x] Abschluss-Bildschirm (Rangliste mit Punkten, Stufe, Bewohnern, Gebiet, Orten; Statistik; Weiterspielen)
 
 **Abnahme:** Vier Testspieler (oder zwei plus Flachländer) spielen eine 2-Stunden-Partie bis zum Ende ohne Abbruch. Danach sagen sie: „Noch eine.“
 

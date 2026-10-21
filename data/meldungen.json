@@ -1,5 +1,5 @@
 {
- "hinweis": "Meldungen der Erzählfigur (Drehbuch 1.1, 1.4, 4.4): Hochdeutsch, der Sprachtick der Figur kommt aus regions.json dazu. Platzhalter: {name} Erzählfigur, {ort} Startort, {gebaeude} Gebäude, {ware} Ware, {stufe} Dorfstufe, {n} Zahl, {liste} Kirmes-Warenliste, {fest} Name eines kleinen Fests, {wetter} Wetter, {feld} betroffenes Feld. Bauernregeln (wetter_<art>) kündigen das Wetter an (Drehbuch 7.4). Mehrere Texte je Anlass werden der Reihe nach verwendet.",
+ "hinweis": "Meldungen der Erzählfigur (Drehbuch 1.1, 1.4, 4.4): Hochdeutsch, der Sprachtick der Figur kommt aus regions.json dazu. Platzhalter: {name} Erzählfigur, {ort} Startort, {gebaeude} Gebäude, {ware} Ware, {stufe} Dorfstufe, {n} Zahl, {liste} Kirmes-Warenliste, {fest} Name eines kleinen Fests, {wetter} Wetter, {feld} betroffenes Feld; ab M10 {text} (Ortsname, Stadt, Ausrede, Spieler). Bauernregeln (wetter_<art>) kündigen das Wetter an (Drehbuch 7.4). Mehrere Texte je Anlass werden der Reihe nach verwendet.",
  "begruessung": [
   "Willkommen in {ort}! Hier fängt die Eifel an. Erst Holz und Stein, dann Kartoffeln – und dann feiern wir Kirmes.",
   "Na, da seid ihr ja. {ort} wartet. Holzfäller an den Wald, Weg dahin, und dann sehen wir weiter."
@@ -89,5 +89,37 @@
  ],
  "verloren": [
   "Ein Bote hat {ware} verloren. Liegt jetzt irgendwo im Gras. Wird schon einer finden."
+ ],
+ "einstand": [
+  "Einstand in {text}! Die Leute sind jetzt unsere Leute. Mit Fundkiste.",
+  "{text} gehört jetzt dazu. Erst misstrauisch, dann Freibier – wie immer."
+ ],
+ "zu_spaet": [
+  "Zu spät in {text}! Ein anderer war schneller. Unsere Waren? Verschwunden. Wie das so ist."
+ ],
+ "handel": [
+  "Die Händler sind zurück aus {text}. Flachländer – aber zahlen tun sie."
+ ],
+ "fund": [
+  "Der Finder ist zurück: {ware} gefunden. Lag da so rum, sagt er."
+ ],
+ "erwischt": [
+  "Der Finder ist erwischt worden und sitzt in der Ausredenstube. Seine Ausrede: {text}"
+ ],
+ "ertappt": [
+  "Ein Finder von {text} wollte bei uns was finden. Der Hund war schneller."
+ ],
+ "schuetzenfest": [
+  "Schützenfest! Unser Schütze trifft {n} Ringe. Der Vogel wackelt."
+ ],
+ "koenig": [
+  "{text} hat den Vogel abgeschossen – Schützenkönig! Der König zahlt die Runde."
+ ],
+ "ende": [
+  "Die Partie ist entschieden: {text} hat gewonnen! Weiterspielen geht trotzdem.",
+  "{text} gewinnt! Der Rest feiert trotzdem. Hauptsache Kirmes."
+ ],
+ "ort_entdeckt": [
+  "Ein Weg führt bis {text}. Der Ortsvorsteher guckt misstrauisch – er will einen Einstand sehen."
  ]
 }

@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import type { MapData } from '../map/mapdata';
 import type { HexGrid } from '../map/hex';
 import { FLAG } from '../welt/format';
-import { KEIN_DORF, KEIN_JAHR, KEINE_NATUR, PROMILLE, TICK_HZ, type SichtFahne, type SichtGebaeude, type SichtSegment, type SichtTraeger, type SimSicht } from '../sim/typen';
+import { KEIN_DORF, KEIN_GEBIET, KEIN_JAHR, KEINE_NATUR, PROMILLE, TICK_HZ, type SichtFahne, type SichtGebaeude, type SichtSegment, type SichtTraeger, type SimSicht } from '../sim/typen';
 import { Wege } from './wege';
 import { Fahnen } from './fahnen';
 import { Traeger } from './traeger';
@@ -31,7 +31,7 @@ export class SimDemo {
   readonly fahnen: Fahnen;
   readonly traeger: Traeger;
   readonly gebaeude: Gebaeude;
-  sicht: SimSicht = { tick: 0, ich: 0, spieler: [], fahnen: [], segmente: [], traeger: [], gebaeude: [], freieTraeger: 0, natur: KEINE_NATUR, bauleute: [], dorf: KEIN_DORF, ereignisse: [], jahr: KEIN_JAHR, boten: [], liegend: [] };
+  sicht: SimSicht = { tick: 0, ich: 0, spieler: [], fahnen: [], segmente: [], traeger: [], gebaeude: [], freieTraeger: 0, natur: KEINE_NATUR, bauleute: [], dorf: KEIN_DORF, ereignisse: [], jahr: KEIN_JAHR, boten: [], liegend: [], gebiet: KEIN_GEBIET, orte: [], posten: [], regeln: { gebiet: false, ziel: '', zielPunkte: 0 }, ende: null };
   private laeufe: Lauf[] = [];
   private acc = 0;
   private pausiert = false;
@@ -131,7 +131,7 @@ export class SimDemo {
   }
 
   private aufbauen() {
-    this.sicht = { tick: 0, ich: 0, spieler: [], fahnen: [], segmente: [], traeger: [], gebaeude: [], freieTraeger: 0, natur: KEINE_NATUR, bauleute: [], dorf: KEIN_DORF, ereignisse: [], jahr: KEIN_JAHR, boten: [], liegend: [] };
+    this.sicht = { tick: 0, ich: 0, spieler: [], fahnen: [], segmente: [], traeger: [], gebaeude: [], freieTraeger: 0, natur: KEINE_NATUR, bauleute: [], dorf: KEIN_DORF, ereignisse: [], jahr: KEIN_JAHR, boten: [], liegend: [], gebiet: KEIN_GEBIET, orte: [], posten: [], regeln: { gebiet: false, ziel: '', zielPunkte: 0 }, ende: null };
     this.laeufe = [];
     this.nextId = 1;
     const L = this.lagerHex;
@@ -177,7 +177,7 @@ export class SimDemo {
   /** Viele Träger und Fahnen für die Leistungsprobe: Gitter aus Fahnen auf geraden Hex-Koordinaten. */
   stress(nTraeger = 200, nFahnen = 100) {
     const L = this.lagerHex;
-    this.sicht = { tick: 0, ich: 0, spieler: [], fahnen: [], segmente: [], traeger: [], gebaeude: [], freieTraeger: 0, natur: KEINE_NATUR, bauleute: [], dorf: KEIN_DORF, ereignisse: [], jahr: KEIN_JAHR, boten: [], liegend: [] };
+    this.sicht = { tick: 0, ich: 0, spieler: [], fahnen: [], segmente: [], traeger: [], gebaeude: [], freieTraeger: 0, natur: KEINE_NATUR, bauleute: [], dorf: KEIN_DORF, ereignisse: [], jahr: KEIN_JAHR, boten: [], liegend: [], gebiet: KEIN_GEBIET, orte: [], posten: [], regeln: { gebiet: false, ziel: '', zielPunkte: 0 }, ende: null };
     this.laeufe = [];
     const mapF = new Map<string, SichtFahne>();
     const kand: H[] = [];
