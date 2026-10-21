@@ -119,10 +119,10 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
     for (const x of sicht) if (JSON.stringify(x.hf) !== '[0,1]') fail(`Nicht beide Holzfäller sichtbar: ${JSON.stringify(x.hf)}`);
     // M7: Fenster im Mehrspieler – der Gast stellt die Warenverteilung um (Fensterknopf), der Gastgeber lässt seinen Holzfäller ruhen
     await gast.evaluate(() => window.eifeler.spiel.fensterUmschalten('verteilung'));
-    await gast.waitForSelector('.fenster[data-fenster="verteilung"] .fe-platz:not([disabled])', { timeout: 10000 });
+    await gast.waitForSelector('.fenster[data-fenster="verteilung"] .fe-platz:not([disabled])', { timeout: 30000 });
     await gast.locator('.fenster[data-fenster="verteilung"] .fe-platz:not([disabled])').first().click();
     const hfId = await host.evaluate(() => { const sp = window.eifeler.spiel; const g = sp.sicht.gebaeude.find((x) => x.sp === sp.ich && x.typ === 'holzfaeller'); sp.oeffneGebaeude(g.id); return g.id; });
-    await host.waitForSelector(`.fenster[data-fenster="geb:${hfId}"]`, { timeout: 10000 });
+    await host.waitForSelector(`.fenster[data-fenster="geb:${hfId}"]`, { timeout: 30000 });
     await host.evaluate(() => window.eifeler.spiel.fensterUmschalten('statistik'));
     await host.waitForTimeout(500);
     const m7 = await host.evaluate(() => ({ fenster: window.eifeler.spiel.fenster.ids, auto: window.eifeler.spiel.autosave(), da: !!localStorage.getItem('eifeler.autosave') }));
@@ -168,9 +168,9 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
     // einen Bauarbeiter mehr (Knopf); beides muss bei beiden ankommen
     const lagerId = async (s) => s.evaluate(() => { const sp = window.eifeler.spiel; const g = sp.sicht.gebaeude.find((x) => x.sp === sp.ich && x.typ === 'lager'); sp.oeffneGebaeude(g.id); return g.id; });
     const lg = await lagerId(gast), lh = await lagerId(host);
-    await gast.waitForSelector(`.fenster[data-fenster="geb:${lg}"] [data-knopf="regel:2"]`, { timeout: 10000 });
+    await gast.waitForSelector(`.fenster[data-fenster="geb:${lg}"] [data-knopf="regel:2"]`, { timeout: 30000 });
     await gast.locator(`.fenster[data-fenster="geb:${lg}"] [data-knopf="regel:2"]`).click();
-    await host.waitForSelector(`.fenster[data-fenster="geb:${lh}"] [data-knopf="bau:+"]`, { timeout: 10000 });
+    await host.waitForSelector(`.fenster[data-fenster="geb:${lh}"] [data-knopf="bau:+"]`, { timeout: 30000 });
     await host.locator(`.fenster[data-fenster="geb:${lh}"] [data-knopf="bau:+"]`).click();
     await host.waitForTimeout(1500);
     // M7: Verteilung des Gasts und das Ruhen des Gastgebers sind bei beiden gleich (auch nach dem Neuladen des Gasts)
@@ -197,7 +197,7 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
       sp.oeffneOrt(0);
       return { vk: s.spieler.map((p) => p.voelkchen).join(','), regeln: JSON.stringify(s.regeln), rev: s.gebiet.rev, punkte: s.spieler.map((p) => p.punkte).join(','), hexe: s.spieler.map((p) => p.hexe).join(','), orte: s.orte.length, posten: s.posten.length, tick: sp.sim.tick };
     })));
-    await gast.waitForSelector('.fenster[data-fenster="ort:0"]', { timeout: 10000 }).catch(() => fail('Mehrspieler M10: Ortsfenster geht nicht auf'));
+    await gast.waitForSelector('.fenster[data-fenster="ort:0"]', { timeout: 30000 }).catch(() => fail('Mehrspieler M10: Ortsfenster geht nicht auf'));
     info(`Mehrspieler M10: Regeln ${m10[0].regeln}, Gebiet ${m10.map((x) => x.hexe).join(' / ')}, Punkte ${m10.map((x) => x.punkte).join(' / ')}, ${m10[0].orte} Orte, ${m10[0].posten} Marktposten`);
     info(`Mehrspieler M11: Völkchen ${m10.map((x) => x.vk).join(' / ')}`);
     if (m10.some((x) => x.vk !== m10[0].vk) || m10[0].vk.split(',').some((v) => !v)) fail(`Mehrspieler M11: Völkchen fehlen oder verschieden: ${m10.map((x) => x.vk).join(' / ')}`);

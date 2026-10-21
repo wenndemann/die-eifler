@@ -35,6 +35,14 @@ export function erzaehlerVon(id: string): Erzaehler {
   return v ? { voelkchen: v.name, name: v.erzaehler.name, tick: v.erzaehler.tick, sprueche: v.sprueche, id: v.id } : erzaehlerFuer(undefined);
 }
 
+/** Völkchen eines neuen Spiels allein: die Wahl aus den Einstellungen, sonst (oder unbekannt) aus dem Startort. */
+export function waehleVoelkchen(wahl: string, startort: string | undefined, orte: readonly string[] = []): string {
+  return VOELKCHEN.some((v) => v.id === wahl) ? wahl : erzaehlerFuer(startort, orte).id;
+}
+
+/** Alle Völkchen (Id und Name) für die Auswahl. */
+export const VOELKCHEN_LISTE: readonly { id: string; name: string }[] = VOELKCHEN.map((v) => ({ id: v.id, name: v.name }));
+
 /** Name des Völkchens zur Id oder ''. */
 export function voelkchenName(id: string): string {
   return VOELKCHEN.find((x) => x.id === id)?.name ?? '';

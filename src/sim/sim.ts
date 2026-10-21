@@ -805,6 +805,18 @@ export class Simulation {
     return h >= 0 && this.hexKannFahne(h, sp);
   }
 
+  /** Gebäude des eigenen Völkchens, die auf dieser Karte nirgends gehen (kein Wasser, kein Moor). Nur lesen, für eine Warnung beim Start. */
+  fehltAufKarte(sp = 0): string[] {
+    if (!this.doerfer[sp]) return [];
+    const k = this.karte, id = this.vkVon(sp).id;
+    let wasser = false, moor = false;
+    for (let h = 0; h < k.terrain.length; h++) {
+      if (!k.begehbar[h] || (k.flags[h] & (FLAG.fluss | FLAG.ufer))) wasser = true;
+      if (k.terrain[h] === 4) moor = true;
+    }
+    return Object.values(GEBAEUDE).filter((t) => t.voelkchen.includes(id) && ((t.amWasser && !wasser) || (t.amMoor && !moor))).map((t) => t.id);
+  }
+
   kannBauen(typ: string, q: number, r: number, sp = 0): boolean {
     const h = this.karte.index(q, r);
     return h >= 0 && this.hexKannBauen(typ, h, sp);

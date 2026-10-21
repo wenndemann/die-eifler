@@ -14,10 +14,12 @@ export interface Einstellungen {
   tipps: boolean;
   /** M10: Ziel für neue Spiele allein (Id aus data/nachbarn.json: punkte.ziele). */
   ziel: string;
+  /** M11: Völkchen für neue Spiele allein ('' = aus dem Startort; im Mehrspieler immer aus dem Startort). */
+  voelkchen: string;
 }
 
 export const EINSTELLUNGEN_SPEICHER = 'eifeler.einstellungen';
-export const STANDARD: Einstellungen = { uiGroesse: 100, farbenblind: false, kameraTempo: 100, autosave: true, tipps: true, ziel: 'normal' };
+export const STANDARD: Einstellungen = { uiGroesse: 100, farbenblind: false, kameraTempo: 100, autosave: true, tipps: true, ziel: 'normal', voelkchen: '' };
 
 const zahl = (v: unknown, min: number, max: number, def: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(min, Math.round(v))) : def);
 
@@ -32,6 +34,7 @@ export function leseEinstellungen(text: string | null): Einstellungen {
     autosave: typeof d.autosave === 'boolean' ? d.autosave : STANDARD.autosave,
     tipps: typeof d.tipps === 'boolean' ? d.tipps : STANDARD.tipps,
     ziel: typeof d.ziel === 'string' && d.ziel ? d.ziel : STANDARD.ziel,
+    voelkchen: typeof d.voelkchen === 'string' ? d.voelkchen : STANDARD.voelkchen,
   };
 }
 

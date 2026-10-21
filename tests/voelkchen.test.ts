@@ -183,6 +183,15 @@ describe('M11 Völkchen in der Simulation', () => {
     expect(new Simulation(k, 1, { q: -10, r: 8 }).kannBauen('wohnhaus', -12, 8)).toBe(true);
   });
 
+  it('Warnung beim Start: Bootsverleih ohne Wasser, Torfstich ohne Moor', () => {
+    expect(new Simulation(k, 1, { q: -10, r: 8, voelkchen: 'rursee' }).fehltAufKarte()).toEqual([]);
+    // dieselbe Karte ohne Wasser, Fluss und Moor
+    const trocken: KarteDaten = { ...k, terrain: k.terrain.map((t) => (t === 0 || t === 4 ? 1 : t)), flags: k.flags.map(() => 0) };
+    expect(new Simulation(trocken, 1, { q: -10, r: 8, voelkchen: 'rursee' }).fehltAufKarte().sort()).toEqual(['bootsverleih', 'fischerhuette']);
+    expect(new Simulation(trocken, 1, { q: -10, r: 8, voelkchen: 'ostbelgien' }).fehltAufKarte()).toContain('torfstich');
+    expect(new Simulation(trocken, 1, { q: -10, r: 8, voelkchen: 'monschau' }).fehltAufKarte()).toEqual([]);
+  });
+
   it('Spielstand und Replay behalten das Völkchen', () => {
     const sim = new Simulation(k, 3, [{ q: 0, r: 0, voelkchen: 'ahr' }, { q: -14, r: 0, voelkchen: 'laach' }]);
     tu(sim, 0, { art: 'gebaeude', typ: 'wohnhaus', q: 3, r: 0 });

@@ -264,6 +264,7 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 **Ziel:** Jeder Startort spielt sich anders (Drehbuch 5.3).
 
 - [x] Völkchen aus dem Startort (Kerngebiete in `data/regions.json`, sonst der erste Ortskern des Ausschnitts in einem Kerngebiet); eine echte Gebietskarte im Konverter folgt
+- [x] Allein im freien Spiel frei wählbar (Einstellungen → „Völkchen für neue Spiele“), im Mehrspieler immer aus dem Startort; fehlt dem Ausschnitt Wasser oder Moor für eigene Gebäude, warnt die Erzählfigur beim Start
 - [x] Je Völkchen Bonus, **Spezialkette (2–3 Gebäude, ab Stufe 2)**, augenzwinkernde Schwäche, edle Spezialität für die Marktflecken-Kirmes (statt des Bergkäse-Platzhalters); Regeln in `data/voelkchen.json`
 - [x] Monschauer & Venner, Rursee-Leute, Rureifeler, Vulkaneifeler, Ahrtaler, Laacher & Mayener, Südeifeler, Schneifeler, **Ostbelgier**, **Öslinger** mit Römerstraße, Vennbahn, Abtei, Bootsverleih, Torf, Basaltbruch und wachsenden Hecken wie im Drehbuch
 - [x] **Hecken als Monschauer Spezialität:** Buchenhecke aus Setzlingen, wächst erst heran (Monschauer 25 % schneller), dann Windschutz im Winter (+30 % bis 2 Hexe); als lebende Grenze gegen Grenzsteinversetzer kommt sie mit dem Versetzen
