@@ -290,6 +290,9 @@ export class Simulation {
   // abgeleitete Zwischenspeicher (nicht Teil der Prüfsumme)
   private distCache = new Map<Id, Map<Id, number>>();
   private verbunden = new Set<Id>();
+  /** Zähler für Netzänderungen und die nur lesend gerechneten Verbindungen (abgeleitet, nicht Teil der Prüfsumme). */
+  private netzStand = 0;
+  private verbundenLesend: { stand: number; fahnen: Set<Id> } | null = null;
   private verbundenNeu = true;
   private inb = new Map<Id, number>();
   private natCache: SichtNatur | null = null;
@@ -1366,10 +1369,32 @@ export class Simulation {
 
   /** Spieler `sp` hat eine mit einem Lager verbundene Fahne höchstens ANSCHLUSS Hexe von Hex `h`. */
   private erreicht(sp: number, h: number): boolean {
-    if (this.verbundenNeu) this.verbindungenNeu();
+    const verbunden = this.verbundeneFahnen();
     const k = this.karte;
-    for (const f of this.fahnen.values()) if (f.sp === sp && this.verbunden.has(f.id) && k.abstand(f.h, h) <= ANSCHLUSS) return true;
+    for (const f of this.fahnen.values()) if (f.sp === sp && verbunden.has(f.id) && k.abstand(f.h, h) <= ANSCHLUSS) return true;
     return false;
+  }
+
+  /**
+   * Fahnen mit Wegverbindung zu einem Lager – nur lesend: Die Sicht fragt das zwischen den Ticks ab, und `getrennt` der Gebäude (Teil
+   * der Prüfsumme) darf sich dadurch nicht früher ändern als im Tick selbst (sonst laufen Mehrspieler auseinander).
+   */
+  private verbundeneFahnen(): Set<Id> {
+    if (!this.verbundenNeu) return this.verbunden;
+    if (this.verbundenLesend && this.verbundenLesend.stand === this.netzStand) return this.verbundenLesend.fahnen;
+    const fahnen = new Set<Id>();
+    const stapel: Id[] = [];
+    for (const g of this.gebaeude.values()) if (istLager(g)) { fahnen.add(g.fahne); stapel.push(g.fahne); }
+    while (stapel.length) {
+      const f = this.fahnen.get(stapel.pop()!)!;
+      for (const sid of f.segmente) {
+        const sg = this.segmente.get(sid)!;
+        const o = sg.a === f.id ? sg.b : sg.a;
+        if (!fahnen.has(o)) { fahnen.add(o); stapel.push(o); }
+      }
+    }
+    this.verbundenLesend = { stand: this.netzStand, fahnen };
+    return fahnen;
   }
 
   /**
@@ -1795,6 +1820,7 @@ export class Simulation {
   // ------------------------------------------------------------------ Netz aufbauen
 
   private netzGeaendert(): void {
+    this.netzStand++;
     this.distCache.clear();
     this.verbundenNeu = true;
   }
