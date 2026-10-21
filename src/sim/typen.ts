@@ -73,7 +73,18 @@ export type Befehl =
    * Mehrspieler (Drehbuch 8.3): Der Verwalter übernimmt das Dorf von `spieler` (an) oder gibt es zurück. Solange er verwaltet, läuft die
    * Wirtschaft weiter, aber Bau- und Abrissbefehle für dieses Dorf werden verworfen. Schickt nur der Taktgeber.
    */
-  | { art: 'verwalter'; spieler: number; an: boolean };
+  | { art: 'verwalter'; spieler: number; an: boolean }
+  /**
+   * Einstand (Drehbuch 6.2): Die Wunschliste des Orts `ort` (Index in SimSicht.orte) geht aus den eigenen Lagern auf den Weg. Nur, wenn
+   * der Ort noch niemandem gehört, eine eigene, mit einem Lager verbundene Fahne höchstens 2 Hexe vom Ortskern steht und alles im Lager
+   * ist. Wer zuerst ankommt, gewinnt den Ort; die anderen haben umsonst geliefert.
+   */
+  | { art: 'einstand'; ort: number }
+  /**
+   * Handel mit Flachländern (Drehbuch 6.2): Tausch `tausch` (Index in HANDEL, data/nachbarn.json) `mal`-mal am Marktposten `posten`
+   * (Index in SimSicht.posten). Wie beim Einstand braucht es eine verbundene eigene Fahne am Posten und die Waren im Lager.
+   */
+  | { art: 'handel'; posten: number; tausch: number; mal: number };
 
 /** Start eines Dorfs: Lager-Hex und (optional, sonst data/dorf.json) die Zahl der Bewohner. Spieler i startet mit Eintrag i. */
 export interface StartDaten { q: number; r: number; bewohner?: number }
@@ -90,6 +101,8 @@ export interface Protokoll {
   start: StartDaten;
   /** Mehrspieler: Lager-Hexe der Spieler 1, 2, … (fehlt im Einzelspiel). */
   mitspieler?: StartDaten[];
+  /** M10: Regeln der Partie (Gebiet, Ziel); fehlt = wie vor M10. */
+  regeln?: { gebiet: number; ziel: string };
   befehle: ProtokollEintrag[];
   /** Zahl der gerechneten Ticks. */
   ticks: number;
@@ -156,7 +169,9 @@ export interface SichtTraeger {
 export type GebaeudeZustand =
   | 'baustelle' | 'wartet_material' | 'getrennt' | 'kein_arbeiter' | 'kein_baum' | 'kein_fels' | 'kein_platz' | 'voll'
   | 'kein_planierer' | 'planieren' | 'kein_bauarbeiter' | 'hunger' | 'wohnraum_voll' | 'fest'
-  | 'ruht' | 'arbeitet' | 'bereit' | 'winter' | 'saat' | 'hochwasser' | 'kein_werkzeug';
+  | 'ruht' | 'arbeitet' | 'bereit' | 'winter' | 'saat' | 'hochwasser' | 'kein_werkzeug'
+  /** M10: steht auf fremdem Gebiet still; Finder sitzt in der Ausredenstube. */
+  | 'fremd' | 'ausrede';
 
 /** Der Arbeiter eines Holzfällers, Försters oder Steinbruchs (Figur in der Welt). */
 export interface SichtArbeiter {
@@ -206,6 +221,32 @@ export interface SichtGebaeude {
   regel?: number[];
   /** Schänke: Boten, die gerade unterwegs sind. */
   boten?: number;
+  /** Finderhütte (M10): unterwegs bis Tick, in der Ausredenstube bis Tick (mit Ausrede-Index in AUSREDEN), sonst bereit. */
+  finder?: { tut: 'bereit' | 'unterwegs' | 'ausrede'; bis: number; ausrede: number; ziel: string };
+}
+
+/** Besitz je Hex (M10), indiziert wie SimKarte; -1 = niemand. Kopie, nur bei Änderung neu (dann steigt rev) – nicht beschreiben. */
+export interface SichtGebiet { rev: number; besitz: Int8Array }
+
+/** Eifel-Ort im Spielfeld (Drehbuch 6.2). */
+export interface SichtOrt {
+  /** Ort-Nummer (Index + 1 in orte.json), Ortskern-Hex, Größe 0 Weiler / 1 Dorf / 2 Städtchen, Besitzer (-1 niemand). */
+  nr: number; q: number; r: number; groesse: number; besitzer: number;
+  /** Wunschliste je Warenart. */
+  wunsch: number[];
+  /** Für den Spieler der Sicht: eine verbundene eigene Fahne steht am Ort; eine eigene Lieferung ist unterwegs (Ankunft-Tick, sonst 0). */
+  erreicht: boolean; unterwegs: number;
+  /** Was es beim Einstand gibt: Bewohner, Punkte, Fundkiste je Warenart. */
+  bewohner: number; punkte: number; fundkiste: number[];
+}
+
+/** Marktposten der Flachländer am Kartenrand (Drehbuch 6.2). */
+export interface SichtPosten {
+  stadt: string; q: number; r: number; km: number;
+  /** Für den Spieler der Sicht: verbundene Fahne am Posten; eigene Händler unterwegs (Ankunft-Ticks). */
+  erreicht: boolean; unterwegs: number[];
+  /** Tauschangebote (gib → nimm je Warenart, schon mit dem Marktflecken-Zuschlag für den Spieler der Sicht). */
+  handel: { gib: number[]; nimm: number[] }[];
 }
 
 /**
@@ -246,7 +287,8 @@ export interface SichtBaumann {
 export interface SichtEreignis {
   nr: number; tick: number;
   art: 'bewohner' | 'notnagel' | 'fertig' | 'kirmes' | 'stufe' | 'zuzug'
-    | 'jahreszeit' | 'wetter' | 'friert' | 'satt' | 'kleines_fest' | 'bauleute' | 'verloren';
+    | 'jahreszeit' | 'wetter' | 'friert' | 'satt' | 'kleines_fest' | 'bauleute' | 'verloren'
+    | 'einstand' | 'zu_spaet' | 'handel' | 'fund' | 'erwischt' | 'ertappt' | 'schuetzenfest' | 'koenig' | 'ende';
   /** Gebäude (bewohner, fertig, kirmes, kleines_fest) oder 0. */
   gebaeude: Id;
   /**
@@ -284,6 +326,9 @@ export interface SichtDorf {
   verteilung: number[][];
   /** Erzeugte Waren je Warenart in diesem Dorf seit Spielbeginn. */
   erzeugt: number[];
+  /** M10: Schützenfest dieses Jahres (null ohne Schützenhaus): Liste, geliefert, schon gefeiert, laufendes Fest; Schützenkönig. */
+  schuetzen?: { liste: number[]; geliefert: number[]; gefeiert: boolean; fest: number; schuss: number } | null;
+  koenig?: boolean;
 }
 
 /**
@@ -296,6 +341,8 @@ export const STAT_KOPF = 4;
 /** Kurzüberblick über ein Dorf im Mehrspieler (für alle sichtbar). */
 export interface SichtSpieler {
   stufe: number; bewohner: number; festPunkte: number;
+  /** M10: Eifel-Punkte, Gebiet in Hexen, Orte, Schützenkönig. */
+  punkte: number; hexe: number; orte: number; koenig: boolean;
   /** Der Verwalter führt das Dorf (Spieler fehlt länger als 5 Minuten). */
   verwalter: boolean;
 }
@@ -340,6 +387,12 @@ export interface SimSicht {
   boten: SichtBote[];
   /** Waren, die Boten haben fallen lassen (liegen, bis sie einer aufliest). */
   liegend: { q: number; r: number; ware: number; sp: number }[];
+  /** M10: Gebiet, Orte, Marktposten, Regeln (Gebiet an/aus, Ziel und Zielpunkte) und Ende der Partie (Sieger, Tick) oder null. */
+  gebiet: SichtGebiet;
+  orte: SichtOrt[];
+  posten: SichtPosten[];
+  regeln: { gebiet: boolean; ziel: string; zielPunkte: number };
+  ende: { sieger: number; tick: number } | null;
 }
 
 /** Leere Natur (ohne Hexe) für Darstellungen ohne Simulation, z. B. die Demo. */
@@ -354,3 +407,6 @@ export const KEIN_DORF: SichtDorf = {
   bauarbeiter: { gesamt: 0, frei: 0 }, planierer: { gesamt: 0, frei: 0 }, kirmes: null, notnagel: -1, verteilung: [], erzeugt: [],
   fest: null, festPunkte: 0, friert: false, bauSoll: 0, planSoll: 0,
 };
+
+/** Kein Gebiet, keine Orte (Demo ohne Simulation). */
+export const KEIN_GEBIET: SichtGebiet = { rev: 0, besitz: new Int8Array(0) };

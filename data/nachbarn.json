@@ -1,0 +1,95 @@
+{
+  "hinweis": "Gebiet, Orte, Flachländer, Finden, Schützenfest und Eifel-Punkte (Drehbuch 6, ROADMAP M10). Startwerte zum Spielen; Waren nach data/goods.json. Gebiet: Einfluss-Radius in Hexen je Gebäudetyp (nur fertige Gebäude auf eigenem Gebiet strahlen), gut versorgt (Dorf friert nicht und hat seit dem letzten Takt gegessen) +1, Schützenkönig +1. Ein Hex gehört dem stärksten Einfluss (Radius minus Abstand), bei Gleichstand dem älteren Gebäude.",
+  "gebiet": {
+    "takt_s": 5,
+    "radius": { "lager": 9, "wohnhaus": 2, "kirmesplatz": 4, "schuetzenhaus": 3, "polizeiwache": 2 },
+    "versorgt_bonus": 1,
+    "koenig_bonus": 1,
+    "anschluss": 2
+  },
+  "orte": {
+    "hinweis": "Größe nach Zahl der Ortskern-Hexe im Spielfeld. wunsch: Waren-Pool, daraus je Ort 'posten' Einträge (fest aus Ort-Nummer und Saat). Fundkiste kommt ins neue Lager. Laufzeit der Lieferung: s je Hex Abstand vom liefernden Lager.",
+    "laufzeit_s_je_hex": 2,
+    "groessen": [
+      { "id": "weiler", "bis_hexe": 2, "radius": 3, "bewohner": 3, "punkte": 10, "posten": 2,
+        "wunsch": { "kartoffeln": 5, "aepfel": 4, "milch": 4, "bretter": 5, "bratkartoffeln": 3 },
+        "fundkiste": { "bretter": 4, "stein": 4, "kartoffeln": 4 } },
+      { "id": "dorf", "bis_hexe": 6, "radius": 4, "bewohner": 6, "punkte": 20, "posten": 3,
+        "wunsch": { "kaese": 4, "most": 3, "bratkartoffeln": 5, "honig": 3, "landbier": 4, "milch": 6 },
+        "fundkiste": { "bretter": 6, "stein": 6, "kaese": 3, "werkzeug": 1 } },
+      { "id": "stadt", "bis_hexe": 9999, "radius": 5, "bewohner": 10, "punkte": 30, "posten": 4,
+        "wunsch": { "kaese": 10, "most": 5, "werkzeug": 3, "landbier": 8, "schnaps": 4, "bergkaese": 3 },
+        "fundkiste": { "bretter": 10, "stein": 8, "werkzeug": 3, "honig": 4 } }
+    ]
+  },
+  "flachland": {
+    "hinweis": "Städte außerhalb der Eifel mit globalem Hex (axial, wie die Weltdaten). Je Karte die nächsten 'max' als Marktposten am Spielfeldrand. Handel: was die Flachländer nehmen (gib) und was sie dafür geben (nimm), je Tausch. Ab Marktflecken besser: 'besser' zusätzliche Stück je Tausch. Laufzeit: s je km echter Entfernung.",
+    "max": 2,
+    "staedte": [
+      { "id": "aachen", "name": "Aachen", "q": 195, "r": 157 },
+      { "id": "dueren", "name": "Düren", "q": 480, "r": 132 },
+      { "id": "euskirchen", "name": "Euskirchen", "q": 588, "r": 318 },
+      { "id": "bonn", "name": "Bonn", "q": 846, "r": 229 },
+      { "id": "koblenz", "name": "Koblenz", "q": 932, "r": 708 },
+      { "id": "trier", "name": "Trier", "q": -103, "r": 1439 },
+      { "id": "luettich", "name": "Lüttich", "q": -234, "r": 316 }
+    ],
+    "laufzeit_s_je_km": 3,
+    "wachsamkeit": 35,
+    "handel": [
+      { "gib": { "kaese": 3 }, "nimm": { "werkzeug": 1 } },
+      { "gib": { "schnaps": 2 }, "nimm": { "eisen": 2 } },
+      { "gib": { "honig": 2 }, "nimm": { "bretter": 6 } },
+      { "gib": { "landbier": 3 }, "nimm": { "stein": 6 } },
+      { "gib": { "most": 3 }, "nimm": { "kartoffeln": 8 } },
+      { "gib": { "bergkaese": 1 }, "nimm": { "werkzeug": 2 } }
+    ],
+    "besser": 1
+  },
+  "finden": {
+    "hinweis": "Finderhütte schickt ihren Finder zum nächsten erreichten Marktposten oder (Mehrspieler) ins Gebiet eines Nachbarn. Erwischt-Chance in Prozent: Flachländer 'wachsamkeit', Mitspieler 'basis' plus je Wachhund und Dorfpolizist im Umkreis 'umkreis' des Ziellagers. Erwischte sitzen in der Ausredenstube (Dauer nach Güte der Ausrede).",
+    "dauer_s_je_hex": 2,
+    "pause_s": 30,
+    "basis": 20,
+    "wachhund": 25,
+    "polizist": 35,
+    "umkreis": 8,
+    "hoechstens": 85,
+    "beute": 3,
+    "fund_punkte": 2,
+    "ausrede_s": [40, 70, 110],
+    "ausreden": [
+      "„Ich hab mich nur verlaufen. Mit dem Sack. Im Dunkeln.“",
+      "„Dat lag do eso eröm, dat wollt ich nur zeröckbrenge.“",
+      "„Der Hund hat angefangen.“",
+      "„Ich war Pilze suchen. Im Keller.“",
+      "„Dat es ming Kuh. Die süht nur anders us.“"
+    ]
+  },
+  "schuetzen": {
+    "hinweis": "Schützenfest einmal je Spieljahr am Schützenhaus: Warenliste liefern, dann Vogelschuss. Treffer-Wert = grund + schiessstand (falls gebaut) + Zufall bis glueck; König wird, wer am höchsten liegt (allein: ab 'koenig_ab'). Der König zahlt die Runde: 'runde' Waren aus dem Lager, sofern da.",
+    "liste": { "landbier": 10, "schnaps": 4, "bratkartoffeln": 8 },
+    "fest_s": 60,
+    "grund": 30,
+    "schiessstand": 30,
+    "glueck": 60,
+    "koenig_ab": 60,
+    "runde": { "landbier": 4 }
+  },
+  "punkte": {
+    "hinweis": "Eifel-Punkte (Drehbuch 6.4). stufe: insgesamt für Weiler, Dorf, Kirchdorf, Marktflecken. Kirmes und Schützenfest je 50, Bewohner 1, Gebiet 1 je 10 Hexe, Schützenkönig 150.",
+    "stufe": [0, 100, 250, 450],
+    "kirmes": 50,
+    "schuetzenfest": 50,
+    "koenig": 150,
+    "bewohner": 1,
+    "hexe_je_punkt": 10,
+    "ziele": [
+      { "id": "kurz", "name": "Kurz", "punkte": 600 },
+      { "id": "normal", "name": "Normal (rund 2 Stunden)", "punkte": 1000 },
+      { "id": "lang", "name": "Lang", "punkte": 1500 },
+      { "id": "wettlauf", "name": "Wettlauf zum Marktflecken", "punkte": 0 },
+      { "id": "ohne_ende", "name": "Ohne Ende (nur allein)", "punkte": 0 }
+    ]
+  }
+}

@@ -15,6 +15,14 @@ import {
   TAL_DM, WETTER, WETTER_ANKUENDIGUNG, WINTER, WINTER_ESSEN_TICKS, WINTER_JE_BEWOHNER,
 } from './daten';
 import { inJahreszeit, jahreszeitVon, jahrVon, Wetterkalender } from './jahr';
+import {
+  ANSCHLUSS, AUSREDE_TICKS, FIND_BASIS, FIND_BEUTE, FIND_HOECHSTENS, FIND_PAUSE, FIND_POLIZIST, FIND_PUNKTE, FIND_TICKS_JE_HEX, FIND_UMKREIS,
+  FIND_WACHHUND, FLACH_WACHSAMKEIT, GEBIET_RADIUS, GEBIET_TAKT, HANDEL, HANDEL_BESSER, HEXE_JE_PUNKT, KOENIG_AB, KOENIG_BONUS, KOENIG_RUNDE,
+  marktpostenAusKarte, ORT_GROESSEN, ORT_LAUFZEIT_JE_HEX, orteAusKarte, POSTEN_LAUFZEIT_JE_KM, PUNKTE_BEWOHNER, PUNKTE_KIRMES, PUNKTE_KOENIG,
+  PUNKTE_SCHUETZENFEST, PUNKTE_STUFE, REGELN_ALT, SCHUETZEN_FEST, SCHUETZEN_LISTE, SCHUSS_GLUECK, SCHUSS_GRUND, SCHUSS_STAND, STAEDTE,
+  VERSORGT_BONUS, zielPunkte, AUSREDEN,
+} from './nachbarn';
+import type { OrtDaten, PostenDaten, Regeln } from './nachbarn';
 import type { GebaeudeTyp } from './daten';
 import { SimKarte } from './karte';
 import { FELS_FELS, FELS_KLIPPE, FELS_LESE as ART_LESE, hashHex, hashHex2, hashHex3 } from './natur';
@@ -22,7 +30,7 @@ import { sucheWeg, ZahlenHeap } from './pfad';
 import { PROMILLE, STAT_KOPF } from './typen';
 import type {
   Befehl, GebaeudeZustand, Id, KarteDaten, Protokoll, ProtokollEintrag, SichtArbeiter, SichtBaumann, SichtBote, SichtEreignis, SichtJahr, SichtNatur,
-  SichtStatistik, SimSicht, StartDaten,
+  SichtStatistik, SimSicht, StartDaten, SichtGebiet, SichtDorf,
 } from './typen';
 import { ausBase64, inBase64, kopie, STAND_ZAHLEN } from './stand';
 import type { SimStand } from './stand';
@@ -98,6 +106,17 @@ interface Bote {
 /** Ware, die ein Bote verloren hat: liegt auf Hex h, bis ein Bote sie holt (bote) oder ab Tick `bis` ein Bewohner sie aufliest. */
 interface Liegend { h: number; art: number; sp: number; bis: number; bote: Id }
 
+/**
+ * Lieferung an einen Ort (Einstand, art 0) oder Handel mit einem Marktposten (art 1, Drehbuch 6.2): Die Waren haben das Lager verlassen
+ * und kommen am Tick `ankunft` an; beim Handel kommt `nimm` dann ins Lager `lager`.
+ */
+interface Lieferung { id: Id; sp: number; art: 0 | 1; ziel: number; ankunft: number; waren: number[]; nimm: number[]; lager: Id }
+
+/** Finderhütte (Drehbuch 6.3): Phasen in Gebaeude.ph – bereit, unterwegs, in der Ausredenstube. */
+const FI_BEREIT = 0, FI_UNTERWEGS = 1, FI_AUSREDE = 2;
+/** Ziel eines Finders: Marktposten p oder (ab FI_SPIELER) Mitspieler sp. */
+const FI_SPIELER = 1000;
+
 /** Phasen eines Baumanns: geht über die Wege, arbeitet an der Baustelle, wartet dort auf Material. */
 const BM_GEHT = 0, BM_ARBEIT = 1, BM_WARTET = 2;
 
@@ -138,6 +157,11 @@ interface Dorf {
   friert: number; winterT: number;
   /** Tick, an dem zuletzt eine Lieferung für einen Boten weit genug war (die Schänke schickt nur dann Boten los). */
   botenWunsch: number;
+  /**
+   * M10: Punkte aus Einständen und Funden, Schützenfeste (Zahl, Jahr des letzten, Restticks des laufenden, letzter Treffer-Wert),
+   * Schützenkönig (1 = trägt gerade den Titel) und wie oft.
+   */
+  einstandP: number; fundP: number; schuetzenN: number; schuetzenJahr: number; sfest: number; schuss: number; koenig: number; koenigN: number;
 }
 
 function neuesDorf(bewohner: number): Dorf {
@@ -145,8 +169,13 @@ function neuesDorf(bewohner: number): Dorf {
     bewohner, frei: bewohner, bauGesamt: START_BAUARBEITER, bauFrei: START_BAUARBEITER, planGesamt: START_PLANIERER, planFrei: START_PLANIERER,
     stufe: 0, fest: 0, notnagelT: 0, verwalter: 0, ereignisse: [], wohnFrei: 0,
     vert: standardVerteilung(), erzeugt: new Array<number>(WAREN.length).fill(0), statPunkte: [], statTakt: STAT_TAKT, statNaechst: 0,
-    ...dorfM8(),
+    ...dorfM8(), ...dorfM10(),
   };
+}
+
+/** Felder, die mit M10 ins Dorf kamen (auch für ältere Spielstände). */
+function dorfM10(): Pick<Dorf, 'einstandP' | 'fundP' | 'schuetzenN' | 'schuetzenJahr' | 'sfest' | 'schuss' | 'koenig' | 'koenigN'> {
+  return { einstandP: 0, fundP: 0, schuetzenN: 0, schuetzenJahr: -1, sfest: 0, schuss: 0, koenig: 0, koenigN: 0 };
 }
 
 /** Felder, die mit M8 ins Dorf kamen (auch für ältere Spielstände). */
@@ -187,7 +216,7 @@ function abnehmerArt(g: { typ: string; fertig: number }): number {
   if (!g.fertig) return 0;
   if (istLager(g)) return -1;
   const f = GEBAEUDE[g.typ].funktion;
-  return f === 'kirmes' ? 1 : f === 'wohnen' ? 3 : 2;
+  return f === 'kirmes' || f === 'schuetzen' ? 1 : f === 'wohnen' ? 3 : 2;
 }
 
 /** Höchstzahl Spieler einer Partie. */
@@ -272,9 +301,24 @@ export class Simulation {
   private missernteP = 0;
   private hochwasser = false;
   private jz = 0;
+  /**
+   * M10 (Drehbuch 6): Regeln der Partie; Besitz je Hex (-1 frei) mit Änderungszähler; Orte und Marktposten (statisch aus der Karte),
+   * Besitzer je Ort (-1 niemand), Ort-Index je Ortskern-Hex (-1); laufende Lieferungen; Ende der Partie (Sieger, Tick) oder null.
+   */
+  private regeln: Regeln;
+  private besitz: Int8Array;
+  private besitzRev = 0;
+  private besitzHash: { rev: number; hex: string } | null = null;
+  private gebietCache: SichtGebiet | null = null;
+  private orte: OrtDaten[];
+  private ortVonHex: Int16Array;
+  private ortBesitz: number[];
+  private posten: PostenDaten[];
+  private lieferungen: Lieferung[] = [];
+  private ende: { sieger: number; tick: number } | null = null;
 
   /** `start`: ein Dorf (Einzelspiel) oder eins je Spieler; Spieler i startet am Lager-Hex start[i]. */
-  constructor(karteDaten: KarteDaten, saat: number, start: StartDaten | readonly StartDaten[]) {
+  constructor(karteDaten: KarteDaten, saat: number, start: StartDaten | readonly StartDaten[], regeln?: Regeln) {
     this.karte = new SimKarte(karteDaten);
     this.saat = saat | 0;
     const starts = Array.isArray(start) ? start : [start as StartDaten];
@@ -310,6 +354,25 @@ export class Simulation {
     this.lageTal = new Uint8Array(n); this.lageHoehe = new Uint8Array(n); this.lageAue = new Uint8Array(n);
     this.lagenBerechnen();
     this.jahrTick();
+    // M10: Orte, Marktposten, Startorte und das erste Gebiet
+    this.regeln = regeln ? { gebiet: regeln.gebiet ? 1 : 0, ziel: String(regeln.ziel ?? '') } : { ...REGELN_ALT };
+    this.orte = orteAusKarte(this.karte, karteDaten.place, this.saat);
+    this.ortVonHex = new Int16Array(n).fill(-1);
+    if (karteDaten.place) {
+      const nrIndex = new Map(this.orte.map((o, i) => [o.nr, i] as [number, number]));
+      for (let i = 0; i < n; i++) {
+        const oi = nrIndex.get(karteDaten.place[i] | 0);
+        if (oi !== undefined && (this.karte.flags[i] & FLAG.ortskern)) this.ortVonHex[i] = oi;
+      }
+    }
+    this.ortBesitz = this.orte.map(() => -1);
+    this.starts.forEach((st, sp) => {
+      const oi = this.ortVonHex[this.karte.index(st.q, st.r)];
+      if (oi >= 0 && this.ortBesitz[oi] < 0) this.ortBesitz[oi] = sp;
+    });
+    this.posten = marktpostenAusKarte(this.karte).filter((p) => !this.hexGeb[p.h]);
+    this.besitz = new Int8Array(n).fill(-1);
+    this.gebietNeu();
   }
 
   /**
@@ -502,6 +565,10 @@ export class Simulation {
     for (const b of [...this.boten.values()]) this.boteSchritt(b);
     if (t % 20 === 0) this.aufsammeln();
     this.traegerPhase();
+    // M10: Lieferungen an Orte und Marktposten, Gebiet, Ende der Partie
+    if (this.lieferungen.length) this.lieferungenTick();
+    if (t % GEBIET_TAKT === 0) this.gebietNeu();
+    if (t % 20 === 0 && !this.ende) this.endePruefen();
     if (t % 40 === 0) for (const s of this.segmente.values()) if (s.verkehr > 0) s.verkehr--;
     this._tick++;
   }
@@ -513,6 +580,7 @@ export class Simulation {
       ticks: this._tick,
     };
     if (this.starts.length > 1) p.mitspieler = this.starts.slice(1).map((x) => ({ ...x }));
+    if (this.regeln.gebiet || this.regeln.ziel) p.regeln = { ...this.regeln };
     return p;
   }
 
@@ -543,13 +611,18 @@ export class Simulation {
       log: this.log, ausstehend: this.ausstehend, stat: this.stat, erzeugtJe: this.erzeugtJe,
       boten: [...this.boten.values()] as unknown as Record<string, unknown>[],
       liegend: this.liegend as unknown as Record<string, unknown>[],
+      regeln: this.regeln,
+      gebiet: {
+        besitz: inBase64(Uint8Array.from(this.besitz, (v) => v + 1)), rev: this.besitzRev, orte: this.ortBesitz,
+        lieferungen: this.lieferungen as unknown as Record<string, unknown>[], ende: this.ende,
+      },
     });
   }
 
   /** Simulation aus einem Spielstand auf derselben Karte (Prüfsumme danach wie beim Speichern). */
   static ausStand(karteDaten: KarteDaten, st: SimStand): Simulation {
     if (!st || st.format !== 1) throw new Error('Unbekanntes Spielstand-Format');
-    const sim = new Simulation(karteDaten, st.saat, st.starts);
+    const sim = new Simulation(karteDaten, st.saat, st.starts, st.regeln);
     sim.setzeStand(kopie(st));
     return sim;
   }
@@ -576,6 +649,8 @@ export class Simulation {
       const m8 = dorfM8() as unknown as Record<string, unknown>;
       for (const key of Object.keys(m8)) if ((d as unknown as Record<string, unknown>)[key] === undefined) (d as unknown as Record<string, unknown>)[key] = m8[key];
       d.festJahr = KLEINE_FESTE.map((_, i) => (Array.isArray(d.festJahr) ? d.festJahr[i] ?? -1 : -1));
+      const m10 = dorfM10() as unknown as Record<string, unknown>;
+      for (const key of Object.keys(m10)) if ((d as unknown as Record<string, unknown>)[key] === undefined) (d as unknown as Record<string, unknown>)[key] = m10[key];
     }
     this.erzeugtJe = aufLaenge(st.erzeugtJe, nw);
     const map = <T extends { id: Id }>(a: Record<string, unknown>[]) => new Map((a as unknown as T[]).map((x) => [x.id, x] as [Id, T]));
@@ -609,6 +684,16 @@ export class Simulation {
     this.natCache = null; this.natHash = null;
     this.netzGeaendert();
     this.jahrTick();
+    // M10: Gebiet, Orte, Lieferungen und Ende; Spielstände von vor M10 behalten das Gebiet, das der Konstruktor gerechnet hat
+    const ge = st.gebiet;
+    if (ge) {
+      const b = ausBase64(ge.besitz, n);
+      for (let i = 0; i < n; i++) this.besitz[i] = b[i] - 1;
+      this.besitzRev = ge.rev | 0; this.besitzHash = null; this.gebietCache = null;
+      if (Array.isArray(ge.orte) && ge.orte.length === this.orte.length) this.ortBesitz = ge.orte.slice();
+      this.lieferungen = (ge.lieferungen ?? []) as unknown as Lieferung[];
+      this.ende = ge.ende ?? null;
+    } else this.gebietNeu();
   }
 
   /**
@@ -673,6 +758,8 @@ export class Simulation {
         g.regel[b.ware] = b.regel;
         break;
       }
+      case 'einstand': this.einstandSchicken(sp, b.ort); break;
+      case 'handel': this.handelSchicken(sp, b.posten, b.tausch, b.mal); break;
       case 'bauleute': {
         const ok = (x: unknown) => Number.isInteger(x) && (x as number) >= 0 && (x as number) <= BAULEUTE_MAX;
         if (!ok(b.bauarbeiter) || !ok(b.planierer)) break;
@@ -741,7 +828,7 @@ export class Simulation {
     if (!this.zielFahneOk(z, sp)) return null;
     const p = sucheWeg(k, a, z, (h, istZiel) => {
       if (istZiel) return true;
-      return !this.hexFahne[h] && !this.hexGeb[h] && !this.hexWeg[h];
+      return !this.hexFahne[h] && !this.hexGeb[h] && !this.hexWeg[h] && !this.fremdesLand(h, sp);
     }, WEG_MAX_SCHRITTE);
     return p ? p.map((h) => ({ q: k.qs[h], r: k.rs[h] })) : null;
   }
@@ -764,7 +851,7 @@ export class Simulation {
     if (!this.zielFahneOk(z, sp)) return null;
     const p = sucheWeg(k, a, z, (h, istZiel) => {
       if (istZiel) return true;
-      return !this.hexFahne[h] && !this.hexGeb[h] && !this.hexWeg[h] && !gesperrt.has(h);
+      return !this.hexFahne[h] && !this.hexGeb[h] && !this.hexWeg[h] && !gesperrt.has(h) && !this.fremdesLand(h, sp);
     }, Math.min(maxSchritte, WEG_MAX_SCHRITTE));
     return p ? p.map((h) => ({ q: k.qs[h], r: k.rs[h] })) : null;
   }
@@ -793,7 +880,10 @@ export class Simulation {
     return {
       tick: this._tick,
       ich,
-      spieler: this.doerfer.map((d) => ({ stufe: d.stufe, bewohner: d.bewohner, festPunkte: d.festPunkte, verwalter: d.verwalter === 1 })),
+      spieler: this.doerfer.map((d, sp) => ({
+        stufe: d.stufe, bewohner: d.bewohner, festPunkte: d.festPunkte, verwalter: d.verwalter === 1,
+        punkte: this.punkte(sp), hexe: this.hexeVon(sp), orte: this.ortBesitz.filter((b) => b === sp).length, koenig: d.koenig === 1,
+      })),
       fahnen: [...this.fahnen.values()].map((f) => ({ id: f.id, sp: f.sp, ...hx(f.h), waren: f.waren.map((w) => w.art), ziele: f.waren.map((w) => w.ziel), gebaeude: f.gebaeude })),
       segmente: [...this.segmente.values()].map((s) => ({ id: s.id, sp: s.sp, a: s.a, b: s.b, pfad: s.pfad.map(hx), traeger: s.traeger, verkehr: s.verkehr })),
       traeger: tr,
@@ -816,6 +906,10 @@ export class Simulation {
         const ar = this.arbeiterSicht(g, t);
         if (ar) o.arbeiter = ar;
         if (g.mitte >= 0) o.mitte = hx(g.mitte);
+        if (t.funktion === 'finder') {
+          const zn = g.zh >= FI_SPIELER ? `Dorf ${g.zh - FI_SPIELER + 1}` : g.zh >= 0 && this.posten[g.zh] ? STAEDTE[this.posten[g.zh].stadt].name : '';
+          o.finder = { tut: g.ph === FI_UNTERWEGS ? 'unterwegs' : g.ph === FI_AUSREDE ? 'ausrede' : 'bereit', bis: g.pt, ausrede: g.pd, ziel: zn };
+        }
         return o;
       }),
       freieTraeger: dorf.frei,
@@ -826,7 +920,28 @@ export class Simulation {
       jahr: this.jahrSicht(),
       boten: [...this.boten.values()].map((b) => this.boteSicht(b)),
       liegend: this.liegend.map((x) => ({ q: k.qs[x.h], r: k.rs[x.h], ware: x.art, sp: x.sp })),
+      gebiet: this.gebietSicht(),
+      orte: this.orte.map((o, i) => {
+        const g = ORT_GROESSEN[o.groesse];
+        const l = this.lieferungen.find((x) => x.art === 0 && x.sp === ich && x.ziel === i);
+        return {
+          nr: o.nr, ...hx(o.h), groesse: o.groesse, besitzer: this.ortBesitz[i], wunsch: o.wunsch.slice(),
+          erreicht: this.erreicht(ich, o.h), unterwegs: l ? l.ankunft : 0, bewohner: g.bewohner, punkte: g.punkte, fundkiste: g.fundkiste.slice(),
+        };
+      }),
+      posten: this.posten.map((p, i) => ({
+        stadt: STAEDTE[p.stadt].name, ...hx(p.h), km: p.km, erreicht: this.erreicht(ich, p.h),
+        unterwegs: this.lieferungen.filter((x) => x.art === 1 && x.sp === ich && x.ziel === i).map((x) => x.ankunft),
+        handel: HANDEL.map((h) => ({ gib: h.gib.slice(), nimm: this.handelNimm(ich, h.nimm) })),
+      })),
+      regeln: { gebiet: this.regeln.gebiet === 1, ziel: this.regeln.ziel, zielPunkte: zielPunkte(this.regeln) },
+      ende: this.ende ? { ...this.ende } : null,
     };
+  }
+
+  private gebietSicht(): SichtGebiet {
+    if (!this.gebietCache || this.gebietCache.rev !== this.besitzRev) this.gebietCache = { rev: this.besitzRev, besitz: this.besitz.slice() };
+    return this.gebietCache;
   }
 
   private jahrSicht(): SichtJahr {
@@ -897,6 +1012,18 @@ export class Simulation {
       notnagel: this.notnagelGreift(sp) ? NOTNAGEL_TICKS - d.notnagelT : -1,
       verteilung: WAREN.map((_, a) => d.vert.slice(a * ABNEHMER_ZAHL, (a + 1) * ABNEHMER_ZAHL)),
       erzeugt: d.erzeugt.slice(),
+      schuetzen: this.schuetzenSicht(sp),
+      koenig: d.koenig === 1,
+    };
+  }
+
+  private schuetzenSicht(sp: number): SichtDorf['schuetzen'] {
+    const g = this.schuetzenhaus(sp);
+    if (!g) return null;
+    const d = this.doerfer[sp];
+    return {
+      liste: SCHUETZEN_LISTE.slice(), geliefert: SCHUETZEN_LISTE.map((n, a) => Math.min(n, g.puffer[a])),
+      gefeiert: d.schuetzenJahr === jahrVon(this._tick), fest: d.sfest, schuss: d.schuss,
     };
   }
 
@@ -924,6 +1051,8 @@ export class Simulation {
       if (summe(g.stapel) > 0) return 'kein_bauarbeiter';
       return summe(g.incoming) > 0 ? 'baustelle' : 'wartet_material';
     }
+    if (this.fremd(g)) return 'fremd';
+    if (t.funktion === 'finder' && g.ph === FI_AUSREDE) return 'ausrede';
     if (g.ruht && !g.arbeit && (t.radius === 0 || g.ph === PH_SUCHE)) return 'ruht';
     if (t.funktion === 'wohnen') {
       if (g.arbeit) return 'arbeitet';
@@ -935,7 +1064,15 @@ export class Simulation {
       if (d.fest > 0 || d.kfest > 0) return 'fest';
       return KIRMES[d.stufe] || this.festJetzt(d) >= 0 ? 'wartet_material' : 'bereit';
     }
+    if (t.funktion === 'schuetzen') {
+      const d = this.doerfer[g.sp];
+      if (d.sfest > 0) return 'fest';
+      return d.schuetzenJahr === jahrVon(this._tick) ? 'bereit' : 'wartet_material';
+    }
+    if (t.funktion === 'zier' || (t.funktion === 'wache' && !t.arbeiter)) return 'bereit';
     if (t.arbeiter && !g.ar) return t.werkzeug && this.doerfer[g.sp].frei > 0 ? 'kein_werkzeug' : 'kein_arbeiter';
+    if (t.funktion === 'wache') return 'arbeitet';
+    if (t.funktion === 'finder') return g.ph === FI_UNTERWEGS ? 'arbeitet' : 'bereit';
     const still = this.stillstand(g, t);
     if (still && !g.ruht) return still;
     if (t.funktion === 'schaenke') {
@@ -1132,7 +1269,347 @@ export class Simulation {
     }
     f.text(this.natHash.hex);
     liste(this.jungListe);
+    // M10: Regeln, Gebiet (nur bei Änderung neu gehasht), Orte, Lieferungen, Ende
+    w(this.regeln.gebiet); f.text(this.regeln.ziel);
+    w(this.besitzRev);
+    if (!this.besitzHash || this.besitzHash.rev !== this.besitzRev) {
+      const n = new Fnv2();
+      for (let i = 0; i < this.besitz.length; i++) n.byte(this.besitz[i] + 1);
+      this.besitzHash = { rev: this.besitzRev, hex: n.hex() };
+    }
+    f.text(this.besitzHash.hex);
+    liste(this.ortBesitz);
+    w(this.lieferungen.length);
+    for (const l of this.lieferungen) { w(l.id); w(l.sp); w(l.art); w(l.ziel); w(l.ankunft); liste(l.waren); liste(l.nimm); w(l.lager); }
+    w(this.ende ? this.ende.sieger : -1); w(this.ende ? this.ende.tick : -1);
+    for (const d of this.doerfer) { w(d.einstandP); w(d.fundP); w(d.schuetzenN); w(d.schuetzenJahr); w(d.sfest); w(d.schuss); w(d.koenig); w(d.koenigN); }
     return f.hex();
+  }
+
+  // ------------------------------------------------------------------ M10: Gebiet, Orte, Flachländer, Finden, Schützenfest, Punkte
+
+  /** Gebäude steht auf fremdem Gebiet (nur mit Gebiets-Regel): es steht still, bis das Hex zurückkommt (Drehbuch 6.1). */
+  private fremd(g: Gebaeude): boolean {
+    return this.regeln.gebiet === 1 && this.besitz[g.h] !== g.sp;
+  }
+
+  /** Hex gehört einem anderen Spieler (nur mit Gebiets-Regel): kein Weg, keine Fahne. */
+  private fremdesLand(h: number, sp: number): boolean {
+    return this.regeln.gebiet === 1 && this.besitz[h] >= 0 && this.besitz[h] !== sp;
+  }
+
+  /** Erwischt-Chance (Prozent) für Finder bei Spieler `sp` (für Fenster und Tests). */
+  wachsamkeitVon(sp: number): number { return this.doerfer[sp] ? this.wachsamkeit(sp) : 0; }
+
+  /** Freies Hex nah an einem Ort oder Marktposten: dort darf eine Fahne stehen, damit ein Weg hinführen kann. */
+  private amAnschluss(h: number): boolean {
+    const k = this.karte;
+    for (const o of this.orte) if (k.abstand(o.h, h) <= ANSCHLUSS) return true;
+    for (const p of this.posten) if (k.abstand(p.h, h) <= ANSCHLUSS) return true;
+    return false;
+  }
+
+  /** Spieler `sp` hat eine mit einem Lager verbundene Fahne höchstens ANSCHLUSS Hexe von Hex `h`. */
+  private erreicht(sp: number, h: number): boolean {
+    if (this.verbundenNeu) this.verbindungenNeu();
+    const k = this.karte;
+    for (const f of this.fahnen.values()) if (f.sp === sp && this.verbunden.has(f.id) && k.abstand(f.h, h) <= ANSCHLUSS) return true;
+    return false;
+  }
+
+  /**
+   * Gebiet neu (Drehbuch 6.1, Einfluss): Jede Quelle strahlt mit Stärke Radius − Abstand; ein Hex gehört der stärksten, bei Gleichstand
+   * der älteren (kleinere Id; Orte nach den Gebäuden). Quellen: fertige Gebäude mit Radius in GEBIET_RADIUS, die auf eigenem Gebiet
+   * stehen (der Dorfkern dazu mit +1 je Dorfstufe), +VERSORGT_BONUS, solange das Dorf nicht friert, +KOENIG_BONUS für den Schützenkönig;
+   * gewonnene Orte mit dem Radius ihrer Größe. Das Lager eines gewonnenen Orts strahlt nicht selbst (der Ort tut es).
+   */
+  private gebietNeu(): void {
+    const k = this.karte, n = k.count;
+    const staerke = new Int16Array(n).fill(-1), alter = new Int32Array(n).fill(0x7fffffff), neu = new Int8Array(n).fill(-1);
+    const quelle = (h: number, r: number, sp: number, alt: number) => {
+      for (const x of this.hexeImRadius(h, r, true)) {
+        const st = r - k.abstand(h, x);
+        if (st > staerke[x] || (st === staerke[x] && alt < alter[x])) { staerke[x] = st; alter[x] = alt; neu[x] = sp; }
+      }
+    };
+    const bonus = (sp: number) => (this.doerfer[sp].friert ? 0 : VERSORGT_BONUS) + (this.doerfer[sp].koenig ? KOENIG_BONUS : 0);
+    for (const g of this.gebaeude.values()) {
+      const r0 = GEBIET_RADIUS[g.typ] ?? 0;
+      if (!r0 || !g.fertig) continue;
+      if (this.besitz[g.h] >= 0 && this.besitz[g.h] !== g.sp) continue;
+      const oi = this.ortVonHex[g.h];
+      if (g.typ === 'lager' && oi >= 0 && !this.istStartLager(g)) continue;
+      const r = r0 + bonus(g.sp) + (g.typ === 'lager' ? this.doerfer[g.sp].stufe : 0);
+      quelle(g.h, r, g.sp, g.id);
+    }
+    this.orte.forEach((o, i) => {
+      const sp = this.ortBesitz[i];
+      if (sp < 0) return;
+      // der Startort strahlt über sein Lager; gewonnene Orte selbst
+      for (const g of this.gebaeude.values()) if (g.h === o.h && this.istStartLager(g)) return;
+      quelle(o.h, ORT_GROESSEN[o.groesse].radius + bonus(sp), sp, 0x40000000 + i);
+    });
+    let anders = false;
+    for (let i = 0; i < n; i++) if (neu[i] !== this.besitz[i]) { anders = true; break; }
+    if (anders) { this.besitz = neu; this.besitzRev++; }
+  }
+
+  /** Das erste Lager eines Spielers (Startlager auf seinem Startort). */
+  private istStartLager(g: Gebaeude): boolean {
+    const st = this.starts[g.sp];
+    return !!st && g.typ === 'lager' && this.karte.index(st.q, st.r) === g.h;
+  }
+
+  /** Gebiet von Spieler `sp` in Hexen. */
+  private hexeVon(sp: number): number {
+    let n = 0;
+    for (let i = 0; i < this.besitz.length; i++) if (this.besitz[i] === sp) n++;
+    return n;
+  }
+
+  /** Eigene fertige Lager in Id-Reihenfolge. */
+  private eigeneLager(sp: number): Gebaeude[] {
+    return [...this.gebaeude.values()].filter((g) => g.sp === sp && istLager(g));
+  }
+
+  /** Nimmt `waren` (je Warenart) aus den eigenen Lagern, wenn alles da ist; sonst false und nichts passiert. */
+  private ausLagern(sp: number, waren: readonly number[]): boolean {
+    const lager = this.eigeneLager(sp);
+    for (let a = 0; a < waren.length; a++) {
+      if (!waren[a]) continue;
+      let da = 0;
+      for (const l of lager) da += l.vorrat[a];
+      if (da < waren[a]) return false;
+    }
+    for (let a = 0; a < waren.length; a++) {
+      let rest = waren[a];
+      for (const l of lager) { const x = Math.min(rest, l.vorrat[a]); l.vorrat[a] -= x; rest -= x; if (!rest) break; }
+      this.stat.verbraucht += waren[a];
+    }
+    return true;
+  }
+
+  /** Kürzester Hex-Abstand von einem eigenen Lager zu Hex `h` (und dieses Lager). */
+  private naechstesEigenesLager(sp: number, h: number): { l: Gebaeude | undefined; d: number } {
+    let best: Gebaeude | undefined, bd = Infinity;
+    for (const l of this.eigeneLager(sp)) { const d = this.karte.abstand(l.h, h); if (d < bd) { bd = d; best = l; } }
+    return { l: best, d: best ? bd : 0 };
+  }
+
+  /** Befehl 'einstand': Wunschliste des Orts auf den Weg schicken (Drehbuch 6.2). */
+  private einstandSchicken(sp: number, oi: number): void {
+    const o = Number.isInteger(oi) ? this.orte[oi] : undefined;
+    if (!o || this.ortBesitz[oi] >= 0 || this.ende) return;
+    if (this.lieferungen.some((l) => l.art === 0 && l.sp === sp && l.ziel === oi)) return;
+    if (!this.erreicht(sp, o.h)) return;
+    const { d } = this.naechstesEigenesLager(sp, o.h);
+    if (!this.ausLagern(sp, o.wunsch)) return;
+    this.lieferungen.push({ id: this.naechsteId++, sp, art: 0, ziel: oi, ankunft: this._tick + Math.max(1, d) * ORT_LAUFZEIT_JE_HEX, waren: o.wunsch.slice(), nimm: [], lager: 0 });
+  }
+
+  /** Was der Spieler bei Tausch `nimm` bekommt: ab Marktflecken je Ware HANDEL_BESSER mehr. */
+  private handelNimm(sp: number, nimm: readonly number[]): number[] {
+    const besser = this.doerfer[sp] && this.doerfer[sp].stufe >= 3 ? HANDEL_BESSER : 0;
+    return nimm.map((n) => (n > 0 ? n + besser : 0));
+  }
+
+  /** Befehl 'handel': Waren zum Marktposten schicken, die Gegenware kommt nach der Laufzeit (hin und zurück) ins nächste Lager. */
+  private handelSchicken(sp: number, pi: number, ti: number, mal: number): void {
+    const p = Number.isInteger(pi) ? this.posten[pi] : undefined;
+    const h = Number.isInteger(ti) ? HANDEL[ti] : undefined;
+    if (!p || !h || !Number.isInteger(mal) || mal < 1 || mal > 10) return;
+    if (!this.erreicht(sp, p.h)) return;
+    const gib = h.gib.map((n) => n * mal);
+    const { l } = this.naechstesEigenesLager(sp, p.h);
+    if (!l || !this.ausLagern(sp, gib)) return;
+    const nimm = this.handelNimm(sp, h.nimm).map((n) => n * mal);
+    this.lieferungen.push({ id: this.naechsteId++, sp, art: 1, ziel: pi, ankunft: this._tick + 2 * p.km * POSTEN_LAUFZEIT_JE_KM, waren: gib, nimm, lager: l.id });
+  }
+
+  /** Fällige Lieferungen (in Einfüge-Reihenfolge): Einstand gewinnt den Ort oder kommt zu spät; Handel bringt die Gegenware. */
+  private lieferungenTick(): void {
+    const faellig = this.lieferungen.filter((l) => l.ankunft <= this._tick);
+    if (!faellig.length) return;
+    this.lieferungen = this.lieferungen.filter((l) => l.ankunft > this._tick);
+    for (const l of faellig) {
+      if (!this.doerfer[l.sp]) continue;
+      if (l.art === 0) {
+        if (this.ortBesitz[l.ziel] < 0) this.ortGewinnen(l.ziel, l.sp);
+        else this.ereignis(l.sp, 'zu_spaet', 0, l.ziel);
+      } else {
+        let ziel = this.gebaeude.get(l.lager);
+        if (!ziel || ziel.sp !== l.sp || !istLager(ziel)) ziel = this.eigeneLager(l.sp)[0];
+        if (!ziel) continue;
+        for (let a = 0; a < l.nimm.length; a++) ziel.vorrat[a] += l.nimm[a];
+        this.ereignis(l.sp, 'handel', ziel.id, l.ziel);
+      }
+    }
+  }
+
+  /** Einstand gefeiert (Drehbuch 6.2): Ort, Bewohner, Punkte, ein Lager auf dem Ortskern mit der Fundkiste (sonst ins nächste Lager). */
+  private ortGewinnen(oi: number, sp: number): void {
+    const o = this.orte[oi], g = ORT_GROESSEN[o.groesse], d = this.doerfer[sp];
+    this.ortBesitz[oi] = sp;
+    d.einstandP += g.punkte;
+    this.neuerBewohner(sp, g.bewohner);
+    let lager: Gebaeude | undefined;
+    if (!this.hexGeb[o.h] && !this.hexFahne[o.h] && !this.hexWeg[o.h] && this.karte.begehbar[o.h]) {
+      lager = this.gebaeudeErzeugen('lager', o.h, true, sp);
+      lager.vorrat = new Array<number>(WAREN.length).fill(0);
+    } else lager = this.naechstesEigenesLager(sp, o.h).l;
+    if (lager) for (let a = 0; a < g.fundkiste.length; a++) lager.vorrat[a] += g.fundkiste[a];
+    this.ereignis(sp, 'einstand', lager?.id ?? 0, oi);
+    this.gebietNeu();
+  }
+
+  /** Finderhütte (Drehbuch 6.3): Ziel suchen, hin und zurück, mit Beute oder erwischt in die Ausredenstube. */
+  private finderTick(g: Gebaeude): void {
+    if (!g.ar) return;
+    const t = this._tick;
+    if (g.ph === FI_AUSREDE) { if (t >= g.pt) { g.ph = FI_BEREIT; g.pt = t + FIND_PAUSE; } return; }
+    if (g.ph === FI_BEREIT) {
+      if (g.ruht || t < g.pt) return;
+      const ziele = this.finderZiele(g);
+      if (!ziele.length) { g.pt = t + FIND_PAUSE; g.leer = 1; return; }
+      const z = ziele[g.wi % ziele.length];
+      g.wi++; g.leer = 0;
+      g.zh = z.code; g.ph = FI_UNTERWEGS; g.arbeit = 1;
+      g.pt = t + 2 * Math.max(1, this.karte.abstand(g.h, z.h)) * FIND_TICKS_JE_HEX;
+      return;
+    }
+    if (t < g.pt) return;
+    // zurück: erwischt oder mit Beute
+    g.arbeit = 0;
+    const zielSp = g.zh >= FI_SPIELER ? g.zh - FI_SPIELER : -1;
+    if (zielSp >= 0 && !this.doerfer[zielSp]) { g.ph = FI_BEREIT; g.pt = t + FIND_PAUSE; return; }
+    const chance = zielSp < 0 ? FLACH_WACHSAMKEIT : this.wachsamkeit(zielSp);
+    if (this.zufall(100) < chance) {
+      g.ph = FI_AUSREDE;
+      g.pd = this.zufall(AUSREDEN.length);
+      g.pt = t + AUSREDE_TICKS[g.pd % AUSREDE_TICKS.length];
+      this.ereignis(g.sp, 'erwischt', g.id, g.pd);
+      if (zielSp >= 0) this.ereignis(zielSp, 'ertappt', 0, g.sp);
+      return;
+    }
+    let art = -1, n = 0;
+    if (zielSp < 0) {
+      // Flachländer: eine Ware aus ihrem Angebot (fest aus dem Zufall)
+      const angebot: number[] = [];
+      for (const h of HANDEL) for (let a = 0; a < h.nimm.length; a++) if (h.nimm[a] > 0 && !angebot.includes(a)) angebot.push(a);
+      if (angebot.length) { art = angebot[this.zufall(angebot.length)]; n = FIND_BEUTE; }
+    } else {
+      // Mitspieler: von der Ware, die sein Lager am reichlichsten hat, höchstens FIND_BEUTE
+      const lager = this.eigeneLager(zielSp);
+      let best = 0;
+      for (let a = 0; a < WAREN.length; a++) {
+        let da = 0;
+        for (const l of lager) da += l.vorrat[a];
+        if (da > best) { best = da; art = a; }
+      }
+      if (art >= 0) {
+        n = Math.min(FIND_BEUTE, best);
+        const weg = new Array<number>(WAREN.length).fill(0); weg[art] = n;
+        this.ausLagern(zielSp, weg);
+        this.stat.verbraucht -= n;
+      }
+    }
+    if (art >= 0 && n > 0) {
+      const f = this.fahnen.get(g.fahne)!;
+      let rest = n;
+      while (rest > 0 && this.platz(f)) { this.wareAufFahne(f, art); rest--; }
+      if (rest > 0) { const l = this.naechstesEigenesLager(g.sp, g.h).l; if (l) l.vorrat[art] += rest; }
+      this.stat.erzeugt += n; this.erzeugtJe[art] += n; this.doerfer[g.sp].erzeugt[art] += n;
+      this.doerfer[g.sp].fundP += FIND_PUNKTE;
+      g.erzeugt += n;
+      this.ereignis(g.sp, 'fund', g.id, art);
+    }
+    g.ph = FI_BEREIT; g.pt = t + FIND_PAUSE;
+  }
+
+  /** Mögliche Ziele eines Finders: erreichte Marktposten, dann die Dorfkerne der Mitspieler (Ziel-Hex = deren Startlager). */
+  private finderZiele(g: Gebaeude): { code: number; h: number }[] {
+    const aus: { code: number; h: number }[] = [];
+    this.posten.forEach((p, i) => { if (this.erreicht(g.sp, p.h)) aus.push({ code: i, h: p.h }); });
+    for (let sp = 0; sp < this.doerfer.length; sp++) {
+      if (sp === g.sp) continue;
+      const st = this.starts[sp];
+      aus.push({ code: FI_SPIELER + sp, h: this.karte.index(st.q, st.r) });
+    }
+    return aus;
+  }
+
+  /** Erwischt-Chance (Prozent) bei Spieler `sp`: Grundwert plus Wachhunde und Dorfpolizisten im Umkreis seines Startlagers. */
+  private wachsamkeit(sp: number): number {
+    const st = this.starts[sp], h = this.karte.index(st.q, st.r);
+    let p = FIND_BASIS;
+    for (const g of this.gebaeude.values()) {
+      if (g.sp !== sp || !g.fertig || this.karte.abstand(g.h, h) > FIND_UMKREIS) continue;
+      if (g.typ === 'hundehuette') p += FIND_WACHHUND;
+      else if (g.typ === 'polizeiwache' && g.ar) p += FIND_POLIZIST;
+    }
+    return Math.min(FIND_HOECHSTENS, p);
+  }
+
+  private schuetzenhaus(sp: number): Gebaeude | undefined {
+    for (const g of this.gebaeude.values()) if (g.sp === sp && g.fertig && GEBAEUDE[g.typ].funktion === 'schuetzen') return g;
+    return undefined;
+  }
+
+  /**
+   * Schützenhaus (Drehbuch 6, Feste): Ist die Liste dieses Jahres geliefert, wird gefeiert und auf den Vogel geschossen: Grundwert,
+   * Schießstand und etwas Glück. Schützenkönig wird, wer mindestens KOENIG_AB trifft und alle schlägt, die dieses Jahr schon geschossen
+   * haben; der alte König verliert den Titel. Der König zahlt die Runde (KOENIG_RUNDE aus dem Lager, sofern da).
+   */
+  private schuetzenTick(g: Gebaeude): void {
+    const d = this.doerfer[g.sp], jahr = jahrVon(this._tick);
+    if (d.sfest > 0) { d.sfest--; return; }
+    if (d.schuetzenJahr === jahr) return;
+    for (let a = 0; a < WAREN.length; a++) if (g.puffer[a] < SCHUETZEN_LISTE[a]) return;
+    for (let a = 0; a < WAREN.length; a++) { g.puffer[a] -= SCHUETZEN_LISTE[a]; this.stat.verbraucht += SCHUETZEN_LISTE[a]; }
+    d.schuetzenJahr = jahr; d.schuetzenN++; d.sfest = Math.max(1, SCHUETZEN_FEST);
+    let stand = false;
+    for (const x of this.gebaeude.values()) if (x.sp === g.sp && x.fertig && x.typ === 'schiessstand') stand = true;
+    d.schuss = SCHUSS_GRUND + (stand ? SCHUSS_STAND : 0) + this.zufall(SCHUSS_GLUECK + 1);
+    this.ereignis(g.sp, 'schuetzenfest', g.id, d.schuss);
+    let koenig = d.schuss >= KOENIG_AB;
+    this.doerfer.forEach((o, sp) => { if (sp !== g.sp && o.schuetzenJahr === jahr && o.schuss >= d.schuss) koenig = false; });
+    if (!koenig) return;
+    for (const o of this.doerfer) o.koenig = 0;
+    d.koenig = 1; d.koenigN++;
+    const runde = KOENIG_RUNDE.slice();
+    if (!this.ausLagern(g.sp, runde)) {
+      // nicht genug da: was da ist
+      for (let a = 0; a < runde.length; a++) {
+        if (!runde[a]) continue;
+        let da = 0;
+        for (const l of this.eigeneLager(g.sp)) da += l.vorrat[a];
+        const x = new Array<number>(WAREN.length).fill(0); x[a] = Math.min(da, runde[a]);
+        this.ausLagern(g.sp, x);
+      }
+    }
+    this.doerfer.forEach((_, sp) => this.ereignis(sp, 'koenig', g.id, g.sp));
+  }
+
+  /** Eifel-Punkte (Drehbuch 6.4, data/nachbarn.json: punkte). */
+  punkte(sp: number): number {
+    const d = this.doerfer[sp];
+    if (!d) return 0;
+    return PUNKTE_STUFE[Math.min(d.stufe, PUNKTE_STUFE.length - 1)] + PUNKTE_KIRMES * d.stufe + d.festPunkte + d.einstandP + d.fundP
+      + PUNKTE_SCHUETZENFEST * d.schuetzenN + PUNKTE_KOENIG * d.koenigN + PUNKTE_BEWOHNER * d.bewohner + Math.floor(this.hexeVon(sp) / HEXE_JE_PUNKT);
+  }
+
+  /** Ende der Partie: Wettlauf (zuerst Marktflecken) oder Zielpunktzahl erreicht; bei mehreren gewinnt der mit den meisten Punkten. */
+  private endePruefen(): void {
+    let sieger = -1, beste = -1;
+    const ziel = zielPunkte(this.regeln);
+    for (let sp = 0; sp < this.doerfer.length; sp++) {
+      const p = this.punkte(sp);
+      const geschafft = this.regeln.ziel === 'wettlauf' ? this.doerfer[sp].stufe >= 3 : ziel > 0 && p >= ziel;
+      if (geschafft && p > beste) { beste = p; sieger = sp; }
+    }
+    if (sieger < 0) return;
+    this.ende = { sieger, tick: this._tick };
+    this.doerfer.forEach((_, sp) => this.ereignis(sp, 'ende', 0, sieger));
   }
 
   // ------------------------------------------------------------------ Hex-Prüfungen
@@ -1140,6 +1617,7 @@ export class Simulation {
   /** Freie Fahne möglich: begehbar, frei oder auf einem eigenen Weg (teilt ihn). */
   private hexKannFahne(h: number, sp: number): boolean {
     if (!this.karte.begehbar[h] || this.hexFahne[h] || this.hexGeb[h]) return false;
+    if (this.regeln.gebiet && this.besitz[h] !== sp && !(this.besitz[h] < 0 && this.amAnschluss(h))) return false;
     if (this.hexWeg[h]) {
       const s = this.segmente.get(this.hexWeg[h]);
       return !!s && s.sp === sp && s.pfad.indexOf(h) > 0;
@@ -1168,6 +1646,7 @@ export class Simulation {
   private hexKannBauen(typ: string, h: number, sp: number): boolean {
     const t = typVon(typ);
     if (!t || typ === 'lager' || !this.doerfer[sp] || !this.typFrei(t, sp)) return false;
+    if (this.regeln.gebiet && this.besitz[h] !== sp) return false;
     return this.karte.bebaubar[h] >= t.groesse && this.hexFrei(h);
   }
 
@@ -1381,6 +1860,8 @@ export class Simulation {
     for (let i = 1; i < n - 1; i++) {
       const h = hs[i];
       if (this.hexFahne[h] || this.hexGeb[h] || this.hexWeg[h]) return;
+      // M10: Wege über eigenes und freies Land, nie über fremdes Gebiet
+      if (this.fremdesLand(h, sp)) return;
     }
     const letzter = hs[n - 1];
     if (!this.zielFahneOk(letzter, sp)) return;
@@ -1586,6 +2067,7 @@ export class Simulation {
       const d = this.doerfer[g.sp], k = this.kirmesJetzt(d);
       return this.platzBedarf(d, art) + (k && MISCHKORB[art] ? k.mischkorb : 0);
     }
+    if (t.funktion === 'schuetzen') return SCHUETZEN_LISTE[art];
     // die Fachkraft hat ihr Werkzeug schon
     if (art === WARE.werkzeug && t.werkzeug && g.ar) return 0;
     return t.puffer[art];
@@ -1624,6 +2106,11 @@ export class Simulation {
       for (let a = 0; a < WAREN.length; a++) if (MISCHKORB[a]) belegt += Math.max(0, g.puffer[a] + g.incoming[a] - this.platzBedarf(d, a));
       return direkt + Math.max(0, k.mischkorb - belegt);
     }
+    if (t.funktion === 'schuetzen') {
+      // Schützenhaus (M10): einmal je Spieljahr die Liste; Waren für die laufende Kirmes gehen vor
+      if (d.schuetzenJahr === jahrVon(this._tick) || d.sfest > 0 || this.kirmesBraucht(g.sp, art) > 0) return 0;
+      return Math.max(0, SCHUETZEN_LISTE[art] - g.puffer[art] - g.incoming[art]);
+    }
     const p = this.pufferMax(g, t, art) - g.puffer[art] - g.incoming[art];
     if (t.funktion !== 'wohnen' || p <= 0) return p;
     // was die Kirmes noch braucht, isst keiner weg (nur der Überschuss im Lager) – solange der Kirmesplatz in der Verteilung vorgeht
@@ -1637,7 +2124,7 @@ export class Simulation {
 
   /** Gebäude nimmt Waren in den Input-Puffer (Verarbeiter, Wohnhaus, Kirmesplatz). */
   private hatEingang(t: GebaeudeTyp): boolean {
-    return t.pufferSumme > 0 || t.funktion === 'wohnen' || t.funktion === 'kirmes';
+    return t.pufferSumme > 0 || t.funktion === 'wohnen' || t.funktion === 'kirmes' || t.funktion === 'schuetzen';
   }
 
   /** Liegen alle Zutaten für den nächsten Arbeitsgang eines Verarbeiters im Input-Puffer? */
@@ -1765,7 +2252,7 @@ export class Simulation {
       this.stat.angekommen++;
       break;
     }
-    if (istLager(g) || !g.fertig || g.getrennt) return;
+    if (istLager(g) || !g.fertig || g.getrennt || this.fremd(g)) return;
     const t = GEBAEUDE[g.typ];
     // Output-Puffer → Fahne, solange diese Platz hat (Rückstau)
     if (t.ausgangMax > 0 && g.ausgang[t.ausgangWare] > 0 && this.platz(f)) {
@@ -1817,6 +2304,8 @@ export class Simulation {
       case 'wohnen': this.wohnenTick(g, t); break;
       case 'kirmes': this.kirmesTick(g); break;
       case 'schaenke': this.schaenkeTick(g, t); break;
+      case 'finder': this.finderTick(g); break;
+      case 'schuetzen': this.schuetzenTick(g); break;
       default: break;
     }
   }
