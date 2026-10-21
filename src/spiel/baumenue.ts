@@ -127,6 +127,7 @@ export function zustandsText(zustand: string, baustelle: boolean, bedarf: string
     case 'saat': return { titel: 'Wird gesät', spruch: 'Erst säen, dann ernten. So war das schon immer.', warn: false };
     case 'hochwasser': return { titel: 'Hochwasser – steht still', spruch: 'Das Wasser geht wieder. Nicht in die Aue bauen hilft.', warn: true };
     case 'kein_werkzeug': return { titel: 'Wartet auf Werkzeug', spruch: 'Ohne Hammer kein Handwerk. Die Schmiede macht welches.', warn: true };
+    case 'waechst': return { titel: 'Wächst noch heran', spruch: 'Eine Hecke braucht Geduld. Und Wasser. Und noch mehr Geduld.', warn: false };
     case 'regen': return { titel: 'Ruht bei Regen', spruch: 'Bei dem Wetter fährt keiner raus. Ist ja nicht wasserdicht.', warn: false };
     case 'fremd': return { titel: 'Steht auf fremdem Gebiet still', spruch: 'Die Grenze ist gewandert. Das Haus nicht.', warn: true };
     case 'ausrede': return { titel: 'Finder sitzt in der Ausredenstube', spruch: 'Je besser die Ausrede, desto schneller ist er frei.', warn: true };

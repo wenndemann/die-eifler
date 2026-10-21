@@ -121,5 +121,9 @@
  ],
  "ort_entdeckt": [
   "Ein Weg führt bis {text}. Der Ortsvorsteher guckt misstrauisch – er will einen Einstand sehen."
+ ],
+ "altstein": [
+  "Die Bauarbeiter haben schon wieder alte Steine gefunden. Römisch, sagen sie. Jetzt wird erst mal geguckt.",
+  "Ein alter Stein im Fundament! Der Bauarbeiter meint, der Kaiser persönlich hat den gelegt."
  ]
 }

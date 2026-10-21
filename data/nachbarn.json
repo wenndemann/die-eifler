@@ -2,7 +2,7 @@
   "hinweis": "Gebiet, Orte, Flachländer, Finden, Schützenfest und Eifel-Punkte (Drehbuch 6, ROADMAP M10). Startwerte zum Spielen; Waren nach data/goods.json. Gebiet: Einfluss-Radius in Hexen je Gebäudetyp (nur fertige Gebäude auf eigenem Gebiet strahlen), gut versorgt (Dorf friert nicht und hat seit dem letzten Takt gegessen) +1, Schützenkönig +1. Ein Hex gehört dem stärksten Einfluss (Radius minus Abstand), bei Gleichstand dem älteren Gebäude.",
   "gebiet": {
     "takt_s": 5,
-    "radius": { "lager": 9, "wohnhaus": 2, "kirmesplatz": 4, "schuetzenhaus": 3, "polizeiwache": 2 },
+    "radius": { "lager": 9, "wohnhaus": 2, "kirmesplatz": 4, "schuetzenhaus": 3, "polizeiwache": 2, "abtei": 4 },
     "versorgt_bonus": 1,
     "koenig_bonus": 1,
     "anschluss": 2
@@ -42,7 +42,9 @@
       { "gib": { "honig": 2 }, "nimm": { "bretter": 6 } },
       { "gib": { "landbier": 3 }, "nimm": { "stein": 6 } },
       { "gib": { "most": 3 }, "nimm": { "kartoffeln": 8 } },
-      { "gib": { "bergkaese": 1 }, "nimm": { "werkzeug": 2 } }
+      { "gib": { "bergkaese": 1 }, "nimm": { "werkzeug": 2 } },
+      { "gib": { "muehlstein": 1 }, "nimm": { "werkzeug": 3 } },
+      { "gib": { "dachschiefer": 2 }, "nimm": { "eisen": 3 } }
     ],
     "besser": 1
   },

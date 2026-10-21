@@ -173,8 +173,8 @@ export type GebaeudeZustand =
   | 'ruht' | 'arbeitet' | 'bereit' | 'winter' | 'saat' | 'hochwasser' | 'kein_werkzeug'
   /** M10: steht auf fremdem Gebiet still; Finder sitzt in der Ausredenstube. */
   | 'fremd' | 'ausrede'
-  /** M11: ruht bei Regen (Schwäche des Völkchens). */
-  | 'regen';
+  /** M11: ruht bei Regen (Schwäche des Völkchens); Hecke wächst noch heran. */
+  | 'regen' | 'waechst';
 
 /** Der Arbeiter eines Holzfällers, Försters oder Steinbruchs (Figur in der Welt). */
 export interface SichtArbeiter {
@@ -291,7 +291,7 @@ export interface SichtEreignis {
   nr: number; tick: number;
   art: 'bewohner' | 'notnagel' | 'fertig' | 'kirmes' | 'stufe' | 'zuzug'
     | 'jahreszeit' | 'wetter' | 'friert' | 'satt' | 'kleines_fest' | 'bauleute' | 'verloren'
-    | 'einstand' | 'zu_spaet' | 'handel' | 'fund' | 'erwischt' | 'ertappt' | 'schuetzenfest' | 'koenig' | 'ende';
+    | 'einstand' | 'zu_spaet' | 'handel' | 'fund' | 'erwischt' | 'ertappt' | 'schuetzenfest' | 'koenig' | 'ende' | 'altstein';
   /** Gebäude (bewohner, fertig, kirmes, kleines_fest) oder 0. */
   gebaeude: Id;
   /**

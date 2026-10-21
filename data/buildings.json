@@ -1,5 +1,5 @@
 {
- "hinweis": "Gebäude nach DESIGN §6.2 und Drehbuch 5.1 (Startwerte, werden beim Spielen eingestellt). Zeiten in Sekunden, Kosten und Waren über Waren-Ids (goods.json). 'funktion' wählt das Verhalten in der Simulation (lager, wohnen, holzfaeller, foerster, steinbruch, erzeuger, verarbeiter, kirmes, schaenke; ab M10 finder, wache, schuetzen, zier); 'radius' ist der Arbeitsradius in Hexen um den Arbeitsmittelpunkt (außen „geht noch“), 'radiusGut' der innere Ring „gut“; 'eingang' der Input-Puffer je Ware, 'ausgang' der Output-Puffer; 'wandelt' macht aus 'menge' Stück 'ein' eine Ware 'aus' ('ein' darf auch mehrere Waren mit Menge nennen, z. B. {\"erz\": 1, \"holzkohle\": 1}); ein Erzeuger macht alle 'arbeit_s' eine Ware; 'nahrung_plaetze' sind die Essensplätze des Wohnhauses; 'ab_stufe' die Dorfstufe, ab der man es bauen kann (0 Weiler, 1 Dorf, 2 Kirchdorf); 'einmalig' heißt höchstens eins je Dorf; 'taste' wählt das Gebäude bei offenem Baumenü (nicht W, A, S, D, Q, E, B, X, P, G). 'saison': 'feld' heißt: ruht im Winter, wird im Frühjahr erst gesät und erntet im Herbst schneller (data/jahr.json). 'werkzeug': so viel Werkzeug braucht die Fachkraft, bevor sie anfängt (Drehbuch 4.5, 5). 'boten': höchstens so viele beschwipste Boten schickt die Schänke los (DESIGN §10.3, data/dorf.json: boten). Ein zweites Gebäude mit 'funktion': 'lager' ist ein Lagerhaus: Lager ohne Gebiet und Bewohner (Drehbuch 6.2). 'leistung': ein Satz fürs Gebäudefenster, was das Gebäude tut (wenn es sich nicht aus den anderen Feldern ergibt). Ab M11: 'voelkchen' = nur diese Völkchen dürfen das Gebäude bauen (Spezialkette, Drehbuch 5.3); 'modell' = Darstellung wie dieses Gebäude; 'am_wasser' = braucht Wasser höchstens 2 Hexe weit; 'kein_planieren' = Hanglage braucht keinen Planierer.",
+ "hinweis": "Gebäude nach DESIGN §6.2 und Drehbuch 5.1 (Startwerte, werden beim Spielen eingestellt). Zeiten in Sekunden, Kosten und Waren über Waren-Ids (goods.json). 'funktion' wählt das Verhalten in der Simulation (lager, wohnen, holzfaeller, foerster, steinbruch, erzeuger, verarbeiter, kirmes, schaenke; ab M10 finder, wache, schuetzen, zier); 'radius' ist der Arbeitsradius in Hexen um den Arbeitsmittelpunkt (außen „geht noch“), 'radiusGut' der innere Ring „gut“; 'eingang' der Input-Puffer je Ware, 'ausgang' der Output-Puffer; 'wandelt' macht aus 'menge' Stück 'ein' eine Ware 'aus' ('ein' darf auch mehrere Waren mit Menge nennen, z. B. {\"erz\": 1, \"holzkohle\": 1}); ein Erzeuger macht alle 'arbeit_s' eine Ware; 'nahrung_plaetze' sind die Essensplätze des Wohnhauses; 'ab_stufe' die Dorfstufe, ab der man es bauen kann (0 Weiler, 1 Dorf, 2 Kirchdorf); 'einmalig' heißt höchstens eins je Dorf; 'taste' wählt das Gebäude bei offenem Baumenü (nicht W, A, S, D, Q, E, B, X, P, G). 'saison': 'feld' heißt: ruht im Winter, wird im Frühjahr erst gesät und erntet im Herbst schneller (data/jahr.json). 'werkzeug': so viel Werkzeug braucht die Fachkraft, bevor sie anfängt (Drehbuch 4.5, 5). 'boten': höchstens so viele beschwipste Boten schickt die Schänke los (DESIGN §10.3, data/dorf.json: boten). Ein zweites Gebäude mit 'funktion': 'lager' ist ein Lagerhaus: Lager ohne Gebiet und Bewohner (Drehbuch 6.2). 'leistung': ein Satz fürs Gebäudefenster, was das Gebäude tut (wenn es sich nicht aus den anderen Feldern ergibt). Ab M11: 'voelkchen' = nur diese Völkchen dürfen das Gebäude bauen (Spezialkette, Drehbuch 5.3); 'modell' = Darstellung wie dieses Gebäude; 'am_wasser' = braucht Wasser höchstens 2 Hexe weit; 'kein_planieren' = Hanglage braucht keinen Planierer. 'laut': lautes Gebäude (Laacher: nicht nah an der Abtei); 'am_moor': braucht Moor höchstens 2 Hexe weit; 'schnellweg': macht eigene Wege schneller (radius/prozent oder bahn/prozent); funktion 'hecke' wächst erst heran, 'boote' bringt Punkte.",
  "gebaeude": [
   {
    "id": "lager",
@@ -106,7 +106,8 @@
    "ausgang": {
     "ware": "bretter",
     "max": 6
-   }
+   },
+   "laut": true
   },
   {
    "id": "steinbruch",
@@ -130,7 +131,8 @@
    "zeiten": {
     "arbeit_s": 6,
     "ruhe_s": 2
-   }
+   },
+   "laut": true
   },
   {
    "id": "kartoffelfeld",
@@ -475,7 +477,8 @@
    "zeiten": {
     "arbeit_s": 18
    },
-   "ab_stufe": 2
+   "ab_stufe": 2,
+   "laut": true
   },
   {
    "id": "koehlerei",
@@ -535,7 +538,8 @@
    "ausgang": {
     "ware": "eisen",
     "max": 6
-   }
+   },
+   "laut": true
   },
   {
    "id": "schmiede",
@@ -566,7 +570,8 @@
    "ausgang": {
     "ware": "werkzeug",
     "max": 6
-   }
+   },
+   "laut": true
   },
   {
    "id": "kirmesplatz",
@@ -681,26 +686,32 @@
    "name": "Spinnerei",
    "gruppe": "Spezialität",
    "symbol": "🧶",
-   "spruch": "Die Schafe liefern, die Spinnerin spinnt. Und erzählt dabei alles.",
-   "funktion": "erzeuger",
-   "groesse": 2,
+   "spruch": "Aus Wolle wird Garn. Und aus der Spinnerin eine Erzählerin.",
+   "funktion": "verarbeiter",
+   "groesse": 1,
    "kosten": {
     "bretter": 3,
     "stein": 2
    },
    "arbeiter": 1,
    "ausgang": {
-    "ware": "wolle",
+    "ware": "garn",
     "max": 6
-   },
-   "zeiten": {
-    "arbeit_s": 20
    },
    "ab_stufe": 2,
    "voelkchen": [
     "monschau"
    ],
-   "modell": "schafstall"
+   "modell": "kaeserei",
+   "eingang": {
+    "wolle": 4
+   },
+   "wandelt": {
+    "ein": "wolle",
+    "menge": 2,
+    "aus": "garn",
+    "dauer_s": 12
+   }
   },
   {
    "id": "tuchmacherei",
@@ -716,11 +727,11 @@
    },
    "arbeiter": 1,
    "eingang": {
-    "wolle": 4
+    "garn": 4
    },
    "ab_stufe": 2,
    "wandelt": {
-    "ein": "wolle",
+    "ein": "garn",
     "menge": 2,
     "aus": "tuch",
     "dauer_s": 16
@@ -732,7 +743,7 @@
    "voelkchen": [
     "monschau"
    ],
-   "modell": "kaeserei"
+   "modell": "brennerei"
   },
   {
    "id": "senfmuehle",
@@ -766,7 +777,7 @@
    "gruppe": "Spezialität",
    "symbol": "🌳",
    "spruch": "Hinter der Hecke ist es warm. Vor der Hecke weht's.",
-   "funktion": "zier",
+   "funktion": "hecke",
    "groesse": 1,
    "kosten": {
     "setzling": 2
@@ -774,7 +785,7 @@
    "voelkchen": [
     "monschau"
    ],
-   "leistung": "Windschutz gegen den Venn-Wind: Gebäude bis 2 Hexe weit arbeiten im Winter 30 % schneller"
+   "leistung": "wächst erst heran (Monschauer schneller), dann Windschutz gegen den Venn-Wind: Gebäude bis 2 Hexe weit arbeiten im Winter 30 % schneller"
   },
   {
    "id": "fischerhuette",
@@ -865,7 +876,8 @@
    "voelkchen": [
     "rureifel"
    ],
-   "modell": "saegewerk"
+   "modell": "saegewerk",
+   "am_wasser": true
   },
   {
    "id": "steinmetz",
@@ -981,10 +993,10 @@
   },
   {
    "id": "kelter",
-   "name": "Kelter und Weinkeller",
+   "name": "Kelter",
    "gruppe": "Spezialität",
    "symbol": "🍷",
-   "spruch": "Rotwein von der Ahr. Für Feste, die nicht enden.",
+   "spruch": "Die Trauben werden gepresst. Die Winzer auch, wenn Kirmes ist.",
    "funktion": "verarbeiter",
    "groesse": 1,
    "kosten": {
@@ -999,11 +1011,11 @@
    "wandelt": {
     "ein": "trauben",
     "menge": 2,
-    "aus": "rotwein",
-    "dauer_s": 16
+    "aus": "traubenmost",
+    "dauer_s": 12
    },
    "ausgang": {
-    "ware": "rotwein",
+    "ware": "traubenmost",
     "max": 6
    },
    "voelkchen": [
@@ -1041,7 +1053,8 @@
    "voelkchen": [
     "laach"
    ],
-   "modell": "schmiede"
+   "modell": "schmiede",
+   "laut": true
   },
   {
    "id": "schieferdecker",
@@ -1049,7 +1062,7 @@
    "gruppe": "Spezialität",
    "symbol": "🏚️",
    "spruch": "Schiefer aufs Dach, dann regnet's nicht rein. Meistens.",
-   "funktion": "erzeuger",
+   "funktion": "verarbeiter",
    "groesse": 1,
    "kosten": {
     "bretter": 3,
@@ -1057,17 +1070,23 @@
    },
    "arbeiter": 1,
    "ausgang": {
-    "ware": "schiefer",
+    "ware": "dachschiefer",
     "max": 6
-   },
-   "zeiten": {
-    "arbeit_s": 20
    },
    "ab_stufe": 2,
    "voelkchen": [
     "laach"
    ],
-   "modell": "steinbruch"
+   "modell": "steinbruch",
+   "eingang": {
+    "schiefer": 4
+   },
+   "wandelt": {
+    "ein": "schiefer",
+    "menge": 2,
+    "aus": "dachschiefer",
+    "dauer_s": 14
+   }
   },
   {
    "id": "hopfengarten",
@@ -1235,17 +1254,19 @@
    },
    "arbeiter": 1,
    "ausgang": {
-    "ware": "holzkohle",
+    "ware": "torf",
     "max": 6
    },
    "zeiten": {
     "arbeit_s": 24
    },
-   "ab_stufe": 2,
+   "ab_stufe": 0,
    "voelkchen": [
     "ostbelgien"
    ],
-   "modell": "erzgrube"
+   "modell": "erzgrube",
+   "am_moor": true,
+   "leistung": "sticht Torf im Venn (braucht Moor in der Nähe): ersetzt in der Eisenhütte die Holzkohle"
   },
   {
    "id": "lohhecke",
@@ -1330,6 +1351,203 @@
     "oesling"
    ],
    "modell": "koehlerei"
+  },
+  {
+   "id": "schafweide",
+   "name": "Schafweide im Venn",
+   "gruppe": "Spezialität",
+   "symbol": "🐑",
+   "spruch": "Die Venn-Schafe geben Wolle. Und Widerworte.",
+   "funktion": "erzeuger",
+   "groesse": 2,
+   "kosten": {
+    "bretter": 2,
+    "stein": 1
+   },
+   "arbeiter": 1,
+   "ausgang": {
+    "ware": "wolle",
+    "max": 6
+   },
+   "zeiten": {
+    "arbeit_s": 20
+   },
+   "ab_stufe": 2,
+   "voelkchen": [
+    "monschau"
+   ],
+   "modell": "schafstall"
+  },
+  {
+   "id": "bootsverleih",
+   "name": "Bootsverleih am Rursee",
+   "gruppe": "Spezialität",
+   "symbol": "🛶",
+   "spruch": "Die Flachländer rudern im Kreis und zahlen dafür. Herrlich.",
+   "funktion": "boote",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 4,
+    "stein": 1
+   },
+   "arbeiter": 1,
+   "ab_stufe": 2,
+   "voelkchen": [
+    "rursee"
+   ],
+   "am_wasser": true,
+   "modell": "holzfaeller",
+   "leistung": "Ausflügler mieten Boote: alle 60 s 2 Eifel-Punkte (bei Regen ruht der Verleih)"
+  },
+  {
+   "id": "basaltbruch",
+   "name": "Basaltbruch",
+   "gruppe": "Spezialität",
+   "symbol": "⛰️",
+   "spruch": "Basalt aus dem Vulkan. Hart, schwarz und unbeeindruckt.",
+   "funktion": "steinbruch",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 2
+   },
+   "radius": 4,
+   "radiusGut": 2,
+   "arbeiter": 1,
+   "ausgang": {
+    "ware": "stein",
+    "max": 6
+   },
+   "zeiten": {
+    "arbeit_s": 6,
+    "ruhe_s": 2
+   },
+   "voelkchen": [
+    "vulkaneifel"
+   ],
+   "modell": "steinbruch"
+  },
+  {
+   "id": "weinkeller",
+   "name": "Weinkeller",
+   "gruppe": "Spezialität",
+   "symbol": "🍷",
+   "spruch": "Rotwein von der Ahr. Für Feste, die nicht enden.",
+   "funktion": "verarbeiter",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 3,
+    "stein": 3
+   },
+   "arbeiter": 1,
+   "eingang": {
+    "traubenmost": 4
+   },
+   "ab_stufe": 2,
+   "wandelt": {
+    "ein": "traubenmost",
+    "menge": 2,
+    "aus": "rotwein",
+    "dauer_s": 16
+   },
+   "ausgang": {
+    "ware": "rotwein",
+    "max": 6
+   },
+   "voelkchen": [
+    "ahr"
+   ],
+   "modell": "reifekeller"
+  },
+  {
+   "id": "schieferbruch",
+   "name": "Schieferbruch",
+   "gruppe": "Spezialität",
+   "symbol": "🪨",
+   "spruch": "Schiefer bricht, wie er will. Der Brecher auch.",
+   "funktion": "erzeuger",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 3,
+    "stein": 1
+   },
+   "arbeiter": 1,
+   "ausgang": {
+    "ware": "schiefer",
+    "max": 6
+   },
+   "zeiten": {
+    "arbeit_s": 20
+   },
+   "ab_stufe": 2,
+   "voelkchen": [
+    "laach"
+   ],
+   "modell": "erzgrube",
+   "laut": true
+  },
+  {
+   "id": "abtei",
+   "name": "Abtei Maria Laach",
+   "gruppe": "Spezialität",
+   "symbol": "⛪",
+   "spruch": "Die Mönche beten. Die Steinhauer bitte leise.",
+   "funktion": "zier",
+   "groesse": 3,
+   "kosten": {
+    "bretter": 6,
+    "stein": 8
+   },
+   "einmalig": true,
+   "voelkchen": [
+    "laach"
+   ],
+   "modell": "lager",
+   "leistung": "strahlt Einfluss aus (Gebiet 4 Hexe); laute Gebäude (Steinbruch, Schmiede, Mühlsteinhauerei …) nicht näher als 4 Hexe"
+  },
+  {
+   "id": "roemerstrasse",
+   "name": "Römerstraße",
+   "gruppe": "Spezialität",
+   "symbol": "🏛️",
+   "spruch": "Die Römer haben's gepflastert. Wir haben's nur wiedergefunden.",
+   "funktion": "schnellweg",
+   "groesse": 1,
+   "kosten": {
+    "stein": 6
+   },
+   "ab_stufe": 2,
+   "voelkchen": [
+    "suedeifel"
+   ],
+   "modell": "lagerhaus",
+   "schnellweg": {
+    "radius": 6,
+    "prozent": 30
+   },
+   "leistung": "gepflasterte Römerstraße: eigene Wege bis 6 Hexe weit sind 30 % schneller"
+  },
+  {
+   "id": "vennbahn",
+   "name": "Vennbahn-Bahnhof",
+   "gruppe": "Spezialität",
+   "symbol": "🚂",
+   "spruch": "Die alte Vennbahn fährt wieder. Mit der Draisine.",
+   "funktion": "schnellweg",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 4,
+    "stein": 2
+   },
+   "ab_stufe": 2,
+   "voelkchen": [
+    "ostbelgien"
+   ],
+   "modell": "lagerhaus",
+   "schnellweg": {
+    "bahn": true,
+    "prozent": 50
+   },
+   "leistung": "die alte Bahntrasse: eigene Wege auf Bahn-Hexen sind 50 % schneller"
   }
  ]
 }

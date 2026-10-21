@@ -20,6 +20,7 @@ interface GebaeudeJson {
   nahrung_plaetze?: number; ab_stufe?: number; einmalig?: boolean; taste?: string;
   saison?: string; werkzeug?: number; boten?: number; leistung?: string;
   voelkchen?: string[]; modell?: string; am_wasser?: boolean; kein_planieren?: boolean;
+  laut?: boolean; am_moor?: boolean; schnellweg?: { radius?: number; prozent: number; bahn?: boolean };
 }
 
 const warenListe = (warenJson as { waren: WareJson[] }).waren;
@@ -132,7 +133,7 @@ export const PRIO_STANDARD = 2;
 export const SUCHE_WARTE = 2 * TICK_HZ;
 
 export type Funktion = 'lager' | 'wohnen' | 'holzfaeller' | 'foerster' | 'steinbruch' | 'erzeuger' | 'verarbeiter' | 'kirmes' | 'schaenke'
-  | 'finder' | 'wache' | 'schuetzen' | 'zier';
+  | 'finder' | 'wache' | 'schuetzen' | 'zier' | 'hecke' | 'boote' | 'schnellweg';
 
 export interface GebaeudeTyp {
   id: string; name: string; gruppe: string; symbol: string; spruch: string;
@@ -180,6 +181,8 @@ export interface GebaeudeTyp {
   leistung: string;
   /** M11: nur diese Völkchen dürfen es bauen (leer = alle); Darstellung wie Gebäude `modell`; braucht Wasser nah; kein Planieren am Hang. */
   voelkchen: readonly string[]; modell: string; amWasser: boolean; keinPlanieren: boolean;
+  /** Laut (Laacher: nicht nah an der Abtei); braucht Moor nah; macht eigene Wege schneller (Römerstraße, Vennbahn). */
+  laut: boolean; amMoor: boolean; schnellweg: { radius: number; prozent: number; bahn: boolean } | null;
 }
 
 const ticks = (s: number | undefined) => Math.round((s ?? 0) * TICK_HZ);
@@ -230,6 +233,8 @@ function baue(j: GebaeudeJson): GebaeudeTyp {
     boten: j.boten ?? 0,
     leistung: j.leistung ?? '',
     voelkchen: j.voelkchen ?? [], modell: j.modell ?? '', amWasser: !!j.am_wasser, keinPlanieren: !!j.kein_planieren,
+    laut: !!j.laut, amMoor: !!j.am_moor,
+    schnellweg: j.schnellweg ? { radius: j.schnellweg.radius ?? 0, prozent: j.schnellweg.prozent, bahn: !!j.schnellweg.bahn } : null,
   };
 }
 
