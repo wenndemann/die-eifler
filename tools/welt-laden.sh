@@ -11,7 +11,10 @@ mkdir -p "$ZIEL"
 TMP="$(mktemp)"
 trap 'rm -f "$TMP"' EXIT
 echo "Lade $URL"
-curl -fL --retry 4 --retry-delay 2 -o "$TMP" "$URL"
+# Die Weiterleitung zum Datei-Server von GitHub selbst auflösen: mit -L schickt curl hinter manchen Proxys Kopfzeilen mit, die der
+# signierte Link ablehnt (401)
+ZIEL_URL="$(curl -fsS -o /dev/null -w '%{redirect_url}' "$URL" || true)"
+curl -f --retry 4 --retry-delay 2 -o "$TMP" "${ZIEL_URL:-$URL}"
 VERSION="$(tar -tzf "$TMP" | awk -F/ 'NR == 1 { print $1 }')"
 tar -xzf "$TMP" -C "$ZIEL"
 # versions.json ergänzen (mehrere Gebiete können nebeneinander liegen; das zuletzt geladene ist „aktuell“)
