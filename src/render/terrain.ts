@@ -23,7 +23,7 @@ const COVER_COLORS = [
   '#5e5a40', // wasser (Grund)
   '#7dab4c', // wiese (STIL.md: sattes Wimmelbuch-Grün)
   '#c9b06a', // acker
-  '#4a6a3a', // wald (Waldboden)
+  '#5d8442', // wald (Waldboden; M9 heller, sonst dunkle Flecken auf der Wiese)
   '#a08a78', // heide
   '#9a9468', // moor
   '#9a9284', // fels

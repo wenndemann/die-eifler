@@ -49,7 +49,7 @@ function felsGeometrie(variante: number): THREE.BufferGeometry {
   const nor = g.attributes.normal;
   const col = new Float32Array(pos.count * 3);
   // Eifeler Bruchstein: warmes Grau (STIL.md #a39a8c), oben Moos
-  const c = new THREE.Color(), unten = new THREE.Color('#6f665a'), oben = new THREE.Color('#aa9f8c'), moos = new THREE.Color('#6d8a3e');
+  const c = new THREE.Color(), unten = new THREE.Color('#7e6c58'), oben = new THREE.Color('#b8a688'), moos = new THREE.Color('#6d8a3e');
   for (let i = 0; i < pos.count; i++) {
     const hell = 0.5 + 0.5 * nor.getY(i);
     c.copy(unten).lerp(oben, hell).multiplyScalar(0.92 + hash(i, 9 + variante) * 0.16);

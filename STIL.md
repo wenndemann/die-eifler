@@ -30,7 +30,7 @@ feinen braunen Linie. Siedler 2 liefert die Lesbarkeit und den Maßstab, der Com
   |---|---|
   | Wiese | `#7dab4c` |
   | Acker | `#c9b06a` |
-  | Waldboden | `#4a6a3a` |
+  | Waldboden | `#5d8442` |
   | Buche | `#6f9a48`, `#7aa652` |
   | Fichte | `#2f5a3a` … `#3b6a46` |
   | Gefache (Putz) | `#f6e6cf` |
