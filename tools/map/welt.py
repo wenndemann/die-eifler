@@ -94,6 +94,8 @@ def _kreis_kacheln(lon, lat, km):
 
 GEBIETE = {
     "welt": [(tx, tz) for tz in range(NTZ) for tx in range(NTX)],
+    # die ganze Eifel: wie „welt“, aber eigener Name für das Release (welt-daten-eifel), gerechnet in Streifen
+    "eifel": [(tx, tz) for tz in range(NTZ) for tx in range(NTX)],
     **{name: _kreis_kacheln(*v) for name, v in VOELKCHEN_GEBIETE.items()},
     "eifelsteig": _kampagnen_kacheln(),
     "nordeifel": [(tx, tz) for tz in range(0, 8) for tx in range(5, 11)],
@@ -252,6 +254,19 @@ def gebaute_hexkacheln(kacheln):
             if any((tx, tz) in ks for tx in range(tx0, tx1 + 1) for tz in range(tz0, tz1 + 1)):
                 out.append((hx, hz))
     return out
+
+
+def streifen(kacheln, i, n):
+    """Streifen i (1..n) eines Gebiets nach Kachelzeilen: (Kern, Kern mit einer Kachel Rand aus demselben Gebiet)."""
+    if not 1 <= i <= n:
+        raise SystemExit(f"Teil {i}/{n} gibt es nicht")
+    zeilen = sorted({tz for _, tz in kacheln})
+    je = -(-len(zeilen) // n)
+    meine = set(zeilen[(i - 1) * je:i * je])
+    kern = [k for k in kacheln if k[1] in meine]
+    alle = set(kacheln)
+    rand = {(tx + dx, tz + dz) for tx, tz in kern for dx in (-1, 0, 1) for dz in (-1, 0, 1)} & alle
+    return kern, sorted(rand, key=lambda k: (k[1], k[0]))
 
 
 def gebiet_kacheln(name):
