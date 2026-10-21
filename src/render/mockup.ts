@@ -78,7 +78,16 @@ export function roof(w: number, d: number, h: number, y: number, color = C.dach,
 }
 
 /** Fachwerkhaus: Bruchsteinsockel, weiße Gefache, dunkle Balken, Fenster, Schieferdach. Front = +z. */
+/** Regionale Dachfarbe (M11, Drehbuch 7.3: Schiefer, Buntsandstein …): gesetzt, während die Modelle eines Völkchens entstehen. */
+let dachErsatz: string | null = null;
+export function mitDach<T>(farbe: string | null, f: () => T): T {
+  const alt = dachErsatz;
+  dachErsatz = farbe;
+  try { return f(); } finally { dachErsatz = alt; }
+}
+
 export function fachwerk(w: number, d: number, floors: number, wall = C.wand, dach = C.dach): THREE.BufferGeometry[] {
+  if (dachErsatz) dach = dachErsatz;
   const fh = 3, H = floors * fh, y0 = 1;
   const parts = [box(w + 0.4, 5, d + 0.4, 0, y0 - 2.5, 0, C.sockel), box(w, H, d, 0, y0 + H / 2, 0, wall)];
   for (const side of [1, -1]) {

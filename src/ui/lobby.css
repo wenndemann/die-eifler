@@ -41,3 +41,4 @@
 @media (max-width: 699px) {
   .lobby-raum { left: 8px; right: 8px; top: auto; bottom: 8px; width: auto; max-height: 60dvh; }
 }
+.lobby-voelkchen { margin-left: 8px; color: var(--gold); font-size: 12px; white-space: nowrap; }

@@ -1,3 +1,4 @@
+import { erzaehlerFuer } from './spiel/meldungen';
 import * as THREE from 'three';
 import './style.css';
 import { MapData } from './map/mapdata';
@@ -427,7 +428,7 @@ async function main() {
         start = await lobby.warteAufStart();
       }
       const neu = !raum.gestartet && start.du === start.raum.taktgeber ? {
-        starts: start.startorte.map((n) => waehleLagerHex(ausschnitt.hex, ausschnitt.kerne, n)),
+        starts: start.startorte.map((n) => ({ ...waehleLagerHex(ausschnitt.hex, ausschnitt.kerne, n), voelkchen: erzaehlerFuer(n, ausschnitt.kerne.map((k) => k.name)).id })),
         saat: saatAusPruefsumme(ausschnitt.pruefsumme), tempo: start.einstellungen.tempo, spielstand: start.spielstand,
         regeln: { gebiet: 1, ziel: start.einstellungen.ziel ?? 'normal' },
       } : undefined;

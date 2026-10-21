@@ -14,10 +14,14 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import type { MapData } from '../map/mapdata';
 import type { HexGrid } from '../map/hex';
 import { PROMILLE, type GebaeudeZustand, type Id, type SimSicht } from '../sim/typen';
-import { box, roof, fachwerk, logPile, paint, weicheKiste, C } from './mockup';
+import { box, roof, fachwerk, logPile, mitDach, paint, weicheKiste, C } from './mockup';
 import { Instanzen } from './instanzen';
 import { WAREN_ANZAHL, WARE_HOEHE, warenGeometrie } from './waren';
 import { WARE_M } from './massstab';
+import { GEBAEUDE } from '../sim/daten';
+import { VOELKCHEN } from '../sim/voelkchen';
+
+const VOLK_DACH = new Map(VOELKCHEN.map((v) => [v.id, v.dach] as [string, string]));
 import { HAUS_SKALE } from './massstab';
 import { hash } from './terrain';
 import type { Trees } from './trees';
@@ -574,6 +578,17 @@ const TYPEN: Record<string, Typ> = {
       return out;
     },
   },
+  hecke: {
+    w: 6, d: 1.5, floors: 1, wand: '#4f7a3a', dach: '#4f7a3a', laden: '#4f7a3a', skala: 1, hoehe: 4,
+    grund: [-6, 6, -2, 2],
+    fertig() {
+      // hohe Buchenhecke (Monschauer Heckenland): eine Reihe dichter, runder Büsche
+      const out: THREE.BufferGeometry[] = [];
+      for (let k = 0; k < 6; k++) out.push(paint(new THREE.SphereGeometry(1.5, 8, 6).scale(1, 1.5, 0.8).translate(-5 + k * 2, G + 2.0 + (k % 2) * 0.3, 0), k % 2 ? '#4f7a3a' : '#5f8a44'));
+      out.push(boxR(11, 0.4, 1.4, 0, G + 0.2, 0, '#6a4a2e'));
+      return out;
+    },
+  },
   lagerhaus: {
     w: 13, d: 8, floors: 1, wand: '#ece0c8', dach: '#5a4a3c', laden: '#2f7a55', skala: 1, hoehe: 10,
     grund: [-8, 8.5, -5, 8],
@@ -782,12 +797,24 @@ const KLEINKRAM = 1.6;
 
 /** Unbekannte Typen zeigen das Wohnhaus. */
 function modellTyp(typ: string): string {
-  return typ in TYPEN ? typ : 'wohnhaus';
+  if (typ in TYPEN) return typ;
+  // M11: Gebäude der Spezialketten sehen aus wie ein verwandtes Grundgebäude (data/buildings.json: modell)
+  const m = GEBAEUDE[typ]?.modell;
+  return m && m in TYPEN ? m : 'wohnhaus';
 }
 
 const modellCache = new Map<string, THREE.BufferGeometry>();
-function modell(typ: string, phase: number): THREE.BufferGeometry {
-  const key = `${typ}:${phase}`;
+function modell(typ: string, phase: number, dach: string | null = null): THREE.BufferGeometry {
+  if (dach) {
+    const key = `${typ}:${phase}:${dach}`;
+    let g = modellCache.get(key);
+    if (!g) { g = mitDach(dach, () => modellRoh(typ, phase, key)); modellCache.set(key, g); }
+    return g;
+  }
+  return modellRoh(typ, phase, `${typ}:${phase}`);
+}
+
+function modellRoh(typ: string, phase: number, key: string): THREE.BufferGeometry {
   let g = modellCache.get(key);
   if (!g) {
     const t = TYPEN[modellTyp(typ)];
@@ -1137,10 +1164,12 @@ export class Gebaeude {
       const t = TYPEN[modellTyp(g.typ)];
       // am Hang zeigt die Baustelle bis zum Ende des Planierens nur den abgesteckten Grund
       const phase = g.planiert !== undefined && g.planiert < PROMILLE ? 1 : bauPhase(g.bau);
-      const key = `${modellTyp(g.typ)}:${phase}`;
+      // M11: Dach in der Farbe der regionalen Baustoffe des Völkchens
+      const dach = VOLK_DACH.get(sicht.spieler[g.sp]?.voelkchen ?? '') ?? null;
+      const key = `${modellTyp(g.typ)}:${phase}:${dach ?? ''}`;
       let satz = this.saetze.get(key);
       if (!satz) {
-        satz = new Instanzen(this.group, modell(modellTyp(g.typ), phase), this.mat, true, true);
+        satz = new Instanzen(this.group, modell(modellTyp(g.typ), phase, dach), this.mat, true, true);
         satz.beginne();
         this.saetze.set(key, satz);
       }

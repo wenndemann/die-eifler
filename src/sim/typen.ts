@@ -87,7 +87,8 @@ export type Befehl =
   | { art: 'handel'; posten: number; tausch: number; mal: number };
 
 /** Start eines Dorfs: Lager-Hex und (optional, sonst data/dorf.json) die Zahl der Bewohner. Spieler i startet mit Eintrag i. */
-export interface StartDaten { q: number; r: number; bewohner?: number }
+/** Start eines Dorfs: Lager-Hex, (optional) Bewohner und (ab M11) das Völkchen (Id aus data/voelkchen.json; fehlt = ohne Völkchen). */
+export interface StartDaten { q: number; r: number; bewohner?: number; voelkchen?: string }
 
 export interface ProtokollEintrag { tick: number; spieler: number; befehl: Befehl }
 
@@ -171,7 +172,9 @@ export type GebaeudeZustand =
   | 'kein_planierer' | 'planieren' | 'kein_bauarbeiter' | 'hunger' | 'wohnraum_voll' | 'fest'
   | 'ruht' | 'arbeitet' | 'bereit' | 'winter' | 'saat' | 'hochwasser' | 'kein_werkzeug'
   /** M10: steht auf fremdem Gebiet still; Finder sitzt in der Ausredenstube. */
-  | 'fremd' | 'ausrede';
+  | 'fremd' | 'ausrede'
+  /** M11: ruht bei Regen (Schwäche des Völkchens). */
+  | 'regen';
 
 /** Der Arbeiter eines Holzfällers, Försters oder Steinbruchs (Figur in der Welt). */
 export interface SichtArbeiter {
@@ -329,6 +332,8 @@ export interface SichtDorf {
   /** M10: Schützenfest dieses Jahres (null ohne Schützenhaus): Liste, geliefert, schon gefeiert, laufendes Fest; Schützenkönig. */
   schuetzen?: { liste: number[]; geliefert: number[]; gefeiert: boolean; fest: number; schuss: number } | null;
   koenig?: boolean;
+  /** M11: Völkchen (Id) oder ''. */
+  voelkchen?: string;
 }
 
 /**
@@ -343,6 +348,8 @@ export interface SichtSpieler {
   stufe: number; bewohner: number; festPunkte: number;
   /** M10: Eifel-Punkte, Gebiet in Hexen, Orte, Schützenkönig. */
   punkte: number; hexe: number; orte: number; koenig: boolean;
+  /** M11: Völkchen (Id) oder ''. */
+  voelkchen: string;
   /** Der Verwalter führt das Dorf (Spieler fehlt länger als 5 Minuten). */
   verwalter: boolean;
 }

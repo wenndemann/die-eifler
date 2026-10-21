@@ -1,0 +1,15 @@
+{
+ "hinweis": "Völkchen für die Simulation (Drehbuch 5.3, ROADMAP M11): Texte, Erzähler und Kerngebiete stehen in data/regions.json, hier die Regeln als Zahlen. spezialitaet: edle Ware, die in der Marktflecken-Kirmes an die Stelle des Bergkäse-Platzhalters tritt. tempo: Prozent schneller (+) oder langsamer (−) je Gebäudetyp. bauzeit: Prozent der Bauzeit je Ware (100 = normal). fest: Prozent der Festdauer. handel: Prozent der Waren, die man den Flachländern gibt. am_wasser_verboten: kein Bau direkt neben Wasser (Maare sind heilig). moor_planieren_s: zusätzliches Planieren auf Moor. regen_ruht: diese Gebäude ruhen bei Regen. hecke_winter: Gebäude bis 2 Hexe an einer eigenen Hecke arbeiten im Winter so viel Prozent schneller. start: zusätzliche Startwaren. tracht und dach: Farben für Figuren und Dächer (regionale Baustoffe, Drehbuch 7.3). Startwerte; ausgeglichen nach Faustregel: jeder Bonus etwa +25 %, jede Schwäche etwa −10 bis −20 %.",
+ "voelkchen": [
+  {"id": "monschau", "spezialitaet": "tuch", "tempo": {}, "bauzeit": 100, "fest": 100, "handel": 100, "moor_planieren_s": 60, "hecke_winter": 30, "tracht": "#b22a2a", "dach": "#4a5560"},
+  {"id": "rursee", "spezialitaet": "raeucherfisch", "tempo": {"fischerhuette": 25}, "bauzeit": 100, "fest": 100, "handel": 100, "regen_ruht": ["fischerhuette"], "tracht": "#2a7fa8", "dach": "#5f7090"},
+  {"id": "rureifel", "spezialitaet": "papier", "tempo": {"steinbruch": 25}, "bauzeit": 110, "fest": 100, "handel": 100, "tracht": "#c0603a", "dach": "#b0563e"},
+  {"id": "vulkaneifel", "spezialitaet": "sprudel", "tempo": {"steinbruch": 25}, "bauzeit": 100, "fest": 100, "handel": 100, "am_wasser_verboten": true, "tracht": "#4a4a55", "dach": "#3f4048"},
+  {"id": "ahr", "spezialitaet": "rotwein", "tempo": {"weinberg": 25}, "bauzeit": 100, "fest": 130, "handel": 100, "tracht": "#7a1f3d", "dach": "#4a5560"},
+  {"id": "laach", "spezialitaet": "muehlstein", "tempo": {"muehlsteinhauerei": 25, "steinbruch": -10, "schmiede": -10}, "bauzeit": 100, "fest": 100, "handel": 100, "tracht": "#6e5a8c", "dach": "#3f4a5a"},
+  {"id": "suedeifel", "spezialitaet": "edelbier", "tempo": {"brauerei": 25, "edelbrauerei": 25}, "bauzeit": 110, "fest": 100, "handel": 100, "tracht": "#d9a21b", "dach": "#b0563e"},
+  {"id": "schneifel", "spezialitaet": "harz", "tempo": {"holzfaeller": 25, "koehlerei": 25, "kartoffelfeld": -20, "gerstenfeld": -20}, "bauzeit": 100, "fest": 100, "handel": 100, "tracht": "#2f6b3c", "dach": "#3f4a5a"},
+  {"id": "ostbelgien", "spezialitaet": "butter", "tempo": {}, "bauzeit": 115, "fest": 100, "handel": 100, "tracht": "#c8a02e", "dach": "#4a5560"},
+  {"id": "oesling", "spezialitaet": "ham", "tempo": {}, "bauzeit": 90, "fest": 100, "handel": 120, "start": {"bretter": 4}, "tracht": "#1f4e79", "dach": "#3f4a5a"}
+ ]
+}

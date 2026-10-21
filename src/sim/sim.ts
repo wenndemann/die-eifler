@@ -23,6 +23,7 @@ import {
   VERSORGT_BONUS, zielPunkte, AUSREDEN,
 } from './nachbarn';
 import type { OrtDaten, PostenDaten, Regeln } from './nachbarn';
+import { KIRMES_JE_VOELKCHEN, VOELKCHEN, voelkchenIndex, type VoelkchenRegeln } from './voelkchen';
 import type { GebaeudeTyp } from './daten';
 import { SimKarte } from './karte';
 import { FELS_FELS, FELS_KLIPPE, FELS_LESE as ART_LESE, hashHex, hashHex2, hashHex3 } from './natur';
@@ -162,6 +163,8 @@ interface Dorf {
    * Schützenkönig (1 = trägt gerade den Titel) und wie oft.
    */
   einstandP: number; fundP: number; schuetzenN: number; schuetzenJahr: number; sfest: number; schuss: number; koenig: number; koenigN: number;
+  /** M11: Völkchen (Index in VOELKCHEN, -1 keins). */
+  vk: number;
 }
 
 function neuesDorf(bewohner: number): Dorf {
@@ -169,7 +172,7 @@ function neuesDorf(bewohner: number): Dorf {
     bewohner, frei: bewohner, bauGesamt: START_BAUARBEITER, bauFrei: START_BAUARBEITER, planGesamt: START_PLANIERER, planFrei: START_PLANIERER,
     stufe: 0, fest: 0, notnagelT: 0, verwalter: 0, ereignisse: [], wohnFrei: 0,
     vert: standardVerteilung(), erzeugt: new Array<number>(WAREN.length).fill(0), statPunkte: [], statTakt: STAT_TAKT, statNaechst: 0,
-    ...dorfM8(), ...dorfM10(),
+    ...dorfM8(), ...dorfM10(), vk: -1,
   };
 }
 
@@ -177,6 +180,12 @@ function neuesDorf(bewohner: number): Dorf {
 function dorfM10(): Pick<Dorf, 'einstandP' | 'fundP' | 'schuetzenN' | 'schuetzenJahr' | 'sfest' | 'schuss' | 'koenig' | 'koenigN'> {
   return { einstandP: 0, fundP: 0, schuetzenN: 0, schuetzenJahr: -1, sfest: 0, schuss: 0, koenig: 0, koenigN: 0 };
 }
+
+/** Kein Völkchen: neutrale Regeln (Tests, alte Spielstände). */
+const KEIN_VOELKCHEN: VoelkchenRegeln = {
+  id: '', spezialitaet: -1, tempo: {}, bauzeit: 100, fest: 100, handel: 100, amWasserVerboten: false, moorPlanieren: 0, regenRuht: [], heckeWinter: 0,
+  start: [], tracht: '', dach: '',
+};
 
 /** Felder, die mit M8 ins Dorf kamen (auch für ältere Spielstände). */
 function dorfM8(): Pick<Dorf, 'bauSoll' | 'planSoll' | 'festJahr' | 'kfest' | 'kfestNr' | 'festPunkte' | 'friert' | 'winterT' | 'botenWunsch'> {
@@ -300,6 +309,8 @@ export class Simulation {
   private missernte = '';
   private missernteP = 0;
   private hochwasser = false;
+  /** Es regnet gerade (abgeleitet, je Tick). */
+  private regen = false;
   private jz = 0;
   /**
    * M10 (Drehbuch 6): Regeln der Partie; Besitz je Hex (-1 frei) mit Änderungszähler; Orte und Marktposten (statisch aus der Karte),
@@ -323,8 +334,12 @@ export class Simulation {
     this.saat = saat | 0;
     const starts = Array.isArray(start) ? start : [start as StartDaten];
     if (!starts.length || starts.length > SPIELER_MAX) throw new Error(`1 bis ${SPIELER_MAX} Spieler, nicht ${starts.length}`);
-    this.starts = starts.map((x) => (x.bewohner === undefined ? { q: x.q, r: x.r } : { q: x.q, r: x.r, bewohner: x.bewohner }));
-    this.doerfer = this.starts.map((x) => neuesDorf(Math.max(0, Math.floor(x.bewohner ?? START_BEWOHNER))));
+    this.starts = starts.map((x) => {
+      const s: StartDaten = x.bewohner === undefined ? { q: x.q, r: x.r } : { q: x.q, r: x.r, bewohner: x.bewohner };
+      if (x.voelkchen && voelkchenIndex(x.voelkchen) >= 0) s.voelkchen = x.voelkchen;
+      return s;
+    });
+    this.doerfer = this.starts.map((x) => ({ ...neuesDorf(Math.max(0, Math.floor(x.bewohner ?? START_BEWOHNER))), vk: voelkchenIndex(x.voelkchen) }));
     this.rng = (Math.imul(this.saat, 0x9e3779b1) ^ 0x85ebca6b) | 0;
     const n = this.karte.count;
     this.hexFahne = new Int32Array(n);
@@ -344,7 +359,7 @@ export class Simulation {
       if (h < 0 || !this.karte.begehbar[h]) throw new Error(`Startlager von Spieler ${sp} liegt nicht auf begehbarem Boden`);
       if (this.hexGeb[h] || this.hexFahne[h]) throw new Error(`Startlager von Spieler ${sp} liegt auf einem anderen Lager`);
       const lager = this.gebaeudeErzeugen('lager', h, true, sp);
-      lager.vorrat = START_VORRAT.slice();
+      lager.vorrat = START_VORRAT.map((n, a) => n + (this.vkVon(sp).start[a] ?? 0));
     });
     // fairer Start erst, wenn alle Lager stehen (keine Lesesteine auf ein anderes Lager)
     this.starts.forEach((st) => this.fairerStart(this.karte.index(st.q, st.r)));
@@ -417,7 +432,7 @@ export class Simulation {
     this.wegeP = [this.jz === WINTER ? SCHNEE_PROZENT : 0, 0, 0, 0];
     this.arbeitP = [0, 0, 0, 0];
     this.felderP = this.jz === 2 ? ERNTE_PROZENT : 0;
-    this.missernte = ''; this.missernteP = 0; this.hochwasser = false;
+    this.missernte = ''; this.missernteP = 0; this.hochwasser = false; this.regen = false;
     for (const e of this.kalender.aktiv(t)) {
       const w = WETTER[e.art];
       this.wegeP[w.wo] += w.wege;
@@ -425,6 +440,7 @@ export class Simulation {
       this.felderP += w.felder;
       if (w.missernte) { this.missernte = e.feld; this.missernteP = w.missernte; }
       if (w.hochwasser) this.hochwasser = true;
+      if (w.id === 'regen') this.regen = true;
     }
   }
 
@@ -449,7 +465,8 @@ export class Simulation {
   }
 
   /** Steht ein fertiges Gebäude wegen Jahreszeit oder Wetter still? Zustand oder ''. */
-  private stillstand(g: Gebaeude, t: GebaeudeTyp): '' | 'winter' | 'saat' | 'hochwasser' {
+  private stillstand(g: Gebaeude, t: GebaeudeTyp): '' | 'winter' | 'saat' | 'hochwasser' | 'regen' {
+    if (this.regen && this.vkVon(g.sp).regenRuht.includes(g.typ)) return 'regen';
     if (t.feld) {
       if (this.jz === WINTER) return 'winter';
       if (this.jz === 0 && jahrVon(this._tick) > 0 && inJahreszeit(this._tick) < SAAT_TICKS) return 'saat';
@@ -462,6 +479,10 @@ export class Simulation {
   private tempoProzent(g: Gebaeude, t: GebaeudeTyp): number {
     let p = -this.lageP(this.arbeitP, g.h);
     if (this.doerfer[g.sp].friert) p -= FRIEREN_PROZENT;
+    // M11: Bonus und Schwäche des Völkchens, Windschutz der Hecken im Winter
+    const vk = this.vkVon(g.sp);
+    p += vk.tempo[g.typ] ?? 0;
+    if (vk.heckeWinter && this.jz === WINTER && this.heckeNah(g)) p += vk.heckeWinter;
     if (t.feld) {
       p += this.felderP;
       if (this.missernte === g.typ) p -= this.missernteP;
@@ -649,6 +670,7 @@ export class Simulation {
       const m8 = dorfM8() as unknown as Record<string, unknown>;
       for (const key of Object.keys(m8)) if ((d as unknown as Record<string, unknown>)[key] === undefined) (d as unknown as Record<string, unknown>)[key] = m8[key];
       d.festJahr = KLEINE_FESTE.map((_, i) => (Array.isArray(d.festJahr) ? d.festJahr[i] ?? -1 : -1));
+      if (typeof d.vk !== 'number') d.vk = voelkchenIndex(this.starts[this.doerfer.indexOf(d)]?.voelkchen);
       const m10 = dorfM10() as unknown as Record<string, unknown>;
       for (const key of Object.keys(m10)) if ((d as unknown as Record<string, unknown>)[key] === undefined) (d as unknown as Record<string, unknown>)[key] = m10[key];
     }
@@ -883,6 +905,7 @@ export class Simulation {
       spieler: this.doerfer.map((d, sp) => ({
         stufe: d.stufe, bewohner: d.bewohner, festPunkte: d.festPunkte, verwalter: d.verwalter === 1,
         punkte: this.punkte(sp), hexe: this.hexeVon(sp), orte: this.ortBesitz.filter((b) => b === sp).length, koenig: d.koenig === 1,
+        voelkchen: this.vkVon(sp).id,
       })),
       fahnen: [...this.fahnen.values()].map((f) => ({ id: f.id, sp: f.sp, ...hx(f.h), waren: f.waren.map((w) => w.art), ziele: f.waren.map((w) => w.ziel), gebaeude: f.gebaeude })),
       segmente: [...this.segmente.values()].map((s) => ({ id: s.id, sp: s.sp, a: s.a, b: s.b, pfad: s.pfad.map(hx), traeger: s.traeger, verkehr: s.verkehr })),
@@ -932,7 +955,7 @@ export class Simulation {
       posten: this.posten.map((p, i) => ({
         stadt: STAEDTE[p.stadt].name, ...hx(p.h), km: p.km, erreicht: this.erreicht(ich, p.h),
         unterwegs: this.lieferungen.filter((x) => x.art === 1 && x.sp === ich && x.ziel === i).map((x) => x.ankunft),
-        handel: HANDEL.map((h) => ({ gib: h.gib.slice(), nimm: this.handelNimm(ich, h.nimm) })),
+        handel: HANDEL.map((h) => ({ gib: this.handelGib(ich, h.gib), nimm: this.handelNimm(ich, h.nimm) })),
       })),
       regeln: { gebiet: this.regeln.gebiet === 1, ziel: this.regeln.ziel, zielPunkte: zielPunkte(this.regeln) },
       ende: this.ende ? { ...this.ende } : null,
@@ -990,7 +1013,7 @@ export class Simulation {
     let arbeiter = 0, wohnraum = 0, traeger = 0;
     for (const g of this.gebaeude.values()) if (g.sp === sp) { arbeiter += g.ar; if (g.fertig) wohnraum += GEBAEUDE[g.typ].wohnraum; }
     for (const t of this.traeger.values()) if (t.sp === sp) traeger++;
-    const ks = KIRMES[d.stufe];
+    const ks = this.kirmesVon(d)[d.stufe];
     const platz = this.kirmesPlatz(sp);
     const da = platz && platz.fertig ? platz.puffer : new Array<number>(WAREN.length).fill(0);
     let misch = 0;
@@ -1014,6 +1037,7 @@ export class Simulation {
       erzeugt: d.erzeugt.slice(),
       schuetzen: this.schuetzenSicht(sp),
       koenig: d.koenig === 1,
+      voelkchen: this.vkVon(sp).id,
     };
   }
 
@@ -1062,7 +1086,7 @@ export class Simulation {
     if (t.funktion === 'kirmes') {
       const d = this.doerfer[g.sp];
       if (d.fest > 0 || d.kfest > 0) return 'fest';
-      return KIRMES[d.stufe] || this.festJetzt(d) >= 0 ? 'wartet_material' : 'bereit';
+      return this.kirmesVon(d)[d.stufe] || this.festJetzt(d) >= 0 ? 'wartet_material' : 'bereit';
     }
     if (t.funktion === 'schuetzen') {
       const d = this.doerfer[g.sp];
@@ -1282,8 +1306,39 @@ export class Simulation {
     w(this.lieferungen.length);
     for (const l of this.lieferungen) { w(l.id); w(l.sp); w(l.art); w(l.ziel); w(l.ankunft); liste(l.waren); liste(l.nimm); w(l.lager); }
     w(this.ende ? this.ende.sieger : -1); w(this.ende ? this.ende.tick : -1);
-    for (const d of this.doerfer) { w(d.einstandP); w(d.fundP); w(d.schuetzenN); w(d.schuetzenJahr); w(d.sfest); w(d.schuss); w(d.koenig); w(d.koenigN); }
+    for (const d of this.doerfer) { w(d.vk); w(d.einstandP); w(d.fundP); w(d.schuetzenN); w(d.schuetzenJahr); w(d.sfest); w(d.schuss); w(d.koenig); w(d.koenigN); }
     return f.hex();
+  }
+
+  // ------------------------------------------------------------------ M11: Völkchen
+
+  /** Regeln des Völkchens von Spieler `sp` (ohne Völkchen neutral). */
+  private vkVon(sp: number): VoelkchenRegeln {
+    const vk = this.doerfer[sp]?.vk ?? -1;
+    return vk >= 0 ? VOELKCHEN[vk] : KEIN_VOELKCHEN;
+  }
+
+  /** Kirmes-Stufen dieses Dorfs (Marktflecken-Kirmes mit der Spezialität des Völkchens). */
+  private kirmesVon(d: Dorf): typeof KIRMES {
+    return KIRMES_JE_VOELKCHEN[(d.vk ?? -1) + 1] ?? KIRMES;
+  }
+
+  /** Was der Spieler beim Handel gibt (Öslinger handeln teurer: aufgerundet). */
+  private handelGib(sp: number, gib: readonly number[]): number[] {
+    const p = this.doerfer[sp] ? this.vkVon(sp).handel : 100;
+    return gib.map((n) => (n > 0 ? Math.floor((n * p + 99) / 100) : 0));
+  }
+
+  /** Wasser höchstens `r` Hexe von Hex `h`. */
+  private wasserNah(h: number, r: number): boolean {
+    for (const x of this.hexeImRadius(h, r)) if (!this.karte.begehbar[x]) return true;
+    return false;
+  }
+
+  /** Eine fertige eigene Hecke höchstens 2 Hexe vom Gebäude (Windschutz, Monschauer & Venner). */
+  private heckeNah(g: Gebaeude): boolean {
+    for (const x of this.gebaeude.values()) if (x.sp === g.sp && x.typ === 'hecke' && x.fertig && this.karte.abstand(x.h, g.h) <= 2) return true;
+    return false;
   }
 
   // ------------------------------------------------------------------ M10: Gebiet, Orte, Flachländer, Finden, Schützenfest, Punkte
@@ -1419,7 +1474,7 @@ export class Simulation {
     const h = Number.isInteger(ti) ? HANDEL[ti] : undefined;
     if (!p || !h || !Number.isInteger(mal) || mal < 1 || mal > 10) return;
     if (!this.erreicht(sp, p.h)) return;
-    const gib = h.gib.map((n) => n * mal);
+    const gib = this.handelGib(sp, h.gib).map((n) => n * mal);
     const { l } = this.naechstesEigenesLager(sp, p.h);
     if (!l || !this.ausLagern(sp, gib)) return;
     const nimm = this.handelNimm(sp, h.nimm).map((n) => n * mal);
@@ -1647,20 +1702,25 @@ export class Simulation {
     const t = typVon(typ);
     if (!t || typ === 'lager' || !this.doerfer[sp] || !this.typFrei(t, sp)) return false;
     if (this.regeln.gebiet && this.besitz[h] !== sp) return false;
+    // M11: Fischer brauchen Wasser in der Nähe; die Vulkaneifeler bauen nicht direkt am Wasser (Maare sind heilig)
+    if (t.amWasser && !this.wasserNah(h, 2)) return false;
+    if (this.vkVon(sp).amWasserVerboten && this.wasserNah(h, 1)) return false;
     return this.karte.bebaubar[h] >= t.groesse && this.hexFrei(h);
   }
 
   /** Typ ist im Dorf von `sp` schon freigeschaltet (Dorfstufe) und, wenn einmalig, dort noch nicht gebaut (auch nicht als Baustelle). */
   private typFrei(t: GebaeudeTyp, sp: number): boolean {
     if (t.abStufe > this.doerfer[sp].stufe) return false;
+    if (t.voelkchen.length && !t.voelkchen.includes(this.vkVon(sp).id)) return false;
     if (t.einmalig) for (const g of this.gebaeude.values()) if (g.sp === sp && g.typ === t.id) return false;
     return true;
   }
 
   /** Dorfstufe und einmalige Gebäude: Darf Spieler `sp` den Typ jetzt bauen (unabhängig vom Platz)? Grund in Klartext oder ''. */
-  sperrGrund(typ: string, sp = 0): '' | 'stufe' | 'einmalig' | 'unbekannt' {
+  sperrGrund(typ: string, sp = 0): '' | 'stufe' | 'einmalig' | 'unbekannt' | 'voelkchen' {
     const t = typVon(typ);
     if (!t || typ === 'lager' || !this.doerfer[sp]) return 'unbekannt';
+    if (t.voelkchen.length && !t.voelkchen.includes(this.vkVon(sp).id)) return 'voelkchen';
     if (t.abStufe > this.doerfer[sp].stufe) return 'stufe';
     if (!this.typFrei(t, sp)) return 'einmalig';
     return '';
@@ -1760,7 +1820,7 @@ export class Simulation {
       regel: t.funktion === 'lager' ? nul() : [],
     };
     // Bauplätze am Hang muss erst ein Planierer ebnen (Drehbuch 4.5)
-    if (!g.fertig) g.planSoll = planierTicks(this.karte.neigung[h]);
+    if (!g.fertig) g.planSoll = t.keinPlanieren ? 0 : planierTicks(this.karte.neigung[h]) + (this.karte.terrain[h] === 4 ? this.vkVon(sp).moorPlanieren : 0);
     // gerodete ausgewachsene Bäume (höchstens RODUNG_STAMM_MAX) werden zu Stämmen an der Gebäudefahne
     const staemme = sofort ? 0 : Math.min(RODUNG_STAMM_MAX, this.baum[h]);
     const f = this.fahneErzeugen(h, g.id, sp);
@@ -2075,7 +2135,7 @@ export class Simulation {
 
   /** Kirmes der aktuellen Stufe, solange nicht gerade gefeiert wird (sonst undefined). */
   private kirmesJetzt(d: Dorf): (typeof KIRMES)[number] | undefined {
-    return d.fest > 0 ? undefined : KIRMES[d.stufe];
+    return d.fest > 0 ? undefined : this.kirmesVon(d)[d.stufe];
   }
 
   /** Kleines Fest, das in dieser Jahreszeit noch aussteht (Index in KLEINE_FESTE), oder -1; während eines kleinen Fests -1. */
@@ -2554,7 +2614,7 @@ export class Simulation {
    */
   private kirmesBraucht(sp: number, art: number): number {
     const d = this.doerfer[sp];
-    const k = KIRMES[d.stufe];
+    const k = this.kirmesVon(d)[d.stufe];
     if (!k || !k.liste[art] || d.fest > 0) return 0;
     let n = k.liste[art];
     const p = this.kirmesPlatz(sp);
@@ -2589,7 +2649,7 @@ export class Simulation {
           const n = Math.min(rest, g.puffer[a]);
           g.puffer[a] -= n; rest -= n; this.stat.verbraucht += n;
         }
-        d.fest = Math.max(1, k.festTicks);
+        d.fest = Math.max(1, Math.floor((k.festTicks * this.vkVon(g.sp).fest) / 100));
         this.ereignis(g.sp, 'kirmes', g.id, d.stufe);
       }
     }
@@ -2599,7 +2659,7 @@ export class Simulation {
     const fest = KLEINE_FESTE[f], kv = this.kirmesJetzt(d);
     for (let a = 0; a < WAREN.length; a++) if (fest.liste[a] > 0 && g.puffer[a] - (kv ? kv.liste[a] : 0) < fest.liste[a]) return;
     for (let a = 0; a < WAREN.length; a++) { g.puffer[a] -= fest.liste[a]; this.stat.verbraucht += fest.liste[a]; }
-    d.kfest = Math.max(1, KLEINES_FEST_TICKS); d.kfestNr = f;
+    d.kfest = Math.max(1, Math.floor((KLEINES_FEST_TICKS * this.vkVon(g.sp).fest) / 100)); d.kfestNr = f;
     d.festJahr[f] = jahrVon(this._tick);
     d.festPunkte += Math.max(0, Math.min(fest.punkte, FEST_OBERGRENZE - d.festPunkte));
     this.ereignis(g.sp, 'kleines_fest', g.id, f);
@@ -2646,7 +2706,7 @@ export class Simulation {
     if (d.fest > 0) {
       d.fest--;
       if (d.fest === 0) {
-        const k = KIRMES[d.stufe];
+        const k = this.kirmesVon(d)[d.stufe];
         d.stufe++;
         this.ereignis(sp, 'stufe', 0, d.stufe);
         if (k && k.zuzug > 0) { this.neuerBewohner(sp, k.zuzug); this.ereignis(sp, 'zuzug', 0, k.zuzug); }
@@ -2884,7 +2944,7 @@ export class Simulation {
     for (let a = 0; a < g.stapel.length; a++) {
       if (g.stapel[a] <= 0) continue;
       g.stapel[a]--; g.haende = a;
-      b.phase = BM_ARBEIT; b.t = 0; b.dauer = BAU_JE_WARE;
+      b.phase = BM_ARBEIT; b.t = 0; b.dauer = Math.max(1, Math.floor((BAU_JE_WARE * this.vkVon(b.sp).bauzeit) / 100));
       return;
     }
     if (summe(g.incoming) === 0) this.baumannFertig(b);

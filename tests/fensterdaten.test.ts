@@ -164,7 +164,7 @@ describe('Warenverteilung im Fenster', () => {
     const d = verteilungFenster(kontext(sim));
     const r = art(d, 'rangliste')[0].zeilen;
     expect(r.some((z) => z.ware === WARE.kartoffeln)).toBe(true);
-    expect(r.some((z) => z.ware === WARE.stein)).toBe(false); // nur Baustellen
+    expect(r.some((z) => z.ware === WARE.setzling)).toBe(false); // nur Baustellen (Stein nehmen seit M11 auch Steinmetz und Mühlsteinhauerei)
     const kart = r.find((z) => z.ware === WARE.kartoffeln)!;
     expect(kart.plaetze.map((p) => p.name)).toEqual(['Kirmesplatz', 'Verarbeiter', 'Wohnhäuser']); // Kirmesplatz: Erntedank
     expect(kart.standard).toBe(true);

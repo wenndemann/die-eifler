@@ -1,5 +1,5 @@
 {
- "hinweis": "Gebäude nach DESIGN §6.2 und Drehbuch 5.1 (Startwerte, werden beim Spielen eingestellt). Zeiten in Sekunden, Kosten und Waren über Waren-Ids (goods.json). 'funktion' wählt das Verhalten in der Simulation (lager, wohnen, holzfaeller, foerster, steinbruch, erzeuger, verarbeiter, kirmes, schaenke; ab M10 finder, wache, schuetzen, zier); 'radius' ist der Arbeitsradius in Hexen um den Arbeitsmittelpunkt (außen „geht noch“), 'radiusGut' der innere Ring „gut“; 'eingang' der Input-Puffer je Ware, 'ausgang' der Output-Puffer; 'wandelt' macht aus 'menge' Stück 'ein' eine Ware 'aus' ('ein' darf auch mehrere Waren mit Menge nennen, z. B. {\"erz\": 1, \"holzkohle\": 1}); ein Erzeuger macht alle 'arbeit_s' eine Ware; 'nahrung_plaetze' sind die Essensplätze des Wohnhauses; 'ab_stufe' die Dorfstufe, ab der man es bauen kann (0 Weiler, 1 Dorf, 2 Kirchdorf); 'einmalig' heißt höchstens eins je Dorf; 'taste' wählt das Gebäude bei offenem Baumenü (nicht W, A, S, D, Q, E, B, X, P, G). 'saison': 'feld' heißt: ruht im Winter, wird im Frühjahr erst gesät und erntet im Herbst schneller (data/jahr.json). 'werkzeug': so viel Werkzeug braucht die Fachkraft, bevor sie anfängt (Drehbuch 4.5, 5). 'boten': höchstens so viele beschwipste Boten schickt die Schänke los (DESIGN §10.3, data/dorf.json: boten). Ein zweites Gebäude mit 'funktion': 'lager' ist ein Lagerhaus: Lager ohne Gebiet und Bewohner (Drehbuch 6.2). 'leistung': ein Satz fürs Gebäudefenster, was das Gebäude tut (wenn es sich nicht aus den anderen Feldern ergibt).",
+ "hinweis": "Gebäude nach DESIGN §6.2 und Drehbuch 5.1 (Startwerte, werden beim Spielen eingestellt). Zeiten in Sekunden, Kosten und Waren über Waren-Ids (goods.json). 'funktion' wählt das Verhalten in der Simulation (lager, wohnen, holzfaeller, foerster, steinbruch, erzeuger, verarbeiter, kirmes, schaenke; ab M10 finder, wache, schuetzen, zier); 'radius' ist der Arbeitsradius in Hexen um den Arbeitsmittelpunkt (außen „geht noch“), 'radiusGut' der innere Ring „gut“; 'eingang' der Input-Puffer je Ware, 'ausgang' der Output-Puffer; 'wandelt' macht aus 'menge' Stück 'ein' eine Ware 'aus' ('ein' darf auch mehrere Waren mit Menge nennen, z. B. {\"erz\": 1, \"holzkohle\": 1}); ein Erzeuger macht alle 'arbeit_s' eine Ware; 'nahrung_plaetze' sind die Essensplätze des Wohnhauses; 'ab_stufe' die Dorfstufe, ab der man es bauen kann (0 Weiler, 1 Dorf, 2 Kirchdorf); 'einmalig' heißt höchstens eins je Dorf; 'taste' wählt das Gebäude bei offenem Baumenü (nicht W, A, S, D, Q, E, B, X, P, G). 'saison': 'feld' heißt: ruht im Winter, wird im Frühjahr erst gesät und erntet im Herbst schneller (data/jahr.json). 'werkzeug': so viel Werkzeug braucht die Fachkraft, bevor sie anfängt (Drehbuch 4.5, 5). 'boten': höchstens so viele beschwipste Boten schickt die Schänke los (DESIGN §10.3, data/dorf.json: boten). Ein zweites Gebäude mit 'funktion': 'lager' ist ein Lagerhaus: Lager ohne Gebiet und Bewohner (Drehbuch 6.2). 'leistung': ein Satz fürs Gebäudefenster, was das Gebäude tut (wenn es sich nicht aus den anderen Feldern ergibt). Ab M11: 'voelkchen' = nur diese Völkchen dürfen das Gebäude bauen (Spezialkette, Drehbuch 5.3); 'modell' = Darstellung wie dieses Gebäude; 'am_wasser' = braucht Wasser höchstens 2 Hexe weit; 'kein_planieren' = Hanglage braucht keinen Planierer.",
  "gebaeude": [
   {
    "id": "lager",
@@ -675,6 +675,661 @@
    "einmalig": true,
    "ab_stufe": 2,
    "leistung": "Übung: +30 beim Vogelschuss"
+  },
+  {
+   "id": "spinnerei",
+   "name": "Spinnerei",
+   "gruppe": "Spezialität",
+   "symbol": "🧶",
+   "spruch": "Die Schafe liefern, die Spinnerin spinnt. Und erzählt dabei alles.",
+   "funktion": "erzeuger",
+   "groesse": 2,
+   "kosten": {
+    "bretter": 3,
+    "stein": 2
+   },
+   "arbeiter": 1,
+   "ausgang": {
+    "ware": "wolle",
+    "max": 6
+   },
+   "zeiten": {
+    "arbeit_s": 20
+   },
+   "ab_stufe": 2,
+   "voelkchen": [
+    "monschau"
+   ],
+   "modell": "schafstall"
+  },
+  {
+   "id": "tuchmacherei",
+   "name": "Tuchmacherei (Rotes Haus)",
+   "gruppe": "Spezialität",
+   "symbol": "🧵",
+   "spruch": "Monschauer Tuch: so fein, dass die Aachener neidisch werden.",
+   "funktion": "verarbeiter",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 3,
+    "stein": 2
+   },
+   "arbeiter": 1,
+   "eingang": {
+    "wolle": 4
+   },
+   "ab_stufe": 2,
+   "wandelt": {
+    "ein": "wolle",
+    "menge": 2,
+    "aus": "tuch",
+    "dauer_s": 16
+   },
+   "ausgang": {
+    "ware": "tuch",
+    "max": 6
+   },
+   "voelkchen": [
+    "monschau"
+   ],
+   "modell": "kaeserei"
+  },
+  {
+   "id": "senfmuehle",
+   "name": "Senfmühle",
+   "gruppe": "Spezialität",
+   "symbol": "🌭",
+   "spruch": "Scharf wie der Venn-Wind. Nur leckerer.",
+   "funktion": "erzeuger",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 3,
+    "stein": 2
+   },
+   "arbeiter": 1,
+   "ausgang": {
+    "ware": "senf",
+    "max": 6
+   },
+   "zeiten": {
+    "arbeit_s": 22
+   },
+   "ab_stufe": 2,
+   "voelkchen": [
+    "monschau"
+   ],
+   "modell": "mostkeller"
+  },
+  {
+   "id": "hecke",
+   "name": "Buchenhecke",
+   "gruppe": "Spezialität",
+   "symbol": "🌳",
+   "spruch": "Hinter der Hecke ist es warm. Vor der Hecke weht's.",
+   "funktion": "zier",
+   "groesse": 1,
+   "kosten": {
+    "setzling": 2
+   },
+   "voelkchen": [
+    "monschau"
+   ],
+   "leistung": "Windschutz gegen den Venn-Wind: Gebäude bis 2 Hexe weit arbeiten im Winter 30 % schneller"
+  },
+  {
+   "id": "fischerhuette",
+   "name": "Fischerhütte",
+   "gruppe": "Spezialität",
+   "symbol": "🎣",
+   "spruch": "Der Fisch beißt. Der Fischer auch, wenn man ihn stört.",
+   "funktion": "erzeuger",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 3,
+    "stein": 2
+   },
+   "arbeiter": 1,
+   "ausgang": {
+    "ware": "fisch",
+    "max": 6
+   },
+   "zeiten": {
+    "arbeit_s": 18
+   },
+   "ab_stufe": 2,
+   "voelkchen": [
+    "rursee"
+   ],
+   "modell": "holzfaeller",
+   "am_wasser": true
+  },
+  {
+   "id": "raeucherei",
+   "name": "Räucherei",
+   "gruppe": "Spezialität",
+   "symbol": "🐟",
+   "spruch": "Rauch rein, Forelle raus. Duftet bis Rurberg.",
+   "funktion": "verarbeiter",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 3,
+    "stein": 2
+   },
+   "arbeiter": 1,
+   "eingang": {
+    "fisch": 4
+   },
+   "ab_stufe": 2,
+   "wandelt": {
+    "ein": "fisch",
+    "menge": 2,
+    "aus": "raeucherfisch",
+    "dauer_s": 16
+   },
+   "ausgang": {
+    "ware": "raeucherfisch",
+    "max": 6
+   },
+   "voelkchen": [
+    "rursee"
+   ],
+   "modell": "koehlerei"
+  },
+  {
+   "id": "papiermuehle",
+   "name": "Papiermühle an der Rur",
+   "gruppe": "Spezialität",
+   "symbol": "📜",
+   "spruch": "Aus Holz wird Papier. Aus Papier werden Formulare. So ist das Leben.",
+   "funktion": "verarbeiter",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 3,
+    "stein": 2
+   },
+   "arbeiter": 1,
+   "eingang": {
+    "stamm": 4
+   },
+   "ab_stufe": 2,
+   "wandelt": {
+    "ein": "stamm",
+    "menge": 2,
+    "aus": "papier",
+    "dauer_s": 14
+   },
+   "ausgang": {
+    "ware": "papier",
+    "max": 6
+   },
+   "voelkchen": [
+    "rureifel"
+   ],
+   "modell": "saegewerk"
+  },
+  {
+   "id": "steinmetz",
+   "name": "Steinmetz",
+   "gruppe": "Spezialität",
+   "symbol": "🗿",
+   "spruch": "Roter Sandstein, schöner Stein. Wird ein Engel. Oder eine Bank.",
+   "funktion": "verarbeiter",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 3,
+    "stein": 2
+   },
+   "arbeiter": 1,
+   "eingang": {
+    "stein": 4
+   },
+   "ab_stufe": 2,
+   "wandelt": {
+    "ein": "stein",
+    "menge": 2,
+    "aus": "werkstein",
+    "dauer_s": 14
+   },
+   "ausgang": {
+    "ware": "werkstein",
+    "max": 6
+   },
+   "voelkchen": [
+    "rureifel"
+   ],
+   "modell": "schmiede"
+  },
+  {
+   "id": "sprudelquelle",
+   "name": "Sprudelquelle",
+   "gruppe": "Spezialität",
+   "symbol": "💧",
+   "spruch": "Das Wasser blubbert von selbst. Der Vulkan hilft mit.",
+   "funktion": "erzeuger",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 3,
+    "stein": 2
+   },
+   "arbeiter": 1,
+   "ausgang": {
+    "ware": "sprudel",
+    "max": 6
+   },
+   "zeiten": {
+    "arbeit_s": 18
+   },
+   "ab_stufe": 2,
+   "voelkchen": [
+    "vulkaneifel"
+   ],
+   "modell": "bienenstock"
+  },
+  {
+   "id": "lavasteinbruch",
+   "name": "Lavasteinbruch",
+   "gruppe": "Spezialität",
+   "symbol": "🌋",
+   "spruch": "Leicht wie Brot, hart wie die Eifeler.",
+   "funktion": "erzeuger",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 3,
+    "stein": 2
+   },
+   "arbeiter": 1,
+   "ausgang": {
+    "ware": "lavastein",
+    "max": 6
+   },
+   "zeiten": {
+    "arbeit_s": 20
+   },
+   "ab_stufe": 2,
+   "voelkchen": [
+    "vulkaneifel"
+   ],
+   "modell": "erzgrube"
+  },
+  {
+   "id": "weinberg",
+   "name": "Weinberg",
+   "gruppe": "Spezialität",
+   "symbol": "🍇",
+   "spruch": "Steil ist gut. Steiler ist besser. Ganz steil ist Ahr.",
+   "funktion": "erzeuger",
+   "groesse": 2,
+   "kosten": {
+    "bretter": 3,
+    "stein": 2
+   },
+   "arbeiter": 1,
+   "ausgang": {
+    "ware": "trauben",
+    "max": 6
+   },
+   "zeiten": {
+    "arbeit_s": 22
+   },
+   "ab_stufe": 2,
+   "voelkchen": [
+    "ahr"
+   ],
+   "modell": "obstwiese",
+   "saison": "feld",
+   "kein_planieren": true
+  },
+  {
+   "id": "kelter",
+   "name": "Kelter und Weinkeller",
+   "gruppe": "Spezialität",
+   "symbol": "🍷",
+   "spruch": "Rotwein von der Ahr. Für Feste, die nicht enden.",
+   "funktion": "verarbeiter",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 3,
+    "stein": 2
+   },
+   "arbeiter": 1,
+   "eingang": {
+    "trauben": 4
+   },
+   "ab_stufe": 2,
+   "wandelt": {
+    "ein": "trauben",
+    "menge": 2,
+    "aus": "rotwein",
+    "dauer_s": 16
+   },
+   "ausgang": {
+    "ware": "rotwein",
+    "max": 6
+   },
+   "voelkchen": [
+    "ahr"
+   ],
+   "modell": "mostkeller"
+  },
+  {
+   "id": "muehlsteinhauerei",
+   "name": "Mühlsteinhauerei",
+   "gruppe": "Spezialität",
+   "symbol": "⚙️",
+   "spruch": "Aus Mayener Basalt: Mühlsteine bis nach Rom. Behauptet man.",
+   "funktion": "verarbeiter",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 3,
+    "stein": 2
+   },
+   "arbeiter": 1,
+   "eingang": {
+    "stein": 6
+   },
+   "ab_stufe": 2,
+   "wandelt": {
+    "ein": "stein",
+    "menge": 3,
+    "aus": "muehlstein",
+    "dauer_s": 18
+   },
+   "ausgang": {
+    "ware": "muehlstein",
+    "max": 6
+   },
+   "voelkchen": [
+    "laach"
+   ],
+   "modell": "schmiede"
+  },
+  {
+   "id": "schieferdecker",
+   "name": "Schieferdecker",
+   "gruppe": "Spezialität",
+   "symbol": "🏚️",
+   "spruch": "Schiefer aufs Dach, dann regnet's nicht rein. Meistens.",
+   "funktion": "erzeuger",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 3,
+    "stein": 2
+   },
+   "arbeiter": 1,
+   "ausgang": {
+    "ware": "schiefer",
+    "max": 6
+   },
+   "zeiten": {
+    "arbeit_s": 20
+   },
+   "ab_stufe": 2,
+   "voelkchen": [
+    "laach"
+   ],
+   "modell": "steinbruch"
+  },
+  {
+   "id": "hopfengarten",
+   "name": "Hopfengarten",
+   "gruppe": "Spezialität",
+   "symbol": "🌿",
+   "spruch": "Hopfen und Malz, Gott erhalt's.",
+   "funktion": "erzeuger",
+   "groesse": 2,
+   "kosten": {
+    "bretter": 3,
+    "stein": 2
+   },
+   "arbeiter": 1,
+   "ausgang": {
+    "ware": "hopfen",
+    "max": 6
+   },
+   "zeiten": {
+    "arbeit_s": 20
+   },
+   "ab_stufe": 2,
+   "voelkchen": [
+    "suedeifel"
+   ],
+   "modell": "gerstenfeld",
+   "saison": "feld"
+  },
+  {
+   "id": "edelbrauerei",
+   "name": "Edelbrauerei",
+   "gruppe": "Spezialität",
+   "symbol": "🍺",
+   "spruch": "Bier aus der Südeifel. Bitte ein …!",
+   "funktion": "verarbeiter",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 3,
+    "stein": 2
+   },
+   "arbeiter": 1,
+   "eingang": {
+    "gerste": 2,
+    "hopfen": 2
+   },
+   "ab_stufe": 2,
+   "wandelt": {
+    "ein": {
+     "gerste": 1,
+     "hopfen": 1
+    },
+    "aus": "edelbier",
+    "dauer_s": 16
+   },
+   "ausgang": {
+    "ware": "edelbier",
+    "max": 6
+   },
+   "voelkchen": [
+    "suedeifel"
+   ],
+   "modell": "brauerei"
+  },
+  {
+   "id": "grossmeiler",
+   "name": "Großmeiler",
+   "gruppe": "Spezialität",
+   "symbol": "🔥",
+   "spruch": "Holzkohle im großen Stil. Der Rauch steht bis Prüm.",
+   "funktion": "verarbeiter",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 3,
+    "stein": 2
+   },
+   "arbeiter": 1,
+   "eingang": {
+    "stamm": 4
+   },
+   "ab_stufe": 2,
+   "wandelt": {
+    "ein": "stamm",
+    "menge": 2,
+    "aus": "holzkohle",
+    "dauer_s": 8
+   },
+   "ausgang": {
+    "ware": "holzkohle",
+    "max": 6
+   },
+   "voelkchen": [
+    "schneifel"
+   ],
+   "modell": "koehlerei"
+  },
+  {
+   "id": "harzer",
+   "name": "Harzer",
+   "gruppe": "Spezialität",
+   "symbol": "🌲",
+   "spruch": "Harz klebt. Am Baum, an der Hand, an der Hose.",
+   "funktion": "erzeuger",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 3,
+    "stein": 2
+   },
+   "arbeiter": 1,
+   "ausgang": {
+    "ware": "harz",
+    "max": 6
+   },
+   "zeiten": {
+    "arbeit_s": 20
+   },
+   "ab_stufe": 2,
+   "voelkchen": [
+    "schneifel"
+   ],
+   "modell": "foerster"
+  },
+  {
+   "id": "molkerei",
+   "name": "Molkerei",
+   "gruppe": "Spezialität",
+   "symbol": "🧈",
+   "spruch": "Butter aus Eupen. Das Butterland hat einen Namen.",
+   "funktion": "verarbeiter",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 3,
+    "stein": 2
+   },
+   "arbeiter": 1,
+   "eingang": {
+    "milch": 4
+   },
+   "ab_stufe": 2,
+   "wandelt": {
+    "ein": "milch",
+    "menge": 2,
+    "aus": "butter",
+    "dauer_s": 14
+   },
+   "ausgang": {
+    "ware": "butter",
+    "max": 6
+   },
+   "voelkchen": [
+    "ostbelgien"
+   ],
+   "modell": "kaeserei"
+  },
+  {
+   "id": "torfstich",
+   "name": "Torfstich im Venn",
+   "gruppe": "Spezialität",
+   "symbol": "🟫",
+   "spruch": "Torf brennt wie Holzkohle. Riecht nur anders.",
+   "funktion": "erzeuger",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 3,
+    "stein": 2
+   },
+   "arbeiter": 1,
+   "ausgang": {
+    "ware": "holzkohle",
+    "max": 6
+   },
+   "zeiten": {
+    "arbeit_s": 24
+   },
+   "ab_stufe": 2,
+   "voelkchen": [
+    "ostbelgien"
+   ],
+   "modell": "erzgrube"
+  },
+  {
+   "id": "lohhecke",
+   "name": "Lohhecke",
+   "gruppe": "Spezialität",
+   "symbol": "🌳",
+   "spruch": "Die Eichenrinde wird geschält. Die Eiche guckt beleidigt.",
+   "funktion": "erzeuger",
+   "groesse": 2,
+   "kosten": {
+    "bretter": 3,
+    "stein": 2
+   },
+   "arbeiter": 1,
+   "ausgang": {
+    "ware": "lohe",
+    "max": 6
+   },
+   "zeiten": {
+    "arbeit_s": 22
+   },
+   "ab_stufe": 2,
+   "voelkchen": [
+    "oesling"
+   ],
+   "modell": "obstwiese"
+  },
+  {
+   "id": "gerberei",
+   "name": "Gerberei (Wiltz)",
+   "gruppe": "Spezialität",
+   "symbol": "👞",
+   "spruch": "Leder aus Wiltz. Riecht nach Arbeit.",
+   "funktion": "verarbeiter",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 3,
+    "stein": 2
+   },
+   "arbeiter": 1,
+   "eingang": {
+    "lohe": 4
+   },
+   "ab_stufe": 2,
+   "wandelt": {
+    "ein": "lohe",
+    "menge": 2,
+    "aus": "leder",
+    "dauer_s": 14
+   },
+   "ausgang": {
+    "ware": "leder",
+    "max": 6
+   },
+   "voelkchen": [
+    "oesling"
+   ],
+   "modell": "brennerei"
+  },
+  {
+   "id": "raeucherkammer",
+   "name": "Räucherkammer",
+   "gruppe": "Spezialität",
+   "symbol": "🍖",
+   "spruch": "Éislécker Ham: Schinken mit Rauch und Stolz.",
+   "funktion": "erzeuger",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 3,
+    "stein": 2
+   },
+   "arbeiter": 1,
+   "ausgang": {
+    "ware": "ham",
+    "max": 6
+   },
+   "zeiten": {
+    "arbeit_s": 26
+   },
+   "ab_stufe": 2,
+   "voelkchen": [
+    "oesling"
+   ],
+   "modell": "koehlerei"
   }
  ]
 }
