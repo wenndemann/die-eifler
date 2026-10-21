@@ -188,6 +188,17 @@ export class MeldungsFilter {
         case 'schuetzenfest': add('schuetzenfest', k({ n: ev.wert }), true, true, ev.gebaeude); break;
         case 'koenig': add('koenig', k({ text: namen?.spieler?.(ev.wert) ?? 'Einer' }), true, true); break;
         case 'fonds': if (ev.tick - this.fondsTick >= 4 * 60 * 20) { this.fondsTick = ev.tick; add('fonds', k({ ware: wareName(ev.wert) }), false, false, ev.gebaeude); } break;
+        // M14 Der Mai
+        case 'mainacht': add(['mainacht_kommt', 'mainacht_beginnt', 'mainacht_steht', 'mainacht_ohne'][ev.wert] ?? 'mainacht_beginnt', k({}), ev.wert === 1); break;
+        case 'maibaum': add('maibaum', k({}), true, true); break;
+        case 'maiklau': {
+          const rest = ev.wert % 100, ziel = rest >= 50 ? (namen?.ort?.(rest - 51) ?? 'dem Nachbarort') : (namen?.spieler?.(rest) ?? 'den Nachbarn');
+          add(['maiklau_ok', 'maiklau_wache', 'maiklau_bier', 'maiklau_leer'][Math.floor(ev.wert / 100)] ?? 'maiklau_leer', k({ text: ziel }), Math.floor(ev.wert / 100) === 0, true);
+          break;
+        }
+        case 'maibesuch': add(['maibesuch_ok', 'maibesuch_wache', 'maibesuch_bier'][Math.floor(ev.wert / 10)] ?? 'maibesuch_ok', k({ text: ev.wert % 10 ? 'die Burschen aus dem Nachbarort' : 'die Nachbarn' }), true, true); break;
+        case 'mailoese': add(ev.wert <= -10 ? 'mailoese_bekommen' : 'mailoese', k({ text: ev.wert <= -10 ? namen?.spieler?.(-10 - ev.wert) ?? 'Die Nachbarn' : '' }), false, true); break;
+        case 'mailehen': add('mailehen', k({ n: ev.wert }), false, true); break;
         case 'altstein': if (ev.tick - this.altsteinTick >= 3 * 60 * 20) { this.altsteinTick = ev.tick; add('altstein', k({}), false, false, ev.gebaeude); } break;
         case 'ende': add('ende', k({ text: namen?.spieler?.(ev.wert) ?? 'Einer' }), true, true); break;
         case 'verloren': {

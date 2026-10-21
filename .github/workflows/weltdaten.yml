@@ -1,34 +1,69 @@
 # Weltdaten auf GitHub rechnen und als Release ablegen (statt in jeder Session neu zu laden).
 # Start: im Tab „Actions“ → „Weltdaten“ → „Run workflow“ (Gebiet wählen), oder einen Branch weltdaten/<gebiet> pushen.
-# Ergebnis: Release „welt-daten-<gebiet>“ mit welt-daten-<gebiet>.tar.gz; laden mit tools/welt-laden.sh <gebiet>.
+# Gebiete: eifel (die ganze Eifel, in 8 Streifen nebeneinander gerechnet und dann zusammengeführt – das ist die Version fürs Spiel),
+# dazu kleinere zum Testen: nideggen, nordeifel, eifelsteig (Kampagne) und die Kerngebiete der 10 Völkchen; „alle-voelkchen“
+# rechnet alle 10 nebeneinander (je ein Job, je ein Release).
+# Ergebnis: Release „welt-daten-<gebiet>“ mit welt-daten-<gebiet>.tar.gz; laden mit tools/welt-laden.sh <gebiet> (eifel: die ganze Eifel).
 name: Weltdaten
 
 on:
   workflow_dispatch:
     inputs:
       gebiet:
-        description: 'Gebiet (nideggen ~10 min, nordeifel ~1 h, eifelsteig (Kampagne) einige Stunden, welt viele Stunden)'
+        description: 'Gebiet (eifel = ganze Eifel in Streifen, einige Stunden; nideggen ~10 min, ein Völkchen ~1 h, nordeifel ~1 h, eifelsteig einige Stunden; alle-voelkchen = alle 10)'
         type: choice
-        options: [nideggen, nordeifel, eifelsteig]
-        default: nideggen
+        options: [eifel, nideggen, nordeifel, eifelsteig, alle-voelkchen, monschau, rursee, rureifel, vulkaneifel, ahr, laach, suedeifel, schneifel, ostbelgien, oesling]
+        default: eifel
   push:
     branches: ['weltdaten/**']
 
 permissions:
   contents: write
 
+env:
+  # Streifen für „eifel“ (je ein Job; jeder bleibt so unter dem 6-Stunden-Limit von GitHub)
+  TEILE: '8'
+
 jobs:
-  rechnen:
+  plan:
     runs-on: ubuntu-latest
-    timeout-minutes: 340
+    outputs:
+      gebiete: ${{ steps.g.outputs.gebiete }}
+      teile: ${{ steps.g.outputs.teile }}
+      version: ${{ steps.g.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Gebiet bestimmen
+      - name: Gebiete bestimmen
+        id: g
         run: |
           G="${{ inputs.gebiet }}"
           if [ -z "$G" ]; then G="${GITHUB_REF_NAME#weltdaten/}"; fi
-          case "$G" in nideggen|nordeifel|eifelsteig) ;; *) echo "Unbekanntes Gebiet: $G"; exit 1 ;; esac
-          echo "GEBIET=$G" >> "$GITHUB_ENV"
+          V='["monschau","rursee","rureifel","vulkaneifel","ahr","laach","suedeifel","schneifel","ostbelgien","oesling"]'
+          echo "version=eifel-$(date -u +%Y.%m)" >> "$GITHUB_OUTPUT"
+          case "$G" in
+            eifel)
+              echo 'gebiete=[]' >> "$GITHUB_OUTPUT"
+              echo "teile=$(python3 -c "print(list(range(1, $TEILE + 1)))")" >> "$GITHUB_OUTPUT" ;;
+            alle-voelkchen) echo "gebiete=$V" >> "$GITHUB_OUTPUT"; echo 'teile=[]' >> "$GITHUB_OUTPUT" ;;
+            nideggen|nordeifel|eifelsteig|monschau|rursee|rureifel|vulkaneifel|ahr|laach|suedeifel|schneifel|ostbelgien|oesling)
+              echo "gebiete=[\"$G\"]" >> "$GITHUB_OUTPUT"; echo 'teile=[]' >> "$GITHUB_OUTPUT" ;;
+            *) echo "Unbekanntes Gebiet: $G"; exit 1 ;;
+          esac
+
+  # ---------------------------------------------------------------- ein Gebiet in einem Job
+  rechnen:
+    needs: plan
+    if: needs.plan.outputs.gebiete != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        gebiet: ${{ fromJSON(needs.plan.outputs.gebiete) }}
+    env:
+      GEBIET: ${{ matrix.gebiet }}
+    steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -56,12 +91,85 @@ jobs:
       - name: Release anlegen oder ersetzen
         env:
           GH_TOKEN: ${{ github.token }}
+        run: tools/welt-release.sh "$GEBIET" "$VERSION" "welt-daten-$GEBIET.tar.gz"
+
+  # ---------------------------------------------------------------- die ganze Eifel: Streifen nebeneinander …
+  teil:
+    needs: plan
+    if: needs.plan.outputs.teile != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        teil: ${{ fromJSON(needs.plan.outputs.teile) }}
+    env:
+      VERSION: ${{ needs.plan.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Python-Pakete
+        run: pip install -r tools/map/requirements.txt
+      - name: Streifen rechnen
+        env:
+          WELT_VERSUCHE: '10'
         run: |
-          TAG="welt-daten-$GEBIET"
-          NOTIZ="Weltdaten $VERSION (Gebiet $GEBIET), gerechnet am $(date -u +%Y-%m-%d) aus ${GITHUB_SHA::7}. Laden: tools/welt-laden.sh $GEBIET"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "welt-daten-$GEBIET.tar.gz" --clobber
-            gh release edit "$TAG" --notes "$NOTIZ"
-          else
-            gh release create "$TAG" "welt-daten-$GEBIET.tar.gz" --title "Weltdaten $GEBIET" --notes "$NOTIZ" --target "$GITHUB_SHA"
-          fi
+          for n in 1 2 3 4 5; do
+            echo "== Durchgang $n"
+            if python3 tools/map/setup.py --gebiet eifel --version "$VERSION" --teil "${{ matrix.teil }}/$TEILE" --osm geofabrik --jobs 2; then exit 0; fi
+            sleep 30
+          done
+          exit 1
+      - name: Streifen packen
+        # Kacheln fürs Spiel und was die Zusammenführung braucht (Höhe, Bedeckung, Zwischenstände je Kachel)
+        run: tar -cf "teil-${{ matrix.teil }}.tar" welt-daten/"$VERSION" tools/map/arbeit/dem10 tools/map/arbeit/wc10 tools/map/arbeit/"$VERSION"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: teil-${{ matrix.teil }}
+          path: teil-${{ matrix.teil }}.tar
+          retention-days: 3
+          compression-level: 0
+
+  # ---------------------------------------------------------------- … dann zusammenführen (Wasser, Bahn, Hex, Übersicht, Manifest)
+  zusammen:
+    needs: [plan, teil]
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    env:
+      VERSION: ${{ needs.plan.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Python-Pakete
+        run: pip install -r tools/map/requirements.txt
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: teil-*
+          path: teile
+          merge-multiple: true
+      - name: Streifen auspacken
+        run: |
+          for t in teile/teil-*.tar; do tar -xf "$t"; rm "$t"; done
+          du -sh welt-daten tools/map/arbeit
+      - name: Zusammenführen
+        env:
+          WELT_VERSUCHE: '10'
+        run: |
+          for n in 1 2 3; do
+            echo "== Durchgang $n"
+            if python3 tools/map/setup.py --gebiet eifel --version "$VERSION" --osm geofabrik --jobs 2; then exit 0; fi
+            sleep 30
+          done
+          exit 1
+      - name: Packen
+        run: |
+          tar -czf welt-daten-eifel.tar.gz -C welt-daten "$VERSION"
+          ls -lh welt-daten-eifel.tar.gz
+      - name: Release anlegen oder ersetzen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: tools/welt-release.sh eifel "$VERSION" welt-daten-eifel.tar.gz

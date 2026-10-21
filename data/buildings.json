@@ -613,6 +613,26 @@
    "einmalig": true
   },
   {
+   "id": "junggesellen",
+   "name": "Junggesellenverein",
+   "gruppe": "Feste",
+   "symbol": "🌳",
+   "spruch": "Wer hier Mitglied ist, hat keine Frau. Noch nicht. Bis zum Mailehen.",
+   "funktion": "maijungen",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 3,
+    "stein": 1
+   },
+   "eingang": {
+    "landbier": 4
+   },
+   "ab_stufe": 1,
+   "einmalig": true,
+   "modell": "schaenke",
+   "leistung": "macht aus freien Bewohnern und je 1 Landbier Maijungen (bis 6): sie stellen in der Mainacht den Maibaum, klauen den der Nachbarn, halten Wache – und das Mailehen bringt Zuzug"
+  },
+  {
    "id": "lagerhaus",
    "taste": "I",
    "name": "Lagerhaus",

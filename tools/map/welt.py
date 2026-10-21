@@ -47,8 +47,53 @@ def _kampagnen_kacheln():
     return sorted(aus, key=lambda k: (k[1], k[0]))
 
 
+def _utm32(lon, lat):
+    """WGS84 -> EPSG:25832 (Ost, Nord) ohne pyproj (für die Gebietsgrenzen, auf Meter genau genug)."""
+    a, f, k0 = 6378137.0, 1 / 298.257223563, 0.9996
+    e2 = f * (2 - f)
+    ep2 = e2 / (1 - e2)
+    phi, lam = math.radians(lat), math.radians(lon)
+    n = a / math.sqrt(1 - e2 * math.sin(phi) ** 2)
+    t, c, aa = math.tan(phi) ** 2, ep2 * math.cos(phi) ** 2, math.cos(phi) * (lam - math.radians(9))
+    m = a * ((1 - e2 / 4 - 3 * e2 ** 2 / 64 - 5 * e2 ** 3 / 256) * phi - (3 * e2 / 8 + 3 * e2 ** 2 / 32 + 45 * e2 ** 3 / 1024) * math.sin(2 * phi)
+             + (15 * e2 ** 2 / 256 + 45 * e2 ** 3 / 1024) * math.sin(4 * phi) - (35 * e2 ** 3 / 3072) * math.sin(6 * phi))
+    ost = k0 * n * (aa + (1 - t + c) * aa ** 3 / 6 + (5 - 18 * t + t * t + 72 * c - 58 * ep2) * aa ** 5 / 120) + 500000
+    nord = k0 * (m + n * math.tan(phi) * (aa * aa / 2 + (5 - t + 9 * c + 4 * c * c) * aa ** 4 / 24 + (61 - 58 * t + t * t + 600 * c - 330 * ep2) * aa ** 6 / 720))
+    return ost, nord
+
+
+# Kerngebiete der 10 Völkchen: Mitte (lon, lat) und Radius in km aus data/regions.json; die Kacheln decken den Kreis plus Kulisse ab.
+def _voelkchen_gebiete():
+    import json
+    import os
+    with open(os.path.join(os.path.dirname(__file__), "..", "..", "data", "regions.json"), encoding="utf-8") as f:
+        d = json.load(f)
+    return {v["id"]: (*v["kerngebiet"]["mitte"], v["kerngebiet"]["radius_km"]) for v in d["voelkchen"]}
+
+
+VOELKCHEN_GEBIETE = _voelkchen_gebiete()
+
+
+def _kreis_kacheln(lon, lat, km):
+    """Kacheln, die einen Kreis (Radius km plus 3 km Kulisse) um lon/lat berühren, in der Welt."""
+    ost, nord = _utm32(lon, lat)
+    x, z, rad = ost - E0, N0 - nord, (km + 3) * 1000
+    aus = []
+    for tz in range(max(0, int((z - rad) // KACHEL)), min(NTZ - 1, int((z + rad) // KACHEL)) + 1):
+        for tx in range(max(0, int((x - rad) // KACHEL)), min(NTX - 1, int((x + rad) // KACHEL)) + 1):
+            # nächster Punkt der Kachel zum Mittelpunkt innerhalb des Radius
+            nx = min(max(x, tx * KACHEL), (tx + 1) * KACHEL)
+            nz = min(max(z, tz * KACHEL), (tz + 1) * KACHEL)
+            if (nx - x) ** 2 + (nz - z) ** 2 <= rad * rad:
+                aus.append((tx, tz))
+    return sorted(aus, key=lambda k: (k[1], k[0]))
+
+
 GEBIETE = {
     "welt": [(tx, tz) for tz in range(NTZ) for tx in range(NTX)],
+    # die ganze Eifel: wie „welt“, aber eigener Name für das Release (welt-daten-eifel), gerechnet in Streifen
+    "eifel": [(tx, tz) for tz in range(NTZ) for tx in range(NTX)],
+    **{name: _kreis_kacheln(*v) for name, v in VOELKCHEN_GEBIETE.items()},
     "eifelsteig": _kampagnen_kacheln(),
     "nordeifel": [(tx, tz) for tz in range(0, 8) for tx in range(5, 11)],
     "nideggen": [(tx, tz) for tz in range(3, 6) for tx in range(8, 11)],
@@ -206,6 +251,19 @@ def gebaute_hexkacheln(kacheln):
             if any((tx, tz) in ks for tx in range(tx0, tx1 + 1) for tz in range(tz0, tz1 + 1)):
                 out.append((hx, hz))
     return out
+
+
+def streifen(kacheln, i, n):
+    """Streifen i (1..n) eines Gebiets nach Kachelzeilen: (Kern, Kern mit einer Kachel Rand aus demselben Gebiet)."""
+    if not 1 <= i <= n:
+        raise SystemExit(f"Teil {i}/{n} gibt es nicht")
+    zeilen = sorted({tz for _, tz in kacheln})
+    je = -(-len(zeilen) // n)
+    meine = set(zeilen[(i - 1) * je:i * je])
+    kern = [k for k in kacheln if k[1] in meine]
+    alle = set(kacheln)
+    rand = {(tx + dx, tz + dz) for tx, tz in kern for dx in (-1, 0, 1) for dz in (-1, 0, 1)} & alle
+    return kern, sorted(rand, key=lambda k: (k[1], k[0]))
 
 
 def gebiet_kacheln(name):

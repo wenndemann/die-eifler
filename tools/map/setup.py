@@ -24,10 +24,17 @@ import util  # noqa: E402
 ROOT = os.path.dirname(os.path.dirname(HERE))
 
 
+def welt_gebiete():
+    """Namen der Gebiete aus welt.py (ohne die schweren Pakete zu laden)."""
+    import welt
+    return list(welt.GEBIETE)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--gebiet", default="welt", choices=["welt", "nordeifel", "nideggen", "eifelsteig"],
-                    help="welt = alle 21×23 Kacheln, nordeifel = tx 5..10/tz 0..7, nideggen = tx 8..10/tz 3..5")
+    ap.add_argument("--gebiet", default="welt", choices=sorted(welt_gebiete()),
+                    help="welt = alle 21×23 Kacheln, nordeifel = tx 5..10/tz 0..7, nideggen = tx 8..10/tz 3..5, eifelsteig = Kampagne, "
+                         "dazu die Kerngebiete der 10 Völkchen (monschau, rursee, rureifel, vulkaneifel, ahr, laach, suedeifel, schneifel, ostbelgien, oesling)")
     ap.add_argument("--version", help="Versionsname (Standard eifel-JJJJ.MM, bei Teilgebiet mit -<gebiet>)")
     ap.add_argument("--daten", default=os.path.join(ROOT, "welt-daten"), help="Ausgabeordner (Standard welt-daten/)")
     ap.add_argument("--arbeit", default=os.path.join(HERE, "arbeit"), help="Arbeitsordner (Standard tools/map/arbeit/)")
@@ -36,6 +43,9 @@ def main():
     ap.add_argument("--nur-copernicus", action="store_true", help="amtliche Höhenmodelle auslassen")
     ap.add_argument("--jobs", type=int, default=4, help="parallele Downloads (Standard 4)")
     ap.add_argument("--neu", action="store_true", help="Neuberechnung erzwingen (heruntergeladene OSM-Rohdaten bleiben)")
+    ap.add_argument("--teil", help="nur Streifen i von n rechnen (z. B. 3/8): Höhe, Bedeckung und Wasser mit einer Kachel Rand, "
+                                   "dann nur die Kacheln des Streifens; Hex-Kacheln, Übersicht und Manifest macht danach ein normaler "
+                                   "Lauf mit derselben Version über alle Streifen (Workflow „Weltdaten“, Gebiet eifel)")
     args = ap.parse_args()
 
     util.umgebung_proxy()
@@ -51,6 +61,12 @@ def main():
 
     t_start = time.time()
     kach = welt.gebiet_kacheln(args.gebiet)
+    alle_kach = kach
+    if args.teil:
+        i, n = (int(x) for x in args.teil.split("/"))
+        kern, mit_rand = welt.streifen(kach, i, n)
+        print(f"Teil {i}/{n}: {len(kern)} Kacheln, mit Rand {len(mit_rand)}")
+        kach = mit_rand
     heute = datetime.date.today()
     version = args.version or (f"eifel-{heute.year}.{heute.month:02d}" + ("" if args.gebiet == "welt" else f"-{args.gebiet}"))
     daten = os.path.abspath(args.daten)
@@ -85,7 +101,7 @@ def main():
 
     # Signatur der Version: ändert sich Gebiet oder Höhenquellen, sind abgeleitete Kachelstufen ungültig
     amtlich = [] if args.nur_copernicus else dem.amtliche_quellen()
-    sig = {"gebiet": args.gebiet, "kacheln": [list(min(kach)), list(max(kach)), len(kach)], "quellen": dem.quellen_codes(amtlich), "format": 1}
+    sig = {"gebiet": args.gebiet, "kacheln": [list(min(alle_kach)), list(max(alle_kach)), len(alle_kach)], "quellen": dem.quellen_codes(amtlich), "format": 1}
     alt = util.json_lesen(os.path.join(arbeit_ver, "signatur.json"))
     if alt is not None and alt != sig:
         print("Einstellungen haben sich geändert: Kachelstufen dieser Version werden neu gerechnet")
@@ -127,8 +143,10 @@ def main():
     stufen_marker = os.path.join(arbeit_ver, "stufen.json")
     with stufe("Kacheln (r10, r40, vec)"):
         wk = kmod.WeltKacheln(arbeit, arbeit_ver, ausgabe, kach, elems, proj, wd)
-        todo = [k for k in kach if args.neu or not wk.fertig(*k)]
-        print(f"{len(kach) - len(todo)} Kacheln fertig, {len(todo)} zu rechnen")
+        # im Teil nur der Kern (der Rand gehört dem Nachbarstreifen)
+        bauen_fuer = kern if args.teil else kach
+        todo = [k for k in bauen_fuer if args.neu or not wk.fertig(*k)]
+        print(f"{len(bauen_fuer) - len(todo)} Kacheln fertig, {len(todo)} zu rechnen")
         fp = util.Fortschritt("Kacheln", len(todo))
         for tx, tz in todo:
             st = wk.bauen(tx, tz)
@@ -136,6 +154,14 @@ def main():
         if todo:
             util.loeschen(stufen_marker)
     marker = util.json_lesen(stufen_marker, {})
+    if args.teil:
+        # Teil fertig: das Wasser galt nur für den Streifen, die Zusammenführung rechnet es für alles neu
+        util.loeschen(os.path.dirname(wasser.pfad(arbeit_ver)))
+        util.loeschen(stufen_marker)
+        util.json_schreiben(os.path.join(arbeit, "status.json"),
+                            {"version": version, "gebiet": args.gebiet, "teil": args.teil, "fertig": True, "zeiten": zeiten}, indent=1)
+        print(f"\n== Teil {args.teil} fertig: {len(kern)} Kacheln in {ausgabe} ==")
+        return
 
     # 5b. Bahnstrecken
     with stufe("Bahnstrecken (rails in vec, Hex-Flag)"):

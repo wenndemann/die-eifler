@@ -7,6 +7,8 @@ import { baueTestKarte, gerade } from './sim-szenario';
 import { Simulation } from '../src/sim/sim';
 import { SimKarte } from '../src/sim/karte';
 import { NAHRUNG, WARE } from '../src/sim/daten';
+import { STAND_ZAHLEN } from '../src/sim/stand';
+import { MAI_AB } from '../src/sim/mai';
 import { GUT, Runde, SCHLECHT } from './netz-sim';
 
 const A = { q: 0, r: 0 }, B = { q: -6, r: 0 }, C = { q: 6, r: -12 };
@@ -414,6 +416,53 @@ describe('Gleichschritt', () => {
     r.gleichziehen();
     for (const i of [0, 1]) expect(sim(r, i).startDaten()[0].waren).toEqual({ werkzeug: 4, bretter: 6 });
     expect(sim(r, 1).pruefsumme()).toBe(sim(r, 0).pruefsumme());
+  });
+
+  it('M14: Mainacht im Gleichschritt – Baum stellen, Klau, Wache und Auslöse bei allen gleich, auch nach dem Neuladen', () => {
+    const karte = baueTestKarte(false);
+    const starts = [{ q: 0, r: 0 }, { q: -14, r: 0 }];
+    const s0 = new Simulation(karte, 31, starts);
+    const gs = s0 as unknown as { karte: { index(q: number, r: number): number }; gebaeudeErzeugen(t: string, h: number, sofort: boolean, sp: number): unknown };
+    gs.gebaeudeErzeugen('kirmesplatz', gs.karte.index(3, 0), true, 0);
+    gs.gebaeudeErzeugen('kirmesplatz', gs.karte.index(-11, 0), true, 1);
+    const st = s0.stand();
+    st.zahlen[STAND_ZAHLEN.indexOf('tick')] = MAI_AB - 200;
+    st.doerfer.forEach((d) => { const x = d as Record<string, number>; x.maiJungen = 4; x.frei -= 4; });
+    for (const g of st.gebaeude) { const v = g.vorrat as number[] | undefined; if (v) { v[WARE.stamm] += 4; v[WARE.landbier] += 20; v[WARE.bratkartoffeln] += 10; } }
+    const r = new Runde(karte, starts, SCHLECHT);
+    r.starte(0, { sim: Simulation.ausStand(karte, st) }); r.starte(1);
+    r.verbindeAlle();
+    r.lauf(2000);
+    p(r, 0).setzeTempo(3);
+    while (!sim(r, 0).inMainacht()) r.lauf(100);
+    p(r, 0).befehl({ art: 'mai', was: 'stellen' });
+    p(r, 1).befehl({ art: 'mai', was: 'stellen' });
+    p(r, 1).befehl({ art: 'mai', was: 'wache', n: 1 });
+    r.lauf(1500);
+    p(r, 1).befehl({ art: 'mai', was: 'klau', ziel: 0, n: 3 });
+    p(r, 0).befehl({ art: 'mai', was: 'klau', ziel: 1, n: 2 });
+    r.lauf(4000);
+    r.trenne(1);
+    r.lauf(1000);
+    const neu = r.starte(1);
+    r.verbindeAlle();
+    while (!neu.sim || neu.angehalten) r.lauf(16);
+    r.lauf(20_000);
+    p(r, 1).befehl({ art: 'mai', was: 'loese' });
+    p(r, 0).befehl({ art: 'mai', was: 'loese' });
+    r.lauf(3000);
+    p(r, 0).pause(true);
+    r.lauf(3000);
+    r.gleichziehen();
+    for (const i of [0, 1]) {
+      const s = sim(r, i).sicht(i);
+      // Dorf 1 hatte eine Wache am Stamm, Dorf 0 nicht: 0 wurde beklaut und hat ausgelöst
+      expect(s.spieler.map((x) => x.maibaum)).toEqual([1, 1]);
+      expect(s.ereignisse.some((e) => e.art === (i === 0 ? 'maibesuch' : 'maiklau'))).toBe(true);
+    }
+    expect(sim(r, 0).sicht(0).ereignisse.some((e) => e.art === 'mailoese')).toBe(true);
+    expect(sim(r, 1).pruefsumme()).toBe(sim(r, 0).pruefsumme());
+    for (const i of [0, 1]) expect(sim(r, i).pruefeInnenzustand()).toEqual([]);
   });
 
   it('kaputte und fremde Nachrichten ändern nichts', () => {

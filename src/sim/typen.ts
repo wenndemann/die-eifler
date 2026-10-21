@@ -84,7 +84,13 @@ export type Befehl =
    * Handel mit Flachländern (Drehbuch 6.2): Tausch `tausch` (Index in HANDEL, data/nachbarn.json) `mal`-mal am Marktposten `posten`
    * (Index in SimSicht.posten). Wie beim Einstand braucht es eine verbundene eigene Fahne am Posten und die Waren im Lager.
    */
-  | { art: 'handel'; posten: number; tausch: number; mal: number };
+  | { art: 'handel'; posten: number; tausch: number; mal: number }
+  /**
+   * M14 Der Mai: Maibaum stellen (nur in der Mainacht, am Kirmesplatz, kostet MAIBAUM_WAREN und braucht Maijungen), klauen beim Spieler
+   * `ziel` (>= 0) oder im Ort -1 - ziel (nur in der Mainacht, mit `n` freien Maijungen, sonst allen), Wache am eigenen Baum (`n`), Bier für
+   * Angreifer geben (`an`), geklauten Baum auslösen. Ungültig → wirkungslos.
+   */
+  | { art: 'mai'; was: 'stellen' | 'klau' | 'wache' | 'bier' | 'loese'; ziel?: number; n?: number; an?: boolean };
 
 /** Start eines Dorfs: Lager-Hex und (optional, sonst data/dorf.json) die Zahl der Bewohner. Spieler i startet mit Eintrag i. */
 /** Start eines Dorfs: Lager-Hex, (optional) Bewohner und (ab M11) das Völkchen (Id aus data/voelkchen.json; fehlt = ohne Völkchen). */
@@ -295,7 +301,8 @@ export interface SichtEreignis {
   nr: number; tick: number;
   art: 'bewohner' | 'notnagel' | 'fertig' | 'kirmes' | 'stufe' | 'zuzug'
     | 'jahreszeit' | 'wetter' | 'friert' | 'satt' | 'kleines_fest' | 'bauleute' | 'verloren'
-    | 'einstand' | 'zu_spaet' | 'handel' | 'fund' | 'erwischt' | 'ertappt' | 'schuetzenfest' | 'koenig' | 'ende' | 'altstein' | 'fonds';
+    | 'einstand' | 'zu_spaet' | 'handel' | 'fund' | 'erwischt' | 'ertappt' | 'schuetzenfest' | 'koenig' | 'ende' | 'altstein' | 'fonds'
+    | 'mainacht' | 'maibaum' | 'maiklau' | 'maibesuch' | 'mailoese' | 'mailehen';
   /** Gebäude (bewohner, fertig, kirmes, kleines_fest) oder 0. */
   gebaeude: Id;
   /**
@@ -335,6 +342,11 @@ export interface SichtDorf {
   erzeugt: number[];
   /** M10: Schützenfest dieses Jahres (null ohne Schützenhaus): Liste, geliefert, schon gefeiert, laufendes Fest; Schützenkönig. */
   schuetzen?: { liste: number[]; geliefert: number[]; gefeiert: boolean; fest: number; schuss: number } | null;
+  /**
+   * M14 Der Mai: Maijungen (gesamt, Wache, frei), Bier für Angreifer, Maibaum (0 keiner, 1 steht, 2 geklaut von `dieb`: Spieler oder -2
+   * Nachbarort), dieses Jahr schon gestellt, Punkte aus dem Mai, dieses Jahr beklaute Orte, Junggesellenverein steht.
+   */
+  mai?: { jungen: number; wache: number; frei: number; bier: boolean; baum: number; dieb: number; gestellt: boolean; punkte: number; orte: number[]; verein: boolean };
   koenig?: boolean;
   /** M11: Völkchen (Id) oder ''. */
   voelkchen?: string;
@@ -354,6 +366,8 @@ export interface SichtSpieler {
   punkte: number; hexe: number; orte: number; koenig: boolean;
   /** M11: Völkchen (Id) oder ''. */
   voelkchen: string;
+  /** M14: Maibaum (0 keiner, 1 steht, 2 geklaut) und wer ihn hat (Spieler, -2 Nachbarort, -1 keiner). */
+  maibaum?: number; maiDieb?: number;
   /** Der Verwalter führt das Dorf (Spieler fehlt länger als 5 Minuten). */
   verwalter: boolean;
 }
@@ -366,6 +380,12 @@ export interface SichtBote {
   ware: number;
   tut: 'geht' | 'wartet';
   pegel: 1 | 2 | 3;
+}
+
+/** M14: Maijungen unterwegs (sp -1: Burschen aus einem Nachbarort); Phase 0 hin, 1 mit Baum zurück, 2 leer zurück, 3 torkeln zurück. */
+export interface SichtTrupp {
+  id: Id; sp: number; ziel: number; n: number; phase: number;
+  von: { q: number; r: number }; nach: { q: number; r: number }; fortschritt: number; schritt: number;
 }
 
 /** Jahreszeit und Wetter (Drehbuch 7.4): für alle gleich. */
@@ -396,6 +416,9 @@ export interface SimSicht {
   ereignisse: SichtEreignis[];
   jahr: SichtJahr;
   boten: SichtBote[];
+  /** M14: Mainacht (läuft sie, bis wann; sonst ab wann die nächste) und Maijungen bzw. Burschen unterwegs. */
+  mainacht?: { an: boolean; ab: number; bis: number };
+  trupps?: SichtTrupp[];
   /** Waren, die Boten haben fallen lassen (liegen, bis sie einer aufliest). */
   liegend: { q: number; r: number; ware: number; sp: number }[];
   /** M10: Gebiet, Orte, Marktposten, Regeln (Gebiet an/aus, Ziel und Zielpunkte) und Ende der Partie (Sieger, Tick) oder null. */

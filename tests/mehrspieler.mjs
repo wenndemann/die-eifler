@@ -4,7 +4,7 @@
 // in unter 30 Sekunden wieder drin sein, Pause, Prüfsummen gleich, Speichern. M7: Warenverteilung über das Fenster, Ruhen,
 // Statistik und Autosave im Mehrspieler. M8: Lagerregel und Bauleute-Wunsch über das Lagerfenster, Jahreszeit und Wetter bei beiden gleich.
 // M10: Regeln (Gebiet, Ziel), Gebiet und Eifel-Punkte bei beiden gleich, Ortsfenster. M11: Völkchen beider Dörfer bei beiden gleich. M12: Uhrzeit
-// und Wetter-Optik (Talnebel/Aue) bei beiden gleich.
+// und Wetter-Optik (Talnebel/Aue) bei beiden gleich. M14: Mainacht und Maibäume bei beiden gleich.
 //
 // Läuft in npm run test:smoke mit; allein:  node tests/mehrspieler.mjs   (Server und Vite startet es selbst)
 import { existsSync, mkdirSync } from 'node:fs';
@@ -208,10 +208,13 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
     const m12 = await Promise.all([host, gast].map((x) => x.evaluate(() => {
       const sp = window.eifeler.spiel;
       const uhr = /(\d+) Uhr/.exec(document.querySelector('.spielstatus')?.textContent ?? '')?.[1] ?? '';
-      return { uhr, tick: sp.sim.tick, scheiben: JSON.stringify(sp.wetterOptik.zahlen()) };
+      const s = sp.sim.sicht(sp.ich);
+      return { uhr, tick: sp.sim.tick, scheiben: JSON.stringify(sp.wetterOptik.zahlen()), mai: `${s.mainacht?.ab}/${s.spieler.map((x) => x.maibaum).join(',')}` };
     })));
     info(`Mehrspieler M12: Uhr ${m12.map((x) => x.uhr).join(' / ')}, Nebel/Aue ${m12.map((x) => x.scheiben).join(' / ')}`);
     if (m12.some((x) => !x.uhr)) fail('Mehrspieler M12: keine Uhrzeit in der Statusleiste');
+    info(`Mehrspieler M14: Mainacht ab Tick / Maibäume ${m12.map((x) => x.mai).join(' | ')}`);
+    if (m12[0].mai !== m12[1].mai) fail(`Mehrspieler M14: Mai verschieden: ${m12.map((x) => x.mai).join(' | ')}`);
     if (m12[0].scheiben !== m12[1].scheiben) fail(`Mehrspieler M12: Talnebel/Aue verschieden: ${m12.map((x) => x.scheiben).join(' / ')}`);
     if (Math.abs(m12[0].tick - m12[1].tick) < 40 && Math.abs(Number(m12[0].uhr) - Number(m12[1].uhr)) > 1) fail(`Mehrspieler M12: Uhrzeit verschieden: ${m12.map((x) => x.uhr).join(' / ')}`);
     info(`Mehrspieler M7: Verteilung gleich ${m7b[0].vert === m7b[1].vert}, Holzfäller ruht ${m7b.map((x) => x.ruht).join('/')}, Statistik-Punkte ${m7b.map((x) => x.stat).join('/')}`);

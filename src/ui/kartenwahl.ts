@@ -9,6 +9,7 @@ import {
   bigHexBounds, bigHexOutline, hexCount, hexDistance, hexRound, hexTileIndex, hexToWorld, hexesInRadius, worldToHex,
 } from '../welt/hexwelt';
 import { holeBildUrl, holeBytes, holeJson, type Welt } from '../welt/laden';
+import { VOELKCHEN_GEBIETE, gebietBei } from '../welt/voelkchengebiete';
 import { VORSCHLAEGE } from '../map/presets';
 import { holeAutosave, leseSpielstand, type Spielstand } from '../spiel/spielstand';
 
@@ -598,6 +599,9 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Kartenwa
       if (ausw.hoch !== null && ausw.tief !== null) {
         zeile('Höhen', `${Math.round(ausw.tief)} bis ${Math.round(ausw.hoch)} m ü. NN`);
       }
+      // Völkchen des Gebiets (die Erzählfigur kommt mit)
+      const mw = hexToWorld(q, r), vg = gebietBei(mw.x, mw.z);
+      zeile('Völkchen', vg ? `${vg.name} – mit ${vg.erzaehler}` : 'zwischen den Kerngebieten (Völkchen vom Startort)');
       if (anteile) {
         const bar = el('div', 'kw-bar');
         const teile: [string, number, string][] = [['wald', anteile.wald, 'Wald'], ['wiese', anteile.wiese, 'Wiese und Acker'], ['heide', anteile.heide, 'Heide und Moor'], ['stein', anteile.stein, 'Fels'], ['wasser', anteile.wasser, 'Wasser'], ['siedlung', anteile.siedlung, 'Ortskern']];
@@ -770,6 +774,7 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Kartenwa
         }
       }
 
+      maleVoelkchen();
       maleGrenzen();
       maleWege();
       maleHex();
@@ -798,6 +803,31 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Kartenwa
 
     function sichtbar(x0: number, z0: number, x1: number, z1: number) {
       return x1 >= wx(0) && x0 <= wx(W) && z1 >= wz(0) && z0 <= wz(H);
+    }
+
+    /** Kerngebiete der 10 Völkchen: zarte Fläche und gestrichelter Rand in der Farbe des Völkchens, Name in der Mitte. */
+    function maleVoelkchen() {
+      const s = view.s;
+      ctx.save();
+      for (const g of VOELKCHEN_GEBIETE) {
+        if (!sichtbar(g.x - g.r, g.z - g.r, g.x + g.r, g.z + g.r)) continue;
+        ctx.beginPath();
+        ctx.arc(sx(g.x), sz(g.z), g.r * s, 0, Math.PI * 2);
+        ctx.globalAlpha = 0.13; ctx.fillStyle = g.farbe; ctx.fill();
+        ctx.globalAlpha = 0.75; ctx.setLineDash([6, 5]); ctx.lineWidth = 2; ctx.strokeStyle = g.farbe; ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const gross = Math.max(11, Math.min(18, 6000 * s));
+      ctx.font = `700 ${gross}px "Alegreya SC", serif`;
+      for (const g of VOELKCHEN_GEBIETE) {
+        if (!sichtbar(g.x - g.r, g.z - g.r, g.x + g.r, g.z + g.r) || g.r * s < 28) continue;
+        const x = sx(g.x), y = sz(g.z) - g.r * s * 0.55;
+        ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(20, 16, 12, 0.75)'; ctx.strokeText(g.name, x, y);
+        ctx.fillStyle = g.farbe; ctx.fillText(g.name, x, y);
+      }
+      ctx.restore();
     }
 
     function maleGrenzen() {

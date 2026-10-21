@@ -346,6 +346,7 @@ Gebäude werden nie zerstört. Wechselt ein Hex mit Gebäude den Besitzer, steht
 
 **Viele Feste (beschlossen):** Neben Kirmes und Schützenfest gibt es viele kleine Feste. Alle funktionieren gleich: Warenliste liefern, feiern, Punkte bekommen. Je mehr Feste man schafft, desto mehr Eifel-Punkte.
 
+- **Maibaum und Mainacht (M14):** Junggesellen stellen in der Mainacht den Maibaum, die Nachbarn klauen ihn – der einzige „Krieg“ im Spiel, ohne dass etwas kaputtgeht. Abwehr mit Wache (Hand am Stamm) oder Bier, Auslöse gegen Bier und Bratkartoffeln, das Mailehen bringt Zuzug (Startwerte in `data/mai.json`).
 - **Kleine Feste**, jedes zu seiner Jahreszeit (7.4): Maifest, Erntedank, Viehmarkt, Martinsfeuer, Fastelovend, Weinfest (an Mosel und Ahr) und mehr. Kurze Warenliste, 10–30 Punkte.
 - **Einstand:** Jeder gewonnene Ort feiert seinen Einstand (6.2). Danach feiert jeder angeschlossene Ort einmal im Jahr **sein eigenes Fest**. Mehr Orte heißt mehr Feste.
 - **Kein Dauerfeiern:** Jedes kleine Fest gibt es höchstens einmal je Spieljahr und Ort, dazu eine Obergrenze für die Punkte aus kleinen Festen (Startwert beim Spielen). Kein Bereich allein reicht zum Sieg (6.4).

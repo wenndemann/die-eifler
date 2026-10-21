@@ -1,5 +1,5 @@
 {
- "hinweis": "Meldungen der Erzählfigur (Drehbuch 1.1, 1.4, 4.4): Hochdeutsch, der Sprachtick der Figur kommt aus regions.json dazu. Platzhalter: {name} Erzählfigur, {ort} Startort, {gebaeude} Gebäude, {ware} Ware, {stufe} Dorfstufe, {n} Zahl, {liste} Kirmes-Warenliste, {fest} Name eines kleinen Fests, {wetter} Wetter, {feld} betroffenes Feld; ab M10 {text} (Ortsname, Stadt, Ausrede, Spieler). Bauernregeln (wetter_<art>) kündigen das Wetter an (Drehbuch 7.4). Mehrere Texte je Anlass werden der Reihe nach verwendet. Ab M12: fonds (Eifelfonds zahlt aus), tempo_hoch (Träger-Spruch beim schnellsten Tempo), nachbar (Tooltip über fremden Dörfern und Orten, Running Gag „Die Eifel fängt erst hinter meinem Dorf an“).",
+ "hinweis": "Meldungen der Erzählfigur (Drehbuch 1.1, 1.4, 4.4): Hochdeutsch, der Sprachtick der Figur kommt aus regions.json dazu. Platzhalter: {name} Erzählfigur, {ort} Startort, {gebaeude} Gebäude, {ware} Ware, {stufe} Dorfstufe, {n} Zahl, {liste} Kirmes-Warenliste, {fest} Name eines kleinen Fests, {wetter} Wetter, {feld} betroffenes Feld; ab M10 {text} (Ortsname, Stadt, Ausrede, Spieler). Bauernregeln (wetter_<art>) kündigen das Wetter an (Drehbuch 7.4). Mehrere Texte je Anlass werden der Reihe nach verwendet. Ab M12: fonds (Eifelfonds zahlt aus), tempo_hoch (Träger-Spruch beim schnellsten Tempo), nachbar (Tooltip über fremden Dörfern und Orten, Running Gag „Die Eifel fängt erst hinter meinem Dorf an“). Ab M14 (Der Mai): mainacht_kommt, mainacht_beginnt, mainacht_steht, mainacht_ohne, maibaum, maiklau_ok/wache/bier/leer ({text} = Ziel), maibesuch_ok/wache/bier ({text} = wer), mailoese, mailoese_bekommen ({text} = wer zahlt), mailehen ({n}).",
  "begruessung": [
   "Willkommen in {ort}! Hier fängt die Eifel an. Erst Holz und Stein, dann Kartoffeln – und dann feiern wir Kirmes.",
   "Na, da seid ihr ja. {ort} wartet. Holzfäller an den Wald, Weg dahin, und dann sehen wir weiter."
@@ -144,5 +144,53 @@
   "Noch keine Eifel.",
   "Flachland. Sieht man doch.",
   "Die Eifel fängt erst hinter unserem Dorf an."
+ ],
+ "mainacht_kommt": [
+  "Heute Nacht ist Mainacht! Maijungen bereit machen, Stamm ins Lager – und wer nicht aufpasst, hat morgen keinen Baum mehr."
+ ],
+ "mainacht_beginnt": [
+  "Die Mainacht beginnt. Jetzt den Maibaum stellen – und Wache halten. Die Nachbarn sind auch wach.",
+  "Mainacht! Wer seinen Baum liebt, der bewacht ihn. Oder hat Bier im Lager."
+ ],
+ "mainacht_steht": [
+  "Der Morgen danach: Unser Maibaum steht noch! Das gibt Punkte und ein gutes Maifest."
+ ],
+ "mainacht_ohne": [
+  "Die Mainacht ist vorbei – und bei uns steht kein Maibaum. Nächstes Jahr wieder."
+ ],
+ "maibaum": [
+  "Der Maibaum steht! Birke, Kranz und Bänder – schöner als bei den Nachbarn."
+ ],
+ "maiklau_ok": [
+  "Unsere Maijungen kommen zurück – mit dem Maibaum von {text}! Den können die jetzt auslösen.",
+  "Geklaut! Der Baum von {text} steht jetzt bei uns. Fragen kostet Bier."
+ ],
+ "maiklau_wache": [
+  "Bei {text} stand einer mit der Hand am Stamm. Da ist nichts zu machen – Regel ist Regel."
+ ],
+ "maiklau_bier": [
+  "{text} hat unseren Jungs Bier gegeben. Jetzt torkeln sie heim und singen. Den Baum haben sie vergessen."
+ ],
+ "maiklau_leer": [
+  "Bei {text} stand gar kein Maibaum. Die Jungs kommen enttäuscht zurück."
+ ],
+ "maibesuch_ok": [
+  "Unser Maibaum ist weg! Geklaut. Auslösen kostet Bier und Bratkartoffeln – oder Stolz.",
+  "Wo ist der Maibaum?! Weg. Das war bestimmt {text}."
+ ],
+ "maibesuch_wache": [
+  "Nachts kamen welche für den Maibaum – aber unsere Wache hatte die Hand am Stamm. Abgewehrt!"
+ ],
+ "maibesuch_bier": [
+  "Nachts kamen welche für den Maibaum. Wir haben ihnen Bier gegeben, jetzt torkeln sie heim. Der Baum steht."
+ ],
+ "mailoese": [
+  "Der Maibaum ist ausgelöst und steht wieder. Teuer, aber die Ehre ist gerettet."
+ ],
+ "mailoese_bekommen": [
+  "{text} hat ihren Maibaum ausgelöst – Bier und Bratkartoffeln sind bei uns im Lager. Prost!"
+ ],
+ "mailehen": [
+  "Mailehen beim Junggesellenverein: {n} Neue ziehen zu. Man sieht sich beim Maifest."
  ]
 }
