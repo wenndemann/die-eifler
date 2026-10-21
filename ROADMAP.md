@@ -276,19 +276,20 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 
 ---
 
-## M12 – Feinschliff Figuren, Wetter, Klang → Version 1.0
+## M12 – Feinschliff Figuren, Wetter, Klang → Version 1.0 ✅ (erster Stand) → 🔨 Leistung auf echter Hardware, Spieltest
 
 **Ziel:** Charme und Fertigstellung. Freies Spiel und Mehrspieler sind fertig (Drehbuch 1, 7).
 
-- [ ] Figuren fertig im Stil aus M9: volle Mimik, übertriebene Gesten, alle Berufe
-- [ ] **Waren schön** (Drehbuch 7.6, Grundstil aus M9): feine Modelle, Holzmaserung, Steine mit Moos, Wackeln beim Tragen
-- [ ] **Gebrabbel** mit Eifeler Klang statt Sprecher, Betrunkene singen (Drehbuch 7.2)
-- [ ] Wetter- und Jahreszeiten-Optik: Talnebel (Höhennebel im Shader), Regen, Schnee, Wolkenschatten, Tageszeiten
-- [ ] Post-Processing: SSAO, dezentes Bloom, Farb-Grading, Qualitätsstufen (aus M1)
-- [ ] **Volksmusik** (Akkordeon, Blasmusik, Fiedel), Tusch auf den Festen, räumliche Geräusche, spukende Grenzsteinversetzer
-- [ ] **Erzählfiguren** der 10 Völkchen (Drehbuch 1.4) mit Bauernregeln und kurzer Einführung ins freie Spiel
-- [ ] Running Gags aus Drehbuch 1.2 durchgehend eingebaut
-- [ ] Startmenü, Credits mit Quellenangaben, Leistungsdurchgang auf echter Hardware
+- [x] Figuren mit **Mimik** (Brauen, Mund lacht/Strich/Flunsch, Blinzeln) und **Gesten** (Winken beim Übergeben, Kopfkratzen beim Warten, Jubeln und Hüpfen beim Fest, Schimpfen); Laune aus dem Dorf (Fest froh, Frieren grimmig, schwere Last verzieht das Gesicht); Boten grinsen und singen; Arbeiter mit Mimik, die Arme bleiben beim Werkzeug
+- [x] **Waren schöner** (Drehbuch 7.6): Stamm mit Jahresringen, Rindenfurchen und Aststummel, Bretter mit Maserung und Ast, Steine mit Moos und Feldstein; Waren wackeln beim Tragen (schwere mehr)
+- [x] **Gebrabbel** mit Eifeler Klang statt Sprecher (Formant-Stimme, Silben aus Eifeler Wörtern, Stimmlage je Erzählfigur), Betrunkene singen schief (Drehbuch 7.2)
+- [x] Wetter- und Tageszeiten-Optik (`data/optik.json`): Regen und Schneefall um den Blickpunkt, Talnebel in den Tälern (gleiche Tal-Regel wie die Simulation, im Herbst auch Morgennebel), ziehende **Wolkenschatten**, Hochwasser in der Aue, Tageszeit (Tag = 12 Spielminuten: goldener Morgen und Abend, blaue Nacht – spielbar hell), Uhrzeit in der Statusleiste
+- [x] Nachbearbeitung je Qualitätsstufe: weiche Verdeckung (SSAO-artig aus der Tiefe, Mittel abgeschwächt, Hoch voll), dezentes Leuchten (Hoch), Farb-Grading nach Tageszeit und Wetter; Niedrig ohne
+- [x] **Volksmusik** im Browser erzeugt (`data/klang.json`): Akkordeon-Walzer, Blasmusik mit Tuba-Umtata, Fiedel; Tusch mit Pauke bei Kirmes, Festen, neuer Stufe und Schützenkönig; Arbeitsgeräusche räumlich um den Blickpunkt (Säge, Axt, Amboss, Steinklopfen, Schafe, Kühe, Hunde, Bienen), Vögel, Grillen, Wind, Regen, Bach; nachts heulen die **spukenden Grenzsteinversetzer**; Regler für Musik und Geräusche
+- [x] **Einführung durch die Erzählfigur** des eigenen Völkchens (`data/einfuehrung.json`): „Erste Schritte mit …“ – acht Schritte bis zur ersten Kirmes, die Figur kommentiert jeden geschafften Schritt mit ihrem Sprachtick; Bauernregeln kündigen das Wetter an (seit M8)
+- [x] Running Gags aus Drehbuch 1.2: „Mer renne nit.“ beim schnellsten Tempo, „Noch keine Eifel.“ über fremden Dörfern und Orten, **Eifelfonds** („Preußisch Sibirien“: zahlt nur armen Dörfern), Annakirmes, Kaffee über die Grenze, „von bei Aachen“, Bootsverleih mit Kapitän Kalle, spukende Grenzsteinversetzer
+- [x] **Startmenü** (Weiterspielen, Freies Spiel, Mit Freunden, Kampagne kommt mit M13, Mitwirkende) mit Spruch der Völkchen; **Mitwirkende und Quellen** (Weltdaten aus dem Manifest, Erzählfiguren, Technik, Recherche)
+- [ ] Leistungsdurchgang auf echter Hardware (60 fps bei „Mittel“) – im Container nur Software-Rendering
 
 **Abnahme:** Eine Gruppe Fremder spielt über den Link eine Partie ohne Hilfe von uns. Die Leistung hält 60 fps bei „Mittel“. Die Bildstrecke aus M9 besteht die Gutachter-Bewertung weiterhin.
 

@@ -122,6 +122,10 @@ donoh widder fott. Ungebroche? Einfach neu starte, et määt do wigger wo et opj
   Maatflecke-Kirmes (Tuch, Forell, Papier, Sprudel, Rotwein, Möhlesteen, Edelbier, Harz, Botter, Ham). Allein kann mer
   sich dat Völkche en de Enstellunge ussöke, em Mehrspiller kütt et luuter vum Startort. Rejele:
   `data/voelkchen.json`.
+- **Feinschliff (M12):** Startmenü met de Lück, die metjemaat han; de Verzällfijur zeich, wie mer aanfängk. Mer süht dat Wedder:
+  Räen, Schnie, Nevvel em Dal, Wolkeschadde, Huhwasser un Daach un Naach. De Männcher laache, schänge, winke un jubele op d'r Kirmes.
+  Musik un Jeräusche maach dä Browser selvs: Quetsch, Blosmusik, Fiddel, Tusch, Jebrabbel, Sääch, Amboss, Schof, Vüjel – un naaks
+  spök dä Jrenzsteenversetzer. „Mer renne nit.“ un dä Eifelfonds för ärm Dörfer sin och dobei.
 - **Simulation** (`src/sim/`): faste Tick (20/s), nur janze Zahle, jede Aktion es ene Befehl met Tick-Nummer,
   Prüfsumm övver dä Zostand, Befehlsprotokoll zom Avspille. Dä Smoke-Test pröf, dat Node un Browser de selve
   Prüfsumm krije.

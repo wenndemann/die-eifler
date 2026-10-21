@@ -291,7 +291,7 @@ export interface SichtEreignis {
   nr: number; tick: number;
   art: 'bewohner' | 'notnagel' | 'fertig' | 'kirmes' | 'stufe' | 'zuzug'
     | 'jahreszeit' | 'wetter' | 'friert' | 'satt' | 'kleines_fest' | 'bauleute' | 'verloren'
-    | 'einstand' | 'zu_spaet' | 'handel' | 'fund' | 'erwischt' | 'ertappt' | 'schuetzenfest' | 'koenig' | 'ende' | 'altstein';
+    | 'einstand' | 'zu_spaet' | 'handel' | 'fund' | 'erwischt' | 'ertappt' | 'schuetzenfest' | 'koenig' | 'ende' | 'altstein' | 'fonds';
   /** Gebäude (bewohner, fertig, kirmes, kleines_fest) oder 0. */
   gebaeude: Id;
   /**

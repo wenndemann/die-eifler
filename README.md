@@ -155,6 +155,13 @@ nach Gebrauch wieder. Unterbrochen? Einfach neu starten, es setzt fort. Details 
   Schneifeler Harz, Eupener Butter, Éislécker Ham). Monschauer pflanzen Buchenhecken als Windschutz. Figuren tragen den Farbton
   ihres Völkchens, Dächer die regionale Farbe. Allein lässt sich das Völkchen in den Einstellungen frei wählen (gilt ab dem nächsten Spiel), im Mehrspieler kommt es immer aus dem Startort.
   Regeln: `data/voelkchen.json`, Texte und Erzähler: `data/regions.json`.
+- **Feinschliff (M12):** Startmenü mit Mitwirkenden und Quellen; die Erzählfigur führt durch die ersten Schritte bis zur ersten
+  Kirmes. Wetter sieht man: Regen, Schneefall, Talnebel, Wolkenschatten, Hochwasser in der Aue und eine Tageszeit mit goldenem
+  Abend und blauer Nacht (Uhr in der Statusleiste). Figuren lachen, schimpfen, winken, kratzen sich am Kopf und jubeln beim Fest;
+  Waren haben Maserung, Jahresringe und Moos und wackeln beim Tragen. Musik und Geräusche entstehen im Browser: Akkordeon,
+  Blasmusik und Fiedel, Tusch auf den Festen, Gebrabbel statt Sprecher, Säge, Amboss, Schafe, Vögel, nachts der spukende
+  Grenzsteinversetzer (Regler in den Einstellungen; der Ton startet nach dem ersten Tipp). Running Gags: „Mer renne nit.“,
+  „Noch keine Eifel.“, der Eifelfonds für arme Dörfer. Zahlen: `data/optik.json`, `data/klang.json`, `data/einfuehrung.json`.
 - **Simulation** (`src/sim/`): fester Tick (20/s), nur Ganzzahlen, jede Aktion ist ein Befehl mit Tick-Nummer,
   Prüfsumme über den Zustand (Statusleiste „Sim“), Befehlsprotokoll zum Abspielen (`spieleAb`). Der Smoke-Test
   prüft, dass Node und Browser dieselbe Prüfsumme bekommen und ein Replay im zweiten Browser-Fenster gleich ausgeht.

@@ -31,20 +31,33 @@ type Form = (farbe: string) => { teile: THREE.BufferGeometry[]; hoehe: number };
 const FORMEN: Record<string, Form> = {
   stamm: (f) => {
     const l = W * 1.5, r = W * 0.2;
-    return {
-      hoehe: W * 0.4,
-      teile: [
-        paint(new THREE.CylinderGeometry(r, r, l, 7).rotateZ(Math.PI / 2).translate(0, r, 0), f),
-        // helle Schnittflächen an den Enden
-        paint(new THREE.CylinderGeometry(r * 0.86, r * 0.86, l + 0.12, 7).rotateZ(Math.PI / 2).translate(0, r, 0), '#e0bf86'),
-        paint(new THREE.CylinderGeometry(r * 1.03, r * 1.03, l - 0.5, 7).rotateZ(Math.PI / 2).translate(0, r, 0), f),
-      ],
-    };
+    const teile = [
+      paint(new THREE.CylinderGeometry(r, r, l, 8).rotateZ(Math.PI / 2).translate(0, r, 0), f),
+      // helle Schnittflächen an den Enden mit Jahresringen (M12: schön)
+      paint(new THREE.CylinderGeometry(r * 0.86, r * 0.86, l + 0.12, 8).rotateZ(Math.PI / 2).translate(0, r, 0), '#e0bf86'),
+      paint(new THREE.CylinderGeometry(r * 0.55, r * 0.55, l + 0.16, 8).rotateZ(Math.PI / 2).translate(0, r, 0), '#c9a26a'),
+      paint(new THREE.CylinderGeometry(r * 0.2, r * 0.2, l + 0.2, 6).rotateZ(Math.PI / 2).translate(0, r, 0), '#a87e4c'),
+      paint(new THREE.CylinderGeometry(r * 1.03, r * 1.03, l - 0.5, 8).rotateZ(Math.PI / 2).translate(0, r, 0), f),
+      // Rinde: dunkle Furchen längs und ein abgesägter Aststummel
+      paint(new THREE.CylinderGeometry(W * 0.06, W * 0.07, W * 0.18, 6).rotateZ(0.5).translate(W * 0.25, r * 1.85, 0), ton(f, 0.85)),
+      paint(new THREE.CylinderGeometry(W * 0.05, W * 0.05, W * 0.02, 6).rotateZ(0.5).translate(W * 0.29, r * 1.85 + W * 0.08, 0), '#e0bf86'),
+    ];
+    for (let i = 0; i < 4; i++) {
+      const a = i * 1.6 + 0.3;
+      teile.push(paint(new THREE.BoxGeometry(l - 0.6, W * 0.025, W * 0.04).translate(0, r + Math.cos(a) * r * 1.04, Math.sin(a) * r * 1.04), ton(f, 0.72)));
+    }
+    return { hoehe: W * 0.4, teile };
   },
   bretter: (f) => {
     const out: THREE.BufferGeometry[] = [];
     for (let i = 0; i < 4; i++) {
-      out.push(paint(new THREE.BoxGeometry(W * 1.45, W * 0.12, W * 0.62).translate((i % 2 - 0.5) * 0.18, W * 0.12 + i * W * 0.13, 0), i % 2 ? ton(f, 1.15) : f));
+      const x = (i % 2 - 0.5) * 0.18, y = W * 0.12 + i * W * 0.13;
+      out.push(paint(new THREE.BoxGeometry(W * 1.45, W * 0.12, W * 0.62).translate(x, y, 0), i % 2 ? ton(f, 1.15) : f));
+      // Maserung: feine dunkle Linien auf der Oberseite, leicht gewellt, dazu ein Ast
+      if (i === 3) {
+        for (let k = 0; k < 4; k++) out.push(paint(new THREE.BoxGeometry(W * 1.3, W * 0.012, W * 0.022).rotateY((k - 1.5) * 0.03).translate(x, y + W * 0.062, (k - 1.5) * W * 0.13), ton(f, 0.7)));
+        out.push(paint(new THREE.CylinderGeometry(W * 0.045, W * 0.045, W * 0.014, 7).translate(x + W * 0.3, y + W * 0.063, W * 0.06), ton(f, 0.6)));
+      }
     }
     // quer liegende Hölzer darunter
     out.push(paint(new THREE.BoxGeometry(W * 0.12, W * 0.1, W * 0.7).translate(-W * 0.45, W * 0.05, 0), '#7a5636'));
@@ -56,8 +69,13 @@ const FORMEN: Record<string, Form> = {
     return {
       hoehe: W * 0.82,
       teile: [
+        // behauener Block mit hellerer Oberkante, daneben ein runder Feldstein; Moos auf der Schattenseite (M12: schön)
         paint(new THREE.BoxGeometry(s, s * 0.8, s * 0.9).rotateY(0.3).translate(0, s * 0.4, 0), f),
         paint(new THREE.BoxGeometry(s * 0.9, s * 0.1, s * 0.8).rotateY(0.3).translate(0, s * 0.82, 0), ton(f, 1.25)),
+        paint(new THREE.SphereGeometry(s * 0.32, 6, 5).scale(1, 0.75, 1).translate(s * 0.55, s * 0.22, s * 0.3), ton(f, 0.9)),
+        paint(new THREE.SphereGeometry(s * 0.3, 6, 4).scale(1.2, 0.25, 0.9).rotateY(0.3).translate(-s * 0.18, s * 0.86, -s * 0.12), '#6f9a45'),
+        paint(new THREE.SphereGeometry(s * 0.22, 6, 4).scale(0.5, 1, 1.1).rotateY(0.3).translate(-s * 0.5, s * 0.3, -s * 0.15), '#5f8a3c'),
+        paint(new THREE.SphereGeometry(s * 0.14, 5, 4).scale(1, 0.4, 1).translate(s * 0.6, s * 0.45, s * 0.3), '#7aa64e'),
       ],
     };
   },

@@ -12,7 +12,7 @@ import { paint } from './mockup';
 import { Instanzen } from './instanzen';
 import { TRAEGER_H, WARE_TRAGEN, fernFaktor } from './massstab';
 import { WAREN_ANZAHL, warenGeometrie } from './waren';
-import { figur, material } from './traeger';
+import { dorfLaune, FIGUR_ATTRIBUTE, figur, GESTE, material } from './traeger';
 
 type Beruf = 'holzfaeller' | 'foerster' | 'steinbruch' | 'bauarbeiter' | 'planierer';
 const BERUFE: Beruf[] = ['holzfaeller', 'foerster', 'steinbruch'];
@@ -80,6 +80,7 @@ interface Zustand { phase: number; yaw: number; x: number; z: number; benutzt: n
 
 export class Arbeiter {
   readonly group = new THREE.Group();
+  private laune = { laune: 0.35, fest: false };
   /** Wenn gesetzt: Figuren wachsen mit dem Kameraabstand (wie die Träger). */
   kamera: THREE.Camera | null = null;
   private figuren: Instanzen;
@@ -99,7 +100,7 @@ export class Arbeiter {
 
   constructor(private map: MapData, private grid: HexGrid, private base: number, ex: number) {
     this.ex = ex;
-    this.figuren = new Instanzen(this.group, figur(), material(), true, true, [{ name: 'aAnim', size: 3 }], 32);
+    this.figuren = new Instanzen(this.group, figur(), material(), true, true, FIGUR_ATTRIBUTE, 32);
     const matte = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7, flatShading: false });
     this.werkzeuge = {
       holzfaeller: new Instanzen(this.group, WERKZEUG.holzfaeller(), matte, false, true, [], 32),
@@ -118,6 +119,7 @@ export class Arbeiter {
 
   update(sicht: SimSicht, alpha = 0, dt = 0) {
     this.runde++;
+    this.laune = dorfLaune(sicht);
     this.figuren.beginne();
     for (const w of Object.values(this.werkzeuge)) w.beginne();
     for (const w of this.waren) w.beginne();
@@ -180,7 +182,8 @@ export class Arbeiter {
     // Arme: beim Tragen hoch (Ware über dem Kopf), beim Arbeiten im Takt von Schlag bzw. Grabstich, sonst locker
     const cfg = ARBEIT[beruf];
     const arm = traegt ? 1 : arbeitet ? schlag(u, cfg.tief, cfg.hoch, cfg.aus) : 0;
-    this.figuren.fuege(m, farbe.copy(HEMD[beruf]), [st.phase, arm, geht ? 1 : arbeitet ? 0.12 : 0.1]);
+    // Mimik: Laune des Dorfs im Gesicht; die Arme bleiben beim Werkzeug (keine Gesten, sonst schwebt es)
+    this.figuren.fuege(m, farbe.copy(HEMD[beruf]), [st.phase, arm, geht ? 1 : arbeitet ? 0.12 : 0.1, this.laune.laune, GESTE.keine]);
     // Werkzeug
     if (!traegt) {
       const wz = this.werkzeuge[beruf];

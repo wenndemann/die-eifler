@@ -124,6 +124,13 @@ try {
 
   if (plan.art === 'kartenwahl') {
     await page.goto(basis);
+    await page.waitForSelector('.sm-frei', { timeout: 60000 });
+    info(`Startmenü: ${(await page.locator('.sm-knopf').allTextContents()).join(' | ')}`);
+    await page.locator('.sm-credits-knopf').click();
+    await page.waitForSelector('.sm-credits', { timeout: 10000 });
+    info(`Mitwirkende: ${(await page.locator('.sm-credits h3').allTextContents()).join(', ')}`);
+    await page.locator('.sm-zu').click();
+    await page.locator('.sm-frei').click();
     await page.waitForSelector('.kw-vorschlag', { timeout: 60000 });
     info('Kartenwahl erscheint');
     await page.locator('.kw-vorschlag', { hasText: plan.vorschlag.name }).first().click();
@@ -371,6 +378,28 @@ try {
   const kbSpiel = Math.round(statSync(spielBild).size / 1024);
   info(`Screenshot ${spielBild} (${kbSpiel} KB)`);
   if (kbSpiel < 20) fail(`Spiel-Screenshot verdächtig klein (${kbSpiel} KB)`);
+
+  // M12: Wetter, Tageszeit und Klang laufen ohne Fehler (Klang im Test ausdrücklich an; WebAudio im Headless-Browser)
+  const m12 = await page.evaluate(async () => {
+    const sp = window.eifeler.spiel;
+    sp.wetterVorgabe = { tag: 0.85, regen: 1, nebel: 1, hochwasser: 1, wind: 1 };
+    await new Promise((ok) => setTimeout(ok, 1500));
+    const lage = { ...sp.wetterOptik.lage() };
+    sp.wetterVorgabe = { tag: 0.5, schnee: 1, regen: 0, nebel: 0, hochwasser: 0, wind: 0 };
+    await new Promise((ok) => setTimeout(ok, 800));
+    sp.wetterVorgabe = null;
+    const k = sp.klang;
+    k.erlaubt = true;
+    k.wecke();
+    let an = false;
+    try { await k.ac?.resume(); an = k.an; } catch { an = false; }
+    k.tusch(); k.brabbel(0.4, 1); k.setzeLautstaerke(50, 50);
+    await new Promise((ok) => setTimeout(ok, 600));
+    return { lage, scheiben: sp.wetterOptik.zahlen(), an, zustand: k.ac?.state ?? 'keiner', uhr: /(\d+) Uhr/.exec(document.querySelector('.spielstatus')?.textContent ?? '')?.[1] };
+  });
+  info(`M12: Wetter ${JSON.stringify(m12.lage)}, Talnebel/Aue ${JSON.stringify(m12.scheiben)}, Uhr ${m12.uhr}, Klang ${m12.zustand}`);
+  if (!(m12.lage.regen > 0.9 && m12.lage.nebel > 0.9 && m12.lage.hochwasser > 0.9)) fail(`M12: Wetter-Vorgabe kam nicht an: ${JSON.stringify(m12.lage)}`);
+  if (!m12.uhr) fail('M12: keine Uhrzeit in der Statusleiste');
 
   // Replay in einem zweiten, frischen Browser-Kontext mit derselben Karten-Adresse und eigener Karte
   {

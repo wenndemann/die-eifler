@@ -6,7 +6,7 @@ import { wetterPlan } from '../src/sim/jahr';
 import { baueTestKarte, gerade } from './sim-szenario';
 import { Simulation } from '../src/sim/sim';
 import { SimKarte } from '../src/sim/karte';
-import { WARE } from '../src/sim/daten';
+import { NAHRUNG, WARE } from '../src/sim/daten';
 import { GUT, Runde, SCHLECHT } from './netz-sim';
 
 const A = { q: 0, r: 0 }, B = { q: -6, r: 0 }, C = { q: 6, r: -12 };
@@ -352,6 +352,44 @@ describe('Gleichschritt', () => {
       expect(s.gebaeude.filter((g) => g.typ !== 'lager').map((g) => `${g.sp}:${g.typ}`).sort()).toEqual(['0:tuchmacherei', '1:molkerei']);
     }
     expect(sim(r, 1).sicht(1).dorf.kirmes!.liste[WARE.butter]).toBe(10);
+    expect(sim(r, 1).pruefsumme()).toBe(sim(r, 0).pruefsumme());
+  });
+
+  it('M12: Eifelfonds zahlt dem armen Dorf bei allen gleich aus, auch nach dem Neuladen', () => {
+    const karte = baueTestKarte(false);
+    const starts = [{ q: 0, r: 0 }, { q: -14, r: 0 }];
+    const st = new Simulation(karte, 7, starts).stand();
+    // Dorf 1 ist arm dran: kein Essen im Lager
+    for (const g of st.gebaeude) {
+      const v = g.vorrat as number[] | undefined;
+      if (v && g.sp === 1) for (let a = 0; a < v.length; a++) if (NAHRUNG[a] > 0) v[a] = 0;
+    }
+    const r = new Runde(karte, starts, SCHLECHT);
+    r.starte(0, { sim: Simulation.ausStand(karte, st) }); r.starte(1);
+    r.verbindeAlle();
+    r.lauf(2000);
+    p(r, 0).setzeTempo(3);
+    p(r, 1).befehl({ art: 'gebaeude', typ: 'eifelfonds', q: -11, r: 0 });
+    p(r, 1).befehl({ art: 'weg', pfad: gerade(-14, 0, 0, 3) });
+    p(r, 0).befehl({ art: 'gebaeude', typ: 'eifelfonds', q: 3, r: 0 });
+    p(r, 0).befehl({ art: 'weg', pfad: gerade(0, 0, 0, 3) });
+    r.lauf(60_000);
+    r.trenne(1);
+    r.lauf(1000);
+    const neu = r.starte(1);
+    r.verbindeAlle();
+    while (!neu.sim || neu.angehalten) r.lauf(16);
+    r.lauf(60_000);
+    p(r, 0).pause(true);
+    r.lauf(3000);
+    r.gleichziehen();
+    for (const i of [0, 1]) {
+      const s = sim(r, i);
+      expect(s.sicht(1).gebaeude.filter((g) => g.typ === 'eifelfonds').map((g) => g.sp).sort()).toEqual([0, 1]);
+      // nur das arme Dorf bekommt etwas
+      expect(s.sicht(1).ereignisse.filter((e) => e.art === 'fonds').length).toBeGreaterThan(0);
+      expect(s.sicht(0).ereignisse.filter((e) => e.art === 'fonds').length).toBe(0);
+    }
     expect(sim(r, 1).pruefsumme()).toBe(sim(r, 0).pruefsumme());
   });
 

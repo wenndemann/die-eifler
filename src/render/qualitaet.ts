@@ -20,12 +20,15 @@ export interface QualiParam {
   baumDichteFern: number;
   /** Faktor auf die Abstände der Gelände-Detailstufen (kleiner = früher grob). */
   lod: number;
+  /** M12 Nachbearbeitung: weiche Verdeckung (0..1) und Leuchten heller Stellen (0..1). */
+  ao: number;
+  glanz: number;
 }
 
 export const QUALI: Record<Qualitaet, QualiParam> = {
-  niedrig: { pixel: 1, schattenKarte: 1024, schattenReichweite: 3500, baumNah: 1400, baumDichteNah: 0.55, baumDichteFern: 0.35, lod: 0.65 },
-  mittel: { pixel: 1.5, schattenKarte: 2048, schattenReichweite: 5500, baumNah: 2400, baumDichteNah: 0.85, baumDichteFern: 0.6, lod: 1 },
-  hoch: { pixel: 2, schattenKarte: 4096, schattenReichweite: 9000, baumNah: 3400, baumDichteNah: 1, baumDichteFern: 1, lod: 1.25 },
+  niedrig: { pixel: 1, schattenKarte: 1024, schattenReichweite: 3500, baumNah: 1400, baumDichteNah: 0.55, baumDichteFern: 0.35, lod: 0.65, ao: 0, glanz: 0 },
+  mittel: { pixel: 1.5, schattenKarte: 2048, schattenReichweite: 5500, baumNah: 2400, baumDichteNah: 0.85, baumDichteFern: 0.6, lod: 1, ao: 0.6, glanz: 0 },
+  hoch: { pixel: 2, schattenKarte: 4096, schattenReichweite: 9000, baumNah: 3400, baumDichteNah: 1, baumDichteFern: 1, lod: 1.25, ao: 1, glanz: 1 },
 };
 
 export const SETTINGS_KEY = 'eifeler.view';

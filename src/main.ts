@@ -15,6 +15,7 @@ import { RtsCamera } from './render/camera';
 import { setzeKulisse } from './render/kulisse';
 import { Hud } from './ui/hud';
 import { zeigeKartenwahl, type KartenwahlErgebnis } from './ui/kartenwahl';
+import { zeigeStartmenue } from './ui/startmenue';
 import { frageName, Lobby, zeigeHinweis, type LobbyEinstellungen, type StartInfo } from './ui/lobby';
 import { NAME_SPEICHER, speicher, Vermittlung, type RaumSicht } from './netz/vermittlung';
 import { startePartie } from './netz/mehrspieler';
@@ -100,7 +101,13 @@ async function main() {
   else if (preset) param = { version: welt.version, q: preset.q, r: preset.r, size: preset.size };
   else {
     loading.style.display = 'none';
-    wahl = await zeigeKartenwahl(document.body, welt);
+    // M12: erst das Startmenü (Weiterspielen, Freies Spiel, Mit Freunden, Mitwirkende), dann die Kartenwahl
+    const start = await zeigeStartmenue(document.body, welt.manifest.credits);
+    if (start.art === 'weiter') wahl = { art: 'laden', spielstand: start.spielstand };
+    else {
+      wahl = await zeigeKartenwahl(document.body, welt);
+      if (start.art === 'freunde' && wahl.art === 'allein') wahl = { art: 'freunde', param: wahl.param };
+    }
     loading.style.display = '';
     if (wahl.art === 'laden') { spielstand = wahl.spielstand; param = ausschnittVon(spielstand); } else param = wahl.param;
   }
@@ -186,6 +193,7 @@ async function main() {
     springe: (x, z) => { intro = null; api.ready = true; cam.lookAt(...clamp(x, z + 350)); },
     grafik: { felder: () => hud.grafikFelder(), setze: (k, v) => hud.setze(k, v) },
     kameraTempo: (f) => { cam.tempo = f; },
+    ziel: () => cam.target, stimmung: (s) => stage.setzeStimmung(s), grob: () => hud.settings.quality === 'niedrig',
     onLaden: (st) => {
       try { sessionStorage.setItem(LADEN_SPEICHER, JSON.stringify(st)); } catch { alert('Der Spielstand ist zu groß für diesen Browser.'); return; }
       history.replaceState(null, '', location.pathname + location.search);
