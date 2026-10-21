@@ -23,6 +23,7 @@ import { chromium } from 'playwright';
 import { createServer } from 'vite';
 import { bedienungsTest } from './bedienung.mjs';
 import { mehrspielerTest, starteVermittlung } from './mehrspieler.mjs';
+import { kampagneTest } from './kampagne.mjs';
 
 const WURZEL = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DATEN = resolve(process.env.WELT_DATEN ?? join(WURZEL, 'welt-daten'));
@@ -425,6 +426,9 @@ try {
     const mpParam = L.klemmeAusschnitt(manifest, { version, q: mitte.q, r: mitte.r, size: 'klein' });
     await mehrspielerTest({ basis, param: mpParam, aus: AUS, info, fail, exe });
   } else info('Mehrspieler-Test übersprungen (SMOKE_URL: kein eigener Vermittlungs-Server)');
+  // M13: Kampagne (nur wenn die Etappe „Heimbach – Nideggen“ in den geladenen Weltdaten liegt)
+  if (L.ausschnittMoeglich(manifest, 384, 307, 'klein')) await kampagneTest({ basis, info, fail, exe });
+  else info('Kampagnen-Test übersprungen (Etappe Heimbach – Nideggen nicht in diesen Weltdaten)');
 
   for (const s of seitenfehler) fail(s);
 } catch (e) {

@@ -393,6 +393,29 @@ describe('Gleichschritt', () => {
     expect(sim(r, 1).pruefsumme()).toBe(sim(r, 0).pruefsumme());
   });
 
+  it('M13: mitgebrachte Waren (Rucksack) im Startlager bei allen gleich, auch nach dem Neuladen', () => {
+    const karte = baueTestKarte(false);
+    const starts = [{ q: 0, r: 0, waren: { werkzeug: 4, bretter: 6 } }, { q: -14, r: 0 }];
+    const r = new Runde(karte, starts, SCHLECHT);
+    r.starte(0, { sim: new Simulation(karte, 11, starts) }); r.starte(1);
+    r.verbindeAlle();
+    r.lauf(3000);
+    p(r, 0).befehl({ art: 'gebaeude', typ: 'holzfaeller', q: 6, r: 0 });
+    p(r, 0).befehl({ art: 'weg', pfad: gerade(0, 0, 0, 6) });
+    r.lauf(5000);
+    r.trenne(1);
+    r.lauf(1000);
+    const neu = r.starte(1);
+    r.verbindeAlle();
+    while (!neu.sim || neu.angehalten) r.lauf(16);
+    r.lauf(5000);
+    p(r, 0).pause(true);
+    r.lauf(3000);
+    r.gleichziehen();
+    for (const i of [0, 1]) expect(sim(r, i).startDaten()[0].waren).toEqual({ werkzeug: 4, bretter: 6 });
+    expect(sim(r, 1).pruefsumme()).toBe(sim(r, 0).pruefsumme());
+  });
+
   it('kaputte und fremde Nachrichten ändern nichts', () => {
     const r = runde();
     r.lauf(2000);

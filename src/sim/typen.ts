@@ -88,7 +88,11 @@ export type Befehl =
 
 /** Start eines Dorfs: Lager-Hex und (optional, sonst data/dorf.json) die Zahl der Bewohner. Spieler i startet mit Eintrag i. */
 /** Start eines Dorfs: Lager-Hex, (optional) Bewohner und (ab M11) das Völkchen (Id aus data/voelkchen.json; fehlt = ohne Völkchen). */
-export interface StartDaten { q: number; r: number; bewohner?: number; voelkchen?: string }
+export interface StartDaten {
+  q: number; r: number; bewohner?: number; voelkchen?: string;
+  /** M13 Kampagne: mitgebrachte Waren (Rucksack aus der letzten Etappe) zusätzlich im Startlager, Ware-Id → Stück. */
+  waren?: Record<string, number>;
+}
 
 export interface ProtokollEintrag { tick: number; spieler: number; befehl: Befehl }
 

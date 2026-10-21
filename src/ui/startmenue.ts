@@ -4,7 +4,7 @@ import './startmenue.css';
 import regionen from '../../data/regions.json';
 import { holeAutosave, type Spielstand } from '../spiel/spielstand';
 
-export type StartWahl = { art: 'frei' } | { art: 'freunde' } | { art: 'weiter'; spielstand: Spielstand };
+export type StartWahl = { art: 'frei' } | { art: 'freunde' } | { art: 'kampagne' } | { art: 'weiter'; spielstand: Spielstand };
 
 interface Spruch { platt: string; hoch: string }
 const V = regionen.voelkchen as unknown as { name: string; erzaehler: { name: string; tick: string; charakter: string }; sprueche: Spruch[] }[];
@@ -80,7 +80,7 @@ export function zeigeStartmenue(root: HTMLElement, datenQuellen: readonly string
     if (auto) knopf(`⏱ Weiterspielen${auto.ort ? ` (${auto.ort})` : ''}`, 'sm-weiter', () => waehle({ art: 'weiter', spielstand: auto.stand }));
     const frei = knopf('🏡 Freies Spiel', 'sm-frei', () => waehle({ art: 'frei' }), 'Ausschnitt der Eifel wählen und ein Dorf gründen');
     knopf('👥 Mit Freunden spielen', 'sm-freunde', () => waehle({ art: 'freunde' }), 'Ausschnitt wählen, dann Freunde per Link einladen');
-    knopf('🥾 Kampagne „Der Eifelsteig“ (bald)', 'sm-kampagne', null, 'Kommt mit Meilenstein M13');
+    knopf('🥾 Kampagne „Der Eifelsteig“', 'sm-kampagne', () => waehle({ art: 'kampagne' }), 'Mit dem eigenen Völkchen den Eifelsteig entlang wandern');
     knopf('📜 Mitwirkende und Quellen', 'sm-credits-knopf', () => zeigeCredits(root, datenQuellen));
     box.append(titel, unter, spruch, knoepfe, el('div', 'sm-fuss', 'Mer renne nit. Langsam, mir sin en d’r Eifel.'));
     hinter.append(box);

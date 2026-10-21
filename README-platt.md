@@ -126,6 +126,8 @@ donoh widder fott. Ungebroche? Einfach neu starte, et määt do wigger wo et opj
   Räen, Schnie, Nevvel em Dal, Wolkeschadde, Huhwasser un Daach un Naach. De Männcher laache, schänge, winke un jubele op d'r Kirmes.
   Musik un Jeräusche maach dä Browser selvs: Quetsch, Blosmusik, Fiddel, Tusch, Jebrabbel, Sääch, Amboss, Schof, Vüjel – un naaks
   spök dä Jrenzsteenversetzer. „Mer renne nit.“ un dä Eifelfonds för ärm Dörfer sin och dobei.
+- **Kampagne „Dä Eifelsteig“ (M13):** Met dem eijene Völkche vun Kornelimünster bes Trier, 15 Etappe, un dä Rur-Wäch dobei.
+  Jede Etapp hät e Ziel, de Verzällfijur verzällt, un em Rucksack kumme bes 15 Wore met. Daate: `data/kampagne.json`.
 - **Simulation** (`src/sim/`): faste Tick (20/s), nur janze Zahle, jede Aktion es ene Befehl met Tick-Nummer,
   Prüfsumm övver dä Zostand, Befehlsprotokoll zom Avspille. Dä Smoke-Test pröf, dat Node un Browser de selve
   Prüfsumm krije.

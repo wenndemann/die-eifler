@@ -16,6 +16,8 @@ import { setzeKulisse } from './render/kulisse';
 import { Hud } from './ui/hud';
 import { zeigeKartenwahl, type KartenwahlErgebnis } from './ui/kartenwahl';
 import { zeigeStartmenue } from './ui/startmenue';
+import { ladeKampagne, speichereKampagne, zeigeKampagne } from './ui/kampagne';
+import { etappenVon, wegVon, type KampagnenStand } from './spiel/kampagne';
 import { frageName, Lobby, zeigeHinweis, type LobbyEinstellungen, type StartInfo } from './ui/lobby';
 import { NAME_SPEICHER, speicher, Vermittlung, type RaumSicht } from './netz/vermittlung';
 import { startePartie } from './netz/mehrspieler';
@@ -39,10 +41,12 @@ const TERRAIN_NAMES: Record<string, string> = {
 };
 const LAENDER: Record<string, string> = { DE: 'Deutschland', BE: 'Belgien', LU: 'Luxemburg', NL: 'Niederlande' };
 
-interface HashParam { version?: string; q?: number; r?: number; size?: Groesse; vorschlag?: string; bench?: boolean; simdemo?: boolean; raum?: string; freunde?: boolean }
+interface HashParam { version?: string; q?: number; r?: number; size?: Groesse; vorschlag?: string; bench?: boolean; simdemo?: boolean; raum?: string; freunde?: boolean; kampagne?: string }
 
 /** Spielstand, der nach dem Neuladen geladen werden soll (Laden aus dem laufenden Spiel auf eine andere Karte). */
 const LADEN_SPEICHER = 'eifeler.laden';
+/** Nach einer geschafften Etappe: beim Neuladen gleich in die Kampagnen-Übersicht. */
+const ZUR_KAMPAGNE = 'eifeler.zurKampagne';
 
 /** URL-Hash: #v=<version>&q=..&r=..&g=klein|mittel|gross oder #<vorschlag-id>. */
 function leseHash(): HashParam {
@@ -51,13 +55,14 @@ function leseHash(): HashParam {
   if (!h.includes('=')) return { vorschlag: decodeURIComponent(h) };
   const sp = new URLSearchParams(h);
   const g = sp.get('g') as Groesse | null;
-  const out: HashParam = { version: sp.get('v') ?? undefined, bench: sp.get('bench') === '1', simdemo: sp.get('simdemo') === '1', raum: sp.get('raum') ?? undefined, freunde: sp.get('freunde') === '1' };
+  const out: HashParam = { version: sp.get('v') ?? undefined, bench: sp.get('bench') === '1', simdemo: sp.get('simdemo') === '1', raum: sp.get('raum') ?? undefined, freunde: sp.get('freunde') === '1', kampagne: sp.get('k') ?? undefined };
   if (sp.has('q') && sp.has('r') && g && g in GROESSEN) { out.q = Number(sp.get('q')); out.r = Number(sp.get('r')); out.size = g; }
   return out;
 }
 
-function schreibeHash(p: AusschnittParam) {
-  history.replaceState(null, '', `${location.pathname}${location.search}#v=${p.version}&q=${p.q}&r=${p.r}&g=${p.size}`);
+function schreibeHash(p: AusschnittParam, kampagne?: { stand: KampagnenStand; index: number } | null) {
+  const k = kampagne ? `&k=${kampagne.stand.weg}.${kampagne.index}` : '';
+  history.replaceState(null, '', `${location.pathname}${location.search}#v=${p.version}&q=${p.q}&r=${p.r}&g=${p.size}${k}`);
 }
 
 function ladeanzeige(loading: HTMLElement) {
@@ -82,8 +87,15 @@ async function main() {
   }
 
   // 2. Ausschnitt-Parameter: aus der URL, aus einem Vorschlag, per Kartenwahl, aus einem Spielstand oder (Mehrspieler-Gast) vom Gastgeber
-  let param: AusschnittParam;
+  let param!: AusschnittParam;
   let wahl: KartenwahlErgebnis | null = null;
+  // M13: Etappe einer Kampagne (aus der Übersicht, dem Link #…&k=<weg>.<etappe> oder einem Spielstand)
+  let kampagne: { stand: KampagnenStand; index: number } | null = null;
+  const kampagneAus = (weg: string, index: number) => {
+    const k = ladeKampagne();
+    return k && k.weg === weg && wegVon(weg) && index >= 0 && index < etappenVon(wegVon(weg)!).length ? { stand: k, index } : null;
+  };
+  if (hp.kampagne) { const [w, i] = hp.kampagne.split('.'); kampagne = kampagneAus(w, Number(i)); }
   let gast: Vermittlung | null = null;
   let spielstand: Spielstand | null = null;
   try {
@@ -96,20 +108,37 @@ async function main() {
     gast = r.v;
     param = r.param;
     loading.style.display = '';
-  } else if (spielstand) param = ausschnittVon(spielstand);
+  } else if (spielstand) { param = ausschnittVon(spielstand); if (spielstand.kampagne) kampagne = kampagneAus(spielstand.kampagne.weg, spielstand.kampagne.etappe); }
   else if (hp.q !== undefined && hp.size) param = { version: welt.version, q: hp.q, r: hp.r!, size: hp.size };
   else if (preset) param = { version: welt.version, q: preset.q, r: preset.r, size: preset.size };
   else {
     loading.style.display = 'none';
-    // M12: erst das Startmenü (Weiterspielen, Freies Spiel, Mit Freunden, Mitwirkende), dann die Kartenwahl
-    const start = await zeigeStartmenue(document.body, welt.manifest.credits);
-    if (start.art === 'weiter') wahl = { art: 'laden', spielstand: start.spielstand };
-    else {
-      wahl = await zeigeKartenwahl(document.body, welt);
-      if (start.art === 'freunde' && wahl.art === 'allein') wahl = { art: 'freunde', param: wahl.param };
+    // M12: erst das Startmenü (Weiterspielen, Freies Spiel, Mit Freunden, Kampagne, Mitwirkende), dann die Kartenwahl
+    let direkt = false;
+    try { direkt = sessionStorage.getItem(ZUR_KAMPAGNE) === '1'; sessionStorage.removeItem(ZUR_KAMPAGNE); } catch { direkt = false; }
+    for (;;) {
+      const start = direkt ? { art: 'kampagne' as const } : await zeigeStartmenue(document.body, welt.manifest.credits);
+      direkt = false;
+      if (start.art === 'kampagne') {
+        const k = await zeigeKampagne(document.body, welt);
+        if (k.art === 'zurueck') continue;
+        kampagne = { stand: k.stand, index: k.index };
+        const e = etappenVon(wegVon(k.stand.weg)!)[k.index];
+        param = { version: welt.version, q: e.q, r: e.r, size: e.groesse };
+        break;
+      }
+      if (start.art === 'weiter') wahl = { art: 'laden', spielstand: start.spielstand };
+      else {
+        wahl = await zeigeKartenwahl(document.body, welt);
+        if (start.art === 'freunde' && wahl.art === 'allein') wahl = { art: 'freunde', param: wahl.param };
+      }
+      if (wahl.art === 'laden') {
+        spielstand = wahl.spielstand; param = ausschnittVon(spielstand);
+        if (spielstand.kampagne) kampagne = kampagneAus(spielstand.kampagne.weg, spielstand.kampagne.etappe);
+      } else param = wahl.param;
+      break;
     }
     loading.style.display = '';
-    if (wahl.art === 'laden') { spielstand = wahl.spielstand; param = ausschnittVon(spielstand); } else param = wahl.param;
   }
   if (param.version !== welt.version) welt = await ladeWelt(param.version);
   // Mehrspieler: als Gast, als Gastgeber („Mit Freunden spielen“) oder mit einem Spielstand mehrerer Spieler
@@ -119,7 +148,8 @@ async function main() {
   if (spielstand && spielstand.karte.pruefsumme !== ausschnitt.pruefsumme) {
     throw new Error('Der Spielstand passt nicht zu diesen Kartendaten (Prüfsumme weicht ab) – ist die Datenversion noch vorhanden?');
   }
-  if (!mehrspieler) schreibeHash(ausschnitt.param);
+  if (mehrspieler) kampagne = null;
+  if (!mehrspieler) schreibeHash(ausschnitt.param, kampagne);
   const ladezeit = performance.now() - t0;
   fortschritt('Gelände wird aufgebaut', 1);
   await new Promise((r) => setTimeout(r, 30));
@@ -199,6 +229,16 @@ async function main() {
       history.replaceState(null, '', location.pathname + location.search);
       location.reload();
     },
+    // M13: Etappe einer Kampagne; nach dem Abschluss zurück in die Übersicht (Seite neu, ohne Karte)
+    kampagne: kampagne ? {
+      ...kampagne,
+      weiter: (neu: KampagnenStand) => {
+        speichereKampagne(neu);
+        try { sessionStorage.setItem(ZUR_KAMPAGNE, '1'); } catch { /* dann eben übers Startmenü */ }
+        history.replaceState(null, '', location.pathname + location.search);
+        location.reload();
+      },
+    } : undefined,
     ...extra,
   });
   // Farbenblind-Modus (Einstellungen): vor dem Bau der Warenmodelle

@@ -18,11 +18,14 @@ export interface Spielstand {
   /** Wann gespeichert (nur zur Anzeige). */
   gespeichert: string;
   stand: SimStand;
+  /** M13: Etappe einer Kampagne (Weg-Id und Etappen-Index); fehlt im freien Spiel. */
+  kampagne?: { weg: string; etappe: number };
 }
 
-export function baueSpielstand(karte: Protokoll['karte'], spieler: string[], stand: SimStand, pausen?: number[]): Spielstand {
+export function baueSpielstand(karte: Protokoll['karte'], spieler: string[], stand: SimStand, pausen?: number[], kampagne?: Spielstand['kampagne']): Spielstand {
   const s: Spielstand = { art: SPIELSTAND_ART, format: 1, karte: { ...karte }, spieler: spieler.slice(), gespeichert: new Date().toISOString(), stand };
   if (pausen) s.pausen = pausen.slice();
+  if (kampagne) s.kampagne = { ...kampagne };
   return s;
 }
 

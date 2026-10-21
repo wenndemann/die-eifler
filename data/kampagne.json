@@ -1,0 +1,615 @@
+{
+ "hinweis": "Kampagnen (Drehbuch 2.1, ROADMAP M13): Wege mit Abschnitten und Etappen. Jede Etappe ist ein fester Ausschnitt (globales Hex q, r und Größe) aus denselben Weltdaten wie das freie Spiel, gestartet wird im Ort „von“ (Hex start), gewandert wird nach „nach“ (Hex ziel). Ziele (alle müssen erfüllt sein): bewohner n, stufe n (1 Dorf, 2 Kirchdorf, 3 Marktflecken), lager ware n (so viel im Lager), gebaeude typ n (fertig), punkte n (Eifel-Punkte), koenig (Schützenkönig), ort name (Ort gewonnen; fehlt er auf der Karte, zählt das Ziel als erfüllt). Mitnahme: Völkchen und Punkte bleiben, dazu ein Rucksack mit bis zu rucksack_max Waren aus dem Lager als Startwaren der nächsten Etappe. Koordinaten aus Lage der Orte (WGS84 → EPSG:25832 → Hex).",
+ "rucksack_max": 15,
+ "wege": [
+  {
+   "id": "eifelsteig",
+   "name": "Der Eifelsteig",
+   "beschreibung": "15 Etappen, rund 313 km, von Kornelimünster bei Aachen bis nach Trier.",
+   "abschnitte": [
+    {
+     "name": "Nordeifel",
+     "etappen": [
+      {
+       "nr": 1,
+       "name": "Kornelimünster – Roetgen",
+       "von": "Kornelimünster",
+       "nach": "Roetgen",
+       "start": {
+        "q": 226,
+        "r": 219
+       },
+       "ziel": {
+        "q": 185,
+        "r": 317
+       },
+       "q": 205,
+       "r": 268,
+       "groesse": "mittel",
+       "ziele": [
+        {
+         "art": "bewohner",
+         "n": 15
+        },
+        {
+         "art": "ort",
+         "name": "Roetgen"
+        }
+       ],
+       "einleitung": "Hier fängt der Eifelsteig an, in Kornelimünster, Aachen schon in Sichtweite. Die Eifel? Fängt erst hinter Roetgen an, sagt man in Roetgen. Gründet ein Dorf und gewinnt Roetgen für euch.",
+       "geschafft": "Roetgen ist unser. Ab hier ist Eifel – sagen jedenfalls die Roetgener."
+      },
+      {
+       "nr": 2,
+       "name": "Roetgen – Monschau",
+       "von": "Roetgen",
+       "nach": "Monschau",
+       "start": {
+        "q": 185,
+        "r": 317
+       },
+       "ziel": {
+        "q": 154,
+        "r": 433
+       },
+       "q": 169,
+       "r": 375,
+       "groesse": "gross",
+       "ziele": [
+        {
+         "art": "stufe",
+         "n": 1
+        },
+        {
+         "art": "ort",
+         "name": "Monschau"
+        }
+       ],
+       "einleitung": "Über das Venn nach Monschau. Windig ist es, nass sowieso. Richtet eure erste Kirmes aus, dann kommt Monschau von selbst.",
+       "geschafft": "Kirmes gefeiert, Monschau gewonnen. Senf gab es auch."
+      },
+      {
+       "nr": 3,
+       "name": "Monschau – Einruhr",
+       "von": "Monschau",
+       "nach": "Einruhr",
+       "start": {
+        "q": 154,
+        "r": 433
+       },
+       "ziel": {
+        "q": 266,
+        "r": 403
+       },
+       "q": 210,
+       "r": 418,
+       "groesse": "gross",
+       "ziele": [
+        {
+         "art": "lager",
+         "ware": "kaese",
+         "n": 10
+        },
+        {
+         "art": "ort",
+         "name": "Einruhr"
+        }
+       ],
+       "einleitung": "Hinunter an den Rursee. Der Bootsverleih hat zu, wie immer. Legt Käse auf Vorrat – zehn Räder, mindestens – und gewinnt Einruhr.",
+       "geschafft": "Zehn Käse im Lager, Einruhr dabei. Das Boot fährt morgen. Vielleicht."
+      },
+      {
+       "nr": 4,
+       "name": "Einruhr – Gemünd",
+       "von": "Einruhr",
+       "nach": "Gemünd",
+       "start": {
+        "q": 266,
+        "r": 403
+       },
+       "ziel": {
+        "q": 338,
+        "r": 417
+       },
+       "q": 302,
+       "r": 410,
+       "groesse": "mittel",
+       "ziele": [
+        {
+         "art": "lager",
+         "ware": "most",
+         "n": 10
+        },
+        {
+         "art": "ort",
+         "name": "Gemünd"
+        }
+       ],
+       "einleitung": "Am Wasser entlang nach Gemünd. Die Gemünder wollen Most sehen, bevor sie mit euch reden. Schafft Most ins Lager und den Einstand nach Gemünd.",
+       "geschafft": "Gemünd ist überzeugt. Der Most auch alle."
+      }
+     ]
+    },
+    {
+     "name": "Kalkeifel",
+     "etappen": [
+      {
+       "nr": 5,
+       "name": "Gemünd – Steinfeld",
+       "von": "Gemünd",
+       "nach": "Steinfeld",
+       "start": {
+        "q": 338,
+        "r": 417
+       },
+       "ziel": {
+        "q": 337,
+        "r": 509
+       },
+       "q": 337,
+       "r": 463,
+       "groesse": "mittel",
+       "ziele": [
+        {
+         "art": "gebaeude",
+         "typ": "brauerei",
+         "n": 1
+        },
+        {
+         "art": "stufe",
+         "n": 1
+        },
+        {
+         "art": "ort",
+         "name": "Steinfeld"
+        }
+       ],
+       "einleitung": "Hinauf zum Kloster Steinfeld. Die Mönche brauen selbst – zeigt ihnen, dass ihr das auch könnt.",
+       "geschafft": "Eine Brauerei, ein Kloster, ein Dorf. Prost."
+      },
+      {
+       "nr": 6,
+       "name": "Steinfeld – Blankenheim",
+       "von": "Steinfeld",
+       "nach": "Blankenheim",
+       "start": {
+        "q": 337,
+        "r": 509
+       },
+       "ziel": {
+        "q": 350,
+        "r": 590
+       },
+       "q": 343,
+       "r": 549,
+       "groesse": "mittel",
+       "ziele": [
+        {
+         "art": "bewohner",
+         "n": 40
+        },
+        {
+         "art": "ort",
+         "name": "Blankenheim"
+        }
+       ],
+       "einleitung": "Nach Blankenheim, wo die Ahr entspringt. Vierzig Leute braucht ein ordentliches Dorf.",
+       "geschafft": "Vierzig Eifeler und eine Ahrquelle. Was will man mehr."
+      },
+      {
+       "nr": 7,
+       "name": "Blankenheim – Mirbach",
+       "von": "Blankenheim",
+       "nach": "Mirbach",
+       "start": {
+        "q": 350,
+        "r": 590
+       },
+       "ziel": {
+        "q": 351,
+        "r": 659
+       },
+       "q": 350,
+       "r": 624,
+       "groesse": "klein",
+       "ziele": [
+        {
+         "art": "lager",
+         "ware": "werkzeug",
+         "n": 5
+        },
+        {
+         "art": "ort",
+         "name": "Mirbach"
+        }
+       ],
+       "einleitung": "Weiter über die Kalkhöhen nach Mirbach. Ohne Werkzeug wird hier nichts – fünf Stück ins Lager.",
+       "geschafft": "Werkzeug im Lager, Mirbach gewonnen. Die Erlöserkapelle hat geläutet."
+      }
+     ]
+    },
+    {
+     "name": "Vulkaneifel",
+     "etappen": [
+      {
+       "nr": 8,
+       "name": "Mirbach – Hillesheim",
+       "von": "Mirbach",
+       "nach": "Hillesheim",
+       "start": {
+        "q": 351,
+        "r": 659
+       },
+       "ziel": {
+        "q": 269,
+        "r": 770
+       },
+       "q": 310,
+       "r": 714,
+       "groesse": "gross",
+       "ziele": [
+        {
+         "art": "stufe",
+         "n": 2
+        },
+        {
+         "art": "ort",
+         "name": "Hillesheim"
+        }
+       ],
+       "einleitung": "In die Vulkaneifel. Der Boden blubbert, sagt Maar-Mattes. Werdet Kirchdorf, dann gehört Hillesheim euch.",
+       "geschafft": "Kirchdorf! Und Hillesheim dazu. Et blubbert."
+      },
+      {
+       "nr": 9,
+       "name": "Hillesheim – Gerolstein",
+       "von": "Hillesheim",
+       "nach": "Gerolstein",
+       "start": {
+        "q": 269,
+        "r": 770
+       },
+       "ziel": {
+        "q": 219,
+        "r": 855
+       },
+       "q": 244,
+       "r": 812,
+       "groesse": "mittel",
+       "ziele": [
+        {
+         "art": "koenig"
+        },
+        {
+         "art": "ort",
+         "name": "Gerolstein"
+        }
+       ],
+       "einleitung": "Nach Gerolstein, wo der Sprudel herkommt. Schießt den Vogel ab – der Schützenkönig zahlt die Runde.",
+       "geschafft": "Schützenkönig! Die Runde ging auf euch. Gerolstein prostet mit Sprudel."
+      },
+      {
+       "nr": 10,
+       "name": "Gerolstein – Daun",
+       "von": "Gerolstein",
+       "nach": "Daun",
+       "start": {
+        "q": 219,
+        "r": 855
+       },
+       "ziel": {
+        "q": 317,
+        "r": 890
+       },
+       "q": 268,
+       "r": 872,
+       "groesse": "gross",
+       "ziele": [
+        {
+         "art": "punkte",
+         "n": 400
+        },
+        {
+         "art": "ort",
+         "name": "Daun"
+        }
+       ],
+       "einleitung": "Zu den Dauner Maaren. Sammelt Eifel-Punkte, bis die Dauner nicken.",
+       "geschafft": "Die Maare glänzen, Daun ist dabei."
+      },
+      {
+       "nr": 11,
+       "name": "Daun – Manderscheid",
+       "von": "Daun",
+       "nach": "Manderscheid",
+       "start": {
+        "q": 317,
+        "r": 890
+       },
+       "ziel": {
+        "q": 235,
+        "r": 1016
+       },
+       "q": 276,
+       "r": 953,
+       "groesse": "gross",
+       "ziele": [
+        {
+         "art": "lager",
+         "ware": "schnaps",
+         "n": 10
+        },
+        {
+         "art": "lager",
+         "ware": "landbier",
+         "n": 15
+        },
+        {
+         "art": "ort",
+         "name": "Manderscheid"
+        }
+       ],
+       "einleitung": "Nach Manderscheid mit seinen zwei Burgen. Die Burgherren wollen feiern – Schnaps und Landbier ins Lager.",
+       "geschafft": "Zwei Burgen, ein Fest. Manderscheid ist überzeugt."
+      }
+     ]
+    },
+    {
+     "name": "Südeifel",
+     "etappen": [
+      {
+       "nr": 12,
+       "name": "Manderscheid – Himmerod",
+       "von": "Manderscheid",
+       "nach": "Himmerod",
+       "start": {
+        "q": 235,
+        "r": 1016
+       },
+       "ziel": {
+        "q": 146,
+        "r": 1119
+       },
+       "q": 190,
+       "r": 1067,
+       "groesse": "mittel",
+       "ziele": [
+        {
+         "art": "bewohner",
+         "n": 60
+        },
+        {
+         "art": "ort",
+         "name": "Himmerod"
+        }
+       ],
+       "einleitung": "Hinunter ins Salmtal zum Kloster Himmerod. Sechzig Leute, dann reden die Mönche mit euch.",
+       "geschafft": "Himmerod läutet für euch."
+      },
+      {
+       "nr": 13,
+       "name": "Himmerod – Bruch",
+       "von": "Himmerod",
+       "nach": "Bruch",
+       "start": {
+        "q": 146,
+        "r": 1119
+       },
+       "ziel": {
+        "q": 121,
+        "r": 1183
+       },
+       "q": 133,
+       "r": 1151,
+       "groesse": "klein",
+       "ziele": [
+        {
+         "art": "stufe",
+         "n": 2
+        },
+        {
+         "art": "lager",
+         "ware": "eisen",
+         "n": 8
+        },
+        {
+         "art": "ort",
+         "name": "Bruch"
+        }
+       ],
+       "einleitung": "Nach Bruch mit seiner Wasserburg. Eisen braucht es, und ein ordentliches Kirchdorf.",
+       "geschafft": "Eisen im Lager, Bruch gewonnen. Die Burg steht noch."
+      },
+      {
+       "nr": 14,
+       "name": "Bruch – Kordel",
+       "von": "Bruch",
+       "nach": "Kordel",
+       "start": {
+        "q": 121,
+        "r": 1183
+       },
+       "ziel": {
+        "q": -52,
+        "r": 1333
+       },
+       "q": 60,
+       "r": 1230,
+       "groesse": "gross",
+       "ziele": [
+        {
+         "art": "punkte",
+         "n": 600
+        },
+        {
+         "art": "ort",
+         "name": "Kordel"
+        }
+       ],
+       "einleitung": "Durchs Kylltal nach Kordel, die Felsen werden rot. Trier ist nicht mehr weit.",
+       "geschafft": "Kordel ist unser. Man riecht schon die Stadt."
+      },
+      {
+       "nr": 15,
+       "name": "Kordel – Trier",
+       "von": "Kordel",
+       "nach": "Trier",
+       "start": {
+        "q": -52,
+        "r": 1333
+       },
+       "ziel": {
+        "q": -99,
+        "r": 1431
+       },
+       "q": -76,
+       "r": 1382,
+       "groesse": "mittel",
+       "ziele": [
+        {
+         "art": "stufe",
+         "n": 3
+        },
+        {
+         "art": "punkte",
+         "n": 800
+        }
+       ],
+       "einleitung": "Die letzte Etappe: hinunter nach Trier. Werdet Marktflecken, dann staunen selbst die Trierer – Flachländer, aber die ältesten.",
+       "geschafft": "Marktflecken vor den Toren Triers! Der Eifelsteig ist geschafft. Von bei Aachen bis Trier – das soll uns erst mal einer nachmachen."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "rurweg",
+   "name": "Entlang der Rur",
+   "beschreibung": "Zusatzweg: von Monschau die Rur hinunter bis vor Düren.",
+   "abschnitte": [
+    {
+     "name": "Entlang der Rur",
+     "etappen": [
+      {
+       "nr": 1,
+       "name": "Monschau – Einruhr",
+       "von": "Monschau",
+       "nach": "Einruhr",
+       "start": {
+        "q": 154,
+        "r": 433
+       },
+       "ziel": {
+        "q": 266,
+        "r": 403
+       },
+       "q": 210,
+       "r": 418,
+       "groesse": "gross",
+       "ziele": [
+        {
+         "art": "bewohner",
+         "n": 15
+        },
+        {
+         "art": "ort",
+         "name": "Einruhr"
+        }
+       ],
+       "einleitung": "Ein eigener Weg: der Rur entlang, von Monschau bis vor Düren. Erst einmal an den Rursee.",
+       "geschafft": "Einruhr ist dabei. Die Rur fließt weiter, wir auch."
+      },
+      {
+       "nr": 2,
+       "name": "Einruhr – Heimbach",
+       "von": "Einruhr",
+       "nach": "Heimbach",
+       "start": {
+        "q": 266,
+        "r": 403
+       },
+       "ziel": {
+        "q": 363,
+        "r": 341
+       },
+       "q": 314,
+       "r": 372,
+       "groesse": "mittel",
+       "ziele": [
+        {
+         "art": "stufe",
+         "n": 1
+        },
+        {
+         "art": "ort",
+         "name": "Heimbach"
+        }
+       ],
+       "einleitung": "Am Stausee entlang nach Heimbach mit seiner Burg. Erst die Kirmes, dann die Burg.",
+       "geschafft": "Heimbach gewonnen. Die Burg Hengebach grüßt."
+      },
+      {
+       "nr": 3,
+       "name": "Heimbach – Nideggen",
+       "von": "Heimbach",
+       "nach": "Nideggen",
+       "start": {
+        "q": 363,
+        "r": 341
+       },
+       "ziel": {
+        "q": 405,
+        "r": 273
+       },
+       "q": 384,
+       "r": 307,
+       "groesse": "klein",
+       "ziele": [
+        {
+         "art": "lager",
+         "ware": "stein",
+         "n": 20
+        },
+        {
+         "art": "ort",
+         "name": "Nideggen"
+        }
+       ],
+       "einleitung": "Hinauf nach Nideggen auf den roten Fels. Bauen will man hier mit Stein – zwanzig Stück ins Lager.",
+       "geschafft": "Nideggen auf dem Buntsandstein ist unser. „In Düren hätten se dat schon“, sagt man in Nideggen. Hier jetzt auch."
+      },
+      {
+       "nr": 4,
+       "name": "Nideggen – Kreuzau",
+       "von": "Nideggen",
+       "nach": "Kreuzau",
+       "start": {
+        "q": 405,
+        "r": 273
+       },
+       "ziel": {
+        "q": 447,
+        "r": 204
+       },
+       "q": 426,
+       "r": 238,
+       "groesse": "klein",
+       "ziele": [
+        {
+         "art": "punkte",
+         "n": 200
+        },
+        {
+         "art": "ort",
+         "name": "Kreuzau"
+        }
+       ],
+       "einleitung": "Das letzte Stück bis Kreuzau, Düren schon in Sicht. Zeigt den Flachländern, was die Eifel kann.",
+       "geschafft": "Kreuzau gewonnen, Düren in Rufweite. Der Rurweg ist geschafft – Annakirmes, wir kommen!"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

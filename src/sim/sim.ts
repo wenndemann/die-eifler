@@ -206,6 +206,9 @@ function aufLaenge(a: number[] | undefined, n: number): number[] {
 }
 
 /** Ist das Gebäude ein fertiges Lager (Dorfkern oder Lagerhaus)? */
+/** Kampagne: höchstens so viele Stück je Warenart im Rucksack (Startdaten). */
+export const RUCKSACK_JE_WARE = 99;
+
 function istLager(g: { typ: string; fertig: number }): boolean {
   return g.fertig === 1 && GEBAEUDE[g.typ].funktion === 'lager';
 }
@@ -343,6 +346,15 @@ export class Simulation {
     this.starts = starts.map((x) => {
       const s: StartDaten = x.bewohner === undefined ? { q: x.q, r: x.r } : { q: x.q, r: x.r, bewohner: x.bewohner };
       if (x.voelkchen && voelkchenIndex(x.voelkchen) >= 0) s.voelkchen = x.voelkchen;
+      // Rucksack: nur bekannte Waren, ganze Stück, höchstens RUCKSACK_JE_WARE je Art
+      if (x.waren) {
+        const w: Record<string, number> = {};
+        for (const [id, n] of Object.entries(x.waren)) {
+          const k = Math.min(RUCKSACK_JE_WARE, Math.floor(Number(n) || 0));
+          if (WARE[id] !== undefined && k > 0) w[id] = k;
+        }
+        if (Object.keys(w).length) s.waren = w;
+      }
       return s;
     });
     this.doerfer = this.starts.map((x) => ({ ...neuesDorf(Math.max(0, Math.floor(x.bewohner ?? START_BEWOHNER))), vk: voelkchenIndex(x.voelkchen) }));
@@ -365,7 +377,7 @@ export class Simulation {
       if (h < 0 || !this.karte.begehbar[h]) throw new Error(`Startlager von Spieler ${sp} liegt nicht auf begehbarem Boden`);
       if (this.hexGeb[h] || this.hexFahne[h]) throw new Error(`Startlager von Spieler ${sp} liegt auf einem anderen Lager`);
       const lager = this.gebaeudeErzeugen('lager', h, true, sp);
-      lager.vorrat = START_VORRAT.map((n, a) => n + (this.vkVon(sp).start[a] ?? 0));
+      lager.vorrat = START_VORRAT.map((n, a) => n + (this.vkVon(sp).start[a] ?? 0) + (st.waren?.[WAREN[a]] ?? 0));
     });
     // fairer Start erst, wenn alle Lager stehen (keine Lesesteine auf ein anderes Lager)
     this.starts.forEach((st) => this.fairerStart(this.karte.index(st.q, st.r)));
