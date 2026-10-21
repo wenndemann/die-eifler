@@ -35,7 +35,7 @@ const PLATZ = 0.58;
  * Rauschen), weich schattiert, warmer Sandstein-Ton mit gemaltem Verlauf (unten dunkler, oben heller), nie kaltes Grau.
  */
 function felsGeometrie(variante: number): THREE.BufferGeometry {
-  const roh = new THREE.IcosahedronGeometry(1, 1);
+  const roh = new THREE.IcosahedronGeometry(1, variante ? 0 : 1);   // zweite Form gröber (Dreiecksbudget)
   roh.deleteAttribute('normal'); roh.deleteAttribute('uv');
   const g = mergeVertices(roh);
   const pos = g.attributes.position;
@@ -120,7 +120,7 @@ export class Natur {
       for (let dq = Math.max(-feld.n, -dr - feld.n); dq <= Math.min(feld.n, -dr + feld.n); dq++) { this.qs[i] = feld.q + dq; this.rs[i] = feld.r + dr; i++; }
     }
     const fels = mitSchnee(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }));
-    for (let v = 0; v < 2; v++) this.felsSaetze.push(new Instanzen(this.group, felsGeometrie(v), fels, true, true, [], 256));
+    for (let v = 0; v < 2; v++) this.felsSaetze.push(new Instanzen(this.group, felsGeometrie(v), fels, false, true, [], 256));
     if (trees) {
       for (const sp of ['fichte', 'buche'] as const) this.baumSaetze.push(new Instanzen(this.group, trees.geos[sp][0], trees.material, true, true, [], 64));
     }

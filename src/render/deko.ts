@@ -12,16 +12,18 @@ import { Instanzen } from './instanzen';
 import { paint } from './mockup';
 import { hash } from './terrain';
 
-const kugel = (r: number, x: number, y: number, z: number, f: string, sy = 1) => paint(new THREE.SphereGeometry(r, 8, 6).scale(1, sy, 1).translate(x, y, z), f);
+const kugel = (r: number, x: number, y: number, z: number, f: string, sy = 1, seg = 5) => paint(new THREE.SphereGeometry(r, seg + 1, seg - 1).scale(1, sy, 1).translate(x, y, z), f);
+/** Winzige Blüte oder Beere: Oktaeder (8 Dreiecke) – Deko ist zahlreich, das Dreiecksbudget knapp. */
+const tupf = (r: number, x: number, y: number, z: number, f: string) => paint(new THREE.OctahedronGeometry(r, 0).translate(x, y, z), f);
 
 /** Arten: 0 Busch, 1 Blumenfleck, 2 Feldsteine, 3 Pilze, 4 Holzstapel mit Bank. Maße in Metern (Spiel). */
 function geometrien(): THREE.BufferGeometry[] {
-  const busch = mergeGeometries([kugel(3.2, 0, 2.4, 0, '#5f9a3a', 0.8), kugel(2.4, 2.6, 1.8, 0.8, '#6fa646', 0.8), kugel(2.2, -2.2, 1.7, -0.6, '#548f34', 0.8),
-    kugel(0.45, 1.2, 4.2, 1.6, '#e0392b'), kugel(0.45, -1.5, 3.6, 1.8, '#e0392b')])!;
-  const blumen: THREE.BufferGeometry[] = [kugel(4, 0, 0.2, 0, '#7fb24e', 0.12)];
-  for (let i = 0; i < 12; i++) {
+  const busch = mergeGeometries([kugel(3.2, 0, 2.4, 0, '#5f9a3a', 0.8, 6), kugel(2.4, 2.6, 1.8, 0.8, '#6fa646', 0.8, 6), kugel(2.2, -2.2, 1.7, -0.6, '#548f34', 0.8, 6),
+    tupf(0.5, 1.2, 4.2, 1.6, '#e0392b'), tupf(0.5, -1.5, 3.6, 1.8, '#e0392b')])!;
+  const blumen: THREE.BufferGeometry[] = [kugel(4, 0, 0.2, 0, '#7fb24e', 0.12, 6)];
+  for (let i = 0; i < 8; i++) {
     const a = i * 2.39, r = 0.8 + (i % 4) * 0.8;
-    blumen.push(kugel(0.55, Math.cos(a) * r, 0.7, Math.sin(a) * r, ['#e0392b', '#f2b829', '#c86ad0', '#f4f1e8', '#5a8ad0'][i % 5]));
+    blumen.push(tupf(0.75, Math.cos(a) * r, 0.7, Math.sin(a) * r, ['#e0392b', '#f2b829', '#c86ad0', '#f4f1e8', '#5a8ad0'][i % 5]));
   }
   const steine = mergeGeometries([kugel(1.6, 0, 0.7, 0, '#9a8f7e', 0.6), kugel(1.1, 2.0, 0.5, 0.9, '#a89c88', 0.6), kugel(0.8, -1.3, 0.4, 1.4, '#8e8474', 0.6), kugel(0.9, 0.2, 1.4, 0.2, '#6d8a3e', 0.35)])!;
   const pilze: THREE.BufferGeometry[] = [];
@@ -29,7 +31,7 @@ function geometrien(): THREE.BufferGeometry[] {
     const x = (i - 1) * 1.3, z = (i % 2) * 0.9;
     pilze.push(paint(new THREE.CylinderGeometry(0.28, 0.35, 1.2, 7).translate(x, 0.6, z), '#f4ead8'));
     pilze.push(paint(new THREE.SphereGeometry(0.9, 9, 6, 0, Math.PI * 2, 0, Math.PI / 2).translate(x, 1.1, z), '#d6262a'));
-    pilze.push(kugel(0.16, x + 0.3, 1.75, z + 0.3, '#ffffff'));
+    pilze.push(tupf(0.2, x + 0.3, 1.75, z + 0.3, '#ffffff'));
   }
   const holz: THREE.BufferGeometry[] = [];
   for (let i = 0; i < 6; i++) {
@@ -65,8 +67,8 @@ export class Deko {
         if ((t !== 1 && t !== 3) || (f.flags[i] & (FLAG.ortskern | FLAG.bahn))) continue;
         const q = f.q + dq, r = f.r + dr;
         const w = hash(q * 17 + 3, r * 31 + 7);
-        if (w > 0.34) continue;
-        const art = w < 0.1 ? 0 : w < 0.22 ? 1 : w < 0.26 ? 2 : w < 0.29 ? 3 : 4;
+        if (w > 0.26) continue;
+        const art = w < 0.08 ? 0 : w < 0.17 ? 1 : w < 0.2 ? 2 : w < 0.22 ? 3 : 4;
         const c = grid.toWorld({ q, r });
         const j = (k: number) => (hash(q + k * 101, r - k * 57) - 0.5) * 50;
         this.stuecke.push({ h: i, art, x: c.x + j(1), z: c.z + j(2), ry: hash(q, r + 5) * 6.28, s: 0.8 + hash(r, q + 9) * 0.5 });

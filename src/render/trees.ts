@@ -83,15 +83,15 @@ function buildGeometries() {
     cone(7, 13, 12, 7, '#356240'),
     cone(4.8, 11, 20, 7, '#3b6a46'),
   ])!;
-  const buchenKrone = new THREE.IcosahedronGeometry(10.5, 1).scale(1, 0.85, 1).translate(0, 17, 0);
-  const buchenKrone2 = new THREE.IcosahedronGeometry(7, 1).translate(3.5, 22, 2);
+  const buchenKrone = new THREE.IcosahedronGeometry(10.5, 0).scale(1, 0.85, 1).translate(0, 17, 0);
+  const buchenKrone2 = new THREE.IcosahedronGeometry(7, 0).translate(3.5, 22, 2);
   const bucheNear = mergeGeometries([
     colored(new THREE.CylinderGeometry(0.9, 1.4, 11, 5, 1, true).translate(0, 5.5, 0), trunk),
     colored(buchenKrone, '#6f9a48'),
     colored(buchenKrone2, '#7aa652'),
   ])!;
   const fichteFar = cone(8.5, 30, 1, 5, '#325e3d');
-  const bucheFar = colored(new THREE.IcosahedronGeometry(11, 1).scale(1, 0.9, 1).translate(0, 17, 0), '#6f9a48');
+  const bucheFar = colored(new THREE.OctahedronGeometry(11, 0).scale(1, 0.9, 1).translate(0, 17, 0), '#6f9a48');
   // Kronen weich (STIL.md): Normalen nach der Kugel, nicht je Facette
   for (const g of [fichteNear, bucheNear, fichteFar, bucheFar]) if (!g.attributes.normal) g.computeVertexNormals();
   return { fichte: [fichteNear, fichteFar], buche: [bucheNear, bucheFar] } as Record<Species, THREE.BufferGeometry[]>;
