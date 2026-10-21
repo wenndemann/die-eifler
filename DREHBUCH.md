@@ -271,6 +271,8 @@ Jedes Völkchen hat einen **Bonus**, eine **Spezialkette** (2–3 Gebäude, ab S
 | **Ostbelgier** (Eupen, Venn, St. Vith) | Torfstich im Venn als Brennstoff (statt Holzkohle) | Milch → Molkerei → **Butter** (Butterland Eupen); **Vennbahn** als schnelle Trasse | Formulare in drei Sprachen: neue Gebäude starten etwas langsamer |
 | **Öslinger** (Nord-Luxemburg) | Schiefer fürs Dach, Gebäude günstiger | Lohhecke (Eichen) → Lohe → **Gerberei** (Wiltz) → Leder; **Éislécker Ham** (Räucherschinken) | Halten alle anderen für arm und handeln teurer |
 
+**Umgesetzt in M11 (Startwerte, `data/voelkchen.json`):** Spezialität statt Bergkäse in der Marktflecken-Kirmes: Monschauer Tuch, Rursee-Forelle (geräuchert), Rur-Papier, Vulkaneifeler Sprudel, Ahr-Rotwein, Mayener Mühlstein, Südeifeler Edelbier, Schneifeler Harz, Eupener Butter, Éislécker Ham. Vereinfacht gegenüber der Tabelle: Rursee-Schwäche trifft die Fischerhütte (es gibt keinen Bootsverleih), Laacher „Lärm“ macht Steinbruch und Schmiede 10 % langsamer (es gibt keine Abtei), Südeifeler „alte Steine“ und Ostbelgier „Formulare“ verlängern die Bauzeit, Öslinger bauen 10 % schneller und haben 4 Bretter mehr (statt billiger), Torf ersetzt Holzkohle über den Torfstich. Römerstraße und Vennbahn folgen.
+
 Die zwei Grenzvölkchen sind beschlossen (Hintergrund: Eupener Butter und die alte Vennbahn-Trasse; Lohhecken und Gerbereien in Wiltz, Éislécker Ham als Spezialität des Ösling). Wo nicht klar ist, zu welchem Völkchen ein Startort gehört, entscheidet eine Gebietskarte im Konverter.
 
 ## 6. Finden, Nachbarn, Ziele

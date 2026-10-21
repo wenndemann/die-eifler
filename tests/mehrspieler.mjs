@@ -3,7 +3,7 @@
 // den Einladungslink, beide laden die Karte (gleiche Prüfsumme), Start, beide bauen, Tempo 3, der Gast lädt die Seite neu und muss
 // in unter 30 Sekunden wieder drin sein, Pause, Prüfsummen gleich, Speichern. M7: Warenverteilung über das Fenster, Ruhen,
 // Statistik und Autosave im Mehrspieler. M8: Lagerregel und Bauleute-Wunsch über das Lagerfenster, Jahreszeit und Wetter bei beiden gleich.
-// M10: Regeln (Gebiet, Ziel), Gebiet und Eifel-Punkte bei beiden gleich, Ortsfenster.
+// M10: Regeln (Gebiet, Ziel), Gebiet und Eifel-Punkte bei beiden gleich, Ortsfenster. M11: Völkchen beider Dörfer bei beiden gleich.
 //
 // Läuft in npm run test:smoke mit; allein:  node tests/mehrspieler.mjs   (Server und Vite startet es selbst)
 import { existsSync, mkdirSync } from 'node:fs';
@@ -195,10 +195,12 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
     const m10 = await Promise.all([host, gast].map((x) => x.evaluate(() => {
       const sp = window.eifeler.spiel, s = sp.sim.sicht(sp.ich);
       sp.oeffneOrt(0);
-      return { regeln: JSON.stringify(s.regeln), rev: s.gebiet.rev, punkte: s.spieler.map((p) => p.punkte).join(','), hexe: s.spieler.map((p) => p.hexe).join(','), orte: s.orte.length, posten: s.posten.length, tick: sp.sim.tick };
+      return { vk: s.spieler.map((p) => p.voelkchen).join(','), regeln: JSON.stringify(s.regeln), rev: s.gebiet.rev, punkte: s.spieler.map((p) => p.punkte).join(','), hexe: s.spieler.map((p) => p.hexe).join(','), orte: s.orte.length, posten: s.posten.length, tick: sp.sim.tick };
     })));
     await gast.waitForSelector('.fenster[data-fenster="ort:0"]', { timeout: 10000 }).catch(() => fail('Mehrspieler M10: Ortsfenster geht nicht auf'));
     info(`Mehrspieler M10: Regeln ${m10[0].regeln}, Gebiet ${m10.map((x) => x.hexe).join(' / ')}, Punkte ${m10.map((x) => x.punkte).join(' / ')}, ${m10[0].orte} Orte, ${m10[0].posten} Marktposten`);
+    info(`Mehrspieler M11: Völkchen ${m10.map((x) => x.vk).join(' / ')}`);
+    if (m10.some((x) => x.vk !== m10[0].vk) || m10[0].vk.split(',').some((v) => !v)) fail(`Mehrspieler M11: Völkchen fehlen oder verschieden: ${m10.map((x) => x.vk).join(' / ')}`);
     if (m10.some((x) => x.regeln !== m10[0].regeln) || !m10[0].regeln.includes('"gebiet":true')) fail(`Mehrspieler M10: Regeln verschieden oder ohne Gebiet: ${m10.map((x) => x.regeln).join(' / ')}`);
     if (m10[0].tick === m10[1].tick && (m10[0].hexe !== m10[1].hexe || m10[0].punkte !== m10[1].punkte)) fail('Mehrspieler M10: Gebiet oder Punkte verschieden');
     info(`Mehrspieler M7: Verteilung gleich ${m7b[0].vert === m7b[1].vert}, Holzfäller ruht ${m7b.map((x) => x.ruht).join('/')}, Statistik-Punkte ${m7b.map((x) => x.stat).join('/')}`);
