@@ -301,3 +301,15 @@ describe('M10 Schützenfest und Eifel-Punkte', () => {
     expect(spieleAb(k, p).pruefsumme()).toBe(sim.pruefsumme());
   });
 });
+
+describe('M10/M11 Szenario für Node = Browser', () => {
+  it('läuft, Replay trifft die Prüfsumme', async () => {
+    const { baueSzenarioM10 } = await import('./m10-szenario');
+    const { karte, protokoll } = baueSzenarioM10();
+    expect(protokoll.regeln).toEqual({ gebiet: 1, ziel: 'kurz' });
+    expect(protokoll.start.voelkchen).toBe('monschau');
+    const a = spieleAb(karte, protokoll), b = spieleAb(karte, protokoll);
+    expect(a.pruefsumme()).toBe(b.pruefsumme());
+    expect(a.sicht().gebaeude.filter((g) => g.typ === 'holzfaeller').length).toBe(2);
+  });
+});
