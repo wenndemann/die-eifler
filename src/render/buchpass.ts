@@ -23,7 +23,7 @@ const FRAG = /* glsl */ `
 #include <common>
 uniform sampler2D tFarbe; uniform sampler2D tTiefe;
 uniform vec2 uPixel; uniform float uNah; uniform float uFern;
-uniform vec3 uLinie; uniform float uDicke; uniform float uSchwelle; uniform float uDeck; uniform float uSatt; uniform float uWarm;
+uniform vec3 uLinie; uniform vec3 uTon; uniform float uDicke; uniform float uSchwelle; uniform float uDeck; uniform float uSatt; uniform float uWarm;
 varying vec2 vUv;
 float tiefe(vec2 uv) {
   float z = texture2D(tTiefe, uv).x * 2.0 - 1.0;
@@ -52,6 +52,7 @@ void main() {
   float l = dot(f, vec3(0.2126, 0.7152, 0.0722));
   f = mix(vec3(l), f, uSatt);
   f *= vec3(1.0 + uWarm, 1.0, 1.0 - uWarm);
+  f *= uTon;
   f = mix(f, uLinie * (0.75 + 0.5 * l), kante * uDeck);
   gl_FragColor = vec4(max(f, vec3(0.0)), 1.0);
   #include <tonemapping_fragment>
@@ -72,7 +73,7 @@ export class Buchpass {
       uniforms: {
         tFarbe: { value: this.ziel.texture }, tTiefe: { value: this.ziel.depthTexture }, uPixel: { value: new THREE.Vector2() },
         uNah: { value: 1 }, uFern: { value: 1000 }, uLinie: { value: BUCH.linie }, uDicke: { value: BUCH.dicke }, uSchwelle: { value: BUCH.schwelle },
-        uDeck: { value: BUCH.deckkraft }, uSatt: { value: BUCH.saettigung }, uWarm: { value: BUCH.waerme },
+        uDeck: { value: BUCH.deckkraft }, uSatt: { value: BUCH.saettigung }, uWarm: { value: BUCH.waerme }, uTon: { value: new THREE.Color(1, 1, 1) },
       },
     }));
     this.quad.frustumCulled = false;
@@ -86,6 +87,14 @@ export class Buchpass {
     if (this.ziel.width === bw && this.ziel.height === bh) return;
     this.ziel.setSize(bw, bh);
     this.quad.material.uniforms.uPixel.value.set(1 / bw, 1 / bh);
+  }
+
+  /** Stimmung (M12): Farbton (Multiplikator), Faktor auf die Sättigung, zusätzliche Wärme. */
+  stimmung(ton: THREE.Color, satt: number, warm: number): void {
+    const u = this.quad.material.uniforms;
+    (u.uTon.value as THREE.Color).copy(ton);
+    u.uSatt.value = BUCH.saettigung * satt;
+    u.uWarm.value = BUCH.waerme + warm;
   }
 
   zeichne(szene: THREE.Scene, kamera: THREE.Camera): void {

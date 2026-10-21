@@ -26,6 +26,11 @@ import { Arbeiter } from '../render/arbeiter';
 import { Boten } from '../render/boten';
 import { Deko } from '../render/deko';
 import { GebietDarstellung } from '../render/gebiet';
+import { WetterOptik, type WetterLage } from '../render/wetter';
+import type { Stimmung } from '../render/scene';
+import { stunde, tageszeit, wetterStimmung } from './stimmung';
+import { klangLage } from './klanglage';
+import { Klang } from '../klang/klang';
 import { setzeSchnee } from '../render/kulisse';
 import { Natur } from '../render/natur';
 import { Gebaeude, type GebaeudeHaken } from '../render/gebaeude';
@@ -80,6 +85,10 @@ export interface SpielKontext {
   /** Grafik-Einstellungen (HUD) für das Einstellungsfenster und das Kamera-Tempo (Steuerung). */
   grafik?: { felder: () => Eingabe[]; setze: (id: string, wert: boolean | string | number) => void };
   kameraTempo?: (f: number) => void;
+  /** M12: Blickpunkt der Kamera (Ausschnitt-Meter), Stimmung an die Bühne (Tageszeit, Wolken), grobe Qualität. */
+  ziel?: () => THREE.Vector3;
+  stimmung?: (s: Stimmung) => void;
+  grob?: () => boolean;
 }
 
 
@@ -161,6 +170,13 @@ export class Spiel {
   private readonly boten: Boten;
   private readonly deko: Deko;
   private readonly gebiet: GebietDarstellung;
+  private readonly wetterOptik: WetterOptik;
+  /** Für Screenshots und Tests: Wetterlage und Tageszeit fest vorgeben (Teile genügen). */
+  wetterVorgabe: (Partial<WetterLage> & { tag?: number }) | null = null;
+  /** M12: Musik, Gebrabbel und Geräusche (WebAudio; in automatisierten Tests aus, außer mit #ton=1). */
+  readonly klang = new Klang(typeof navigator === 'undefined' || !navigator.webdriver || location.hash.includes('ton=1'));
+  private klangTimer = 0;
+  private klangRechts = new THREE.Vector3();
   private readonly natur: Natur;
   private readonly gebaeude: Gebaeude;
   private readonly markierung: Markierung;
@@ -262,13 +278,14 @@ export class Spiel {
     this.boten = new Boten(map, grid, base, ex);
     this.deko = new Deko(map, grid, base, ex);
     this.gebiet = new GebietDarstellung(map, grid, base, ex);
+    this.wetterOptik = new WetterOptik(map, grid, base, ex);
     this.natur = new Natur(map, grid, base, ex, ctx.haken.trees);
     this.markierung = new Markierung(map, grid, base, ex);
     this.bauplaetze = new Bauplaetze(map, grid, base, ex);
     this.geist = new Geist(map, grid, base, ex);
     this.wege.wald = ctx.haken.trees ?? null;
     this.fahnen.kamera = ctx.camera; this.traeger.kamera = ctx.camera; this.gebaeude.kamera = ctx.camera; this.arbeiter.kamera = ctx.camera; this.boten.kamera = ctx.camera;
-    this.group.add(this.wege.group, this.fahnen.group, this.traeger.group, this.gebaeude.group, this.arbeiter.group, this.boten.group, this.deko.group, this.gebiet.group, this.natur.group,
+    this.group.add(this.wege.group, this.fahnen.group, this.traeger.group, this.gebaeude.group, this.arbeiter.group, this.boten.group, this.deko.group, this.gebiet.group, this.wetterOptik.group, this.natur.group,
       this.bauplaetze.group, this.geist.group, this.markierung.group);
     ctx.scene.add(this.group);
 
@@ -276,6 +293,7 @@ export class Spiel {
     this.einst = ladeEinstellungen();
     wendeAn(this.einst);
     ctx.kameraTempo?.(this.einst.kameraTempo / 100);
+    this.klang.setzeLautstaerke(this.einst.musik, this.einst.geraeusche);
     this.ic = icons();
     this.autosaveTick = this._sim.tick + AUTOSAVE_MIN * 60 * TICK_HZ;
     this.leiste = new Spielleiste(ctx.root, {
@@ -418,7 +436,7 @@ export class Spiel {
     this.ctx.ex = ex;
     this.wege.setExaggeration(ex); this.fahnen.setExaggeration(ex); this.traeger.setExaggeration(ex);
     this.gebaeude.setExaggeration(ex); this.markierung.setExaggeration(ex);
-    this.arbeiter.setExaggeration(ex); this.natur.setExaggeration(ex); this.boten.setExaggeration(ex); this.deko.setExaggeration(ex); this.gebiet.setExaggeration(ex);
+    this.arbeiter.setExaggeration(ex); this.natur.setExaggeration(ex); this.boten.setExaggeration(ex); this.deko.setExaggeration(ex); this.gebiet.setExaggeration(ex); this.wetterOptik.setExaggeration(ex);
     this.bauplaetze.setExaggeration(ex); this.geist.setExaggeration(ex);
   }
 
@@ -468,6 +486,7 @@ export class Spiel {
     // Schnee kommt mit dem Winter und taut in den ersten Minuten des Frühjahrs (Drehbuch 7.4)
     const j = this._sicht.jahr, zt = JAHRESZEIT_TICKS - j.rest;
     setzeSchnee(j.jahreszeit === 3 ? Math.min(1, zt / (90 * 20)) : j.jahreszeit === 0 && j.jahr > 0 ? Math.max(0, 1 - zt / (120 * 20)) : 0);
+    this.wetterZeigen(a, dt);
 
     // Maus: Hex unter dem Zeiger (gedrosselt, folgt auch der bewegten Kamera)
     this.mausTimer -= dt;
@@ -497,6 +516,31 @@ export class Spiel {
     if (this.meldung && performance.now() > this.meldung.bis) { this.meldung = null; this.hinweisSetzen(); }
   }
 
+  /** M12: Wetter- und Tageszeit-Optik aus der Sicht (nur Darstellung, data/optik.json). */
+  private wetterZeigen(alpha: number, dt: number): void {
+    const s = this._sicht, j = s.jahr;
+    const st = wetterStimmung(s.tick + alpha, j);
+    if (this.wetterVorgabe) {
+      const v = this.wetterVorgabe;
+      Object.assign(st.lage, v);
+      if (v.tag !== undefined) st.stimmung.tag = v.tag;
+      st.stimmung.wolken = v.wolken ?? Math.max(st.lage.regen, st.lage.schnee * 0.8, st.lage.nebel * 0.5);
+    }
+    if (this.ctx.ziel) {
+      this.wetterOptik.setGrob(this.ctx.grob?.() ?? false);
+      this.wetterOptik.update(st.lage, this.ctx.ziel(), this.ctx.abstand(), dt, !!this.wetterVorgabe);
+    }
+    this.ctx.stimmung?.(st.stimmung);
+    // Klang: Lage gedrosselt neu berechnen (die Quellen ändern sich langsam), Planung jedes Bild
+    this.klangTimer -= dt;
+    if (this.klangTimer <= 0 && this.klang.an && this.ctx.ziel) {
+      this.klangTimer = 0.15;
+      this.klangRechts.setFromMatrixColumn(this.ctx.camera.matrixWorld, 0);
+      this.klang.update(klangLage(s, this.ich, (h) => this.ctx.grid.toWorld(h), this.ctx.ziel(), { x: this.klangRechts.x, z: this.klangRechts.z },
+        this.ctx.abstand(), st.stimmung.tag, st.lage));
+    }
+  }
+
   private neueSicht(): void {
     this._sicht = this._sim.sicht(this.ich);
     this.indizes();
@@ -507,6 +551,10 @@ export class Spiel {
   private zeigeMeldung(m: Meldung): void {
     const g = m.gebaeude ? this._sicht.gebaeude.find((x) => x.id === m.gebaeude) : undefined;
     const ort = g ? { q: g.q, r: g.r } : m.ort;
+    // Gebrabbel statt Sprecher: Stimmlage fest je Erzählfigur, Länge nach dem Text
+    let h = 0;
+    for (const c of this.erzaehler.name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    this.klang.brabbel((h % 100) / 100, m.text.length / 120);
     this.meldungen.zeige({ wer: this.erzaehler.name, text: m.text, platt: m.platt, gross: m.gross, onKlick: ort ? () => this.springeZu(ort) : undefined });
     this.insProtokoll(`${this.erzaehler.name}: ${m.text}`, false, ort);
   }
@@ -530,6 +578,8 @@ export class Spiel {
     for (const e of s.ereignisse) {
       if (e.nr <= this.gemeldetBis) continue;
       this.gemeldetBis = e.nr;
+      // Tusch auf Kirmes, Feste, neue Stufe und Schützenkönig (Drehbuch 7.2), nur für das eigene Dorf
+      if (e.art === 'kirmes' || e.art === 'kleines_fest' || e.art === 'stufe' || e.art === 'schuetzenfest' || e.art === 'koenig') this.klang.tusch();
       const g = e.gebaeude ? s.gebaeude.find((x) => x.id === e.gebaeude) : undefined;
       const ort = g ? { q: g.q, r: g.r } : undefined;
       if (e.art === 'fertig' && g) this.insProtokoll(`${NAMEN[g.typ] ?? g.typ} ist fertig.`, false, ort);
@@ -597,6 +647,8 @@ export class Spiel {
 
   private eingabe(): void {
     const c = this.ctx.canvas;
+    // Ton erst nach der ersten Berührung (Regel der Browser); danach weckt jede Eingabe einen schlafenden Ton wieder
+    for (const art of ['pointerdown', 'keydown'] as const) addEventListener(art, () => this.klang.wecke(), { capture: true });
     c.addEventListener('pointerdown', (e) => {
       this.zeiger = e.pointerType === 'mouse' ? 'mouse' : 'touch';
       if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 2) return;
@@ -1316,6 +1368,12 @@ export class Spiel {
         { id: 'farbenblind', text: 'Farbenblind-Modus für Waren (nach Neuladen)', typ: 'schalter', wert: e.farbenblind, hilfe: 'Andere Warenfarben (Okabe-Ito), gut unterscheidbar auch bei Rot-Grün-Schwäche' },
       ],
     });
+    ab.push({
+      art: 'eingaben', titel: 'Klang', felder: [
+        { id: 'musik', text: 'Musik', typ: 'regler', wert: e.musik, min: 0, max: 100, schritt: 10, einheit: ' %' },
+        { id: 'geraeusche', text: 'Geräusche und Gebrabbel', typ: 'regler', wert: e.geraeusche, min: 0, max: 100, schritt: 10, einheit: ' %' },
+      ],
+    });
     ab.push({ art: 'eingaben', titel: 'Steuerung', felder: [{ id: 'kameraTempo', text: 'Kamera-Tempo (Tasten)', typ: 'regler', wert: e.kameraTempo, min: 25, max: 300, schritt: 25, einheit: ' %' }] });
     ab.push({
       art: 'eingaben', titel: 'Spiel', felder: [
@@ -1345,6 +1403,7 @@ export class Spiel {
       speichereEinstellungen(this.einst);
       wendeAn(this.einst);
       if (k === 'kameraTempo') this.ctx.kameraTempo?.(this.einst.kameraTempo / 100);
+      if (k === 'musik' || k === 'geraeusche') this.klang.setzeLautstaerke(this.einst.musik, this.einst.geraeusche);
     } else this.ctx.grafik?.setze(k, v);
     this.fenster.jetzt('einstellungen');
   }
@@ -1491,7 +1550,8 @@ export class Spiel {
     // Jahreszeit und Wetter (Drehbuch 7.4)
     const j = s.jahr;
     const minuten = (t: number) => Math.max(1, Math.ceil(t / (60 * 20)));
-    let jahr = `${JZ_SYMBOL[j.jahreszeit]} ${JAHRESZEITEN[j.jahreszeit]}, Jahr ${j.jahr + 1} (noch ${minuten(j.rest)} min)`;
+    const uhr = stunde(tageszeit(s.tick));
+    let jahr = `${JZ_SYMBOL[j.jahreszeit]} ${JAHRESZEITEN[j.jahreszeit]}, Jahr ${j.jahr + 1} (noch ${minuten(j.rest)} min) · ${uhr >= 21 || uhr < 5 ? '🌙' : '🕗'} ${uhr} Uhr`;
     for (const w of j.wetter) jahr += ` · ${WETTER[w.art].symbol} ${WETTER[w.art].name} (noch ${minuten(w.bis - s.tick)} min)`;
     for (const w of j.kommt) jahr += ` · bald ${WETTER[w.art].symbol} ${WETTER[w.art].name}`;
     const zeigen = [0, 1, 2, 6, 5, 4, 9, 8, 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19].map((a) => ({ art: a, icon: WARE_TEXT[a]?.icon ?? '', name: WARE_TEXT[a]?.mehr ?? '' }));

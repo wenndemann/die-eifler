@@ -1,0 +1,49 @@
+{
+  "hinweis": "Klang (Drehbuch 7.2, ROADMAP M12): alles im Browser erzeugt (WebAudio), keine Aufnahmen. Lautstärken 0..1 je Bus. Melodien: Noten als Text, je Note 'Name+Oktave:Länge' in Achteln, '-' Pause; Takt in Schlägen je Minute. Gebrabbel: Silben je Satz, Tonhöhe der Stimme (Hz) je Völkchen-Tick, Vokale als Formanten (Hz). Arbeitsgeräusche: Gebäudetyp → Art und Abstand in Sekunden; hörbar bis 'reichweite_m' um den Blickpunkt. Spuk: Grenzsteinversetzer heulen nachts mit dieser Chance je Minute.",
+  "busse": { "musik": 0.32, "geraeusche": 0.55, "stimmen": 0.5, "natur": 0.35 },
+  "musik": {
+    "pause_s": [25, 60],
+    "stuecke": [
+      { "name": "Eifeler Walzer", "instrument": "akkordeon", "takt": 150, "dreier": true,
+        "melodie": "G4:2 C5:2 E5:2 G5:4 E5:2 D5:2 C5:2 D5:4 -:2 F4:2 B4:2 D5:2 F5:4 D5:2 C5:2 B4:2 C5:6",
+        "bass": "C3 G3 G3 C3 G3 G3 G2 D3 D3 G2 D3 D3 G2 D3 D3 C3 G3 G3" },
+      { "name": "Kirmesmarsch", "instrument": "blech", "takt": 116, "dreier": false,
+        "melodie": "C5:1 C5:1 E5:2 G5:2 E5:2 F5:2 D5:2 B4:4 C5:1 C5:1 E5:2 G5:2 C6:2 B5:2 G5:2 C5:4",
+        "bass": "C3 G2 C3 G2 G2 D3 G2 D3 C3 G2 C3 G2 G2 G2 C3 C3" },
+      { "name": "Venn-Reigen", "instrument": "fiedel", "takt": 132, "dreier": false,
+        "melodie": "A4:1 B4:1 C5:2 E5:2 A5:2 G5:1 F5:1 E5:2 D5:2 C5:2 B4:2 A4:4 E5:2 E5:1 F5:1 G5:2 E5:2 C5:2 B4:2 A4:4",
+        "bass": "A2 E3 A2 E3 D3 A3 E3 B2 A2 E3 C3 G3 E3 B2 A2 A2" },
+      { "name": "Rursee-Schunkler", "instrument": "akkordeon", "takt": 138, "dreier": true,
+        "melodie": "D5:2 F5:2 A5:2 A5:4 G5:2 F5:2 E5:2 D5:4 -:2 E5:2 G5:2 Bb5:2 Bb5:4 A5:2 G5:2 E5:2 D5:6",
+        "bass": "D3 A3 A3 D3 A3 A3 A2 E3 E3 A2 E3 E3 G2 D3 D3 D3 A3 A3" }
+    ]
+  },
+  "tusch": { "takt": 140, "akkord": ["C4", "E4", "G4", "C5"], "folge": [1, 1, 4] },
+  "gebrabbel": {
+    "silben": [2, 6],
+    "vokale": { "a": [800, 1200], "o": [500, 850], "u": [350, 700], "e": [450, 1900], "ä": [650, 1700], "i": [300, 2300] },
+    "stimme_hz": [110, 230],
+    "worte": ["jo", "nä", "wat", "dat", "joot", "övver", "esu", "jonn", "hä", "nu", "ens", "kütt"]
+  },
+  "arbeit": {
+    "reichweite_m": 650,
+    "geraeusche": {
+      "saegewerk": { "art": "saege", "takt_s": 2.6 },
+      "holzfaeller": { "art": "axt", "takt_s": 1.8 },
+      "schmiede": { "art": "amboss", "takt_s": 1.1 },
+      "steinbruch": { "art": "klopfen", "takt_s": 1.4 },
+      "basaltbruch": { "art": "klopfen", "takt_s": 1.4 },
+      "schieferbruch": { "art": "klopfen", "takt_s": 1.6 },
+      "muehlsteinhauerei": { "art": "klopfen", "takt_s": 1.2 },
+      "steinmetz": { "art": "klopfen", "takt_s": 1.0 },
+      "eisenhuette": { "art": "zischen", "takt_s": 3.5 },
+      "brauerei": { "art": "blubbern", "takt_s": 3.0 },
+      "schafstall": { "art": "maeh", "takt_s": 7.0 },
+      "schafweide": { "art": "maeh", "takt_s": 6.0 },
+      "kaeserei": { "art": "muh", "takt_s": 9.0 },
+      "hundehuette": { "art": "wuff", "takt_s": 8.0 },
+      "bienenstock": { "art": "summen", "takt_s": 4.0 }
+    }
+  },
+  "natur": { "voegel_je_min": 14, "grillen_nachts": true, "spuk_je_min": 0.25 }
+}

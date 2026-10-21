@@ -186,6 +186,7 @@ async function main() {
     springe: (x, z) => { intro = null; api.ready = true; cam.lookAt(...clamp(x, z + 350)); },
     grafik: { felder: () => hud.grafikFelder(), setze: (k, v) => hud.setze(k, v) },
     kameraTempo: (f) => { cam.tempo = f; },
+    ziel: () => cam.target, stimmung: (s) => stage.setzeStimmung(s), grob: () => hud.settings.quality === 'niedrig',
     onLaden: (st) => {
       try { sessionStorage.setItem(LADEN_SPEICHER, JSON.stringify(st)); } catch { alert('Der Spielstand ist zu groß für diesen Browser.'); return; }
       history.replaceState(null, '', location.pathname + location.search);

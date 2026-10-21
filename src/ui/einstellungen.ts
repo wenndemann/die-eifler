@@ -16,10 +16,13 @@ export interface Einstellungen {
   ziel: string;
   /** M11: Völkchen für neue Spiele allein ('' = aus dem Startort; im Mehrspieler immer aus dem Startort). */
   voelkchen: string;
+  /** M12: Lautstärke Musik und Geräusche (samt Gebrabbel) in Prozent, 0 = aus. */
+  musik: number;
+  geraeusche: number;
 }
 
 export const EINSTELLUNGEN_SPEICHER = 'eifeler.einstellungen';
-export const STANDARD: Einstellungen = { uiGroesse: 100, farbenblind: false, kameraTempo: 100, autosave: true, tipps: true, ziel: 'normal', voelkchen: '' };
+export const STANDARD: Einstellungen = { uiGroesse: 100, farbenblind: false, kameraTempo: 100, autosave: true, tipps: true, ziel: 'normal', voelkchen: '', musik: 60, geraeusche: 80 };
 
 const zahl = (v: unknown, min: number, max: number, def: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(min, Math.round(v))) : def);
 
@@ -35,6 +38,8 @@ export function leseEinstellungen(text: string | null): Einstellungen {
     tipps: typeof d.tipps === 'boolean' ? d.tipps : STANDARD.tipps,
     ziel: typeof d.ziel === 'string' && d.ziel ? d.ziel : STANDARD.ziel,
     voelkchen: typeof d.voelkchen === 'string' ? d.voelkchen : STANDARD.voelkchen,
+    musik: zahl(d.musik, 0, 100, STANDARD.musik),
+    geraeusche: zahl(d.geraeusche, 0, 100, STANDARD.geraeusche),
   };
 }
 
