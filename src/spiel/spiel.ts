@@ -43,7 +43,7 @@ import {
   bauTooltip, endeFenster, zielName, fahneFenster, gebaeudeFenster, hilfeFenster, ortFenster, postenFenster, punkteText, LAGERREGEL_NAMEN, Produktivitaet, protokollFenster, statistikFenster, verteilungFenster,
   verteilungKnopf, warenFenster, warnungen, wegFenster, type FensterKontext, type ProtokollZeile, type StatMass,
 } from './fensterdaten';
-import { erzaehlerFuer, MeldungsFilter, type Erzaehler, type Meldung, type MeldungsNamen } from './meldungen';
+import { erzaehlerFuer, erzaehlerVon, MeldungsFilter, type Erzaehler, type Meldung, type MeldungsNamen } from './meldungen';
 import {
   BAUPLATZ_NAMEN, bedarfNamen, fehlmengen, hexeImUmkreis, kostenText as kostenAlsText, menueGruppen, naechstePrioritaet, PRIO_NAMEN,
   reichweiteText, wareTexte, zustandsText,
@@ -116,8 +116,10 @@ function eingangNamen(g: SichtGebaeude): string {
 }
 
 /** Baumenü aus den Daten: Gruppen und Gebäude wie in data/buildings.json (ohne Lager), mit Icon, Taste und Tooltip. */
-function menueDaten(ic: Icons): MenueGruppeDaten[] {
-  return menueGruppen(GEBAEUDE_IDS.map((id) => GEBAEUDE[id])).map((g) => ({
+function menueDaten(ic: Icons, voelkchen: string): MenueGruppeDaten[] {
+  // Spezialketten (M11) nur fürs eigene Völkchen
+  const eigene = GEBAEUDE_IDS.filter((id) => !GEBAEUDE[id].voelkchen.length || GEBAEUDE[id].voelkchen.includes(voelkchen));
+  return menueGruppen(eigene.map((id) => GEBAEUDE[id])).map((g) => ({
     gruppe: g.gruppe,
     eintraege: g.typen.map((t) => {
       const n = GEBAEUDE_WERKZEUGE.indexOf(t.id) + 3;
@@ -245,7 +247,8 @@ export class Spiel {
       setInterval(() => { if (performance.now() - this.letzterTakt > 200) this.netzTakt(); }, 100);
     } else {
       this._sim = ctx.laden ? Simulation.ausStand(ausschnitt.hex, ctx.laden)
-        : new Simulation(ausschnitt.hex, saatAusPruefsumme(ausschnitt.pruefsumme), waehleLagerHex(ausschnitt.hex, ausschnitt.kerne, map.info.start),
+        : new Simulation(ausschnitt.hex, saatAusPruefsumme(ausschnitt.pruefsumme),
+          { ...waehleLagerHex(ausschnitt.hex, ausschnitt.kerne, map.info.start), voelkchen: erzaehlerFuer(map.info.start, ausschnitt.kerne.map((k) => k.name)).id },
           { gebiet: 1, ziel: ladeEinstellungen().ziel });
       this.ich = 0;
     }
@@ -282,7 +285,7 @@ export class Spiel {
       onZurueck: () => this.zurueck(),
       onTempo: (t) => (t === 0 ? this.pauseUmschalten() : this.setzeTempo(t)),
       onFenster: (id) => this.fensterUmschalten(id),
-    }, menueDaten(this.ic));
+    }, menueDaten(this.ic, this._sim.sicht(this.ich).dorf.voelkchen ?? ''));
     wennIconsDa(() => this.leiste.setzeBilder(this.ic.gebaeude));
     this._sicht = this._sim.sicht(this.ich);
     this.indizes();
@@ -302,7 +305,9 @@ export class Spiel {
     };
     // Erzählfigur des Völkchens zum Startort, Begrüßung
     const ort = map.info.start ?? ausschnitt.kerne[0]?.name ?? 'der Eifel';
-    this.erzaehler = erzaehlerFuer(map.info.start, ausschnitt.kerne.map((k) => k.name));
+    // eigenes Völkchen (aus dem Startort, Mehrspieler: je Spieler); Spielstände ohne Völkchen: wie bisher aus dem Startort der Karte
+    const vk = this._sim.sicht(this.ich).dorf.voelkchen;
+    this.erzaehler = vk ? erzaehlerVon(vk) : erzaehlerFuer(map.info.start, ausschnitt.kerne.map((k) => k.name));
     this.meldungen = new Meldungen(ctx.root);
     this.fenster = new Fensterflaeche(ctx.root, {
       name: (a) => WARE_TEXT[a]?.mehr ?? WAREN[a], bild: (a) => this.ic.ware[a], zeichen: (a) => WARE_TEXT[a]?.icon || '•',

@@ -259,17 +259,17 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 
 ---
 
-## M11 – Die 10 Völkchen
+## M11 – Die 10 Völkchen ✅ (erster Stand) → 🔨 Balancing in Testpartien
 
 **Ziel:** Jeder Startort spielt sich anders (Drehbuch 5.3).
 
-- [ ] Gebietskarte im Konverter: welcher Startort gehört zu welchem Völkchen
-- [ ] Je Völkchen Bonus, **Spezialkette (2–3 Gebäude, ab Stufe 2)**, augenzwinkernde Schwäche, edle Spezialität für Stufe 3
-- [ ] Monschauer & Venner, Rursee-Leute, Rureifeler, Vulkaneifeler, Ahrtaler, Laacher & Mayener, Südeifeler, Schneifeler, **Ostbelgier**, **Öslinger**
-- [ ] **Hecken als Monschauer Spezialität:** lebende Grenze, Windschutz, wachsen nur mit Setzlingen (Drehbuch 6.1); anderswo nur Kulisse an Feldgrenzen (aus M1)
-- [ ] Tracht und Farbe je Völkchen, Gebäude mit regionalen Baustoffen (Schiefer, Buntsandstein, Basalt, Drehbuch 7.3)
-- [ ] Sprüche je Völkchen (ripuarisch, moselfränkisch, Ostbelgien, Ösling), Tooltip-Übersetzung für Flachländer
-- [ ] Balancing: kein Völkchen gewinnt in Testpartien deutlich öfter
+- [x] Völkchen aus dem Startort (Kerngebiete in `data/regions.json`, sonst der erste Ortskern des Ausschnitts in einem Kerngebiet); eine echte Gebietskarte im Konverter folgt
+- [x] Je Völkchen Bonus, **Spezialkette (2–3 Gebäude, ab Stufe 2)**, augenzwinkernde Schwäche, edle Spezialität für die Marktflecken-Kirmes (statt des Bergkäse-Platzhalters); Regeln in `data/voelkchen.json`
+- [x] Monschauer & Venner, Rursee-Leute, Rureifeler, Vulkaneifeler, Ahrtaler, Laacher & Mayener, Südeifeler, Schneifeler, **Ostbelgier**, **Öslinger** (Römerstraße und Vennbahn als schnelle Wege folgen)
+- [x] **Hecken als Monschauer Spezialität:** Buchenhecke aus Setzlingen, Windschutz im Winter (+30 % bis 2 Hexe); als lebende Grenze gegen Grenzsteinversetzer kommt sie mit dem Versetzen
+- [x] Tracht und Farbe je Völkchen (Figuren im Farbton des Völkchens), Dächer in regionaler Farbe (Schiefer, Buntsandstein, Basalt); Wände und Mauern regional folgen
+- [x] Sprüche je Völkchen (ripuarisch, moselfränkisch, Ostbelgien, Ösling) mit Übersetzung, Erzählfigur je Völkchen auch im Mehrspieler
+- [ ] Balancing: kein Völkchen gewinnt in Testpartien deutlich öfter – Faustregel in den Daten (Bonus ≤ +25 %, Schwäche ≥ −20 %), Testpartien stehen aus
 
 **Abnahme:** Ein Ausschnitt über die belgische Grenze bringt Monschauer gegen Ostbelgier. Beide spielen sich erkennbar anders und sind gleich stark.
 

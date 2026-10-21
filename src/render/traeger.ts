@@ -10,6 +10,7 @@ import type { MapData } from '../map/mapdata';
 import type { HexGrid } from '../map/hex';
 import { PROMILLE, type Id, type SimSicht } from '../sim/typen';
 import { paint } from './mockup';
+import { VOELKCHEN } from '../sim/voelkchen';
 import { Instanzen } from './instanzen';
 import { TRAEGER_H, WARE_TRAGEN, fernFaktor } from './massstab';
 import { WAREN_ANZAHL, warenGeometrie } from './waren';
@@ -88,6 +89,17 @@ export function figur(): THREE.BufferGeometry {
 
 /** Kopf- und Bauchfaktor der Figuren (STIL.md). */
 export const KOPF = 1.2, BAUCH = 1.12;
+
+/**
+ * Trachtfarbe (Drehbuch 7.1, M11: je Völkchen): halb die Farbe des Völkchens, halb eine der bunten Grundfarben – das Gewimmel bleibt
+ * bunt, aber ein Völkchen erkennt man an seinem Farbton.
+ */
+export function trachtFarbe(ziel: THREE.Color, id: number, voelkchen: string | undefined): THREE.Color {
+  ziel.copy(TRACHT[id % TRACHT.length]);
+  const v = voelkchen ? VOLK_FARBE.get(voelkchen) : undefined;
+  return v ? ziel.lerp(v, 0.55) : ziel;
+}
+const VOLK_FARBE = new Map(VOELKCHEN.map((v) => [v.id, new THREE.Color(v.tracht)] as [string, THREE.Color]));
 
 const TRACHT = ['#3f6fb5', '#b5463f', '#4f8a4a', '#d0a030', '#7a4fa0', '#3a8a8a', '#e0709a', '#c8642f'].map((c) => new THREE.Color(c));
 
@@ -220,7 +232,7 @@ export class Traeger {
       s.set(sk, sk, sk);
       m.compose(p.set(x, y, z), q, s);
       const trage = t.ware >= 0 ? 1 : 0;
-      this.figuren.fuege(m, farbe.copy(TRACHT[t.id % TRACHT.length]), [st.phase, trage, lauf ? 1 : t.tut === 'uebergibt' ? 0.35 : 0.1]);
+      this.figuren.fuege(m, trachtFarbe(farbe, t.id, sicht.spieler[t.sp]?.voelkchen), [st.phase, trage, lauf ? 1 : t.tut === 'uebergibt' ? 0.35 : 0.1]);
       if (trage && t.ware < WAREN_ANZAHL) {
         // Ware über dem Kopf, wippt mit
         const wip = lauf ? Math.abs(Math.sin(st.phase)) * 0.05 * sk : 0;

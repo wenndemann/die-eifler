@@ -19,6 +19,7 @@ interface GebaeudeJson {
   zeiten?: { arbeit_s?: number; ruhe_s?: number };
   nahrung_plaetze?: number; ab_stufe?: number; einmalig?: boolean; taste?: string;
   saison?: string; werkzeug?: number; boten?: number; leistung?: string;
+  voelkchen?: string[]; modell?: string; am_wasser?: boolean; kein_planieren?: boolean;
 }
 
 const warenListe = (warenJson as { waren: WareJson[] }).waren;
@@ -177,6 +178,8 @@ export interface GebaeudeTyp {
   boten: number;
   /** Satz fürs Gebäudefenster (data/buildings.json: leistung) oder ''. */
   leistung: string;
+  /** M11: nur diese Völkchen dürfen es bauen (leer = alle); Darstellung wie Gebäude `modell`; braucht Wasser nah; kein Planieren am Hang. */
+  voelkchen: readonly string[]; modell: string; amWasser: boolean; keinPlanieren: boolean;
 }
 
 const ticks = (s: number | undefined) => Math.round((s ?? 0) * TICK_HZ);
@@ -226,6 +229,7 @@ function baue(j: GebaeudeJson): GebaeudeTyp {
     werkzeug: j.werkzeug ?? 0,
     boten: j.boten ?? 0,
     leistung: j.leistung ?? '',
+    voelkchen: j.voelkchen ?? [], modell: j.modell ?? '', amWasser: !!j.am_wasser, keinPlanieren: !!j.kein_planieren,
   };
 }
 
@@ -234,7 +238,7 @@ export function zutatMenge(t: GebaeudeTyp, a: number): number {
   return t.wandelt?.ein.find((z) => z.a === a)?.n ?? (a === WARE.werkzeug && t.werkzeug ? t.werkzeug : 1);
 }
 
-const typen = (gebaeudeJson as { gebaeude: GebaeudeJson[] }).gebaeude.map(baue);
+const typen = (gebaeudeJson as unknown as { gebaeude: GebaeudeJson[] }).gebaeude.map(baue);
 
 /** Gebäudetypen nach Id (Reihenfolge wie in data/buildings.json). */
 export const GEBAEUDE: Readonly<Record<string, GebaeudeTyp>> = Object.fromEntries(typen.map((t) => [t.id, t]));

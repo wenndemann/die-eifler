@@ -17,7 +17,7 @@ const VOELKCHEN = (regionenJson as unknown as { voelkchen: Voelkchen[] }).voelkc
 const TEXTE = meldungenJson as unknown as Record<string, string[]>;
 
 /** Erzählfigur eines Völkchens: Name, Sprachtick und Platt-Sprüche (mit Übersetzung). */
-export interface Erzaehler { voelkchen: string; name: string; tick: string; sprueche: Spruch[] }
+export interface Erzaehler { voelkchen: string; name: string; tick: string; sprueche: Spruch[]; /** Völkchen-Id (data/regions.json, data/voelkchen.json). */ id: string }
 
 /**
  * Völkchen zum Startort (Drehbuch 5: es ergibt sich aus dem Startort): erst der Startort selbst in einem Kerngebiet, dann der erste
@@ -26,7 +26,18 @@ export interface Erzaehler { voelkchen: string; name: string; tick: string; spru
 export function erzaehlerFuer(startort: string | undefined, orte: readonly string[] = []): Erzaehler {
   const finde = (o: string | undefined) => (o ? VOELKCHEN.find((v) => v.kerngebiet.orte.includes(o)) : undefined);
   const v = finde(startort) ?? orte.map(finde).find(Boolean) ?? VOELKCHEN.find((x) => x.id === 'rursee') ?? VOELKCHEN[0];
-  return { voelkchen: v.name, name: v.erzaehler.name, tick: v.erzaehler.tick, sprueche: v.sprueche };
+  return { voelkchen: v.name, name: v.erzaehler.name, tick: v.erzaehler.tick, sprueche: v.sprueche, id: v.id };
+}
+
+/** Erzählfigur zum Völkchen mit der Id (Mehrspieler: jeder hat die seines Völkchens); unbekannt → wie erzaehlerFuer ohne Ort. */
+export function erzaehlerVon(id: string): Erzaehler {
+  const v = VOELKCHEN.find((x) => x.id === id);
+  return v ? { voelkchen: v.name, name: v.erzaehler.name, tick: v.erzaehler.tick, sprueche: v.sprueche, id: v.id } : erzaehlerFuer(undefined);
+}
+
+/** Name des Völkchens zur Id oder ''. */
+export function voelkchenName(id: string): string {
+  return VOELKCHEN.find((x) => x.id === id)?.name ?? '';
 }
 
 export interface Meldung {

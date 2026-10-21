@@ -9,6 +9,7 @@ import { pruefeStartplaetze, verteileStartplaetze, type Ort } from '../netz/star
 import { NAME_SPEICHER, speicher, type RaumSicht, type Vermittlung } from '../netz/vermittlung';
 import { SPIELER_FARBEN } from './partieleiste';
 import { ZIELE } from '../sim/nachbarn';
+import { erzaehlerFuer } from '../spiel/meldungen';
 
 /** Was der Gastgeber in den Raum schreibt (alle sehen es). */
 export interface LobbyEinstellungen {
@@ -236,6 +237,8 @@ export class Lobby {
         wahl.addEventListener('change', () => { if (this.einst) { this.einst.startorte[platz] = wahl.value; this.o.v.einstellungen(this.einst); } });
         z.append(wahl);
       } else z.append(el('span', 'lobby-ort', ort ? `startet in ${ort}` : ''));
+      // M11: das Völkchen ergibt sich aus dem Startort
+      if (ort) z.append(el('span', 'lobby-voelkchen', erzaehlerFuer(ort, this.o.orte.map((o) => o.name)).voelkchen));
       return z;
     }));
     // Spielstand und Tempo

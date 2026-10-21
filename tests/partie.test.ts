@@ -6,6 +6,7 @@ import { wetterPlan } from '../src/sim/jahr';
 import { baueTestKarte, gerade } from './sim-szenario';
 import { Simulation } from '../src/sim/sim';
 import { SimKarte } from '../src/sim/karte';
+import { WARE } from '../src/sim/daten';
 import { GUT, Runde, SCHLECHT } from './netz-sim';
 
 const A = { q: 0, r: 0 }, B = { q: -6, r: 0 }, C = { q: 6, r: -12 };
@@ -320,6 +321,37 @@ describe('Gleichschritt', () => {
       expect(p(r, i).ereignisse.filter((e) => e.art === 'auseinander' || e.art === 'fehler')).toEqual([]);
     }
     expect(sim(r, 0).sicht(0).ereignisse.some((e) => e.art === 'zu_spaet')).toBe(true);
+    expect(sim(r, 1).pruefsumme()).toBe(sim(r, 0).pruefsumme());
+  });
+
+  it('M11: Völkchen je Dorf bei allen gleich – eigene Spezialkette, fremde ist gesperrt, auch nach dem Neuladen', () => {
+    const karte = baueTestKarte(false);
+    const starts = [{ q: 0, r: 0, voelkchen: 'monschau' }, { q: -14, r: 0, voelkchen: 'ostbelgien' }];
+    const st = new Simulation(karte, 99, starts).stand();
+    for (const d of st.doerfer) d.stufe = 2;
+    const r = new Runde(karte, starts, SCHLECHT);
+    r.starte(0, { sim: Simulation.ausStand(karte, st) }); r.starte(1);
+    r.verbindeAlle();
+    r.lauf(2000);
+    p(r, 1).befehl({ art: 'gebaeude', typ: 'molkerei', q: -14, r: 3 });
+    p(r, 1).befehl({ art: 'gebaeude', typ: 'tuchmacherei', q: -11, r: 0 });
+    p(r, 0).befehl({ art: 'gebaeude', typ: 'tuchmacherei', q: 3, r: 0 });
+    r.lauf(3000);
+    r.trenne(1);
+    r.lauf(1000);
+    const neu = r.starte(1);
+    r.verbindeAlle();
+    while (!neu.sim || neu.angehalten) r.lauf(16);
+    r.lauf(3000);
+    p(r, 0).pause(true);
+    r.lauf(3000);
+    r.gleichziehen();
+    for (const i of [0, 1]) {
+      const s = sim(r, i).sicht(i);
+      expect(s.spieler.map((x) => x.voelkchen)).toEqual(['monschau', 'ostbelgien']);
+      expect(s.gebaeude.filter((g) => g.typ !== 'lager').map((g) => `${g.sp}:${g.typ}`).sort()).toEqual(['0:tuchmacherei', '1:molkerei']);
+    }
+    expect(sim(r, 1).sicht(1).dorf.kirmes!.liste[WARE.butter]).toBe(10);
     expect(sim(r, 1).pruefsumme()).toBe(sim(r, 0).pruefsumme());
   });
 

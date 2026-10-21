@@ -137,6 +137,27 @@ describe('M10 Orte mit Einstand', () => {
     expect(sim.pruefeInnenzustand()).toEqual([]);
   });
 
+  it('die Sicht zwischen den Ticks ändert nichts an der Prüfsumme (Mehrspieler: wer zeichnet, darf nicht auseinanderlaufen)', () => {
+    const k = karteMitOrt();
+    const baue = () => {
+      const sim = aendere(new Simulation(k, 3, { q: 0, r: 0 }, MIT_GEBIET), k, (st) => fuelleLager(st, 0));
+      tu(sim, 0, { art: 'weg', pfad: gerade(0, 0, 2, 13) });
+      tu(sim, 0, { art: 'gebaeude', typ: 'wohnhaus', q: 3, r: 0 });
+      tu(sim, 0, { art: 'weg', pfad: gerade(0, 0, 0, 3) });
+      return sim;
+    };
+    const a = baue(), b = baue();
+    lauf(a, 1); lauf(b, 1);
+    tu(a, 0, { art: 'einstand', ort: 0 }); tu(b, 0, { art: 'einstand', ort: 0 });
+    for (let i = 0; i < 800; i++) {
+      a.sicht(0);
+      lauf(a, 1); lauf(b, 1);
+      a.sicht(0);
+      expect(a.pruefsumme(), `Tick ${a.tick}`).toBe(b.pruefsumme());
+    }
+    expect(a.sicht().orte[0].besitzer).toBe(0);
+  });
+
   it('Spielstand mit Lieferung unterwegs: gleiche Prüfsumme und gleicher Fortgang; alte Spielstände laden ohne Gebiet', () => {
     const k = karteMitOrt();
     let sim = new Simulation(k, 3, { q: 0, r: 0 }, MIT_GEBIET);
@@ -278,5 +299,17 @@ describe('M10 Schützenfest und Eifel-Punkte', () => {
     const p = sim.protokoll(KARTE_INFO);
     expect(p.regeln).toEqual({ gebiet: 1, ziel: 'normal' });
     expect(spieleAb(k, p).pruefsumme()).toBe(sim.pruefsumme());
+  });
+});
+
+describe('M10/M11 Szenario für Node = Browser', () => {
+  it('läuft, Replay trifft die Prüfsumme', async () => {
+    const { baueSzenarioM10 } = await import('./m10-szenario');
+    const { karte, protokoll } = baueSzenarioM10();
+    expect(protokoll.regeln).toEqual({ gebiet: 1, ziel: 'kurz' });
+    expect(protokoll.start.voelkchen).toBe('monschau');
+    const a = spieleAb(karte, protokoll), b = spieleAb(karte, protokoll);
+    expect(a.pruefsumme()).toBe(b.pruefsumme());
+    expect(a.sicht().gebaeude.filter((g) => g.typ === 'holzfaeller').length).toBe(2);
   });
 });

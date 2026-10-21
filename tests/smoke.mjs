@@ -192,7 +192,7 @@ try {
 
   // ---- M3 a) Determinismus Node = Browser: das 30-Segment-Szenario, die Holzwirtschaft M4 (je 12000 Ticks) und 12 Minuten des
   //      M5-Spieltest-Bots (Bewohner, Bauleute, Essens-Ketten) in beiden Umgebungen
-  for (const [name, modul] of [['baueSzenario30'], ['baueSzenarioM4'], ['baueSzenarioM5', './tests/m5-szenario.ts'], ['baueSzenarioM6', './tests/m6-szenario.ts'], ['baueSzenarioM8', './tests/m8-szenario.ts']]) {
+  for (const [name, modul] of [['baueSzenario30'], ['baueSzenarioM4'], ['baueSzenarioM5', './tests/m5-szenario.ts'], ['baueSzenarioM6', './tests/m6-szenario.ts'], ['baueSzenarioM8', './tests/m8-szenario.ts'], ['baueSzenarioM10', './tests/m10-szenario.ts']]) {
     const nodeCode = await szenarioBuendel('esm', 'node', name, modul);
     const nodeMod = await import(`data:text/javascript;base64,${Buffer.from(nodeCode).toString('base64')}`);
     const t1 = Date.now();
