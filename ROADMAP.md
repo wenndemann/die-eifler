@@ -218,19 +218,20 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 
 ---
 
-## M9 – Stil: Siedler trifft Comic
+## M9 – Stil: Siedler trifft Comic ✅ (erster Stand) → 🔨 Nutzer-Blick und weitere Gutachter-Runden
 
 **Ziel:** Der Stil aus Drehbuch 7 wird verbindlich und überall umgesetzt, bevor die 2-Stunden-Partien beginnen: Siedler-2-Look mit Asterix-Comic-Einschlag, knubbelige Figuren, bunte, schiefe Fachwerkhäuser mit Charakter und Kleinkram, lesbare Waren. Damit der Stil nicht untergeht, ist er ein eigener Meilenstein mit messbarer Abnahme.
 
 - [x] **Stilprobe** (Wohnhaus, Träger, Ware) in drei Varianten, der Nutzer wählt eine aus (`tools/stilprobe/`): **gewählt: Wimmelbuch kräftig mit Linie** (`?v=m`: Kleinkram aus C1, Farben und Licht aus C2, feine Linie aus C3, ohne Unschärfe)
-- [ ] **Stil-Leitfaden** (`STIL.md`): Proportionen der Figuren, Farbpalette je Region, Dachneigung und „Schiefe“, Konturen/Schattierung, Licht und Farb-Grading, Oberfläche
-- [ ] **Alle Gebäude** im gewählten Stil neu, mit kleinen Animationen (Rauch, Mühlrad, Bienen, Schafe, Fässer), drei Bauphasen
-- [ ] **Figuren** (Träger, Arbeiter, Bauleute, Boten) im gewählten Stil, Mimik und Gesten in der Grundform
-- [ ] **Waren** an den Stil angepasst (lesbar bleibt Pflicht, Drehbuch 7.6)
-- [ ] Gelände, Wald und Wasser farblich zum Stil passend, Oberfläche (Fenster, Leisten) im selben Ton
-- [ ] **Bildstrecke** als Skript (`tools/bildstrecke.mjs`): feste Kameras, feste Saat – Übersicht, Dorf nah, jedes Gebäude, Figuren groß, Waren, Fenster, Sommer und Winter, Fest, kurze Bildfolgen für Bewegung
-- [ ] **Bewertung durch Gutachter-Agenten** auf der Bildstrecke: Bewertungsbogen aus Drehbuch 7 (Siedler-Comic-Mischung, Figuren, Gebäude, Waren, Einheitlichkeit, Licht und Farbe, Oberfläche, je 1–10 mit Begründung), 5 unabhängige Gutachter, einer davon gezielt kritisch, dazu der Vergleich mit der vorigen Version; die häufigste Kritik wird zur Aufgabenliste der nächsten Runde (Feinschliff)
-- [ ] Leistung: Leistungsbudget aus M1 bleibt eingehalten
+- [x] **Stil-Leitfaden** (`STIL.md`): Proportionen der Figuren, Farbpalette je Region, Dachneigung und „Schiefe“, Konturen/Schattierung, Licht und Farb-Grading, Oberfläche
+- [x] **Alle Gebäude** im gewählten Stil: gemalte Verläufe, weiche Kanten, Schiefe, Ziegelreihen, Rauch, Kleinkram je Hof (Hühner, Beete, Fässer, Bienenkörbe, Wäsche); drei Bauphasen wie bisher
+- [ ] Weitere kleine Animationen (Mühlrad, Bienen, Schafe) – mit M12
+- [x] **Figuren** (Träger, Arbeiter, Bauleute, Boten) im gewählten Stil: großer Kopf, Bauch, Gesicht unter der Kappe sichtbar, Kappe in Trachtfarbe
+- [x] **Waren** an den Stil angepasst (getragen größer) (lesbar bleibt Pflicht, Drehbuch 7.6)
+- [x] Gelände, Wald und Wasser farblich zum Stil passend, Wiesen-Deko, Schnee auf Dächern und Felsen; Oberfläche im selben Ton, Lagerzeile einklappbar
+- [x] **Bildstrecke** als Skript (`tools/bildstrecke.mjs`): feste Kameras, feste Saat – Übersicht, Dorf nah, jedes Gebäude, Figuren groß, Waren, Fenster, Sommer und Winter, Fest, kurze Bildfolgen für Bewegung
+- [x] **Bewertung durch Gutachter-Agenten** (6 Runden in M9, Ergebnis im PR) auf der Bildstrecke: Bewertungsbogen aus Drehbuch 7 (Siedler-Comic-Mischung, Figuren, Gebäude, Waren, Einheitlichkeit, Licht und Farbe, Oberfläche, je 1–10 mit Begründung), 5 unabhängige Gutachter, einer davon gezielt kritisch, dazu der Vergleich mit der vorigen Version; die häufigste Kritik wird zur Aufgabenliste der nächsten Runde (Feinschliff)
+- [x] Leistung: Dreiecke im Rahmen gehalten (Fernbäume sparsam, Deko als Oktaeder-Tupfen); Messung auf echter Hardware steht mit M1/M12 aus
 
 **Abnahme:** 4 von 5 Gutachter-Agenten sagen „Stilziel aus Drehbuch 7 erreicht“, kein Punkt des Bogens unter 7, und die neue Version gewinnt den Vergleich mit der vorigen. Das letzte Wort hat der Nutzer (Menschen-Blick wie beim Spieltest).
 

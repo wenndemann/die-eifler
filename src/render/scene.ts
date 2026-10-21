@@ -2,13 +2,17 @@
 import * as THREE from 'three';
 import { Sky } from 'three/examples/jsm/objects/Sky.js';
 import { QUALI, type Qualitaet } from './qualitaet';
+import { Buchpass } from './buchpass';
 
 export class Stage {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
   readonly sun: THREE.DirectionalLight;
   readonly sunDir = new THREE.Vector3();
-  private fogColor = new THREE.Color('#b9c8cf');
+  // Stil (STIL.md): warmer, heller Dunst wie im Bilderbuch
+  private fogColor = new THREE.Color('#d3dccf');
+  /** Bilderbuch-Pass: Linie und Farbkraft (aus auf „Niedrig“). */
+  readonly buch: Buchpass;
 
   private quali = QUALI.mittel;
   private breite = 0;
@@ -24,6 +28,8 @@ export class Stage {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(this.renderer.domElement);
+    this.buch = new Buchpass(this.renderer);
+    this.buch.an = q !== 'niedrig';
 
     this.scene.background = this.fogColor;
     this.scene.fog = new THREE.Fog(this.fogColor, 4000, 30000);
@@ -31,13 +37,19 @@ export class Stage {
     // Sonne aus Nordwesten-Westen, mittlere Höhe: plastisches Relief
     const elev = THREE.MathUtils.degToRad(32), azim = THREE.MathUtils.degToRad(-125);
     this.sunDir.set(Math.cos(elev) * Math.sin(azim), Math.sin(elev), -Math.cos(elev) * Math.cos(azim)).normalize();
-    this.sun = new THREE.DirectionalLight('#ffeccc', 3.2);
+    this.sun = new THREE.DirectionalLight('#ffe4bc', 2.75);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(this.quali.schattenKarte, this.quali.schattenKarte);
     this.sun.shadow.bias = -0.0004;
     this.sun.shadow.normalBias = 1.5;
+    // Stil: Schatten hell und farbig, nie schwarz
+    this.sun.shadow.intensity = 0.45;
     this.scene.add(this.sun, this.sun.target);
-    this.scene.add(new THREE.HemisphereLight('#c4d8ea', '#3e4a2a', 0.55));
+    // Himmel kühl, Boden warm: weiche, farbige Schatten wie gemalt; Gegenlicht für runde Formen
+    this.scene.add(new THREE.HemisphereLight('#d6e6f0', '#9a8058', 1.3));
+    const gegen = new THREE.DirectionalLight('#ffd2a0', 0.55);
+    gegen.position.set(-this.sunDir.x, 0.35, -this.sunDir.z).multiplyScalar(1000);
+    this.scene.add(gegen);
 
     // Himmel nur als Umgebungs-Reflexion (Wasser, Glanzlichter)
     const sky = new Sky();
@@ -82,11 +94,18 @@ export class Stage {
       this.sun.shadow.map = null;
     }
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, p.pixel));
-    if (this.breite) this.renderer.setSize(this.breite, this.hoehe);
+    if (this.breite) { this.renderer.setSize(this.breite, this.hoehe); this.buch.groesse(this.breite, this.hoehe); }
+    this.buch.an = q !== 'niedrig';
+  }
+
+  /** Ein Bild: mit Bilderbuch-Pass (Linie, Farbkraft) oder direkt. */
+  zeichne(kamera: THREE.Camera) {
+    this.buch.zeichne(this.scene, kamera);
   }
 
   resize(w: number, h: number) {
     this.breite = w; this.hoehe = h;
     this.renderer.setSize(w, h);
+    this.buch.groesse(w, h);
   }
 }

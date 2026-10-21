@@ -11,7 +11,7 @@ import type { HexGrid } from '../map/hex';
 import { PROMILLE, type Id, type SimSicht } from '../sim/typen';
 import { paint } from './mockup';
 import { Instanzen } from './instanzen';
-import { TRAEGER_H, fernFaktor } from './massstab';
+import { TRAEGER_H, WARE_TRAGEN, fernFaktor } from './massstab';
 import { WAREN_ANZAHL, warenGeometrie } from './waren';
 import { kurvenPunkt, type Pkt } from './wege';
 
@@ -33,7 +33,7 @@ function rohr(a: [number, number, number], b: [number, number, number], r1: numb
 
 export function figur(): THREE.BufferGeometry {
   teile.length = 0;
-  const HOSE = '#6b4a2e', STIEFEL = '#2c2118', HAUT = '#f1bf96', NASE = '#e98a73', KAPPE = '#c0392b';
+  const HOSE = '#6b4a2e', STIEFEL = '#2c2118', HAUT = '#f1bf96', NASE = '#e98a73';
   for (const [i, sx] of [[1, -1], [2, 1]] as const) {
     const hip: [number, number, number] = [sx * 0.1, 0.28, 0];
     // krumme Beine: Knie nach außen, Fuß wieder nach innen
@@ -47,23 +47,33 @@ export function figur(): THREE.BufferGeometry {
   add(paint(new THREE.BoxGeometry(0.07, 0.06, 0.02).translate(0, 0.33, 0.235), '#e8c14a'));
   // Kopf: groß, Knollennase, Augen
   add(paint(new THREE.SphereGeometry(0.235, 9, 7).translate(0, 0.74, 0), HAUT));
-  add(paint(new THREE.SphereGeometry(0.085, 6, 5).scale(1, 0.95, 1.05).translate(0, 0.71, 0.235), NASE));
+  add(paint(new THREE.SphereGeometry(0.1, 7, 5).scale(1, 0.95, 1.1).translate(0, 0.71, 0.24), NASE));
   for (const sx of [-1, 1]) {
-    add(paint(new THREE.SphereGeometry(0.048, 5, 4).translate(sx * 0.085, 0.79, 0.2), '#ffffff'));
-    add(paint(new THREE.SphereGeometry(0.024, 4, 3).translate(sx * 0.085, 0.79, 0.243), '#1b1b1b'));
+    add(paint(new THREE.SphereGeometry(0.062, 6, 5).translate(sx * 0.09, 0.785, 0.195), '#ffffff'));
+    add(paint(new THREE.SphereGeometry(0.032, 5, 4).translate(sx * 0.09, 0.79, 0.25), '#1b1b1b'));
     add(paint(new THREE.SphereGeometry(0.05, 5, 4).translate(sx * 0.16, 0.69, 0.14), '#f08f7a'));   // Wangen
     add(paint(new THREE.BoxGeometry(0.11, 0.02, 0.02).rotateZ(sx * 0.2).translate(sx * 0.085, 0.845, 0.215), '#5a3b26'));   // Brauen
   }
   add(paint(new THREE.BoxGeometry(0.2, 0.05, 0.03).translate(0, 0.64, 0.215), '#b5835a'));  // Schnauzer
   // Kappe mit Schirm und Bommel
-  add(paint(new THREE.SphereGeometry(0.255, 9, 5, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, 0.79, 0), KAPPE));
-  add(paint(new THREE.BoxGeometry(0.3, 0.035, 0.16).translate(0, 0.8, 0.22), '#8f2a20'));
-  add(paint(new THREE.SphereGeometry(0.06, 5, 4).translate(0, 1.05, 0), '#f3e9d2'));
+  // Kappe in den Nacken geschoben, damit man das Gesicht auch von schräg oben sieht (Spielkamera)
+  const nacken = (g: THREE.BufferGeometry) => g.translate(0, -0.74, 0).rotateX(-0.42).translate(0, 0.74, -0.02);
+  // Kappe in der Trachtfarbe (Tint), damit das Gewimmel bunt ist und nicht lauter rote Punkte
+  add(nacken(paint(new THREE.SphereGeometry(0.245, 9, 5, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, 0.83, 0), '#d8cfc4')), 0, [0, 0, 0], 1);
+  add(nacken(paint(new THREE.BoxGeometry(0.26, 0.03, 0.12).translate(0, 0.84, 0.2), '#9a9088')), 0, [0, 0, 0], 1);
+  add(nacken(paint(new THREE.SphereGeometry(0.06, 5, 4).translate(0, 1.08, 0), '#f3e9d2')));
   // Arme: Gelenk an der Schulter, Hand als Kugel
   for (const [i, sx] of [[3, -1], [4, 1]] as const) {
     const sch: [number, number, number] = [sx * 0.25, 0.54, 0];
     add(rohr(sch, [sx * 0.32, 0.3, 0.03], 0.065, 0.06, '#ffffff'), i, sch, 1);
     add(paint(new THREE.SphereGeometry(0.07, 5, 4).translate(sx * 0.32, 0.27, 0.03), HAUT), i, sch);
+  }
+  // Stil (STIL.md): großer Kopf und runder Bauch – Kopfteile um den Hals vergrößert, Bauch breiter
+  for (const t of teile) {
+    t.geo.computeBoundingBox();
+    const b = t.geo.boundingBox!, cy = (b.min.y + b.max.y) / 2;
+    if (t.teil === 0 && cy > 0.6) t.geo.translate(0, -0.6, 0).scale(KOPF, KOPF, KOPF).translate(0, 0.6 + 0.02, 0);
+    else if (t.teil === 0 && cy > 0.3) t.geo.translate(0, -0.42, 0).scale(BAUCH, 1.04, BAUCH).translate(0, 0.42, 0);
   }
   const geos = teile.map((t) => {
     const g = t.geo;
@@ -76,10 +86,13 @@ export function figur(): THREE.BufferGeometry {
   return mergeGeometries(geos)!;
 }
 
-const TRACHT = ['#3f6fb5', '#b5463f', '#4f8a4a', '#d0a030', '#7a4fa0', '#3a8a8a', '#d9d2c0', '#c8642f'].map((c) => new THREE.Color(c));
+/** Kopf- und Bauchfaktor der Figuren (STIL.md). */
+export const KOPF = 1.2, BAUCH = 1.12;
+
+const TRACHT = ['#3f6fb5', '#b5463f', '#4f8a4a', '#d0a030', '#7a4fa0', '#3a8a8a', '#e0709a', '#c8642f'].map((c) => new THREE.Color(c));
 
 export function material(): THREE.MeshStandardMaterial {
-  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75, flatShading: true });
+  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75, flatShading: false });
   mat.onBeforeCompile = (shader) => {
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', `#include <common>
@@ -135,7 +148,7 @@ export class Traeger {
   constructor(private map: MapData, private grid: HexGrid, private base: number, ex: number) {
     this.ex = ex;
     this.figuren = new Instanzen(this.group, figur(), material(), true, true, [{ name: 'aAnim', size: 3 }], 256);
-    const matte = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: true });
+    const matte = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: false });
     for (let a = 0; a < WAREN_ANZAHL; a++) this.waren.push(new Instanzen(this.group, warenGeometrie(a), matte, false, true, [], 256));
   }
 
@@ -211,9 +224,9 @@ export class Traeger {
       if (trage && t.ware < WAREN_ANZAHL) {
         // Ware über dem Kopf, wippt mit
         const wip = lauf ? Math.abs(Math.sin(st.phase)) * 0.05 * sk : 0;
-        const ws = k;
+        const ws = k * WARE_TRAGEN;
         s.set(ws, ws, ws);
-        m.compose(p.set(x, y + 1.06 * sk + wip, z), q, s);
+        m.compose(p.set(x, y + 1.24 * sk + wip, z), q, s);
         this.waren[t.ware].fuege(m);
       }
     }

@@ -13,9 +13,10 @@ describe('Qualitätsstufen', () => {
 });
 
 describe('Maßstab', () => {
-  it('Gebäude 3-fach, Bäume 1,6 bis 2-fach, Waldkronenfläche ungefähr erhalten', () => {
-    expect(HAUS_SKALE).toBe(3);
-    expect(BAUM_SKALE).toBeGreaterThanOrEqual(1.6);
+  it('Gebäude 3- bis 4,5-fach (M9: etwas mehr für die Spielkamera), Bäume 1,2 bis 2-fach, Waldkronenfläche ungefähr erhalten', () => {
+    expect(HAUS_SKALE).toBeGreaterThanOrEqual(3);
+    expect(HAUS_SKALE).toBeLessThanOrEqual(4.5);
+    expect(BAUM_SKALE).toBeGreaterThanOrEqual(1.2);
     expect(BAUM_SKALE).toBeLessThanOrEqual(2);
     // Kronenfläche je Baum wächst mit BAUM_SKALE², die Dichte sinkt entsprechend
     expect(BAUM_DICHTE * BAUM_SKALE * BAUM_SKALE).toBeGreaterThan(0.9);

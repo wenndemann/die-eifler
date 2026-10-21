@@ -10,6 +10,8 @@
 //   Lesesteine = kleiner flacher Steinhaufen. Zahl und Größe schrumpfen stufenweise mit der Restmenge, bei 0 ist alles weg.
 // Es wird nur neu gerechnet, wenn natur.rev steigt, und nur für Hexe, die sich gegenüber der vorigen Kopie geändert haben.
 import * as THREE from 'three';
+import { mitSchnee } from './kulisse';
+import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { MapData } from '../map/mapdata';
 import type { HexGrid } from '../map/hex';
 import { HEX } from '../welt/format';
@@ -28,33 +30,33 @@ const WUCHS = [1, 0.2, 0.42, 0.72];
 /** Platz im Hex, in dem Bäume und Stümpfe stehen (Anteil des Hex-Radius). */
 const PLATZ = 0.58;
 
-/** Kantiger Felsbrocken: Ikosaeder mit Rauschen (gleiche Ecke bekommt gleiches Rauschen), oben heller. */
+/**
+ * Felsbrocken im Wimmelbuch-Stil (STIL.md): rundlicher Findling – unterteiltes Ikosaeder mit Rauschen (gleiche Ecke, gleiches
+ * Rauschen), weich schattiert, warmer Sandstein-Ton mit gemaltem Verlauf (unten dunkler, oben heller), nie kaltes Grau.
+ */
 function felsGeometrie(variante: number): THREE.BufferGeometry {
-  const g = (variante === 0 ? new THREE.IcosahedronGeometry(1, 0) : new THREE.DodecahedronGeometry(1, 0)).toNonIndexed();
+  const roh = new THREE.IcosahedronGeometry(1, variante ? 0 : 1);   // zweite Form gröber (Dreiecksbudget)
+  roh.deleteAttribute('normal'); roh.deleteAttribute('uv');
+  const g = mergeVertices(roh);
   const pos = g.attributes.position;
-  const jit = new Map<string, [number, number, number]>();
   for (let i = 0; i < pos.count; i++) {
-    const k = `${pos.getX(i).toFixed(3)},${pos.getY(i).toFixed(3)},${pos.getZ(i).toFixed(3)}`;
-    let j = jit.get(k);
-    if (!j) { const s = (i + 1) * 7 + variante * 131; j = [0.78 + hash(s, 1) * 0.42, 0.78 + hash(s, 2) * 0.42, 0.78 + hash(s, 3) * 0.42]; jit.set(k, j); }
-    pos.setXYZ(i, pos.getX(i) * j[0], pos.getY(i) * j[1] * 0.72, pos.getZ(i) * j[2]);
+    const s = Math.round((pos.getX(i) * 13 + pos.getY(i) * 7 + pos.getZ(i) * 3) * 100) + variante * 131;
+    const j = 0.82 + hash(s, 1) * 0.3;
+    pos.setXYZ(i, pos.getX(i) * j * (variante ? 1.15 : 1), pos.getY(i) * j * 0.68, pos.getZ(i) * j);
   }
-  g.translate(0, 0.32, 0);
-  // Farbe je Fläche: Oberseite heller, Kanten dunkler
+  g.translate(0, 0.3, 0);
+  g.computeVertexNormals();
+  const nor = g.attributes.normal;
   const col = new Float32Array(pos.count * 3);
-  const c = new THREE.Color();
-  for (let f = 0; f < pos.count; f += 3) {
-    const a = new THREE.Vector3(pos.getX(f), pos.getY(f), pos.getZ(f)), b = new THREE.Vector3(pos.getX(f + 1), pos.getY(f + 1), pos.getZ(f + 1));
-    const d = new THREE.Vector3(pos.getX(f + 2), pos.getY(f + 2), pos.getZ(f + 2));
-    const n = b.clone().sub(a).cross(d.clone().sub(a)).normalize();
-    const hell = 0.5 + 0.5 * n.y;
-    c.set('#665f57').lerp(new THREE.Color('#9d968a'), hell * 0.9);
-    c.multiplyScalar(0.92 + hash(f, 9 + variante) * 0.16);
-    for (let k = 0; k < 3; k++) { col[(f + k) * 3] = c.r; col[(f + k) * 3 + 1] = c.g; col[(f + k) * 3 + 2] = c.b; }
+  // Eifeler Bruchstein: warmes Grau (STIL.md #a39a8c), oben Moos
+  const c = new THREE.Color(), unten = new THREE.Color('#7e6c58'), oben = new THREE.Color('#b8a688'), moos = new THREE.Color('#6d8a3e');
+  for (let i = 0; i < pos.count; i++) {
+    const hell = 0.5 + 0.5 * nor.getY(i);
+    c.copy(unten).lerp(oben, hell).multiplyScalar(0.92 + hash(i, 9 + variante) * 0.16);
+    if (nor.getY(i) > 0.72 && hash(i, 3 + variante) < 0.55) c.lerp(moos, 0.65);
+    col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
   }
   g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  g.deleteAttribute('uv');
-  g.computeVertexNormals();
   return g;
 }
 
@@ -117,8 +119,8 @@ export class Natur {
     for (let dr = -feld.n; dr <= feld.n; dr++) {
       for (let dq = Math.max(-feld.n, -dr - feld.n); dq <= Math.min(feld.n, -dr + feld.n); dq++) { this.qs[i] = feld.q + dq; this.rs[i] = feld.r + dr; i++; }
     }
-    const fels = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true });
-    for (let v = 0; v < 2; v++) this.felsSaetze.push(new Instanzen(this.group, felsGeometrie(v), fels, true, true, [], 256));
+    const fels = mitSchnee(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }));
+    for (let v = 0; v < 2; v++) this.felsSaetze.push(new Instanzen(this.group, felsGeometrie(v), fels, false, true, [], 256));
     if (trees) {
       for (const sp of ['fichte', 'buche'] as const) this.baumSaetze.push(new Instanzen(this.group, trees.geos[sp][0], trees.material, true, true, [], 64));
     }

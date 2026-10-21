@@ -51,7 +51,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #1a1c1e; col
 .label.gewaesser::after { display: none; }
 
 .minimap { right: 14px; bottom: 14px; padding: 6px; }
-.minimap canvas { display: block; border-radius: 6px; cursor: crosshair; }
+.minimap canvas { display: block; border-radius: 6px; cursor: crosshair; filter: brightness(1.3) saturate(1.15) sepia(0.18); }
 
 .info { left: 14px; bottom: 14px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; min-width: 180px; }
 .info b { font: 700 17px 'Alegreya SC', serif; color: var(--gold); }
@@ -133,3 +133,9 @@ kbd {
 .benchbtn { display: flex; gap: 8px; }
 .benchbtn button { padding: 5px 14px; border-radius: 8px; font: inherit; cursor: pointer; color: var(--ink); background: rgba(0,0,0,0.3); border: 1px solid rgba(231,194,122,0.5); }
 .benchbtn button:hover { background: rgba(231,194,122,0.2); }
+
+/* M9: mittlere Breiten – Kopf- und Partieleiste rechts neben dem Statusfenster, damit nichts den Titel verdeckt */
+@media (min-width: 701px) and (max-width: 1560px) {
+  .topbar, .partieleiste { left: calc(50% + 150px); }
+}
+body.schnee .minimap canvas { filter: grayscale(0.85) brightness(1.9) contrast(0.8); }

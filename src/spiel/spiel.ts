@@ -24,6 +24,7 @@ import { Fahnen } from '../render/fahnen';
 import { Traeger } from '../render/traeger';
 import { Arbeiter } from '../render/arbeiter';
 import { Boten } from '../render/boten';
+import { Deko } from '../render/deko';
 import { setzeSchnee } from '../render/kulisse';
 import { Natur } from '../render/natur';
 import { Gebaeude, type GebaeudeHaken } from '../render/gebaeude';
@@ -154,6 +155,7 @@ export class Spiel {
   private readonly traeger: Traeger;
   private readonly arbeiter: Arbeiter;
   private readonly boten: Boten;
+  private readonly deko: Deko;
   private readonly natur: Natur;
   private readonly gebaeude: Gebaeude;
   private readonly markierung: Markierung;
@@ -251,13 +253,14 @@ export class Spiel {
     this.gebaeude = new Gebaeude(map, grid, base, ex, ctx.haken);
     this.arbeiter = new Arbeiter(map, grid, base, ex);
     this.boten = new Boten(map, grid, base, ex);
+    this.deko = new Deko(map, grid, base, ex);
     this.natur = new Natur(map, grid, base, ex, ctx.haken.trees);
     this.markierung = new Markierung(map, grid, base, ex);
     this.bauplaetze = new Bauplaetze(map, grid, base, ex);
     this.geist = new Geist(map, grid, base, ex);
     this.wege.wald = ctx.haken.trees ?? null;
     this.fahnen.kamera = ctx.camera; this.traeger.kamera = ctx.camera; this.gebaeude.kamera = ctx.camera; this.arbeiter.kamera = ctx.camera; this.boten.kamera = ctx.camera;
-    this.group.add(this.wege.group, this.fahnen.group, this.traeger.group, this.gebaeude.group, this.arbeiter.group, this.boten.group, this.natur.group,
+    this.group.add(this.wege.group, this.fahnen.group, this.traeger.group, this.gebaeude.group, this.arbeiter.group, this.boten.group, this.deko.group, this.natur.group,
       this.bauplaetze.group, this.geist.group, this.markierung.group);
     ctx.scene.add(this.group);
 
@@ -405,7 +408,7 @@ export class Spiel {
     this.ctx.ex = ex;
     this.wege.setExaggeration(ex); this.fahnen.setExaggeration(ex); this.traeger.setExaggeration(ex);
     this.gebaeude.setExaggeration(ex); this.markierung.setExaggeration(ex);
-    this.arbeiter.setExaggeration(ex); this.natur.setExaggeration(ex); this.boten.setExaggeration(ex);
+    this.arbeiter.setExaggeration(ex); this.natur.setExaggeration(ex); this.boten.setExaggeration(ex); this.deko.setExaggeration(ex);
     this.bauplaetze.setExaggeration(ex); this.geist.setExaggeration(ex);
   }
 
@@ -450,6 +453,7 @@ export class Spiel {
     this.natur.update(this._sicht);
     this.arbeiter.update(this._sicht, a, dt);
     this.boten.update(this._sicht, a, dt);
+    this.deko.update(this._sicht);
     // Schnee kommt mit dem Winter und taut in den ersten Minuten des Frühjahrs (Drehbuch 7.4)
     const j = this._sicht.jahr, zt = JAHRESZEIT_TICKS - j.rest;
     setzeSchnee(j.jahreszeit === 3 ? Math.min(1, zt / (90 * 20)) : j.jahreszeit === 0 && j.jahr > 0 ? Math.max(0, 1 - zt / (120 * 20)) : 0);

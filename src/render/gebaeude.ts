@@ -9,11 +9,12 @@
 // angelieferte Stapel samt Bauschild, am Kirmesplatz die gelieferte Warenliste; beim Fest dreht sich das Karussell, es gibt
 // Feuerwerk. Reiner Leser der SimSicht, ohne Simulation nutzbar.
 import * as THREE from 'three';
+import { mitSchnee } from './kulisse';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { MapData } from '../map/mapdata';
 import type { HexGrid } from '../map/hex';
 import { PROMILLE, type GebaeudeZustand, type Id, type SimSicht } from '../sim/typen';
-import { box, roof, fachwerk, logPile, paint, C } from './mockup';
+import { box, roof, fachwerk, logPile, paint, weicheKiste, C } from './mockup';
 import { Instanzen } from './instanzen';
 import { WAREN_ANZAHL, WARE_HOEHE, warenGeometrie } from './waren';
 import { WARE_M } from './massstab';
@@ -37,7 +38,7 @@ export interface GebaeudeHaken {
 // ---------------------------------------------------------------- Bausteine
 
 const boxR = (w: number, h: number, d: number, x: number, y: number, z: number, farbe: string, rx = 0, ry = 0, rz = 0) =>
-  paint(new THREE.BoxGeometry(w, h, d).rotateX(rx).rotateZ(rz).rotateY(ry).translate(x, y, z), farbe);
+  paint(weicheKiste(w, h, d).rotateX(rx).rotateZ(rz).rotateY(ry).translate(x, y, z), farbe);
 const walze = (r: number, h: number, x: number, y: number, z: number, farbe: string, rx = 0, rz = 0, seg = 7) =>
   paint(new THREE.CylinderGeometry(r, r, h, seg).rotateX(rx).rotateZ(rz).translate(x, y, z), farbe);
 
@@ -108,7 +109,7 @@ interface Typ {
 
 const TYPEN: Record<string, Typ> = {
   lager: {
-    w: 18, d: 10, floors: 2, wand: '#f0e8d6', dach: '#4d5f7a', laden: '#2f7a55', skala: 1, hoehe: 15,
+    w: 18, d: 10, floors: 2, wand: '#f0e8d6', dach: '#b0563e', laden: '#2f7a55', skala: 1, hoehe: 15,
     grund: [-10.5, 10.5, -6, 8.5],
     fertig() {
       const t = TYPEN.lager;
@@ -325,7 +326,7 @@ const TYPEN: Record<string, Typ> = {
     },
   },
   kaeserei: {
-    w: 7.5, d: 6, floors: 1, wand: '#fbf2d6', dach: '#4d5f7a', laden: '#e0a830', skala: 1, hoehe: 9,
+    w: 7.5, d: 6, floors: 1, wand: '#fbf2d6', dach: '#5f7090', laden: '#e0a830', skala: 1, hoehe: 9,
     grund: [-6, 9, -4.5, 8],
     fertig() {
       const t = TYPEN.kaeserei;
@@ -422,7 +423,7 @@ const TYPEN: Record<string, Typ> = {
     },
   },
   brennerei: {
-    w: 7, d: 6, floors: 1, wand: '#c9bca4', dach: '#4d5f7a', laden: '#7a2a2a', skala: 1, hoehe: 10,
+    w: 7, d: 6, floors: 1, wand: '#c9bca4', dach: '#5f7090', laden: '#7a2a2a', skala: 1, hoehe: 10,
     grund: [-6, 8, -4.5, 8],
     fertig() {
       const t = TYPEN.brennerei;
@@ -618,6 +619,94 @@ function phase2(t: Typ): THREE.BufferGeometry[] {
   return out;
 }
 
+// ---------------------------------------------------------------- Wimmel-Kleinkram (STIL.md)
+
+function huhn(x: number, z: number, ry: number, farbe = '#f4efe4'): THREE.BufferGeometry[] {
+  const k = (geo: THREE.BufferGeometry, f: string) => paint(geo.rotateY(ry).translate(x, 0, z), f);
+  return [
+    k(new THREE.SphereGeometry(0.55, 7, 5).scale(1.25, 1, 0.9).translate(0, G + 0.7, 0), farbe),
+    k(new THREE.SphereGeometry(0.3, 6, 5).translate(0.55, G + 1.25, 0), farbe),
+    k(new THREE.ConeGeometry(0.1, 0.25, 5).rotateZ(-Math.PI / 2).translate(0.88, G + 1.22, 0), '#e8a020'),
+    k(new THREE.SphereGeometry(0.11, 5, 4).scale(1, 1.4, 0.6).translate(0.55, G + 1.52, 0), '#d6262a'),
+    k(new THREE.ConeGeometry(0.3, 0.55, 5).rotateZ(0.9).translate(-0.65, G + 1.0, 0), farbe),
+  ];
+}
+function blumen(x: number, z: number, n: number): THREE.BufferGeometry[] {
+  const out: THREE.BufferGeometry[] = [paint(new THREE.SphereGeometry(0.9, 6, 4).scale(1.4, 0.55, 1).translate(x, G + 0.3, z), '#5f9a3a')];
+  for (let i = 0; i < n; i++) {
+    const a = i * 2.4, r = 0.4 + (i % 3) * 0.35;
+    out.push(paint(new THREE.SphereGeometry(0.28, 5, 4).translate(x + Math.cos(a) * r, G + 0.75, z + Math.sin(a) * r * 0.7), ['#e0392b', '#f2b829', '#c86ad0', '#f4f1e8'][i % 4]));
+  }
+  return out;
+}
+function waesche(x: number, z: number): THREE.BufferGeometry[] {
+  const out = [walze(0.14, 3.6, x, G + 1.8, z, HOLZ), walze(0.14, 3.6, x + 6, G + 1.8, z, HOLZ), boxR(6, 0.06, 0.06, x + 3, G + 3.4, z, '#e8e2d0')];
+  ['#e05a5a', '#f4f1e8', '#5a8ad0', '#f0c040'].forEach((f, i) => out.push(boxR(1.0, 1.3 - (i % 2) * 0.35, 0.08, x + 0.9 + i * 1.4, G + 2.7 + (i % 2) * 0.17, z, f)));
+  return out;
+}
+function brunnen(x: number, z: number): THREE.BufferGeometry[] {
+  return [walze(1.3, 1.2, x, G + 0.6, z, '#b9ad9c', 0, 0, 12), walze(1.1, 0.1, x, G + 1.22, z, '#5a8ab0', 0, 0, 12),
+    boxR(0.25, 2.6, 0.25, x - 1.15, G + 1.9, z, HOLZ), boxR(0.25, 2.6, 0.25, x + 1.15, G + 1.9, z, HOLZ),
+    paint(new THREE.ConeGeometry(2.0, 1.2, 4).rotateY(Math.PI / 4).translate(x, G + 3.7, z), '#c96a52')];
+}
+function vogelscheuche(x: number, z: number): THREE.BufferGeometry[] {
+  return [boxR(0.2, 4, 0.2, x, G + 2, z, HOLZ), boxR(2.6, 0.18, 0.18, x, G + 3.0, z, HOLZ), boxR(1.1, 1.4, 0.5, x, G + 2.6, z, '#5a8ad0'),
+    paint(new THREE.SphereGeometry(0.45, 6, 5).translate(x, G + 3.7, z), '#e2c06a'), paint(new THREE.ConeGeometry(0.8, 0.6, 7).translate(x, G + 4.2, z), '#7a5236')];
+}
+
+function kuerbisse(x: number, z: number): THREE.BufferGeometry[] {
+  const out: THREE.BufferGeometry[] = [];
+  for (let k = 0; k < 4; k++) out.push(paint(new THREE.SphereGeometry(0.75, 9, 7).scale(1.15, 0.8, 1.15).translate(x + (k % 2) * 1.5, G + 0.55, z + Math.floor(k / 2) * 1.4), '#e8822a'));
+  return out;
+}
+function bienenkorb(x: number, z: number): THREE.BufferGeometry[] {
+  return [paint(new THREE.SphereGeometry(1.0, 10, 8, 0, Math.PI * 2, 0, Math.PI / 1.6).scale(1, 1.25, 1).translate(x, G + 0.9, z), '#d9a540'),
+    boxR(1.6, 0.7, 1.6, x, G + 0.35, z, HOLZ)];
+}
+/** Gemüsebeet: Erdbett mit Kohlköpfen in Reihen (Wimmelbuch, STIL.md §6). */
+function beet(x: number, z: number): THREE.BufferGeometry[] {
+  const out: THREE.BufferGeometry[] = [boxR(4.2, 0.35, 2.8, x, G + 0.17, z, '#7a5434')];
+  for (let i = 0; i < 6; i++) {
+    out.push(paint(new THREE.SphereGeometry(0.42, 7, 5).scale(1, 0.75, 1).translate(x - 1.4 + (i % 3) * 1.4, G + 0.6, z - 0.6 + Math.floor(i / 3) * 1.2), i % 2 ? '#7fb24e' : '#5f9a3a'));
+  }
+  return out;
+}
+function zaunStueck(x: number, z: number, lang: number): THREE.BufferGeometry[] {
+  const out: THREE.BufferGeometry[] = [];
+  const n = Math.max(2, Math.round(lang / 1.8));
+  for (let i = 0; i <= n; i++) out.push(boxR(0.3, 1.6, 0.3, x + (lang * i) / n, G + 0.8, z, '#9a7450'));
+  for (const y of [0.6, 1.2]) out.push(boxR(lang, 0.16, 0.14, x + lang / 2, G + y, z, '#b08a62'));
+  return out;
+}
+
+/**
+ * Kleinkram je Gebäudetyp, im Grundriss vorn (Stil Wimmelbuch, STIL.md §6): Hühner, Blumen, Wäsche, Brunnen, Vogelscheuche, Fässer,
+ * Kürbisse, Bienenkörbe, Zaun. Etwas größer als echt, damit er aus der Spielhöhe zu sehen ist.
+ */
+function kleinkram(typ: string, t: Typ): THREE.BufferGeometry[] {
+  const [x0, x1, , z1] = t.grund;
+  const vx = x1 - 2.5, vz = z1 - 1.5;
+  const out: THREE.BufferGeometry[] = [];
+  if (typ === 'wohnhaus') {
+    out.push(...huhn(vx, vz, 0.6), ...huhn(vx - 1.8, vz - 0.6, 2.4, '#b8743a'), ...huhn(vx - 0.6, vz + 1.0, -1.0), ...huhn(vx + 1.2, vz - 1.8, 1.7));
+    out.push(...beet(x1 + 3, -1), ...bienenkorb(x1 + 2.5, -t.d / 2 - 1), ...blumen(x0 + 1.5, z1 - 1.2, 7), ...waesche(x0 - 1, -t.d / 2 - 3), ...zaunStueck(x0 - 1, z1 + 0.5, 6), ...kuerbisse(x0 + 0.5, z1 - 4));
+  } else if (typ === 'lager') {
+    out.push(...beet(x0 - 3, 0), ...brunnen(x0 + 2, z1 + 1), ...huhn(vx, vz + 1, 0.3), ...huhn(vx - 2, vz + 0.4, 2.8), ...huhn(vx - 1, vz + 2.2, -0.6, '#b8743a'));
+    out.push(...blumen(x1 - 1, -1, 6), ...fass(x1 - 4, z1 + 0.5), ...fass(x1 - 5.4, z1 + 0.8), ...kuerbisse(x0 + 5, z1 + 1.5));
+  } else if (t.grund[1] - t.grund[0] > 18) {
+    out.push(...vogelscheuche(x1 - 3, z1 - 3), ...blumen(x0 + 1, z1 - 1, 5), ...huhn(x0 + 3, z1 - 0.5, 1.2), ...kuerbisse(x0 + 4, z1 - 2.5));
+  } else {
+    out.push(...blumen(vx, vz, 6), ...fass(x0 + 1, z1 - 0.8), ...fass(x0 + 2.3, z1 - 0.3), ...huhn(x0 + 3, z1 - 0.2, 2.0), ...huhn(x0 + 4.4, z1 + 0.9, -0.8, '#b8743a'));
+    out.push(...beet(x1 + 3.2, -t.d / 4), ...zaunStueck(x1 + 0.8, -t.d / 4 + 2.2, 5));
+    if (typ.length % 3 === 0) out.push(...bienenkorb(x0 + 0.5, z1 - 3));
+    else if (typ.length % 3 === 1) out.push(...kuerbisse(x0 - 2.5, z1 - 2));
+  }
+  // etwas größer als echt (aus der Spielhöhe lesbar): um den Grundriss-Mittelpunkt vorn skalieren
+  return out.map((g) => g.translate(-vx, 0, -vz).scale(KLEINKRAM, KLEINKRAM, KLEINKRAM).translate(vx, 0, vz));
+}
+/** Kleinkram-Vergrößerung (STIL.md §6). */
+const KLEINKRAM = 1.6;
+
 /** Unbekannte Typen zeigen das Wohnhaus. */
 function modellTyp(typ: string): string {
   return typ in TYPEN ? typ : 'wohnhaus';
@@ -630,7 +719,16 @@ function modell(typ: string, phase: number): THREE.BufferGeometry {
   if (!g) {
     const t = TYPEN[modellTyp(typ)];
     g = mergeGeometries(phase <= 1 ? phase1(t) : phase === 2 ? phase2(t) : t.fertig())!;
-    g.computeVertexNormals();
+    // Stil (STIL.md): Häuser stehen leicht schief, jedes Gebäude anders; fertige bekommen Wimmel-Kleinkram dazu
+    if (phase >= 2) {
+      const lean = (hash(typ.length * 7 + typ.charCodeAt(0), typ.charCodeAt(typ.length - 1)) - 0.5) * 0.06;
+      g.applyMatrix4(new THREE.Matrix4().set(1, lean, 0, 0, 0, 1, 0, 0, 0, lean * 0.5, 1, 0, 0, 0, 0, 1));
+    }
+    if (phase >= 3) {
+      const extra = kleinkram(typ, t);
+      if (extra.length) g = mergeGeometries([g, ...extra])!;
+    }
+    if (!g.attributes.normal) g.computeVertexNormals();
     modellCache.set(key, g);
   }
   return g;
@@ -770,7 +868,7 @@ function karussell(): THREE.BufferGeometry {
     out.push(boxR(0.7, 1.1, 0.6, x + Math.cos(a + Math.PI / 2) * 1.0, G + 2.9 + (k % 2) * 0.6, z + Math.sin(a + Math.PI / 2) * 1.0, ['#f4f1e8', '#6b4a2e', '#2f6db5'][k % 3], 0, -a + Math.PI / 2));
   }
   const g = mergeGeometries(out)!;
-  g.computeVertexNormals();
+  if (!g.attributes.normal) g.computeVertexNormals();
   return g;
 }
 
@@ -801,14 +899,27 @@ interface Planung { idx: Int32Array; alt: Float32Array; ziel: Float32Array; erde
 
 interface Platz { x: number; z: number; y: number; hex: string; plan: Planung }
 
+/** Runder, weicher Funke für das Feuerwerk (ohne Textur zeichnet WebGL eckige Punkte). */
+function funkeTextur(): THREE.Texture {
+  const c = document.createElement('canvas'); c.width = c.height = 32;
+  const g = c.getContext('2d')!;
+  const v = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+  v.addColorStop(0, 'rgba(255,255,255,1)'); v.addColorStop(0.45, 'rgba(255,255,255,0.85)'); v.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = v; g.fillRect(0, 0, 32, 32);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 export class Gebaeude {
   readonly group = new THREE.Group();
   /** Wenn gesetzt: Warnzeichen wachsen mit dem Kameraabstand. */
   kamera: THREE.Camera | null = null;
   /** Zustand in Klartext über Gebäuden („Wartet auf Stämme“), von der Spiel-Schicht gesetzt (Texte aus baumenue.ts). */
   schild: ZustandsSchild | null = null;
+  /** Zeichen und Zustandsschilder über den Gebäuden zeigen (die Bildstrecke blendet sie aus). */
+  hinweise = true;
   private saetze = new Map<string, Instanzen>();
-  private mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, flatShading: true, side: THREE.DoubleSide });
+  private mat = mitSchnee(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, flatShading: false, side: THREE.DoubleSide }));
   private plaetze = new Map<Id, Platz>();
   private warn = new Map<Id, { sp: THREE.Sprite; art: string }>();
   private symbolMat = new Map<string, THREE.SpriteMaterial>();
@@ -832,7 +943,7 @@ export class Gebaeude {
   constructor(private map: MapData, private grid: HexGrid, private base: number, ex: number, private haken: GebaeudeHaken = {}) {
     this.ex = ex;
     this.symbolMat.set('warn', new THREE.SpriteMaterial({ map: warnTextur(), transparent: true, depthWrite: false, fog: false }));
-    const matte = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: true });
+    const matte = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: false });
     for (let a = 0; a < WAREN_ANZAHL; a++) this.bauWaren.push(new Instanzen(this.group, warenGeometrie(a), matte, false, true, [], 32));
     this.bauSchild = new Instanzen(this.group, bauschild(), this.mat, false, true, [], 8);
     this.karussell = new Instanzen(this.group, karussell(), this.mat, true, true, [], 2);
@@ -840,7 +951,7 @@ export class Gebaeude {
     fw.setAttribute('position', new THREE.BufferAttribute(new Float32Array(FUNKEN_MAX * 3), 3));
     fw.setAttribute('color', new THREE.BufferAttribute(new Float32Array(FUNKEN_MAX * 3), 3));
     fw.setDrawRange(0, 0);
-    this.feuerwerk = new THREE.Points(fw, new THREE.PointsMaterial({ size: 9, vertexColors: true, transparent: true, depthWrite: false, fog: false }));
+    this.feuerwerk = new THREE.Points(fw, new THREE.PointsMaterial({ size: 9, map: funkeTextur(), alphaTest: 0.05, vertexColors: true, transparent: true, depthWrite: false, fog: false }));
     this.feuerwerk.frustumCulled = false;
     this.group.add(this.feuerwerk);
   }
@@ -972,7 +1083,7 @@ export class Gebaeude {
       const art = g.getrennt ? 'warn' : SYMBOL_ZUSTAENDE[g.zustand] ?? null;
       const gr = Math.min(120, Math.max(26, dist * 0.045)) * (art === 'warn' ? 1 : 0.8);
       const oben = y + t.hoehe * sk;
-      if (art) {
+      if (art && this.hinweise) {
         sichtbar.add(g.id);
         let w = this.warn.get(g.id);
         if (!w) { w = { sp: new THREE.Sprite(this.symbol(art)), art }; w.sp.renderOrder = 10; this.group.add(w.sp); this.warn.set(g.id, w); }
@@ -981,7 +1092,7 @@ export class Gebaeude {
         w.sp.position.set(pl.x, oben + gr * 0.7 + Math.sin(this.zeit * 3 + g.id) * gr * 0.1, pl.z);
       }
       // Zustand in Klartext darunter (nur aus der Nähe lesbar)
-      const sch = this.schild && dist < SCHILD_FERN ? this.schild(g) : null;
+      const sch = this.schild && this.hinweise && dist < SCHILD_FERN ? this.schild(g) : null;
       if (sch) {
         mitSchild.add(g.id);
         const mt = this.schildMaterial(sch.text, sch.warn);

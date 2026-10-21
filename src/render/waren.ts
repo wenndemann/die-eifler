@@ -234,7 +234,7 @@ function form(art: number) {
 /** Geometrie einer Ware (Farben als Vertexfarben). */
 export function warenGeometrie(art: number): THREE.BufferGeometry {
   const g = mergeGeometries(form(art).teile)!;
-  g.computeVertexNormals();
+  if (!g.attributes.normal) g.computeVertexNormals();
   return g;
 }
 

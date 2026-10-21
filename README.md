@@ -130,6 +130,11 @@ nach Gebrauch wieder. Unterbrochen? Einfach neu starten, es setzt fort. Details 
   zehnte Ware verlieren (liest später einer auf). Zahlen: `data/jahr.json`, `data/feste.json`, `data/dorf.json`.
   Balancing: der Spieltest-Bot (`tests/m8-szenario.ts`) wird in 2 Stunden allein Marktflecken (Dorf ~27, Kirchdorf ~52,
   Marktflecken ~75 Bot-Minuten; Menschen brauchen länger).
+- **Stil „Wimmelbuch kräftig mit Linie“ (M9):** Bilderbuch-Pass mit feiner brauner Linie, satten, warmen Farben und gemalten
+  Verläufen; runde Formen, leicht schiefe Fachwerkhäuser mit Ziegelreihen, Rauch und Kleinkram (Hühner, Wäsche, Beete,
+  Bienenkörbe, Kürbisse), Wiesen-Deko (Büsche, Blumen, Pilze, Holzstapel), Bruchstein mit Moos, Schnee auf Dächern und Felsen.
+  Figuren mit großem Kopf, sichtbarem Gesicht und Kappe in Trachtfarbe, getragene Waren größer. Statusfenster mit einklappbarer
+  Lagerzeile. Leitfaden in `STIL.md`, Prüfung über `tools/bildstrecke.mjs` und Gutachter-Agenten.
 - **Simulation** (`src/sim/`): fester Tick (20/s), nur Ganzzahlen, jede Aktion ist ein Befehl mit Tick-Nummer,
   Prüfsumme über den Zustand (Statusleiste „Sim“), Befehlsprotokoll zum Abspielen (`spieleAb`). Der Smoke-Test
   prüft, dass Node und Browser dieselbe Prüfsumme bekommen und ein Replay im zweiten Browser-Fenster gleich ausgeht.
@@ -163,6 +168,7 @@ Bauen auf einen anderen Server (oder `…&vm=wss://…` in der Adresse).
 | `npm run build` | Typprüfung und Produktions-Build (ohne Weltdaten) |
 | `npm test` | Unit-Tests (Vitest) |
 | `npm run test:smoke` | Browser-Test: Kartenwahl → Ausschnitt laden → Screenshots, Prüfsumme; dazu zwei Fenster im Mehrspieler über schlechtes Netz (Neuladen in unter 30 s) |
+| `node tools/bildstrecke.mjs [ordner]` | Bildstrecke M9 (STIL.md): feste Kameras – Übersicht, Dorf, Gebäude und Figuren nah, Bildfolge, Lagerfenster, Baumenü, Fest, Winter – für die Gutachter-Bewertung |
 | `node tools/m8-ansicht.mjs [ordner]` | Ansicht M8: stellt alle neuen Gebäude, Boten und verlorene Waren ans Lager und macht Screenshots im Sommer, im Winter und nah am Boten |
 | `npm run vermittlung` | Vermittlungs-Server für den Mehrspieler (Port `PORT`, Standard 8787; TURN über `TURN_URLS`/`TURN_SECRET`) |
 | `npm run setup -- [Optionen]` | Weltdaten rechnen (siehe oben) |

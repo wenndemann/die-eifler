@@ -162,6 +162,19 @@ export class Spielleiste {
       z1.append(b);
     }
     z1.append(this.zeit);
+    // M9: Statusfenster einklappbar (Lagerzeile), damit es weniger Spielfläche verdeckt; gemerkt je Browser
+    const klapp = el('button', 'klapp', '▾');
+    klapp.type = 'button'; klapp.title = 'Lagerzeile ein- und ausklappen';
+    const setzeKlapp = (zu: boolean) => {
+      this.status.classList.toggle('eingeklappt', zu);
+      klapp.textContent = zu ? 'Lager ▾' : 'Lager ▴';
+      try { localStorage.setItem('eifeler.status.zu', zu ? '1' : '0'); } catch { /* ohne Speicher */ }
+    };
+    let zu = true;
+    try { zu = localStorage.getItem('eifeler.status.zu') !== '0'; } catch { /* ohne Speicher */ }
+    setzeKlapp(zu);
+    klapp.addEventListener('click', () => { setzeKlapp(!this.status.classList.contains('eingeklappt')); klapp.blur(); });
+    z1.append(klapp);
     const fk = el('div', 'fensterknoepfe');
     for (const f of FENSTER_KNOEPFE) {
       const b = el('button', 'fk', f.icon);
