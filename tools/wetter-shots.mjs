@@ -44,9 +44,10 @@ try {
   await page.addStyleTag({ content: '.meldeleiste, .meldungen { display: none !important; }' });
   const LH = await page.evaluate(() => window.eifeler.spiel.lagerHex);
   console.log('Scheiben', JSON.stringify(await page.evaluate(() => window.eifeler.spiel.wetterOptik.zahlen())));
+  if (process.argv[4]) console.log('Ausdruck', JSON.stringify(await page.evaluate(process.argv[4])));
   const faelle = JSON.parse(process.argv[3] ?? '[]');
   for (const f of faelle) {
-    await page.evaluate(({ LH, f }) => { const e = window.eifeler; e.spiel.wetterVorgabe = f.v; const w = e.grid.toWorld(LH); e.cam.pitchOverride = f.pitch ?? 45; e.cam.jumpTo(w.x, w.z + 100, f.abstand ?? 1500, 0.3); e.settle(); }, { LH, f });
+    await page.evaluate(({ LH, f }) => { const e = window.eifeler; e.spiel.wetterVorgabe = f.v; let w = e.grid.toWorld(LH); if (f.aue !== undefined) { const m = new (e.cam.camera.matrix.constructor)(); e.spiel.wetterOptik.flut.getMatrixAt(f.aue, m); w = { x: m.elements[12], z: m.elements[14] - 100 }; } e.cam.pitchOverride = f.pitch ?? 45; e.cam.jumpTo(w.x, w.z + 100, f.abstand ?? 1500, 0.3); e.settle(); }, { LH, f });
     await page.waitForTimeout(4000);
     await page.screenshot({ path: join(AUS, f.name + '.png'), timeout: 180000 }); console.log(f.name);
   }
