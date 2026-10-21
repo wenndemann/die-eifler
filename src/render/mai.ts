@@ -147,10 +147,12 @@ export class MaiDarstellung {
         torkelt ? 1 : t.phase === 2 ? -0.6 : 0.8, torkelt ? 0.25 * Math.sin(this.zeit * 1.6 + i) : 0);
     }
     if (mitBaum) {
-      const y = this.hoehe(cx, cz) + TRAEGER_H * 1.25;
+      // wächst aus der Ferne wie die Figuren, damit man den geklauten Baum über den Köpfen sieht
+      const y0 = this.hoehe(cx, cz);
+      const k = this.kamera ? fernFaktor(this.kamera.position.distanceTo(this.p.set(cx, y0, cz))) : 1;
+      const l = Math.max(70, n * 16) * k;
       this.q.setFromAxisAngle(this.y, yaw - Math.PI / 2);
-      const l = Math.max(40, n * 11);
-      this.m.compose(this.p.set(cx, y, cz), this.q, this.s.set(l, l * 0.9, l * 0.9));
+      this.m.compose(this.p.set(cx, y0 + TRAEGER_H * k * 1.3, cz), this.q, this.s.set(l, l * 1.4, l * 1.4));
       this.getragen.fuege(this.m);
     }
   }
