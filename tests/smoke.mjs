@@ -124,6 +124,13 @@ try {
 
   if (plan.art === 'kartenwahl') {
     await page.goto(basis);
+    await page.waitForSelector('.sm-frei', { timeout: 60000 });
+    info(`Startmenü: ${(await page.locator('.sm-knopf').allTextContents()).join(' | ')}`);
+    await page.locator('.sm-credits-knopf').click();
+    await page.waitForSelector('.sm-credits', { timeout: 10000 });
+    info(`Mitwirkende: ${(await page.locator('.sm-credits h3').allTextContents()).join(', ')}`);
+    await page.locator('.sm-zu').click();
+    await page.locator('.sm-frei').click();
     await page.waitForSelector('.kw-vorschlag', { timeout: 60000 });
     info('Kartenwahl erscheint');
     await page.locator('.kw-vorschlag', { hasText: plan.vorschlag.name }).first().click();

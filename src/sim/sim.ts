@@ -1114,6 +1114,7 @@ export class Simulation {
       return d.schuetzenJahr === jahrVon(this._tick) ? 'bereit' : 'wartet_material';
     }
     if (t.funktion === 'hecke') return this.heckeGross(g) ? 'bereit' : 'waechst';
+    if (t.funktion === 'fonds') return g.ausgang[t.ausgangWare] + t.fondsMenge > t.ausgangMax ? 'voll' : this.dorfArm(g.sp) ? 'arbeitet' : 'bereit';
     if (t.arbeiter && this.festPause(g.sp)) return 'fest';
     if (t.funktion === 'zier' || (t.funktion === 'wache' && !t.arbeiter) || t.funktion === 'schnellweg') return 'bereit';
     if (t.arbeiter && !g.ar) return t.werkzeug && this.doerfer[g.sp].frei > 0 ? 'kein_werkzeug' : 'kein_arbeiter';
@@ -1364,6 +1365,19 @@ export class Simulation {
   private moorNah(h: number, r: number): boolean {
     for (const x of this.hexeImRadius(h, r, true)) if (this.karte.terrain[x] === 4) return true;
     return false;
+  }
+
+  /** Arm dran (Eifelfonds zahlt): das Dorf friert, oder im Lager liegt weniger als 1 Essen je 4 Bewohner. */
+  private dorfArm(sp: number): boolean {
+    const d = this.doerfer[sp];
+    if (!d) return false;
+    if (d.friert > 0) return true;
+    let essen = 0;
+    for (const l of this.gebaeude.values()) {
+      if (l.sp !== sp || !istLager(l) || !l.vorrat) continue;
+      for (let a = 0; a < NAHRUNG.length; a++) if (NAHRUNG[a] > 0) essen += l.vorrat[a];
+    }
+    return essen * 4 < d.bewohner;
   }
 
   /** Baukosten eines Gebäudes von `sp` auf Hex `h`: Monschauer bauen auf Moor teurer, Öslinger sparen einen Stein (oder ein Brett). */
@@ -2453,6 +2467,19 @@ export class Simulation {
     switch (t.funktion) {
       case 'holzfaeller': case 'steinbruch': case 'foerster': this.laeuferTick(g, t); break;
       case 'hecke': if (!this.heckeGross(g)) g.zeit++; break;
+      case 'fonds': {
+        // Eifelfonds („Preußisch Sibirien“): zahlt nur aus, wenn das Dorf friert oder kaum Essen im Lager hat
+        if (!this.dorfArm(g.sp)) { g.arbeit = 0; g.zeit = 0; break; }
+        g.arbeit = 1;
+        if (++g.zeit >= t.arbeitTicks && g.ausgang[t.ausgangWare] + t.fondsMenge <= t.ausgangMax) {
+          g.zeit = 0;
+          g.ausgang[t.ausgangWare] += t.fondsMenge;
+          this.stat.erzeugt += t.fondsMenge;
+          this.erzeugtJe[t.ausgangWare] += t.fondsMenge; this.doerfer[g.sp].erzeugt[t.ausgangWare] += t.fondsMenge;
+          this.ereignis(g.sp, 'fonds', g.id, t.ausgangWare);
+        }
+        break;
+      }
       case 'boote': {
         if (!g.ar || g.ruht) break;
         g.arbeit = 1;

@@ -118,6 +118,7 @@ export class MeldungsFilter {
   private zaehler = 0;
   /** „Alte Steine“ (Südeifeler) höchstens alle 3 Spielminuten melden. */
   private altsteinTick = -1_000_000;
+  private fondsTick = -1_000_000;
 
   constructor(private e: Erzaehler, private ort: string) {}
 
@@ -186,6 +187,7 @@ export class MeldungsFilter {
         case 'ertappt': add('ertappt', k({ text: namen?.spieler?.(ev.wert) ?? 'nebenan' })); break;
         case 'schuetzenfest': add('schuetzenfest', k({ n: ev.wert }), true, true, ev.gebaeude); break;
         case 'koenig': add('koenig', k({ text: namen?.spieler?.(ev.wert) ?? 'Einer' }), true, true); break;
+        case 'fonds': if (ev.tick - this.fondsTick >= 4 * 60 * 20) { this.fondsTick = ev.tick; add('fonds', k({ ware: wareName(ev.wert) }), false, false, ev.gebaeude); } break;
         case 'altstein': if (ev.tick - this.altsteinTick >= 3 * 60 * 20) { this.altsteinTick = ev.tick; add('altstein', k({}), false, false, ev.gebaeude); } break;
         case 'ende': add('ende', k({ text: namen?.spieler?.(ev.wert) ?? 'Einer' }), true, true); break;
         case 'verloren': {

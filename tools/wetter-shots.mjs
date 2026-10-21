@@ -1,6 +1,6 @@
-// Bildstrecke (ROADMAP M9, STIL.md §8): feste Szene auf der echten Karte (feste Saat), ein Dorf mit allen Gebäuden, Wegen, Trägern,
-// Boten und Waren, dann feste Kamerapositionen: Übersicht, Dorf, Gebäude nah, Figuren nah, Fenster, Fest, Winter und eine Bildfolge
-// eines laufenden Trägers. Grundlage für die Gutachter-Agenten. Aufruf: node tools/bildstrecke.mjs [Ausgabeordner]
+// Wetterbilder (ROADMAP M12): Spiel auf der echten Karte, dann je Fall Wetterlage und Tageszeit fest vorgeben und ein Bild machen.
+// Aufruf: node tools/wetter-shots.mjs <Ausgabeordner> '[{"name":"regen","v":{"tag":0.45,"regen":1},"abstand":1500}]'
+// Vorgaben: tag (0..1), regen, schnee, nebel, wind, hochwasser, wolken (je 0..1); abstand und pitch der Kamera.
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -43,6 +43,7 @@ try {
 
   await page.addStyleTag({ content: '.meldeleiste, .meldungen { display: none !important; }' });
   const LH = await page.evaluate(() => window.eifeler.spiel.lagerHex);
+  console.log('Scheiben', JSON.stringify(await page.evaluate(() => window.eifeler.spiel.wetterOptik.zahlen())));
   const faelle = JSON.parse(process.argv[3] ?? '[]');
   for (const f of faelle) {
     await page.evaluate(({ LH, f }) => { const e = window.eifeler; e.spiel.wetterVorgabe = f.v; const w = e.grid.toWorld(LH); e.cam.pitchOverride = f.pitch ?? 45; e.cam.jumpTo(w.x, w.z + 100, f.abstand ?? 1500, 0.3); e.settle(); }, { LH, f });

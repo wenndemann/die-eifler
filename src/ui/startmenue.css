@@ -1,0 +1,34 @@
+/* Startmenü und Mitwirkende (M12): Holz und Gold wie die Kartenwahl */
+.sm-hinter {
+  position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: radial-gradient(ellipse at 50% 35%, rgba(70, 92, 58, 0.92), rgba(24, 28, 22, 0.97));
+  font-family: 'Alegreya Sans', 'Segoe UI', sans-serif; color: #f3ead8;
+}
+.sm-credits-hinter { z-index: 70; background: rgba(12, 14, 12, 0.72); }
+.sm-box, .sm-credits {
+  width: min(520px, 100%); max-height: calc(100vh - 32px); overflow: auto; box-sizing: border-box; padding: 26px 24px 18px;
+  border-radius: 16px; background: linear-gradient(180deg, rgba(64, 50, 38, 0.98), rgba(38, 30, 24, 0.97));
+  border: 1px solid rgba(231, 194, 122, 0.5); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.55); text-align: center;
+}
+.sm-titel { margin: 0; font: 700 46px 'Alegreya SC', serif; color: #e7c27a; letter-spacing: 0.03em; text-shadow: 0 2px 0 #5a3622; }
+.sm-unter { color: #c9bda6; font-size: 15px; margin-top: 2px; }
+.sm-spruch { margin: 18px 4px 16px; padding: 10px 14px; border-radius: 10px; background: rgba(0, 0, 0, 0.22); border-left: 3px solid #a8844a; text-align: left; }
+.sm-spruch .sm-platt { display: block; font: italic 600 17px 'Alegreya', serif; color: #f3ead8; }
+.sm-spruch .sm-hoch { display: block; font-size: 13px; color: #c9bda6; margin-top: 3px; }
+.sm-spruch cite { display: block; font-size: 12px; color: #a8844a; margin-top: 4px; font-style: normal; }
+.sm-knoepfe { display: flex; flex-direction: column; gap: 9px; }
+.sm-knopf {
+  min-height: 48px; padding: 10px 16px; border-radius: 11px; cursor: pointer; font: 700 18px 'Alegreya SC', serif; color: #f3ead8;
+  background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(231, 194, 122, 0.45);
+}
+.sm-knopf:hover:not(:disabled), .sm-knopf:focus-visible { border-color: #e7c27a; background: rgba(231, 194, 122, 0.12); outline: none; }
+.sm-knopf.sm-frei { background: linear-gradient(180deg, #c99a45, #a8783a); color: #2a1e12; border-color: #e7c27a; }
+.sm-knopf:disabled { opacity: 0.5; cursor: default; }
+.sm-fuss { margin-top: 14px; font-size: 12px; color: #a8844a; }
+.sm-credits { text-align: left; width: min(640px, 100%); }
+.sm-credits h2 { margin: 0 0 8px; font: 700 26px 'Alegreya SC', serif; color: #e7c27a; }
+.sm-credits h3 { margin: 14px 0 4px; font: 700 13px 'Alegreya SC', serif; letter-spacing: 0.08em; text-transform: uppercase; color: #a8844a; }
+.sm-credits ul { margin: 0; padding-left: 18px; font-size: 14px; color: #e5dcc8; }
+.sm-credits li { margin: 2px 0; }
+.sm-zu { margin-top: 16px; width: 100%; }
+@media (max-width: 420px) { .sm-titel { font-size: 36px; } .sm-knopf { font-size: 16px; } }

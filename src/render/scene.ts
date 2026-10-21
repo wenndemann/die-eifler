@@ -32,6 +32,7 @@ export class Stage {
   private gegen: THREE.DirectionalLight;
   private grundDunst = new THREE.Color('#d3dccf');
   private tmp = new THREE.Color();
+  private ton1 = new THREE.Color();
   private stimmungSig = '';
   private breite = 0;
   private hoehe = 0;
@@ -132,9 +133,12 @@ export class Stage {
     dunst.copy(this.grundDunst).lerp(this.tmp.set('#b8bfc4'), st.wolken * 0.8).lerp(this.tmp.set('#f0c8a8'), flach * tag * 0.35)
       .lerp(this.tmp.set('#3a4766'), (1 - tag) * 0.75).lerp(this.tmp.set('#e2d2a6'), st.duerre * 0.4);
     // Farbton im Bilderbuch-Pass
+    // Farbton im Bilderbuch-Pass: goldenes Morgen- und Abendlicht, blaue Nacht (gedämpft, aber spielbar), graue Regentage
+    const gold = flach * tag, nacht = 1 - tag;
     this.buch.stimmung(
-      this.tmp.setRGB(1, 1, 1).lerp(new THREE.Color(1.08, 0.94, 0.82), flach * tag * 0.6).lerp(new THREE.Color(0.78, 0.86, 1.12), (1 - tag) * 0.8),
-      1 - 0.18 * st.wolken - 0.15 * st.duerre, st.duerre * 0.06);
+      this.tmp.setRGB(1, 1, 1).lerp(this.ton1.setRGB(1.16, 0.93, 0.74), gold).lerp(this.ton1.setRGB(0.5, 0.6, 0.92), nacht * 0.9)
+        .multiplyScalar(1 - 0.12 * st.wolken),
+      (1 - 0.3 * st.wolken - 0.15 * st.duerre) * (1 - 0.45 * nacht) * (1 + 0.1 * gold), st.duerre * 0.06 + gold * 0.03);
   }
 
   setShadows(on: boolean) {

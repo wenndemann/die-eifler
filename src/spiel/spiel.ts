@@ -30,6 +30,8 @@ import { WetterOptik, type WetterLage } from '../render/wetter';
 import type { Stimmung } from '../render/scene';
 import { stunde, tageszeit, wetterStimmung } from './stimmung';
 import { klangLage } from './klanglage';
+import { geschafft, SCHRITTE } from './einfuehrung';
+import { EinfuehrungsListe } from '../ui/einfuehrung';
 import { Klang } from '../klang/klang';
 import { setzeSchnee } from '../render/kulisse';
 import { Natur } from '../render/natur';
@@ -48,7 +50,7 @@ import {
   bauTooltip, endeFenster, zielName, fahneFenster, gebaeudeFenster, hilfeFenster, ortFenster, postenFenster, punkteText, LAGERREGEL_NAMEN, Produktivitaet, protokollFenster, statistikFenster, verteilungFenster,
   verteilungKnopf, warenFenster, warnungen, wegFenster, type FensterKontext, type ProtokollZeile, type StatMass,
 } from './fensterdaten';
-import { erzaehlerFuer, erzaehlerVon, waehleVoelkchen, VOELKCHEN_LISTE, MeldungsFilter, type Erzaehler, type Meldung, type MeldungsNamen } from './meldungen';
+import { erzaehlerFuer, erzaehlerVon, mitTick, textFuer, waehleVoelkchen, VOELKCHEN_LISTE, MeldungsFilter, type Erzaehler, type Meldung, type MeldungsNamen } from './meldungen';
 import {
   BAUPLATZ_NAMEN, bedarfNamen, fehlmengen, hexeImUmkreis, kostenText as kostenAlsText, menueGruppen, naechstePrioritaet, PRIO_NAMEN,
   reichweiteText, wareTexte, zustandsText,
@@ -176,6 +178,12 @@ export class Spiel {
   /** M12: Musik, Gebrabbel und Geräusche (WebAudio; in automatisierten Tests aus, außer mit #ton=1). */
   readonly klang = new Klang(typeof navigator === 'undefined' || !navigator.webdriver || location.hash.includes('ton=1'));
   private klangTimer = 0;
+  /** M12: Einführung durch die Erzählfigur (Liste links), schon gemeldete Schritte. */
+  private einfuehrung: EinfuehrungsListe | null = null;
+  private einfuehrungGemeldet: boolean[] | null = null;
+  private einfuehrungAn = false;
+  private tempoGags = 0;
+  private nachbarNr = 0;
   private klangRechts = new THREE.Vector3();
   private readonly natur: Natur;
   private readonly gebaeude: Gebaeude;
@@ -419,10 +427,23 @@ export class Spiel {
     if (this.partie) {
       if (this.partie.ich !== this.partie.gastgeber) { this.melde('Das Tempo stellt der Gastgeber ein.', true); return; }
       this.partie.setzeTempo(Math.min(TEMPI[TEMPI.length - 1], Math.max(TEMPI[0], Math.round(t))));
+      if (Math.round(t) >= TEMPI[TEMPI.length - 1]) { this.tempo = TEMPI[TEMPI.length - 1]; this.tempoGag(); }
       return;
     }
     this.tempo = Math.min(TEMPI[TEMPI.length - 1], Math.max(TEMPI[0], Math.round(t)));
     this.leiste.setTempo(this.tempo, this.pausiert);
+    this.tempoGag();
+  }
+
+  /** Running Gag (Drehbuch 1.2): beim schnellsten Tempo beschwert sich ein Träger – „Mer renne nit.“ (einmal je Sitzung und Stufe). */
+  private tempoGag(): void {
+    const t = this.partie ? this.partie.tempo : this.tempo;
+    if (t < TEMPI[TEMPI.length - 1] || this.tempoGags > this._sicht.dorf.stufe) return;
+    const text = textFuer('tempo_hoch', this.tempoGags++, { ort: '' }, this.erzaehler);
+    if (!text) return;
+    this.klang.brabbel(0.2, 0.4);
+    this.meldungen.zeige({ wer: 'Ein Träger', text, gross: false });
+    this.insProtokoll(text, false);
   }
 
   /** Bildschirmposition (CSS-Pixel) der Mitte eines Hex, für Tests mit echten Mausklicks und Tipps. */
@@ -615,6 +636,16 @@ export class Spiel {
       const m = this.filter.tipp(i, liste);
       if (m) this.zeigeMeldung(m);
     };
+    // M12: Einführung – Liste links, beim Abhaken ein Kommentar der Figur (nur neue Spiele im Weiler, nicht nach dem Laden eines späteren Stands)
+    if (!this.einfuehrung) this.einfuehrung = new EinfuehrungsListe(this.ctx.root, this.erzaehler.name.split(',')[0]);
+    const g = geschafft(s, this.ich);
+    if (!this.einfuehrungGemeldet) { this.einfuehrungGemeldet = g.slice(); this.einfuehrungAn = s.dorf.stufe === 0; }
+    this.einfuehrung.zeige(SCHRITTE, g, this.einst.tipps && this.einfuehrungAn);
+    g.forEach((ok, i) => {
+      if (!ok || this.einfuehrungGemeldet![i]) return;
+      this.einfuehrungGemeldet![i] = true;
+      if (this.einst.tipps) this.zeigeMeldung({ text: `✓ ${mitTick(SCHRITTE[i].geschafft, this.erzaehler)}`, gross: false });
+    });
     tipp(0, min > 1 && !hat('holzfaeller'));
     tipp(1, min > 4 && hat('holzfaeller') && !hat('saegewerk'));
     tipp(2, min > 8 && (!hat('kartoffelfeld') || !hat('wohnhaus')));
@@ -1585,6 +1616,11 @@ export class Spiel {
   }
 
   /** Zeilen fürs Info-Feld (HTML) zu einem Hex: Gebäude, Fahne, Weg, Bauplatz-Prüfung. */
+  /** „Noch keine Eifel.“ – fester Spruch je Nachbar (Spieler oder Ort), damit der Tooltip nicht flackert. */
+  private nachbarSpruch(n: number): string {
+    return textFuer('nachbar', n + this.nachbarNr, { ort: '' }, this.erzaehler);
+  }
+
   infoZeilen(h: Hx): string[] {
     const z: string[] = [];
     const g = this.gebAt.get(key(h));
@@ -1597,6 +1633,8 @@ export class Spiel {
       const zt = zustandsText(g.zustand, baustelle, eingangNamen(g), GEBAEUDE[g.typ]?.funktion);
       const phase = baustelle ? `Baustelle ${Math.floor(g.bau / 10)} % (Phase ${1 + Math.floor((3 * g.bau) / 1001)} von 3) – ${zt.titel}` : zt.titel;
       z.push(`<b class="sim">${name}</b><span class="${zt.warn ? 'warn' : ''}">${phase}</span>`);
+      // Running Gag: über fremden Dörfern ist noch keine Eifel
+      if (g.sp !== this.ich) z.push(`<span class="spruch">„${this.nachbarSpruch(g.sp)}“</span>`);
       if (baustelle) {
         const fehlt = kostenAlsText(g.bedarf ?? [], WARE_TEXT);
         z.push(`<span>${fehlt === 'nichts' ? 'Material komplett' : `fehlt: ${fehlt}`} · Priorität ${PRIO_NAMEN[g.prioritaet] ?? g.prioritaet}</span>`);
@@ -1610,6 +1648,8 @@ export class Spiel {
     } else if (sg) {
       z.push(`<b class="sim">Weg</b><span>${sg.pfad.length - 1} Schritte · ${this.traegerText(sg)}</span>`);
     }
+    const oi = g ? -1 : this.ortBei(h);
+    if (oi >= 0 && this._sicht.orte[oi].besitzer !== this.ich) z.push(`<span class="spruch">${this.ortName(oi)}: „${this.nachbarSpruch(100 + oi)}“</span>`);
     if (GEBAEUDE_WERKZEUGE.includes(w)) {
       const i = this.ctx.ausschnitt.hex.index(h.q, h.r);
       if (i >= 0) {

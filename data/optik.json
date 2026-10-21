@@ -1,9 +1,33 @@
 {
   "hinweis": "Optik von Wetter und Tageszeit (Drehbuch 7.4, ROADMAP M12). Nur Darstellung, nicht in der Simulation. tag_min: ein Tag in Spielminuten (läuft mit dem Spieltempo); start: Tageszeit beim Spielstart (0 Mitternacht, 0.5 Mittag); nacht_licht: so viel Licht bleibt nachts (man soll weiterspielen können). Regen/Schnee: Zahl der Tropfen bzw. Flocken (auf „Niedrig“ ein Drittel), Fallgeschwindigkeit in m/s. Wolken: Zahl der Wolkenschatten bei Sonne und bei Regen, Höhe über dem Gelände (m), Zug in m/s. Talnebel: Hexe mindestens tal_dm tiefer als der Schnitt im Umkreis 4 (wie die Simulation), Morgennebel im Herbst so stark.",
-  "tag": { "tag_min": 12, "start": 0.36, "nacht_licht": 0.42, "daemmerung": 0.07 },
-  "regen": { "tropfen": 5000, "fall_ms": 26, "laenge": 0.022 },
-  "schnee": { "flocken": 3500, "fall_ms": 2.2, "winter_anteil": 0.35 },
-  "wolken": { "sonne": 5, "regen": 16, "hoehe_m": 900, "zug_ms": 9, "groesse_m": [500, 1300] },
-  "talnebel": { "tal_dm": 150, "morgen_herbst": 0.45, "dichte": 0.6 },
-  "duerre": { "waerme": 0.06, "saettigung": 0.85 }
+  "tag": {
+    "tag_min": 12,
+    "start": 0.36,
+    "nacht_licht": 0.42
+  },
+  "regen": {
+    "tropfen": 5000,
+    "fall_ms": 26,
+    "laenge": 0.022
+  },
+  "schnee": {
+    "flocken": 3500,
+    "fall_ms": 2.2,
+    "winter_anteil": 0.35
+  },
+  "wolken": {
+    "sonne": 5,
+    "regen": 16,
+    "hoehe_m": 900,
+    "zug_ms": 9,
+    "groesse_m": [
+      500,
+      1300
+    ]
+  },
+  "talnebel": {
+    "tal_dm": 150,
+    "morgen_herbst": 0.45,
+    "dichte": 0.5
+  }
 }

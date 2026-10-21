@@ -1,5 +1,5 @@
 {
- "hinweis": "Meldungen der Erzählfigur (Drehbuch 1.1, 1.4, 4.4): Hochdeutsch, der Sprachtick der Figur kommt aus regions.json dazu. Platzhalter: {name} Erzählfigur, {ort} Startort, {gebaeude} Gebäude, {ware} Ware, {stufe} Dorfstufe, {n} Zahl, {liste} Kirmes-Warenliste, {fest} Name eines kleinen Fests, {wetter} Wetter, {feld} betroffenes Feld; ab M10 {text} (Ortsname, Stadt, Ausrede, Spieler). Bauernregeln (wetter_<art>) kündigen das Wetter an (Drehbuch 7.4). Mehrere Texte je Anlass werden der Reihe nach verwendet.",
+ "hinweis": "Meldungen der Erzählfigur (Drehbuch 1.1, 1.4, 4.4): Hochdeutsch, der Sprachtick der Figur kommt aus regions.json dazu. Platzhalter: {name} Erzählfigur, {ort} Startort, {gebaeude} Gebäude, {ware} Ware, {stufe} Dorfstufe, {n} Zahl, {liste} Kirmes-Warenliste, {fest} Name eines kleinen Fests, {wetter} Wetter, {feld} betroffenes Feld; ab M10 {text} (Ortsname, Stadt, Ausrede, Spieler). Bauernregeln (wetter_<art>) kündigen das Wetter an (Drehbuch 7.4). Mehrere Texte je Anlass werden der Reihe nach verwendet. Ab M12: fonds (Eifelfonds zahlt aus), tempo_hoch (Träger-Spruch beim schnellsten Tempo), nachbar (Tooltip über fremden Dörfern und Orten, Running Gag „Die Eifel fängt erst hinter meinem Dorf an“).",
  "begruessung": [
   "Willkommen in {ort}! Hier fängt die Eifel an. Erst Holz und Stein, dann Kartoffeln – und dann feiern wir Kirmes.",
   "Na, da seid ihr ja. {ort} wartet. Holzfäller an den Wald, Weg dahin, und dann sehen wir weiter."
@@ -35,7 +35,8 @@
   "Der Kirmesplatz steht! Jetzt fehlt nur noch: {liste}."
  ],
  "kirmes": [
-  "Kirmes! Musik, Karussell, Feuerwerk – und keiner arbeitet. Wie es sich gehört."
+  "Kirmes! Musik, Karussell, Feuerwerk – und keiner arbeitet. Wie es sich gehört.",
+  "Kirmes! Fast so schön wie die Annakirmes in Düren. Aber nur fast – und das sagt man in Düren auch nicht laut."
  ],
  "stufe": [
   "Jetzt sind wir {stufe}! Neue Gebäude sind frei: {liste}.",
@@ -69,7 +70,8 @@
   "Bauernregel: Ist der Himmel lang zu blau, wird das Korn im Felde grau. (Dürre: Felder und Obst wachsen langsamer – Vorrat hilft.)"
  ],
  "wetter_missernte": [
-  "Bauernregel: Schwarze Schnecken auf dem Pfad, magre Ernte – schad, schad, schad. (Missernte beim {feld}: halbe Ernte.)"
+  "Bauernregel: Schwarze Schnecken auf dem Pfad, magre Ernte – schad, schad, schad. (Missernte beim {feld}: halbe Ernte.)",
+  "Bauernregel: Hat der Bauer Pech im Feld, fehlt im Herbst das Erntegeld. Preußisch Sibirien halt. (Missernte beim {feld}: halbe Ernte.)"
  ],
  "wetter_hochwasser": [
   "Bauernregel: Schmilzt der Schnee und regnet's drauf, nimmt der Bach den eigenen Lauf. (Hochwasser: Gebäude in der Aue stehen still, an den Fahnen am Ufer schwimmt Ware weg.)"
@@ -79,7 +81,8 @@
   "{fest} gefeiert. Das Dorf ist zufrieden, und das will was heißen."
  ],
  "friert": [
-  "Es fehlt Essen für den Winter – die Leute frieren und arbeiten langsamer. Schnell Essen ins Lager!"
+  "Es fehlt Essen für den Winter – die Leute frieren und arbeiten langsamer. Schnell Essen ins Lager!",
+  "Preußisch Sibirien, wie es im Buche steht. Essen ins Lager – oder einen Eifelfonds beantragen."
  ],
  "satt": [
   "Alle wieder satt. Hat schlimmer kommen können."
@@ -98,10 +101,12 @@
   "Zu spät in {text}! Ein anderer war schneller. Unsere Waren? Verschwunden. Wie das so ist."
  ],
  "handel": [
-  "Die Händler sind zurück aus {text}. Flachländer – aber zahlen tun sie."
+  "Die Händler sind zurück aus {text}. Flachländer – aber zahlen tun sie.",
+  "Die Händler sind zurück aus {text}. Dort haben sie gesagt, sie wären „von bei Aachen“. Hat geklappt."
  ],
  "fund": [
-  "Der Finder ist zurück: {ware} gefunden. Lag da so rum, sagt er."
+  "Der Finder ist zurück: {ware} gefunden. Lag da so rum, sagt er.",
+  "Der Finder ist zurück: {ware} gefunden. Dazu ein Päckchen Kaffee, das irgendwie über die Grenze kam. Hat keiner gesehen."
  ],
  "erwischt": [
   "Der Finder ist erwischt worden und sitzt in der Ausredenstube. Seine Ausrede: {text}"
@@ -125,5 +130,19 @@
  "altstein": [
   "Die Bauarbeiter haben schon wieder alte Steine gefunden. Römisch, sagen sie. Jetzt wird erst mal geguckt.",
   "Ein alter Stein im Fundament! Der Bauarbeiter meint, der Kaiser persönlich hat den gelegt."
+ ],
+ "fonds": [
+  "Der Eifelfonds zahlt aus: {ware}. Preußisch Sibirien lässt grüßen.",
+  "Zuschuss vom Eifelfonds: {ware}. Formular in dreifacher Ausfertigung, aber immerhin."
+ ],
+ "tempo_hoch": [
+  "Ein Träger ruft: „Mer renne nit.“",
+  "Ein Träger: „Langsam, mir sin en d’r Eifel.“",
+  "Ein Träger schnauft: „Wer rennt, der verschüttet.“"
+ ],
+ "nachbar": [
+  "Noch keine Eifel.",
+  "Flachland. Sieht man doch.",
+  "Die Eifel fängt erst hinter unserem Dorf an."
  ]
 }

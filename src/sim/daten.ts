@@ -18,7 +18,7 @@ interface GebaeudeJson {
   wandelt?: { ein: string | Record<string, number>; menge?: number; aus: string; dauer_s: number };
   zeiten?: { arbeit_s?: number; ruhe_s?: number };
   nahrung_plaetze?: number; ab_stufe?: number; einmalig?: boolean; taste?: string;
-  saison?: string; werkzeug?: number; boten?: number; leistung?: string;
+  saison?: string; werkzeug?: number; boten?: number; leistung?: string; fonds_menge?: number;
   voelkchen?: string[]; modell?: string; am_wasser?: boolean; kein_planieren?: boolean;
   laut?: boolean; am_moor?: boolean; schnellweg?: { radius?: number; prozent: number; bahn?: boolean };
 }
@@ -133,7 +133,7 @@ export const PRIO_STANDARD = 2;
 export const SUCHE_WARTE = 2 * TICK_HZ;
 
 export type Funktion = 'lager' | 'wohnen' | 'holzfaeller' | 'foerster' | 'steinbruch' | 'erzeuger' | 'verarbeiter' | 'kirmes' | 'schaenke'
-  | 'finder' | 'wache' | 'schuetzen' | 'zier' | 'hecke' | 'boote' | 'schnellweg';
+  | 'finder' | 'wache' | 'schuetzen' | 'zier' | 'hecke' | 'boote' | 'schnellweg' | 'fonds';
 
 export interface GebaeudeTyp {
   id: string; name: string; gruppe: string; symbol: string; spruch: string;
@@ -179,6 +179,8 @@ export interface GebaeudeTyp {
   boten: number;
   /** Satz fürs Gebäudefenster (data/buildings.json: leistung) oder ''. */
   leistung: string;
+  /** M12 Eifelfonds: so viele Stück der Ausgangsware je Auszahlung. */
+  fondsMenge: number;
   /** M11: nur diese Völkchen dürfen es bauen (leer = alle); Darstellung wie Gebäude `modell`; braucht Wasser nah; kein Planieren am Hang. */
   voelkchen: readonly string[]; modell: string; amWasser: boolean; keinPlanieren: boolean;
   /** Laut (Laacher: nicht nah an der Abtei); braucht Moor nah; macht eigene Wege schneller (Römerstraße, Vennbahn). */
@@ -232,6 +234,7 @@ function baue(j: GebaeudeJson): GebaeudeTyp {
     werkzeug: j.werkzeug ?? 0,
     boten: j.boten ?? 0,
     leistung: j.leistung ?? '',
+    fondsMenge: j.fonds_menge ?? 0,
     voelkchen: j.voelkchen ?? [], modell: j.modell ?? '', amWasser: !!j.am_wasser, keinPlanieren: !!j.kein_planieren,
     laut: !!j.laut, amMoor: !!j.am_moor,
     schnellweg: j.schnellweg ? { radius: j.schnellweg.radius ?? 0, prozent: j.schnellweg.prozent, bahn: !!j.schnellweg.bahn } : null,

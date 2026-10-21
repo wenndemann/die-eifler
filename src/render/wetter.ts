@@ -42,7 +42,7 @@ void main() {
   p -= aEnde * vec3(uWind.x, -uFall, uWind.y) * uLaenge;
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   gl_Position = projectionMatrix * mv;
-  gl_PointSize = uPunkt * 300.0 / max(-mv.z, 1.0);
+  gl_PointSize = uPunkt * 900.0 / max(-mv.z, 1.0);
   // am Rand der Kiste ausblenden
   vec3 r = abs(vec3(x / k.x, y / k.y, z / k.z) * 2.0 - 1.0);
   vSicht = 1.0 - smoothstep(0.7, 1.0, max(max(r.x, r.z), r.y));
@@ -222,7 +222,7 @@ export class WetterOptik {
       this.group.add(im);
       return im;
     };
-    this.nebel = scheiben(tal, '#eef1f2', 3.4, 14, optik.talnebel.dichte);
+    this.nebel = scheiben(tal, '#e4e9ec', 3.4, 14, optik.talnebel.dichte);
     this.flut = scheiben(aue, '#6f8a8c', 2.2, 1.2, 0.75);
   }
 
@@ -252,7 +252,7 @@ export class WetterOptik {
       u.uWind.value.copy(wind).multiplyScalar(o === this.schnee ? 0.5 : 1);
       u.uLaenge.value = lang;
       u.uFall.value = (o === this.regen ? optik.regen.fall_ms : optik.schnee.fall_ms) * Math.max(1, k / 600);
-      u.uPunkt.value = o === this.schnee ? Math.max(1.5, k / 220) : 0;
+      u.uPunkt.value = o === this.schnee ? k / 160 : 0;
       u.uStaerke.value = Math.min(1, staerke * 1.2);
       const n = o === this.regen ? optik.regen.tropfen : optik.schnee.flocken;
       o.geometry.setDrawRange(0, Math.ceil(n * staerke * (this.grob ? 0.34 : 1)) * (o === this.regen ? 2 : 1));
@@ -278,6 +278,9 @@ export class WetterOptik {
       im.material.uniforms.uZeit.value = this.zeit;
     }
   }
+
+  /** Für Tests und den Smoke: Zahl der Talnebel- und Aue-Scheiben. */
+  zahlen(): { tal: number; aue: number } { return { tal: this.nebel?.count ?? 0, aue: this.flut?.count ?? 0 }; }
 
   /** Für Tests und den Smoke: die aktuelle (weich angenäherte) Lage. */
   lage(): Readonly<WetterLage> { return this.ist; }

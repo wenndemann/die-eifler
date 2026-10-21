@@ -3,7 +3,8 @@
 // den Einladungslink, beide laden die Karte (gleiche Prüfsumme), Start, beide bauen, Tempo 3, der Gast lädt die Seite neu und muss
 // in unter 30 Sekunden wieder drin sein, Pause, Prüfsummen gleich, Speichern. M7: Warenverteilung über das Fenster, Ruhen,
 // Statistik und Autosave im Mehrspieler. M8: Lagerregel und Bauleute-Wunsch über das Lagerfenster, Jahreszeit und Wetter bei beiden gleich.
-// M10: Regeln (Gebiet, Ziel), Gebiet und Eifel-Punkte bei beiden gleich, Ortsfenster. M11: Völkchen beider Dörfer bei beiden gleich.
+// M10: Regeln (Gebiet, Ziel), Gebiet und Eifel-Punkte bei beiden gleich, Ortsfenster. M11: Völkchen beider Dörfer bei beiden gleich. M12: Uhrzeit
+// und Wetter-Optik (Talnebel/Aue) bei beiden gleich.
 //
 // Läuft in npm run test:smoke mit; allein:  node tests/mehrspieler.mjs   (Server und Vite startet es selbst)
 import { existsSync, mkdirSync } from 'node:fs';
@@ -203,6 +204,16 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
     if (m10.some((x) => x.vk !== m10[0].vk) || m10[0].vk.split(',').some((v) => !v)) fail(`Mehrspieler M11: Völkchen fehlen oder verschieden: ${m10.map((x) => x.vk).join(' / ')}`);
     if (m10.some((x) => x.regeln !== m10[0].regeln) || !m10[0].regeln.includes('"gebiet":true')) fail(`Mehrspieler M10: Regeln verschieden oder ohne Gebiet: ${m10.map((x) => x.regeln).join(' / ')}`);
     if (m10[0].tick === m10[1].tick && (m10[0].hexe !== m10[1].hexe || m10[0].punkte !== m10[1].punkte)) fail('Mehrspieler M10: Gebiet oder Punkte verschieden');
+    // M12: Tageszeit (läuft mit dem gemeinsamen Tick) und Wetter-Optik bei beiden
+    const m12 = await Promise.all([host, gast].map((x) => x.evaluate(() => {
+      const sp = window.eifeler.spiel;
+      const uhr = /(\d+) Uhr/.exec(document.querySelector('.spielstatus')?.textContent ?? '')?.[1] ?? '';
+      return { uhr, tick: sp.sim.tick, scheiben: JSON.stringify(sp.wetterOptik.zahlen()) };
+    })));
+    info(`Mehrspieler M12: Uhr ${m12.map((x) => x.uhr).join(' / ')}, Nebel/Aue ${m12.map((x) => x.scheiben).join(' / ')}`);
+    if (m12.some((x) => !x.uhr)) fail('Mehrspieler M12: keine Uhrzeit in der Statusleiste');
+    if (m12[0].scheiben !== m12[1].scheiben) fail(`Mehrspieler M12: Talnebel/Aue verschieden: ${m12.map((x) => x.scheiben).join(' / ')}`);
+    if (Math.abs(m12[0].tick - m12[1].tick) < 40 && Math.abs(Number(m12[0].uhr) - Number(m12[1].uhr)) > 1) fail(`Mehrspieler M12: Uhrzeit verschieden: ${m12.map((x) => x.uhr).join(' / ')}`);
     info(`Mehrspieler M7: Verteilung gleich ${m7b[0].vert === m7b[1].vert}, Holzfäller ruht ${m7b.map((x) => x.ruht).join('/')}, Statistik-Punkte ${m7b.map((x) => x.stat).join('/')}`);
     if (m7b[0].vert !== m7b[1].vert) fail('Mehrspieler M7: Warenverteilung unterschiedlich');
     if (!m7b[0].vert.includes('[0,1,3,2]') && !m7b[0].vert.includes('[0,2,1,3]')) fail(`Mehrspieler M7: Verteilung des Gasts kam nicht an: ${m7b[0].vert}`);

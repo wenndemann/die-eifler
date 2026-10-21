@@ -185,6 +185,30 @@
    }
   },
   {
+   "id": "eifelfonds",
+   "name": "Eifelfonds",
+   "gruppe": "Essen",
+   "symbol": "📜",
+   "spruch": "Zuschuss für arme Dörfer. Formular in dreifacher Ausfertigung. Preußisch Sibirien lässt grüßen.",
+   "funktion": "fonds",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 2,
+    "stein": 1
+   },
+   "ausgang": {
+    "ware": "kartoffeln",
+    "max": 6
+   },
+   "zeiten": {
+    "arbeit_s": 90
+   },
+   "fonds_menge": 3,
+   "einmalig": true,
+   "modell": "wohnhaus",
+   "leistung": "zahlt nur, wenn's knapp wird: friert das Dorf oder liegt weniger als 1 Essen je 4 Bewohner im Lager, alle 90 s 3 Kartoffeln"
+  },
+  {
    "id": "obstwiese",
    "taste": "N",
    "name": "Obstwiese",
