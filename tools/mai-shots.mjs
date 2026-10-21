@@ -92,7 +92,7 @@ try {
     await page.waitForTimeout(4000);
   };
   const bild = async (name) => { await page.screenshot({ path: join(AUS, name), timeout: 180000 }); console.log(name, JSON.stringify(await page.evaluate(() => { const s = window.eifeler.spiel.sicht; return { mai: s.dorf.mai, nacht: s.mainacht, trupps: s.trupps }; }))); };
-  await zu(info.kp.q, info.kp.r, 260, 32, 40, 10); await bild('mai-1-maibaum-wache.png');
+  await zu(info.kp.q, info.kp.r, 340, 30, 20, 40); await bild('mai-1-maibaum-wache.png');
   await zu(info.kp.q, info.kp.r, 700, 45, 80); await bild('mai-2-uebersicht-nacht.png');
   await page.evaluate((id) => window.eifeler.spiel.oeffneGebaeude(id), info.ids.junggesellen);
   await page.waitForTimeout(1500); await bild('mai-3-verein-fenster.png');
@@ -101,7 +101,7 @@ try {
   await page.evaluate((ort) => { const sp = window.eifeler.spiel; sp.befehl({ art: 'mai', was: 'wache', n: 0 }); sp.befehl({ art: 'mai', was: 'bier', an: true }); sp.befehl({ art: 'mai', was: 'klau', ziel: -1 - ort, n: 4 }); sp.schritte(4); }, info.ort);
   const warte = async (fn, max = 400) => { for (let i = 0; i < max; i++) { const t = await page.evaluate(fn); if (t) return t; await page.evaluate(() => window.eifeler.spiel.schritte(15)); } return null; };
   const mitBaum = await warte(() => (window.eifeler.spiel.sicht.trupps ?? []).find((x) => x.sp === 0 && x.phase === 1));
-  if (mitBaum) { await zu(mitBaum.von.q, mitBaum.von.r, 240, 30, 30); await bild('mai-4-maijungen-mit-baum.png'); }
+  if (mitBaum) { await zu(mitBaum.von.q, mitBaum.von.r, 300, 52, 20); await bild('mai-4-maijungen-mit-baum.png'); }
   const torkelt = await warte(() => (window.eifeler.spiel.sicht.trupps ?? []).find((x) => x.sp === -1 && x.phase === 3));
-  if (torkelt) { await zu(torkelt.von.q, torkelt.von.r, 220, 30, 30); await bild('mai-5-burschen-torkeln.png'); }
+  if (torkelt) { await zu(torkelt.von.q, torkelt.von.r, 260, 45, 20); await bild('mai-5-burschen-torkeln.png'); }
 } finally { await browser.close(); await vite.close(); }

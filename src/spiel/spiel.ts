@@ -590,8 +590,10 @@ export class Spiel {
     const st = wetterStimmung(s.tick + alpha, j);
     // M14: in der Mainacht ist Nacht (am Anfang und Ende in die Dämmerung)
     if (s.mainacht?.an) {
-      const rein = Math.min(1, (s.tick - s.mainacht.ab) / 400, (s.mainacht.bis - s.tick) / 400);
-      st.stimmung.tag = st.stimmung.tag + (0.97 - st.stimmung.tag) * Math.max(0, rein);
+      const rein = Math.max(0, Math.min(1, (s.tick - s.mainacht.ab) / 400, (s.mainacht.bis - s.tick) / 400));
+      // auf dem kürzeren Weg im Tageskreis zur Nacht (nicht über den Mittag)
+      const weg = ((0.97 - st.stimmung.tag + 1.5) % 1) - 0.5;
+      st.stimmung.tag = (st.stimmung.tag + weg * rein + 1) % 1;
     }
     if (this.wetterVorgabe) {
       const { tag: _tag, ...v } = this.wetterVorgabe;

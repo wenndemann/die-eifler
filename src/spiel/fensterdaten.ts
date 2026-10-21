@@ -645,8 +645,11 @@ export function maiAbschnitte(k: FensterKontext): Abschnitt[] {
       if (i === k.ich) return;
       knoepfe.push({ id: `mai_klau:${i}`, text: `🌙 Klauen bei ${k.namen[i] ?? `Spieler ${i + 1}`}${sp.maibaum === 1 ? '' : ' (kein Baum?)'}`, aus: m.frei < MAI_KLAU_MIN });
     });
-    s.orte.forEach((o, i) => {
-      if (o.besitzer === k.ich || m.orte.includes(i)) return;
+    // die vier nächsten Nachbarorte (vom Lager aus), die noch keinem selbst gehören und dieses Jahr nicht dran waren
+    const lager = s.gebaeude.find((g) => g.sp === k.ich && g.typ === 'lager');
+    const ab = (o: { q: number; r: number }) => (lager ? (Math.abs(o.q - lager.q) + Math.abs(o.r - lager.r) + Math.abs(o.q + o.r - lager.q - lager.r)) / 2 : 0);
+    const nah = s.orte.map((o, i) => ({ o, i })).filter(({ o, i }) => o.besitzer !== k.ich && !m.orte.includes(i)).sort((a, b) => ab(a.o) - ab(b.o)).slice(0, 4);
+    nah.forEach(({ i }) => {
       knoepfe.push({ id: `mai_klau:${-1 - i}`, text: `🌙 Klauen in ${k.ortName?.(i) || `Ort ${i + 1}`}`, aus: m.frei < MAI_KLAU_MIN });
     });
   }
