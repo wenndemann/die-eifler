@@ -109,6 +109,9 @@ donoh widder fott. Ungebroche? Einfach neu starte, et määt do wigger wo et opj
   Punkte. **Johreszigge:** e Johr dorrt 60 Spillminütte; em Winter litt Schnie, de Felder ruhe, un et Dorf ääß vum Vürrot – wä
   nix hät, früss (lahm, ävver keiner stirv). **Wedder** kütt för all jlich, aanjekündich als Buureräjel. **Beschwipste Bote**
   vun d'r Schänk loofe querfeldein, torkele un verliere ens jet. Zahle: `data/jahr.json`, `data/feste.json`, `data/dorf.json`.
+- **Stil „Wimmelbooch met Strich“ (M9):** Bilderbooch-Pass met feinem brune Strich, sacke, warme Färve; runde Forme, ä bessje
+  scheive Fachwerkhüüser met Rauch un Kleinkrom (Hohnder, Wäsch, Beet, Immekörv), Blome un Pilze op d'r Wies, Schnie op de
+  Däächer. Figure met jroße Kopp un Jesich, Kapp en Trachtfärv. Leitfaden: `STIL.md`, Pröfung: `tools/bildstrecke.mjs`.
 - **Simulation** (`src/sim/`): faste Tick (20/s), nur janze Zahle, jede Aktion es ene Befehl met Tick-Nummer,
   Prüfsumm övver dä Zostand, Befehlsprotokoll zom Avspille. Dä Smoke-Test pröf, dat Node un Browser de selve
   Prüfsumm krije.
