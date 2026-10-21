@@ -25,11 +25,11 @@ export const NACHBAR_P: Record<string, number> = { stadt: 0.45, dorf: 0.2, weile
 /** Höhe eines Trägers samt Kappe in Metern (Richtwert 8–12 m, per Screenshot auf 13 abgestimmt). */
 export const TRAEGER_H = 17.5;
 /** Kantenlänge einer Ware (Würfel-Äquivalent) in Metern. */
-export const WARE_M = 5.5;
+export const WARE_M = 6.5;
 /** Höhe der Fahnenstange in Metern. */
 export const FAHNE_H = 21;
 /** Breite eines Erdpfads in Metern (Mindestverkehr / Höchstverkehr). */
-export const WEG_BREITE: readonly [number, number] = [8, 14];
+export const WEG_BREITE: readonly [number, number] = [12, 19];
 /** Mit wachsendem Kameraabstand werden Figuren, Waren und Fahnen bis zu diesem Faktor größer (Lesbarkeit von weit weg). */
 export const FERN_MAX = 2.3;
 /** Ab diesem Kameraabstand (m) beginnt die Vergrößerung; bei FERN_ENDE ist FERN_MAX erreicht. */

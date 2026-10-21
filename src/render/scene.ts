@@ -37,7 +37,7 @@ export class Stage {
     // Sonne aus Nordwesten-Westen, mittlere Höhe: plastisches Relief
     const elev = THREE.MathUtils.degToRad(32), azim = THREE.MathUtils.degToRad(-125);
     this.sunDir.set(Math.cos(elev) * Math.sin(azim), Math.sin(elev), -Math.cos(elev) * Math.cos(azim)).normalize();
-    this.sun = new THREE.DirectionalLight('#ffe4bc', 3.1);
+    this.sun = new THREE.DirectionalLight('#ffe4bc', 2.75);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(this.quali.schattenKarte, this.quali.schattenKarte);
     this.sun.shadow.bias = -0.0004;
@@ -46,7 +46,7 @@ export class Stage {
     this.sun.shadow.intensity = 0.45;
     this.scene.add(this.sun, this.sun.target);
     // Himmel kühl, Boden warm: weiche, farbige Schatten wie gemalt; Gegenlicht für runde Formen
-    this.scene.add(new THREE.HemisphereLight('#cfe3f2', '#8a7350', 0.95));
+    this.scene.add(new THREE.HemisphereLight('#d6e6f0', '#9a8058', 1.3));
     const gegen = new THREE.DirectionalLight('#ffd2a0', 0.55);
     gegen.position.set(-this.sunDir.x, 0.35, -this.sunDir.z).multiplyScalar(1000);
     this.scene.add(gegen);

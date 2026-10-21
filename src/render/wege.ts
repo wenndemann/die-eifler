@@ -114,7 +114,7 @@ float wn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
 /** Material für Erdpfade. */
 function erdMaterial(): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({
-    color: '#a98b62', roughness: 1, metalness: 0, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+    color: '#c4a472', roughness: 1, metalness: 0, transparent: true, depthWrite: false, side: THREE.DoubleSide,
     polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4,
     // Alpha des Geländes (0) bleibt stehen: der Bilderbuch-Pass zieht an Wegen keine Linie (buchpass.ts)
     blending: THREE.CustomBlending, blendSrc: THREE.SrcAlphaFactor, blendDst: THREE.OneMinusSrcAlphaFactor,

@@ -663,6 +663,14 @@ function bienenkorb(x: number, z: number): THREE.BufferGeometry[] {
   return [paint(new THREE.SphereGeometry(1.0, 10, 8, 0, Math.PI * 2, 0, Math.PI / 1.6).scale(1, 1.25, 1).translate(x, G + 0.9, z), '#d9a540'),
     boxR(1.6, 0.7, 1.6, x, G + 0.35, z, HOLZ)];
 }
+/** Gemüsebeet: Erdbett mit Kohlköpfen in Reihen (Wimmelbuch, STIL.md §6). */
+function beet(x: number, z: number): THREE.BufferGeometry[] {
+  const out: THREE.BufferGeometry[] = [boxR(4.2, 0.35, 2.8, x, G + 0.17, z, '#7a5434')];
+  for (let i = 0; i < 6; i++) {
+    out.push(paint(new THREE.SphereGeometry(0.42, 7, 5).scale(1, 0.75, 1).translate(x - 1.4 + (i % 3) * 1.4, G + 0.6, z - 0.6 + Math.floor(i / 3) * 1.2), i % 2 ? '#7fb24e' : '#5f9a3a'));
+  }
+  return out;
+}
 function zaunStueck(x: number, z: number, lang: number): THREE.BufferGeometry[] {
   const out: THREE.BufferGeometry[] = [];
   const n = Math.max(2, Math.round(lang / 1.8));
@@ -681,15 +689,17 @@ function kleinkram(typ: string, t: Typ): THREE.BufferGeometry[] {
   const out: THREE.BufferGeometry[] = [];
   if (typ === 'wohnhaus') {
     out.push(...huhn(vx, vz, 0.6), ...huhn(vx - 1.8, vz - 0.6, 2.4, '#b8743a'), ...huhn(vx - 0.6, vz + 1.0, -1.0), ...huhn(vx + 1.2, vz - 1.8, 1.7));
-    out.push(...blumen(x0 + 1.5, z1 - 1.2, 7), ...waesche(x0 - 1, -t.d / 2 - 3), ...zaunStueck(x0 - 1, z1 + 0.5, 6), ...kuerbisse(x0 + 0.5, z1 - 4));
+    out.push(...beet(x1 + 3, -1), ...bienenkorb(x1 + 2.5, -t.d / 2 - 1), ...blumen(x0 + 1.5, z1 - 1.2, 7), ...waesche(x0 - 1, -t.d / 2 - 3), ...zaunStueck(x0 - 1, z1 + 0.5, 6), ...kuerbisse(x0 + 0.5, z1 - 4));
   } else if (typ === 'lager') {
-    out.push(...brunnen(x0 + 2, z1 + 1), ...huhn(vx, vz + 1, 0.3), ...huhn(vx - 2, vz + 0.4, 2.8), ...huhn(vx - 1, vz + 2.2, -0.6, '#b8743a'));
+    out.push(...beet(x0 - 3, 0), ...brunnen(x0 + 2, z1 + 1), ...huhn(vx, vz + 1, 0.3), ...huhn(vx - 2, vz + 0.4, 2.8), ...huhn(vx - 1, vz + 2.2, -0.6, '#b8743a'));
     out.push(...blumen(x1 - 1, -1, 6), ...fass(x1 - 4, z1 + 0.5), ...fass(x1 - 5.4, z1 + 0.8), ...kuerbisse(x0 + 5, z1 + 1.5));
   } else if (t.grund[1] - t.grund[0] > 18) {
     out.push(...vogelscheuche(x1 - 3, z1 - 3), ...blumen(x0 + 1, z1 - 1, 5), ...huhn(x0 + 3, z1 - 0.5, 1.2), ...kuerbisse(x0 + 4, z1 - 2.5));
   } else {
-    out.push(...blumen(vx, vz, 6), ...fass(x0 + 1, z1 - 0.8), ...huhn(x0 + 3, z1 - 0.2, 2.0));
+    out.push(...blumen(vx, vz, 6), ...fass(x0 + 1, z1 - 0.8), ...fass(x0 + 2.3, z1 - 0.3), ...huhn(x0 + 3, z1 - 0.2, 2.0), ...huhn(x0 + 4.4, z1 + 0.9, -0.8, '#b8743a'));
+    out.push(...beet(x1 + 3.2, -t.d / 4), ...zaunStueck(x1 + 0.8, -t.d / 4 + 2.2, 5));
     if (typ.length % 3 === 0) out.push(...bienenkorb(x0 + 0.5, z1 - 3));
+    else if (typ.length % 3 === 1) out.push(...kuerbisse(x0 - 2.5, z1 - 2));
   }
   // etwas größer als echt (aus der Spielhöhe lesbar): um den Grundriss-Mittelpunkt vorn skalieren
   return out.map((g) => g.translate(-vx, 0, -vz).scale(KLEINKRAM, KLEINKRAM, KLEINKRAM).translate(vx, 0, vz));

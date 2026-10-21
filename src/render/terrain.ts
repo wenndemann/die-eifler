@@ -344,7 +344,8 @@ export class Terrain {
       pos[v * 3] = (i + 0.5) * cell;
       pos[v * 3 + 1] = heightOf(i, j, k) - this.base - drop;
       pos[v * 3 + 2] = (j + 0.5) * cell;
-      const s = Math.max(1, step);
+      // M9: breiter Stencil – weich gerundete Hänge statt sichtbarer Dreiecksfacetten (Bilderbuch statt Low-Poly)
+      const s = Math.max(2, step * 2);
       const dx = (g[map.idx(i + s, j)] - g[map.idx(i - s, j)]) / (2 * s * cell);
       const dz = (g[map.idx(i, j + s)] - g[map.idx(i, j - s)]) / (2 * s * cell);
       const inv = 1 / Math.hypot(dx, 1, dz);

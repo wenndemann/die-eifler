@@ -53,7 +53,7 @@ gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, vKFade);
  * Schnee auf Dächern, Felsen und Kleinkram (Drehbuch 7.4, STIL.md): nach oben zeigende Flächen werden mit uSchnee weiß.
  * Hängt sich an ein vorhandenes onBeforeCompile an.
  */
-export function mitSchnee<M extends THREE.Material>(mat: M, staerke = 0.6): M {
+export function mitSchnee<M extends THREE.Material>(mat: M, staerke = 0.85): M {
   const vorher = mat.onBeforeCompile;
   mat.onBeforeCompile = (shader, renderer) => {
     vorher.call(mat, shader, renderer);
