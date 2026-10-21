@@ -61,4 +61,8 @@ export interface AusschnittParam {
   q: number;
   r: number;
   size: Groesse;
+  /** Gesuchter Ort aus der Kartenwahl (Name, Hex des Ortskerns): dort steht das Lager, solange er im Spielfeld liegt. */
+  wunsch?: OrtWunsch;
 }
+
+export interface OrtWunsch { name: string; q: number; r: number }

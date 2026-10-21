@@ -29,7 +29,7 @@ import { gespeicherteQualitaet } from './render/qualitaet';
 import { Bench, zeigeErgebnis, type BenchErgebnis } from './bench';
 import { ladeWelt, type Welt } from './welt/laden';
 import { ladeAusschnitt } from './welt/ausschnitt';
-import { GROESSEN, type AusschnittParam, type Groesse } from './welt/format';
+import { GROESSEN, type AusschnittParam, type Groesse, type OrtWunsch } from './welt/format';
 import { SimDemo } from './render/simdemo';
 import { Spiel, type SpielKontext } from './spiel/spiel';
 import { hexToWorld } from './welt/hexwelt';
@@ -41,14 +41,14 @@ const TERRAIN_NAMES: Record<string, string> = {
 };
 const LAENDER: Record<string, string> = { DE: 'Deutschland', BE: 'Belgien', LU: 'Luxemburg', NL: 'Niederlande' };
 
-interface HashParam { version?: string; q?: number; r?: number; size?: Groesse; vorschlag?: string; bench?: boolean; simdemo?: boolean; raum?: string; freunde?: boolean; kampagne?: string }
+interface HashParam { version?: string; q?: number; r?: number; size?: Groesse; wunsch?: OrtWunsch; vorschlag?: string; bench?: boolean; simdemo?: boolean; raum?: string; freunde?: boolean; kampagne?: string }
 
 /** Spielstand, der nach dem Neuladen geladen werden soll (Laden aus dem laufenden Spiel auf eine andere Karte). */
 const LADEN_SPEICHER = 'eifeler.laden';
 /** Nach einer geschafften Etappe: beim Neuladen gleich in die Kampagnen-Übersicht. */
 const ZUR_KAMPAGNE = 'eifeler.zurKampagne';
 
-/** URL-Hash: #v=<version>&q=..&r=..&g=klein|mittel|gross oder #<vorschlag-id>. */
+/** URL-Hash: #v=<version>&q=..&r=..&g=klein|mittel|gross[&o=<q>,<r>,<Wunsch-Ort>] oder #<vorschlag-id>. */
 function leseHash(): HashParam {
   const h = location.hash.slice(1);
   if (!h) return {};
@@ -57,12 +57,16 @@ function leseHash(): HashParam {
   const g = sp.get('g') as Groesse | null;
   const out: HashParam = { version: sp.get('v') ?? undefined, bench: sp.get('bench') === '1', simdemo: sp.get('simdemo') === '1', raum: sp.get('raum') ?? undefined, freunde: sp.get('freunde') === '1', kampagne: sp.get('k') ?? undefined };
   if (sp.has('q') && sp.has('r') && g && g in GROESSEN) { out.q = Number(sp.get('q')); out.r = Number(sp.get('r')); out.size = g; }
+  // Wunsch-Ort: o=<q>,<r>,<Name>
+  const o = sp.get('o')?.match(/^(-?\d+),(-?\d+),(.+)$/);
+  if (o) out.wunsch = { q: Number(o[1]), r: Number(o[2]), name: o[3] };
   return out;
 }
 
 function schreibeHash(p: AusschnittParam, kampagne?: { stand: KampagnenStand; index: number } | null) {
   const k = kampagne ? `&k=${kampagne.stand.weg}.${kampagne.index}` : '';
-  history.replaceState(null, '', `${location.pathname}${location.search}#v=${p.version}&q=${p.q}&r=${p.r}&g=${p.size}${k}`);
+  const o = p.wunsch ? `&o=${p.wunsch.q},${p.wunsch.r},${encodeURIComponent(p.wunsch.name)}` : '';
+  history.replaceState(null, '', `${location.pathname}${location.search}#v=${p.version}&q=${p.q}&r=${p.r}&g=${p.size}${o}${k}`);
 }
 
 function ladeanzeige(loading: HTMLElement) {
@@ -109,7 +113,7 @@ async function main() {
     param = r.param;
     loading.style.display = '';
   } else if (spielstand) { param = ausschnittVon(spielstand); if (spielstand.kampagne) kampagne = kampagneAus(spielstand.kampagne.weg, spielstand.kampagne.etappe); }
-  else if (hp.q !== undefined && hp.size) param = { version: welt.version, q: hp.q, r: hp.r!, size: hp.size };
+  else if (hp.q !== undefined && hp.size) param = { version: welt.version, q: hp.q, r: hp.r!, size: hp.size, ...(hp.wunsch ? { wunsch: hp.wunsch } : {}) };
   else if (preset) param = { version: welt.version, q: preset.q, r: preset.r, size: preset.size };
   else {
     loading.style.display = 'none';
