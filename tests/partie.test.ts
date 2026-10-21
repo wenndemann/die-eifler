@@ -4,6 +4,8 @@ import { PAUSE_MAX_MS, PAUSEN_JE_SPIELER, VERWALTER_NACH_MS, type Partie } from 
 import type { Befehl } from '../src/sim/typen';
 import { wetterPlan } from '../src/sim/jahr';
 import { baueTestKarte, gerade } from './sim-szenario';
+import { Simulation } from '../src/sim/sim';
+import { SimKarte } from '../src/sim/karte';
 import { GUT, Runde, SCHLECHT } from './netz-sim';
 
 const A = { q: 0, r: 0 }, B = { q: -6, r: 0 }, C = { q: 6, r: -12 };
@@ -276,6 +278,48 @@ describe('Gleichschritt', () => {
     }
     // die Ankündigung des ersten Wetters kam bei Spieler 0 an (vor dem Neuladen von Spieler 1)
     expect(sim(r, 0).sicht(0).ereignisse.some((e) => e.art === 'wetter' && e.wert === plan[0].art)).toBe(true);
+    expect(sim(r, 1).pruefsumme()).toBe(sim(r, 0).pruefsumme());
+  });
+
+  it('M10: Gebiet und Wettlauf um einen Ort bei allen gleich, auch mit Neuladen, während die Lieferung unterwegs ist', () => {
+    const karte = baueTestKarte(false);
+    const ks = new SimKarte(karte);
+    for (const h of [{ q: 0, r: -15 }, { q: 1, r: -15 }]) { const i = ks.index(h.q, h.r); karte.flags[i] |= 1; karte.place[i] = 4; }
+    const starts = [{ q: 0, r: 0 }, { q: 0, r: -28 }];
+    let start = new Simulation(karte, 99, starts, { gebiet: 1, ziel: 'normal' });
+    const st = start.stand();
+    for (const g of st.gebaeude) if (g.typ === 'lager') g.vorrat = (g.vorrat as number[]).map((v) => v + 30);
+    start = Simulation.ausStand(karte, st);
+    const r = new Runde(karte, starts, SCHLECHT);
+    r.starte(0, { sim: start }); r.starte(1);
+    r.verbindeAlle();
+    r.lauf(2000);
+    // Spieler 1 darf nicht auf Spieler 0s Gebiet bauen; beide bauen ihren Weg zum Ort
+    p(r, 1).befehl({ art: 'gebaeude', typ: 'wohnhaus', q: 0, r: -3 });
+    p(r, 0).befehl({ art: 'weg', pfad: gerade(0, 0, 2, 14) });
+    p(r, 1).befehl({ art: 'weg', pfad: gerade(0, -28, 5, 12) });
+    r.lauf(3000);
+    p(r, 0).befehl({ art: 'einstand', ort: 0 });
+    p(r, 1).befehl({ art: 'einstand', ort: 0 });
+    r.lauf(3000);
+    // Spieler 1 lädt neu, während die Lieferungen unterwegs sind
+    r.trenne(1);
+    r.lauf(1000);
+    const neu = r.starte(1);
+    r.verbindeAlle();
+    while (!neu.sim || neu.angehalten) r.lauf(16);
+    r.lauf(60_000);
+    p(r, 0).pause(true);
+    r.lauf(3000);
+    r.gleichziehen();
+    for (const i of [0, 1]) {
+      const s = sim(r, i).sicht(i);
+      expect(s.regeln.gebiet).toBe(true);
+      expect(s.orte[0].besitzer).toBe(1);
+      expect(s.gebaeude.some((g) => g.sp === 1 && g.typ === 'wohnhaus')).toBe(false);
+      expect(p(r, i).ereignisse.filter((e) => e.art === 'auseinander' || e.art === 'fehler')).toEqual([]);
+    }
+    expect(sim(r, 0).sicht(0).ereignisse.some((e) => e.art === 'zu_spaet')).toBe(true);
     expect(sim(r, 1).pruefsumme()).toBe(sim(r, 0).pruefsumme());
   });
 

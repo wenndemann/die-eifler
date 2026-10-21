@@ -337,6 +337,8 @@ Gebäude werden nie zerstört. Wechselt ein Hex mit Gebäude den Besitzer, steht
   - **Der Große Fund:** Teile eines seltenen Schatzes bei verschiedenen Nachbarn finden und im Fundbüro zusammensetzen.
 - **Kampagne:** Jede Etappe hat ihr eigenes Ziel (Kapitel 2.1).
 
+**Umgesetzt in M10 (Startwerte, `data/nachbarn.json`):** Einfluss-Radien Lager 9 (+1 je Dorfstufe), Wohnhaus 2, Kirmesplatz 4, Schützenhaus 3, Dorfpolizist 2; +1 solange keiner friert, +1 für den Schützenkönig. Bauen nur auf eigenem Gebiet, Wege auch über freies Land. Orte: Größe nach Ortskern-Hexen (Weiler bis 2, Dorf bis 6, sonst Städtchen), Wunsch 2/3/4 Waren aus einem Pool je Größe, Lohn 3/6/10 Bewohner, 10/20/30 Punkte, Gebiet 3/4/5. Je Karte die zwei nächsten Flachland-Städte als Marktposten. Finder: 20 % Grund-Erwischt-Chance bei Mitspielern, +25 % je Wachhund, +35 % je Dorfpolizist (höchstens 85 %), Flachländer 35 %. Vogelschuss: 30 + 30 mit Schießstand + bis 60 Glück, König ab 60. Grenzsteine versetzen, Abwerben, Nebel, Zöllner, Fundbüro und der Große Fund folgen.
+
 ### Feste
 
 **Viele Feste (beschlossen):** Neben Kirmes und Schützenfest gibt es viele kleine Feste. Alle funktionieren gleich: Warenliste liefern, feiern, Punkte bekommen. Je mehr Feste man schafft, desto mehr Eifel-Punkte.

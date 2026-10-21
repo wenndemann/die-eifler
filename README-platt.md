@@ -112,6 +112,11 @@ donoh widder fott. Ungebroche? Einfach neu starte, et määt do wigger wo et opj
 - **Stil „Wimmelbooch met Strich“ (M9):** Bilderbooch-Pass met feinem brune Strich, sacke, warme Färve; runde Forme, ä bessje
   scheive Fachwerkhüüser met Rauch un Kleinkrom (Hohnder, Wäsch, Beet, Immekörv), Blome un Pilze op d'r Wies, Schnie op de
   Däächer. Figure met jroße Kopp un Jesich, Kapp en Trachtfärv. Leitfaden: `STIL.md`, Pröfung: `tools/bildstrecke.mjs`.
+- **Jebiet, Noobere, Finge, Ziele (M10):** Lager, Hüüser, Kirmesplatz, Schötzehuus un Dörpspolizist striehle **Enfluss** us;
+  jebout weed nur om eije Jebiet, de Jrenz süht mer als Band met Jrenzsteen. **Ööt met Enstand:** Wääch bes an d'r Ortskään,
+  Wunschzeddel liefere – dann jitt et e Lager met Fungkess, Jebiet, Lück un Punkte. **Flachländer** om Kaaterand (Maatposte met
+  Wääschwieser), **Fingerhött**, Wachhungk, Dörpspolizist un Usredestuff, **Schötzefess** met Vurrelschoss. **Eifel-Punkte** bes
+  zom Ziel (600/1000/1500), Wettlouf zom Maatflecke oder ohne Engk. Zahle: `data/nachbarn.json`.
 - **Simulation** (`src/sim/`): faste Tick (20/s), nur janze Zahle, jede Aktion es ene Befehl met Tick-Nummer,
   Prüfsumm övver dä Zostand, Befehlsprotokoll zom Avspille. Dä Smoke-Test pröf, dat Node un Browser de selve
   Prüfsumm krije.
