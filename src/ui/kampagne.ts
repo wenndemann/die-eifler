@@ -9,6 +9,7 @@ import {
   type Etappe, type KampagnenStand, type Weg,
 } from '../spiel/kampagne';
 import { hexToWorld } from '../welt/hexwelt';
+import { VOELKCHEN_GEBIETE } from '../welt/voelkchengebiete';
 import { GEBAEUDE } from '../sim/daten';
 import nachbarn from '../../data/nachbarn.json';
 
@@ -64,6 +65,13 @@ function karte(welt: Welt, welten: readonly Welt[], weg: Weg, k: KampagnenStand 
   s.append(bild);
   // Kacheln mit Weltdaten leicht hell, damit man sieht, wo schon gespielt werden kann
   for (const w of welten) for (const [tx, tz] of w.manifest.kacheln) s.append(svg('rect', { x: tx * welt.manifest.tile, y: tz * welt.manifest.tile, width: welt.manifest.tile, height: welt.manifest.tile, fill: '#fff6d8', opacity: 0.25 }));
+  // Kerngebiete der Völkchen (zart, in ihrer Farbe)
+  for (const g of VOELKCHEN_GEBIETE) {
+    s.append(svg('circle', { cx: g.x, cy: g.z, r: g.r, fill: g.farbe, 'fill-opacity': 0.12, stroke: g.farbe, 'stroke-opacity': 0.6, 'stroke-width': 250, 'stroke-dasharray': '900 600' }));
+    const t = svg('text', { x: g.x, y: g.z - g.r * 0.6, 'font-size': (x1 - x0) / 60, class: 'kp-volk', fill: g.farbe });
+    t.textContent = g.name;
+    s.append(t);
+  }
   // Flachland-Städte zur Orientierung (data/nachbarn.json)
   const rs = (x1 - x0) / 90;
   for (const st of STAEDTE) {

@@ -1,6 +1,6 @@
 {
  "version": 1,
- "hinweis": "Startwerte, werden beim Spielen eingestellt (Drehbuch 5)",
+ "hinweis": "Startwerte, werden beim Spielen eingestellt (Drehbuch 5); kerngebiet.mitte (lon, lat) und radius_km: ungefähres Kerngebiet für die Kartenwahl und das Weltdaten-Gebiet des Völkchens (tools/map/welt.py)",
  "flachlaender": [
   {
    "platt": "Hinger däm Hüjel fängt de Eifel erst aan.",
@@ -86,7 +86,12 @@
      "Konzen",
      "Rohren",
      "Roetgen"
-    ]
+    ],
+    "mitte": [
+     6.22,
+     50.58
+    ],
+    "radius_km": 12
    },
    "sprueche": [
     {
@@ -175,7 +180,12 @@
      "Simonskall",
      "Gemünd",
      "Schleiden"
-    ]
+    ],
+    "mitte": [
+     6.42,
+     50.6
+    ],
+    "radius_km": 12
    },
    "sprueche": [
     {
@@ -263,7 +273,12 @@
      "Kreuzau",
      "Obermaubach",
      "Hürtgenwald"
-    ]
+    ],
+    "mitte": [
+     6.47,
+     50.7
+    ],
+    "radius_km": 12
    },
    "sprueche": [
     {
@@ -351,7 +366,12 @@
      "Ulmen",
      "Gillenfeld",
      "Strohn"
-    ]
+    ],
+    "mitte": [
+     6.78,
+     50.17
+    ],
+    "radius_km": 16
    },
    "sprueche": [
     {
@@ -442,7 +462,12 @@
      "Bad Neuenahr",
      "Adenau",
      "Ahrbrück"
-    ]
+    ],
+    "mitte": [
+     7.0,
+     50.5
+    ],
+    "radius_km": 14
    },
    "sprueche": [
     {
@@ -531,7 +556,12 @@
      "Andernach",
      "Nickenich",
      "Ettringen"
-    ]
+    ],
+    "mitte": [
+     7.25,
+     50.38
+    ],
+    "radius_km": 12
    },
    "sprueche": [
     {
@@ -620,7 +650,12 @@
      "Echternacherbrück",
      "Kyllburg",
      "Speicher"
-    ]
+    ],
+    "mitte": [
+     6.45,
+     49.92
+    ],
+    "radius_km": 16
    },
    "sprueche": [
     {
@@ -714,7 +749,12 @@
      "Habscheid",
      "Büdesheim",
      "Auw"
-    ]
+    ],
+    "mitte": [
+     6.38,
+     50.22
+    ],
+    "radius_km": 14
    },
    "sprueche": [
     {
@@ -803,7 +843,12 @@
      "Kelmis",
      "Weismes",
      "Sourbrodt"
-    ]
+    ],
+    "mitte": [
+     6.1,
+     50.45
+    ],
+    "radius_km": 20
    },
    "sprueche": [
     {
@@ -890,7 +935,12 @@
      "Hosingen",
      "Bastendorf",
      "Esch-sur-Sûre"
-    ]
+    ],
+    "mitte": [
+     6.0,
+     49.98
+    ],
+    "radius_km": 16
    },
    "sprueche": [
     {

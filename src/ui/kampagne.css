@@ -38,3 +38,4 @@
 }
 .kp-stadt { fill: #8a6a4a; stroke: #3a2a1a; stroke-width: 200; }
 .kp-stadtname { fill: #5a4632; font-family: 'Alegreya SC', serif; font-style: italic; }
+.kp-volk { font-family: 'Alegreya SC', serif; font-weight: 700; text-anchor: middle; paint-order: stroke; stroke: rgba(243, 234, 216, 0.8); stroke-width: 300; }

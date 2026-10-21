@@ -62,19 +62,16 @@ def _utm32(lon, lat):
     return ost, nord
 
 
-# Kerngebiete der 10 Völkchen (data/regions.json): Mitte (lon, lat) und Radius in km; die Kacheln decken den Kreis plus Kulisse ab.
-VOELKCHEN_GEBIETE = {
-    "monschau": (6.22, 50.58, 12),      # Monschau, Mützenich, Höfen, Kalterherberg, Konzen, Roetgen
-    "rursee": (6.42, 50.60, 12),        # Einruhr, Rurberg, Woffelsberg, Schwammenauel, Simonskall, Gemünd, Schleiden
-    "rureifel": (6.47, 50.70, 12),      # Nideggen, Heimbach, Abenden, Zerkall, Kreuzau, Obermaubach, Hürtgenwald
-    "vulkaneifel": (6.78, 50.17, 16),   # Gerolstein, Daun, Hillesheim, Manderscheid, Ulmen, Gillenfeld, Strohn
-    "ahr": (7.00, 50.50, 14),           # Altenahr, Mayschoß, Rech, Dernau, Ahrweiler, Bad Neuenahr, Adenau, Ahrbrück
-    "laach": (7.25, 50.38, 12),         # Maria Laach, Mayen, Mendig, Kruft, Andernach, Nickenich, Ettringen
-    "suedeifel": (6.45, 49.92, 16),     # Bitburg, Neuerburg, Irrel, Echternacherbrück, Kyllburg, Speicher
-    "schneifel": (6.38, 50.22, 14),     # Prüm, Bleialf, Schönecken, Olzheim, Habscheid, Büdesheim, Auw
-    "ostbelgien": (6.10, 50.45, 20),    # Eupen, St. Vith, Büllingen, Bütgenbach, Raeren, Kelmis, Weismes, Sourbrodt
-    "oesling": (6.00, 49.98, 16),       # Wiltz, Clervaux, Vianden, Troisvierges, Hosingen, Bastendorf, Esch-sur-Sûre
-}
+# Kerngebiete der 10 Völkchen: Mitte (lon, lat) und Radius in km aus data/regions.json; die Kacheln decken den Kreis plus Kulisse ab.
+def _voelkchen_gebiete():
+    import json
+    import os
+    with open(os.path.join(os.path.dirname(__file__), "..", "..", "data", "regions.json"), encoding="utf-8") as f:
+        d = json.load(f)
+    return {v["id"]: (*v["kerngebiet"]["mitte"], v["kerngebiet"]["radius_km"]) for v in d["voelkchen"]}
+
+
+VOELKCHEN_GEBIETE = _voelkchen_gebiete()
 
 
 def _kreis_kacheln(lon, lat, km):
