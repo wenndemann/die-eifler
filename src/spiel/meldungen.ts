@@ -35,6 +35,14 @@ export function erzaehlerVon(id: string): Erzaehler {
   return v ? { voelkchen: v.name, name: v.erzaehler.name, tick: v.erzaehler.tick, sprueche: v.sprueche, id: v.id } : erzaehlerFuer(undefined);
 }
 
+/** Völkchen eines neuen Spiels allein: die Wahl aus den Einstellungen, sonst (oder unbekannt) aus dem Startort. */
+export function waehleVoelkchen(wahl: string, startort: string | undefined, orte: readonly string[] = []): string {
+  return VOELKCHEN.some((v) => v.id === wahl) ? wahl : erzaehlerFuer(startort, orte).id;
+}
+
+/** Alle Völkchen (Id und Name) für die Auswahl. */
+export const VOELKCHEN_LISTE: readonly { id: string; name: string }[] = VOELKCHEN.map((v) => ({ id: v.id, name: v.name }));
+
 /** Name des Völkchens zur Id oder ''. */
 export function voelkchenName(id: string): string {
   return VOELKCHEN.find((x) => x.id === id)?.name ?? '';
@@ -108,6 +116,8 @@ export class MeldungsFilter {
   private bewohnerMarke = 0;
   private wohnraumGemeldet = false;
   private zaehler = 0;
+  /** „Alte Steine“ (Südeifeler) höchstens alle 3 Spielminuten melden. */
+  private altsteinTick = -1_000_000;
 
   constructor(private e: Erzaehler, private ort: string) {}
 
@@ -176,6 +186,7 @@ export class MeldungsFilter {
         case 'ertappt': add('ertappt', k({ text: namen?.spieler?.(ev.wert) ?? 'nebenan' })); break;
         case 'schuetzenfest': add('schuetzenfest', k({ n: ev.wert }), true, true, ev.gebaeude); break;
         case 'koenig': add('koenig', k({ text: namen?.spieler?.(ev.wert) ?? 'Einer' }), true, true); break;
+        case 'altstein': if (ev.tick - this.altsteinTick >= 3 * 60 * 20) { this.altsteinTick = ev.tick; add('altstein', k({}), false, false, ev.gebaeude); } break;
         case 'ende': add('ende', k({ text: namen?.spieler?.(ev.wert) ?? 'Einer' }), true, true); break;
         case 'verloren': {
           const n = aus.length;

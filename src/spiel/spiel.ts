@@ -43,7 +43,7 @@ import {
   bauTooltip, endeFenster, zielName, fahneFenster, gebaeudeFenster, hilfeFenster, ortFenster, postenFenster, punkteText, LAGERREGEL_NAMEN, Produktivitaet, protokollFenster, statistikFenster, verteilungFenster,
   verteilungKnopf, warenFenster, warnungen, wegFenster, type FensterKontext, type ProtokollZeile, type StatMass,
 } from './fensterdaten';
-import { erzaehlerFuer, erzaehlerVon, MeldungsFilter, type Erzaehler, type Meldung, type MeldungsNamen } from './meldungen';
+import { erzaehlerFuer, erzaehlerVon, waehleVoelkchen, VOELKCHEN_LISTE, MeldungsFilter, type Erzaehler, type Meldung, type MeldungsNamen } from './meldungen';
 import {
   BAUPLATZ_NAMEN, bedarfNamen, fehlmengen, hexeImUmkreis, kostenText as kostenAlsText, menueGruppen, naechstePrioritaet, PRIO_NAMEN,
   reichweiteText, wareTexte, zustandsText,
@@ -248,7 +248,7 @@ export class Spiel {
     } else {
       this._sim = ctx.laden ? Simulation.ausStand(ausschnitt.hex, ctx.laden)
         : new Simulation(ausschnitt.hex, saatAusPruefsumme(ausschnitt.pruefsumme),
-          { ...waehleLagerHex(ausschnitt.hex, ausschnitt.kerne, map.info.start), voelkchen: erzaehlerFuer(map.info.start, ausschnitt.kerne.map((k) => k.name)).id },
+          { ...waehleLagerHex(ausschnitt.hex, ausschnitt.kerne, map.info.start), voelkchen: waehleVoelkchen(ladeEinstellungen().voelkchen, map.info.start, ausschnitt.kerne.map((k) => k.name)) },
           { gebiet: 1, ziel: ladeEinstellungen().ziel });
       this.ich = 0;
     }
@@ -553,6 +553,9 @@ export class Spiel {
     if (!this.begruesst && s.tick >= 20) {
       this.begruesst = true;
       this.zeigeMeldung(this.filter.begruessung(KIRMES[0] ? listeText(KIRMES[0].liste) : ''));
+      // M11: Völkchen-Gebäude, die auf diesem Ausschnitt nirgends gehen (z. B. Bootsverleih ohne Wasser) – einmal sagen
+      const fehlt = this._sim.fehltAufKarte(this.ich);
+      if (fehlt.length) this.zeigeMeldung({ text: `⚠ Auf diesem Ausschnitt geht nicht: ${fehlt.map((t) => GEBAEUDE[t]?.name ?? t).join(', ')} (kein ${fehlt.some((t) => GEBAEUDE[t]?.amMoor) ? 'Moor' : 'Wasser'} in der Nähe). Die Spezialität klappt hier nur über Umwege.`, gross: false });
     }
     const hat = (typ: string) => s.gebaeude.some((g) => g.sp === this.ich && g.typ === typ);
     const min = s.tick / (60 * 20);
@@ -1321,6 +1324,10 @@ export class Spiel {
         ...(this.partie ? [] : [{
           id: 'ziel', text: 'Ziel für neue Spiele', typ: 'auswahl' as const, wert: e.ziel, optionen: ZIELE.map((z) => ({ wert: z.id, text: z.punkte ? `${z.name} (${z.punkte} Punkte)` : z.name })),
           hilfe: `Diese Partie: ${zielName(this._sicht.regeln.ziel)}. Gilt ab dem nächsten neuen Spiel.`,
+        }, {
+          id: 'voelkchen', text: 'Völkchen für neue Spiele', typ: 'auswahl' as const, wert: e.voelkchen,
+          optionen: [{ wert: '', text: 'aus dem Startort' }, ...VOELKCHEN_LISTE.map((v) => ({ wert: v.id, text: v.name }))],
+          hilfe: `Dieses Dorf: ${this.erzaehler.voelkchen}. Gilt ab dem nächsten neuen Spiel allein; im Mehrspieler kommt das Völkchen immer aus dem Startort.`,
         }]),
       ],
     });

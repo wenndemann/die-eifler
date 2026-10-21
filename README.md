@@ -149,11 +149,12 @@ nach Gebrauch wieder. Unterbrochen? Einfach neu starten, es setzt fort. Details 
   `data/nachbarn.json`.
 - **Die 10 Völkchen (M11):** Das Völkchen ergibt sich aus dem Startort (Monschauer & Venner, Rursee-Leute, Rureifeler,
   Vulkaneifeler, Ahrtaler, Laacher & Mayener, Südeifeler, Schneifeler, Ostbelgier, Öslinger). Jedes hat einen Bonus und eine
-  augenzwinkernde Schwäche (z. B. Rureifeler: Steinbruch +25 %, schielen nach Düren: Bauen +10 %; Öslinger: bauen schneller,
-  handeln aber teurer) und ab Kirchdorf eine eigene **Spezialkette** mit edler Spezialität, die die Marktflecken-Kirmes verlangt
+  augenzwinkernde Schwäche (z. B. Rureifeler: Steinbruch +25 %, schielen nach Düren: Bauen +10 %; Öslinger: Schiefer statt Stein,
+  handeln aber teurer; Südeifeler finden beim Bauen alte Steine) und ab Kirchdorf eine eigene **Spezialkette** mit edler Spezialität, die die Marktflecken-Kirmes verlangt
   (Monschauer Tuch, Rursee-Forelle, Rur-Papier, Vulkaneifeler Sprudel, Ahr-Rotwein, Mayener Mühlstein, Südeifeler Edelbier,
   Schneifeler Harz, Eupener Butter, Éislécker Ham). Monschauer pflanzen Buchenhecken als Windschutz. Figuren tragen den Farbton
-  ihres Völkchens, Dächer die regionale Farbe. Regeln: `data/voelkchen.json`, Texte und Erzähler: `data/regions.json`.
+  ihres Völkchens, Dächer die regionale Farbe. Allein lässt sich das Völkchen in den Einstellungen frei wählen (gilt ab dem nächsten Spiel), im Mehrspieler kommt es immer aus dem Startort.
+  Regeln: `data/voelkchen.json`, Texte und Erzähler: `data/regions.json`.
 - **Simulation** (`src/sim/`): fester Tick (20/s), nur Ganzzahlen, jede Aktion ist ein Befehl mit Tick-Nummer,
   Prüfsumme über den Zustand (Statusleiste „Sim“), Befehlsprotokoll zum Abspielen (`spieleAb`). Der Smoke-Test
   prüft, dass Node und Browser dieselbe Prüfsumme bekommen und ein Replay im zweiten Browser-Fenster gleich ausgeht.

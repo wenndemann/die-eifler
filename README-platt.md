@@ -119,7 +119,8 @@ donoh widder fott. Ungebroche? Einfach neu starte, et määt do wigger wo et opj
   zom Ziel (600/1000/1500), Wettlouf zom Maatflecke oder ohne Engk. Zahle: `data/nachbarn.json`.
 - **De 10 Völkcher (M11):** Wo mer aanfängk, dat Völkche hät mer: Monschauer, Rursee-Lück, Rureifeler, Vulkaneifeler,
   Ahrtaler, Laacher, Südeifeler, Schneifeler, Ostbelgier un Öslinger – jedes met Bonus, Schwäch un eijener Spezialität för de
-  Maatflecke-Kirmes (Tuch, Forell, Papier, Sprudel, Rotwein, Möhlesteen, Edelbier, Harz, Botter, Ham). Rejele:
+  Maatflecke-Kirmes (Tuch, Forell, Papier, Sprudel, Rotwein, Möhlesteen, Edelbier, Harz, Botter, Ham). Allein kann mer
+  sich dat Völkche en de Enstellunge ussöke, em Mehrspiller kütt et luuter vum Startort. Rejele:
   `data/voelkchen.json`.
 - **Simulation** (`src/sim/`): faste Tick (20/s), nur janze Zahle, jede Aktion es ene Befehl met Tick-Nummer,
   Prüfsumm övver dä Zostand, Befehlsprotokoll zom Avspille. Dä Smoke-Test pröf, dat Node un Browser de selve

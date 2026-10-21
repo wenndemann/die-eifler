@@ -10,6 +10,7 @@ import {
 } from '../src/spiel/fensterdaten';
 import { wareTexte } from '../src/spiel/baumenue';
 import { leseEinstellungen, STANDARD } from '../src/ui/einstellungen';
+import { erzaehlerFuer, waehleVoelkchen } from '../src/spiel/meldungen';
 import { baueSpielstand, leseAutosaveText } from '../src/spiel/spielstand';
 import { baueTestKarte, gerade, KARTE_INFO } from './sim-szenario';
 
@@ -241,6 +242,11 @@ describe('Einstellungen und Autosave', () => {
     expect(leseEinstellungen(null)).toEqual(STANDARD);
     expect(leseEinstellungen('{"uiGroesse": 400, "kameraTempo": 10, "autosave": false}')).toMatchObject({ uiGroesse: 150, kameraTempo: 25, autosave: false });
     expect(leseEinstellungen('kaputt')).toEqual(STANDARD);
+    // M11: Völkchen allein frei wählbar; leer oder unbekannt → aus dem Startort
+    expect(leseEinstellungen('{"voelkchen": "ahr"}').voelkchen).toBe('ahr');
+    expect(waehleVoelkchen('ahr', 'Nideggen')).toBe('ahr');
+    expect(waehleVoelkchen('', 'Nideggen')).toBe(erzaehlerFuer('Nideggen').id);
+    expect(waehleVoelkchen('quatsch', 'Nideggen')).toBe(erzaehlerFuer('Nideggen').id);
   });
 
   it('Autosave im Spielstand-Format: lesbar, kaputt → null', () => {

@@ -264,9 +264,10 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 **Ziel:** Jeder Startort spielt sich anders (Drehbuch 5.3).
 
 - [x] Völkchen aus dem Startort (Kerngebiete in `data/regions.json`, sonst der erste Ortskern des Ausschnitts in einem Kerngebiet); eine echte Gebietskarte im Konverter folgt
+- [x] Allein im freien Spiel frei wählbar (Einstellungen → „Völkchen für neue Spiele“), im Mehrspieler immer aus dem Startort; fehlt dem Ausschnitt Wasser oder Moor für eigene Gebäude, warnt die Erzählfigur beim Start
 - [x] Je Völkchen Bonus, **Spezialkette (2–3 Gebäude, ab Stufe 2)**, augenzwinkernde Schwäche, edle Spezialität für die Marktflecken-Kirmes (statt des Bergkäse-Platzhalters); Regeln in `data/voelkchen.json`
-- [x] Monschauer & Venner, Rursee-Leute, Rureifeler, Vulkaneifeler, Ahrtaler, Laacher & Mayener, Südeifeler, Schneifeler, **Ostbelgier**, **Öslinger** (Römerstraße und Vennbahn als schnelle Wege folgen)
-- [x] **Hecken als Monschauer Spezialität:** Buchenhecke aus Setzlingen, Windschutz im Winter (+30 % bis 2 Hexe); als lebende Grenze gegen Grenzsteinversetzer kommt sie mit dem Versetzen
+- [x] Monschauer & Venner, Rursee-Leute, Rureifeler, Vulkaneifeler, Ahrtaler, Laacher & Mayener, Südeifeler, Schneifeler, **Ostbelgier**, **Öslinger** mit Römerstraße, Vennbahn, Abtei, Bootsverleih, Torf, Basaltbruch und wachsenden Hecken wie im Drehbuch
+- [x] **Hecken als Monschauer Spezialität:** Buchenhecke aus Setzlingen, wächst erst heran (Monschauer 25 % schneller), dann Windschutz im Winter (+30 % bis 2 Hexe); als lebende Grenze gegen Grenzsteinversetzer kommt sie mit dem Versetzen
 - [x] Tracht und Farbe je Völkchen (Figuren im Farbton des Völkchens), Dächer in regionaler Farbe (Schiefer, Buntsandstein, Basalt); Wände und Mauern regional folgen
 - [x] Sprüche je Völkchen (ripuarisch, moselfränkisch, Ostbelgien, Ösling) mit Übersetzung, Erzählfigur je Völkchen auch im Mehrspieler
 - [ ] Balancing: kein Völkchen gewinnt in Testpartien deutlich öfter – Faustregel in den Daten (Bonus ≤ +25 %, Schwäche ≥ −20 %), Testpartien stehen aus
@@ -307,6 +308,7 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 ## Danach (offen)
 
 - **Verbundene Regionen** im Mehrspieler: jeder spielt seinen eigenen Ausschnitt und schickt Händler und Finder hinüber (Drehbuch 2.3)
+- **Die Karte wächst in andere Gebiete** (Wunsch aus M11, „die Eifel erobern“), in Stufen: (1) Kampagne M13 wandert von Karte zu Karte, Völkchen, Punkte und ein Teil der Waren kommen mit; (2) im freien Spiel „umziehen“: am Kartenrand den Ausschnitt vergrößern, das Dorf bleibt (Spielstand auf größerer Karte); (3) echtes Wachsen während der Partie, auch im Mehrspieler (neues Speicherformat, Kacheln nachladen im Gleichschritt, Leistung) – eigener Meilenstein
 - Volle KI-Gegner, die selbst bauen (Drehbuch 6.2)
 - Desktop- oder Store-App (Drehbuch 8.2)
 
