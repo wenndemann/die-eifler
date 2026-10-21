@@ -1,0 +1,10 @@
+{
+  "hinweis": "Der Mai (ROADMAP M14): Maibaum, Maijungen und Maibaumklau. Vorbild ist der echte Brauch (Junggesellen stellen den Baum in der Nacht zum 1. Mai, Nachbardörfer klauen ihn, zurück gegen Bier und Brotzeit). mainacht: einmal im Jahr im Frühjahr, ab_s Sekunden nach Frühjahrsbeginn, dauer_s lang; nur dann wird gestellt und geklaut (ankuendigung_s vorher meldet es die Erzählfigur). verein: der Junggesellenverein macht aus einem freien Bewohner und bier Landbier einen Maijungen (takt_s), höchstens max. maibaum: kostet waren aus dem Lager, braucht stellen Maijungen und einen Kirmesplatz; steht er am Ende der Mainacht, gibt es punkte_steht, beim Maifest zusätzlich maifest_bonus. klau: mindestens min Maijungen ziehen los; Erfolg punkte_klau für die Diebe, Abwehr punkte_abwehr für die Verteidiger. Abwehr: eine Wache am Baum (Hand am Stamm) oder bier_je_junge Landbier je Angreifer, dann torkeln sie zurück (torkeln_prozent langsamer). Nachbarorte: wache_prozent Chance, dass dort jemand aufpasst. ausloese: so viel gibt man für den eigenen Baum zurück. mailehen: am Ende der Mainacht bringt das Mailehen zuzug neue Bewohner, wenn der Verein mindestens min Maijungen hat. fremde: in jeder Mainacht versuchen es mit chance_prozent Burschen aus einem Nachbarort (n Mann, verzug_s bis zu so spät).",
+  "mainacht": { "ab_s": 600, "dauer_s": 240, "ankuendigung_s": 90 },
+  "verein": { "max": 6, "takt_s": 20, "bier": 1 },
+  "maibaum": { "waren": { "stamm": 1 }, "stellen": 2, "punkte_steht": 30, "maifest_bonus": 10 },
+  "klau": { "min": 2, "punkte_klau": 25, "punkte_abwehr": 10, "bier_je_junge": 1, "torkeln_prozent": 100, "wache_prozent": 40 },
+  "ausloese": { "landbier": 6, "bratkartoffeln": 4 },
+  "mailehen": { "zuzug": 2, "min": 2 },
+  "fremde": { "chance_prozent": 60, "n": 3, "verzug_s": 90 }
+}

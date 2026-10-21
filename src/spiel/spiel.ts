@@ -27,6 +27,7 @@ import { Boten } from '../render/boten';
 import { Deko } from '../render/deko';
 import { GebietDarstellung } from '../render/gebiet';
 import { WetterOptik, type WetterLage } from '../render/wetter';
+import { MaiDarstellung } from '../render/mai';
 import type { Stimmung } from '../render/scene';
 import { stunde, tageszeit, wetterStimmung } from './stimmung';
 import { klangLage } from './klanglage';
@@ -186,6 +187,7 @@ export class Spiel {
   private readonly deko: Deko;
   private readonly gebiet: GebietDarstellung;
   private readonly wetterOptik: WetterOptik;
+  private readonly mai: MaiDarstellung;
   /** Für Screenshots und Tests: Wetterlage und Tageszeit fest vorgeben (Teile genügen). */
   wetterVorgabe: (Partial<WetterLage> & { tag?: number }) | null = null;
   /** M12: Musik, Gebrabbel und Geräusche (WebAudio; in automatisierten Tests aus, außer mit #ton=1). */
@@ -313,6 +315,8 @@ export class Spiel {
     this.gebaeude = new Gebaeude(map, grid, base, ex, ctx.haken);
     this.arbeiter = new Arbeiter(map, grid, base, ex);
     this.boten = new Boten(map, grid, base, ex);
+    this.mai = new MaiDarstellung(map, grid, base, ex);
+    this.mai.kamera = ctx.camera;
     this.deko = new Deko(map, grid, base, ex);
     this.gebiet = new GebietDarstellung(map, grid, base, ex);
     this.wetterOptik = new WetterOptik(map, grid, base, ex);
@@ -322,7 +326,7 @@ export class Spiel {
     this.geist = new Geist(map, grid, base, ex);
     this.wege.wald = ctx.haken.trees ?? null;
     this.fahnen.kamera = ctx.camera; this.traeger.kamera = ctx.camera; this.gebaeude.kamera = ctx.camera; this.arbeiter.kamera = ctx.camera; this.boten.kamera = ctx.camera;
-    this.group.add(this.wege.group, this.fahnen.group, this.traeger.group, this.gebaeude.group, this.arbeiter.group, this.boten.group, this.deko.group, this.gebiet.group, this.wetterOptik.group, this.natur.group,
+    this.group.add(this.wege.group, this.fahnen.group, this.traeger.group, this.gebaeude.group, this.arbeiter.group, this.boten.group, this.mai.group, this.deko.group, this.gebiet.group, this.wetterOptik.group, this.natur.group,
       this.bauplaetze.group, this.geist.group, this.markierung.group);
     ctx.scene.add(this.group);
 
@@ -486,7 +490,7 @@ export class Spiel {
     this.ctx.ex = ex;
     this.wege.setExaggeration(ex); this.fahnen.setExaggeration(ex); this.traeger.setExaggeration(ex);
     this.gebaeude.setExaggeration(ex); this.markierung.setExaggeration(ex);
-    this.arbeiter.setExaggeration(ex); this.natur.setExaggeration(ex); this.boten.setExaggeration(ex); this.deko.setExaggeration(ex); this.gebiet.setExaggeration(ex); this.wetterOptik.setExaggeration(ex);
+    this.arbeiter.setExaggeration(ex); this.natur.setExaggeration(ex); this.boten.setExaggeration(ex); this.deko.setExaggeration(ex); this.gebiet.setExaggeration(ex); this.mai.setExaggeration(ex); this.wetterOptik.setExaggeration(ex);
     this.bauplaetze.setExaggeration(ex); this.geist.setExaggeration(ex);
   }
 
@@ -531,6 +535,7 @@ export class Spiel {
     this.natur.update(this._sicht);
     this.arbeiter.update(this._sicht, a, dt);
     this.boten.update(this._sicht, a, dt);
+    this.mai.update(this._sicht, a, dt);
     this.deko.update(this._sicht);
     this.gebiet.update(this._sicht);
     // Schnee kommt mit dem Winter und taut in den ersten Minuten des Frühjahrs (Drehbuch 7.4)
@@ -583,6 +588,11 @@ export class Spiel {
   private wetterZeigen(alpha: number, dt: number): void {
     const s = this._sicht, j = s.jahr;
     const st = wetterStimmung(s.tick + alpha, j);
+    // M14: in der Mainacht ist Nacht (am Anfang und Ende in die Dämmerung)
+    if (s.mainacht?.an) {
+      const rein = Math.min(1, (s.tick - s.mainacht.ab) / 400, (s.mainacht.bis - s.tick) / 400);
+      st.stimmung.tag = st.stimmung.tag + (0.97 - st.stimmung.tag) * Math.max(0, rein);
+    }
     if (this.wetterVorgabe) {
       const { tag: _tag, ...v } = this.wetterVorgabe;
       Object.assign(st.lage, v);
@@ -643,7 +653,8 @@ export class Spiel {
       if (e.nr <= this.gemeldetBis) continue;
       this.gemeldetBis = e.nr;
       // Tusch auf Kirmes, Feste, neue Stufe und Schützenkönig (Drehbuch 7.2), nur für das eigene Dorf
-      if (e.art === 'kirmes' || e.art === 'kleines_fest' || e.art === 'stufe' || e.art === 'schuetzenfest' || e.art === 'koenig') this.klang.tusch();
+      if (e.art === 'kirmes' || e.art === 'kleines_fest' || e.art === 'stufe' || e.art === 'schuetzenfest' || e.art === 'koenig' || e.art === 'maibaum'
+        || (e.art === 'maiklau' && Math.floor(e.wert / 100) === 0)) this.klang.tusch();
       const g = e.gebaeude ? s.gebaeude.find((x) => x.id === e.gebaeude) : undefined;
       const ort = g ? { q: g.q, r: g.r } : undefined;
       if (e.art === 'fertig' && g) this.insProtokoll(`${NAMEN[g.typ] ?? g.typ} ist fertig.`, false, ort);
@@ -1252,7 +1263,7 @@ export class Spiel {
       sicht: this._sicht, ich: this.ich, ware: WARE_TEXT, namen: this.namen,
       reichweite: (g) => { const ri = this.ringeFuer(g.typ, g.mitte ?? g); return ri ? reichweiteText(ri.art, ri.summe, ri.nah) : null; },
       produktivitaet: (id) => this.produktiv.wert(id), bereichModus: this.bereichId, abrissFrage: this.abrissFrage?.id ?? null,
-      gebaeudeBild: (typ) => this.ic.gebaeude[typ],
+      gebaeudeBild: (typ) => this.ic.gebaeude[typ], ortName: (i) => this.ortName(i),
     };
   }
 
@@ -1263,6 +1274,11 @@ export class Spiel {
     this.fenster.oeffne({
       id: fid, gruppe: 'auswahl', daten: () => gebaeudeFenster(id, this.fensterKontext()),
       onKnopf: (k) => this.gebaeudeKnopf(id, k),
+      onEingabe: (k, v) => {
+        // M14: Junggesellenverein – Wache und Bier für Angreifer
+        if (k === 'mai_wache') this.befehl({ art: 'mai', was: 'wache', n: Number(v) });
+        else if (k === 'mai_bier') this.befehl({ art: 'mai', was: 'bier', an: !!v });
+      },
       onZu: () => { if (this.gewaehlt === id) { this.gewaehlt = null; if (this.bereichId === id) this.bereichId = null; } },
     });
   }
@@ -1353,6 +1369,9 @@ export class Spiel {
     else if (k === 'bereich_zurueck') this.bereichZuruecksetzen();
     else if (k === 'ruhen') { this.befehl({ art: 'ruhen', id, an: !g.ruht }); this.melde(g.ruht ? `${NAMEN[g.typ]} arbeitet wieder.` : `${NAMEN[g.typ]} ruht.`, false); }
     else if (k === 'kamera') this.springeZu(g);
+    else if (k === 'mai_stellen') { this.befehl({ art: 'mai', was: 'stellen' }); this.melde('Die Maijungen stellen den Maibaum.', false); }
+    else if (k === 'mai_loese') { this.befehl({ art: 'mai', was: 'loese' }); this.melde('Auslöse ist unterwegs.', false); }
+    else if (k.startsWith('mai_klau:')) { this.befehl({ art: 'mai', was: 'klau', ziel: Number(k.slice(9)) }); this.melde('Die Maijungen ziehen los …', false); }
     else if (k.startsWith('regel:') && g.regel) {
       // Lagerregel durchschalten: normal → nicht einlagern → auslagern → normal
       const a = Number(k.slice(6));
@@ -1629,6 +1648,9 @@ export class Spiel {
     const uhr = stunde(tageszeit(s.tick));
     let jahr = `${JZ_SYMBOL[j.jahreszeit]} ${JAHRESZEITEN[j.jahreszeit]}, Jahr ${j.jahr + 1} (noch ${minuten(j.rest)} min) · ${uhr >= 21 || uhr < 5 ? '🌙' : '🕗'} ${uhr} Uhr`;
     for (const w of j.wetter) jahr += ` · ${WETTER[w.art].symbol} ${WETTER[w.art].name} (noch ${minuten(w.bis - s.tick)} min)`;
+    // M14: Mainacht (läuft oder kommt bald)
+    if (s.mainacht?.an) jahr += ` · 🌳 Mainacht! (noch ${minuten(s.mainacht.bis - s.tick)} min)`;
+    else if (s.mainacht && s.mainacht.ab - s.tick < 3 * 60 * TICK_HZ) jahr += ` · 🌳 Mainacht in ${minuten(s.mainacht.ab - s.tick)} min`;
     for (const w of j.kommt) jahr += ` · bald ${WETTER[w.art].symbol} ${WETTER[w.art].name}`;
     const zeigen = [0, 1, 2, 6, 5, 4, 9, 8, 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19].map((a) => ({ art: a, icon: WARE_TEXT[a]?.icon ?? '', name: WARE_TEXT[a]?.mehr ?? '' }));
     const vorrat = this.lagerVorrat();

@@ -28,6 +28,8 @@ export interface SimStand {
   /** M10: Regeln der Partie, Besitz je Hex (Base64, Wert + 1), Besitzer je Ort, Lieferungen, Ende (fehlt in älteren Spielständen). */
   regeln?: Regeln;
   gebiet?: { besitz: string; rev: number; orte: number[]; lieferungen: Record<string, unknown>[]; ende: { sieger: number; tick: number } | null };
+  /** M14: Maijungen und Burschen unterwegs (fehlt in älteren Spielständen). */
+  mai?: { trupps: Record<string, unknown>[] };
   log: ProtokollEintrag[];
   ausstehend: ProtokollEintrag[];
   stat: { angekommen: number; verbraucht: number; erzeugt: number; maxWarte: number; verbaut: number };

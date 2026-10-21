@@ -6,6 +6,7 @@ import {
   ABNEHMER, DORFSTUFEN, FEST_OBERGRENZE, FLAG_CAP, GEBAEUDE, GEBAEUDE_IDS, JAHRESZEITEN, KIRMES, KLEINE_FESTE, MISCHKORB, NAHRUNG, VERTEILUNG_JE_WARE, WAREN, WAREN_GRUPPEN, zutatMenge,
 } from '../sim/daten';
 import type { GebaeudeTyp } from '../sim/daten';
+import { MAI_AUSLOESE, MAI_KLAU_MIN, MAIBAUM_STELLEN, MAIBAUM_WAREN } from '../sim/mai';
 import { AUSREDEN, KOENIG_AB, ORT_GROESSEN, SCHUSS_GLUECK, SCHUSS_GRUND, SCHUSS_STAND, ZIELE } from '../sim/nachbarn';
 import { PROMILLE, STAT_KOPF, TICK_HZ } from '../sim/typen';
 import type { Id, SichtFahne, SichtGebaeude, SichtSegment, SichtStatistik, SimSicht } from '../sim/typen';
@@ -30,6 +31,8 @@ export interface FensterKontext {
   abrissFrage?: string | null;
   /** Bilder der Gebäude (Icons aus den Modellen) je Typ. */
   gebaeudeBild?: (typ: string) => string | undefined;
+  /** M14: Name des Orts mit Index i (Klau im Nachbarort). */
+  ortName?: (i: number) => string;
 }
 
 const PROD_FENSTER = 2 * 60;
@@ -205,6 +208,7 @@ export function gebaeudeFenster(id: Id, k: FensterKontext): FensterDaten | null 
       ab.push({ art: 'zeilen', zeilen: [`Punkte aus kleinen Festen: ${s.dorf.festPunkte} von höchstens ${FEST_OBERGRENZE} · jedes Fest einmal im Jahr, nur in seiner Jahreszeit`] });
     }
     if (t.boten) ab.push({ art: 'zeilen', titel: 'Boten', zeilen: [`${g.boten ?? 0} von höchstens ${t.boten} unterwegs`] });
+    if (t.funktion === 'maijungen' && s.dorf.mai) ab.push(...maiAbschnitte(k));
     if (t.funktion === 'schuetzen' && s.dorf.schuetzen) {
       const sch = s.dorf.schuetzen;
       ab.push({ art: 'waren', titel: sch.gefeiert ? 'Schützenfest dieses Jahr gefeiert – nächstes Jahr wieder' : 'Warenliste Schützenfest', waren: warenListe(sch.geliefert, sch.liste) });
@@ -618,3 +622,42 @@ export function punkteText(s: SimSicht, ich: number): string {
 }
 
 export { ORT_GROESSEN };
+
+/** M14 Der Mai: Maijungen, Maibaum, Mainacht, Klau-Ziele, Wache und Bier, Auslöse (im Fenster des Junggesellenvereins). */
+export function maiAbschnitte(k: FensterKontext): Abschnitt[] {
+  const s = k.sicht, m = s.dorf.mai!, na = s.mainacht;
+  const ab: Abschnitt[] = [];
+  const min = (t: number) => Math.max(0, Math.ceil(t / TICK_HZ / 60));
+  const nacht = na?.an ? `🌙 Mainacht! Noch ${min(na.bis - s.tick)} min – jetzt wird gestellt und geklaut.`
+    : na ? `Nächste Mainacht in ${min(na.ab - s.tick)} min (einmal im Frühjahr).` : '';
+  const baum = m.baum === 1 ? '🌳 Unser Maibaum steht.' : m.baum === 2
+    ? `😱 Unser Maibaum ist weg – ${m.dieb >= 0 ? `bei ${k.namen[m.dieb] ?? `Spieler ${m.dieb + 1}`}` : 'bei den Burschen aus dem Nachbarort'}.`
+    : m.gestellt ? 'Der Maibaum ist dieses Jahr schon gestellt worden.' : 'Noch kein Maibaum.';
+  ab.push({ art: 'zeilen', titel: 'Der Mai', zeilen: [
+    nacht, baum,
+    `Maijungen: ${m.jungen} (davon ${m.wache} Wache, ${m.frei} frei) · Punkte aus dem Mai: ${m.punkte}`,
+  ].filter(Boolean) });
+  const knoepfe: Knopf[] = [];
+  if (na?.an && m.baum !== 1 && !m.gestellt) knoepfe.push({ id: 'mai_stellen', text: '🌳 Maibaum stellen', titel: `braucht ${MAIBAUM_STELLEN} freie Maijungen, einen fertigen Kirmesplatz und ${listeText(MAIBAUM_WAREN, k.ware)}`, aus: m.frei < MAIBAUM_STELLEN });
+  if (m.baum === 2) knoepfe.push({ id: 'mai_loese', text: `🍺 Auslösen (${listeText(MAI_AUSLOESE, k.ware)})` });
+  if (na?.an) {
+    s.spieler.forEach((sp, i) => {
+      if (i === k.ich) return;
+      knoepfe.push({ id: `mai_klau:${i}`, text: `🌙 Klauen bei ${k.namen[i] ?? `Spieler ${i + 1}`}${sp.maibaum === 1 ? '' : ' (kein Baum?)'}`, aus: m.frei < MAI_KLAU_MIN });
+    });
+    s.orte.forEach((o, i) => {
+      if (o.besitzer === k.ich || m.orte.includes(i)) return;
+      knoepfe.push({ id: `mai_klau:${-1 - i}`, text: `🌙 Klauen in ${k.ortName?.(i) || `Ort ${i + 1}`}`, aus: m.frei < MAI_KLAU_MIN });
+    });
+  }
+  if (knoepfe.length) ab.push({ art: 'knoepfe', titel: na?.an ? `Mindestens ${MAI_KLAU_MIN} freie Maijungen zum Klauen` : undefined, knoepfe });
+  ab.push({ art: 'eingaben', titel: 'Abwehr', felder: [
+    { id: 'mai_wache', text: 'Wache am Baum (Hand am Stamm)', typ: 'regler', wert: m.wache, min: 0, max: Math.max(m.jungen, 1), schritt: 1 },
+    { id: 'mai_bier', text: 'Angreifern Bier geben (dann torkeln sie heim)', typ: 'schalter', wert: m.bier },
+  ] });
+  return ab;
+}
+
+function listeText(liste: readonly number[], w: readonly WareText[]): string {
+  return liste.map((n, a) => (n > 0 ? `${n} ${n === 1 ? w[a]?.eins ?? '' : w[a]?.mehr ?? ''}` : '')).filter(Boolean).join(', ');
+}

@@ -116,7 +116,7 @@ const TRACHT = ['#3f6fb5', '#b5463f', '#4f8a4a', '#d0a030', '#7a4fa0', '#3a8a8a'
 export const FIGUR_ATTRIBUTE = [{ name: 'aAnim', size: 3 }, { name: 'aMimik', size: 2 }];
 
 /** Gesten (aMimik.y). */
-export const GESTE = { keine: 0, winken: 1, jubeln: 2, schimpfen: 3, kratzen: 4 } as const;
+export const GESTE = { keine: 0, winken: 1, jubeln: 2, schimpfen: 3, kratzen: 4, hand: 5 } as const;
 
 /** Laune des Dorfs für die Gesichter: Feste machen froh, Frieren und Hunger grimmig. */
 export function dorfLaune(s: SimSicht): { laune: number; fest: boolean } {
@@ -141,7 +141,8 @@ vColor.xyz = mix(color.xyz, color.xyz * instanceColor.xyz, aTint);
 {
   float sw = sin(aAnim.x) * 0.75 * aAnim.z;
   float ang = 0.0, angZ = 0.0;
-  // Mimik und Gesten (M12): aMimik.x Laune −1 (grimmig) … 1 (fröhlich), aMimik.y Geste 0 keine, 1 Winken, 2 Jubeln, 3 Schimpfen, 4 Kopfkratzen
+  // Mimik und Gesten (M12): aMimik.x Laune −1 (grimmig) … 1 (fröhlich), aMimik.y Geste 0 keine, 1 Winken, 2 Jubeln, 3 Schimpfen, 4 Kopfkratzen,
+  // 5 Hand ausgestreckt (M14: Wache, Hand am Maibaum)
   float laune = aMimik.x, geste = aMimik.y, gt = aAnim.x * 5.0;
   bool frei = aAnim.y < 0.01;
   if (aTeil > 0.5 && aTeil < 1.5) ang = sw;
@@ -156,6 +157,7 @@ vColor.xyz = mix(color.xyz, color.xyz * instanceColor.xyz, aTint);
       else if (abs(geste - 2.0) < 0.5) { ang = -2.85 + 0.18 * sin(gt * 1.3 + 1.0); angZ = 0.4; }
       else if (abs(geste - 3.0) < 0.5) { ang = -1.55 + 0.35 * sin(gt * 2.4); }
       else if (abs(geste - 4.0) < 0.5) { ang = -2.45; angZ = 0.95 + 0.12 * sin(gt * 2.0); }
+      else if (abs(geste - 5.0) < 0.5) { ang = -1.45; angZ = 0.15; }
     }
   }
   if (aTeil > 0.5 && aTeil < 4.5) {

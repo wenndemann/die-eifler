@@ -133,7 +133,7 @@ export const PRIO_STANDARD = 2;
 export const SUCHE_WARTE = 2 * TICK_HZ;
 
 export type Funktion = 'lager' | 'wohnen' | 'holzfaeller' | 'foerster' | 'steinbruch' | 'erzeuger' | 'verarbeiter' | 'kirmes' | 'schaenke'
-  | 'finder' | 'wache' | 'schuetzen' | 'zier' | 'hecke' | 'boote' | 'schnellweg' | 'fonds';
+  | 'finder' | 'wache' | 'schuetzen' | 'zier' | 'hecke' | 'boote' | 'schnellweg' | 'fonds' | 'maijungen';
 
 export interface GebaeudeTyp {
   id: string; name: string; gruppe: string; symbol: string; spruch: string;

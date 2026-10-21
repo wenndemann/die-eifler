@@ -168,6 +168,12 @@ nach Gebrauch wieder. Unterbrochen? Einfach neu starten, es setzt fort. Details 
   durch, die Übersicht zeigt den gewanderten Weg. Völkchen und Punkte bleiben, ein Rucksack mit bis zu 15 Waren kommt mit.
   Daten: `data/kampagne.json`. Die Karten brauchen das Weltdaten-Gebiet `eifelsteig` (Actions → Weltdaten, dann
   `tools/welt-laden.sh eifelsteig`); mit den Nideggen-Daten geht die Rur-Etappe „Heimbach – Nideggen“.
+- **Der Mai (M14):** Einmal im Frühjahr ist **Mainacht**. Der Junggesellenverein (ab Dorf) macht aus Bewohnern und Landbier
+  Maijungen (nur Jungs, wie im Brauch). In der Mainacht stellen sie am Kirmesplatz den **Maibaum** (Birke mit Kranz und Bändern) –
+  und klauen den der Nachbarn: im Mehrspieler bei den Mitspielern, allein in den Nachbarorten; Burschen aus den Nachbarorten
+  versuchen es auch bei euch. Abwehr: Wache mit der Hand am Stamm oder Bier für die Angreifer (dann torkeln sie heim). Ein
+  geklauter Baum kommt gegen Bier und Bratkartoffeln zurück. Steht der Baum am Morgen, gibt es Punkte, das Maifest wird besser,
+  und das Mailehen bringt Zuzug. Zahlen: `data/mai.json`.
 - **Simulation** (`src/sim/`): fester Tick (20/s), nur Ganzzahlen, jede Aktion ist ein Befehl mit Tick-Nummer,
   Prüfsumme über den Zustand (Statusleiste „Sim“), Befehlsprotokoll zum Abspielen (`spieleAb`). Der Smoke-Test
   prüft, dass Node und Browser dieselbe Prüfsumme bekommen und ein Replay im zweiten Browser-Fenster gleich ausgeht.

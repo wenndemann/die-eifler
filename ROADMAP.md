@@ -309,18 +309,20 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 
 ---
 
-## M14 – Der Mai: Maibaum und Maijungen
+## M14 – Der Mai: Maibaum und Maijungen ✅ (erster Stand) → 🔨 Spieltest der Mainacht
 
 **Ziel:** Maibaum stellen und den Nachbarn den Maibaum klauen – der Wettstreit zwischen Dörfern ohne Krieg (Idee aus der Spielrunde). Vorbild ist der echte Brauch: Junggesellen stellen den Baum in der Nacht zum 1. Mai auf, Nachbardörfer versuchen ihn zu klauen, zurück gibt es ihn gegen Auslöse in Bier und Brotzeit (Bayern, Österreich, Rheinland; in der Eifel stellen ihn die Junggesellenvereine, dazu das Mailehen).
 
-- [ ] **Junggesellenverein** (Gebäude): macht aus Bewohnern und Landbier **Maijungen** (nur Jungs, wie im Brauch)
-- [ ] **Maibaum stellen** in der **Mainacht** (zu Beginn des Frühjahrs, nur an diesem Tag): Stamm mit Bändern am Kirmesplatz; ein stehender Baum gibt Eifel-Punkte und macht das **Maifest** größer
-- [ ] **Maibaumklau** nur in der Mainacht: Maijungen ziehen ins Nachbardorf und tragen den Baum weg, er steht dann beim Dieb (Punkte für ihn). Regeln wie im Brauch: nie den eigenen, nichts geht kaputt, keine Gewalt
-- [ ] **Abwehr:** Maijungen wachen am eigenen Baum (Hand am Stamm = tabu), oder man gibt den Angreifern **Bier** – dann torkeln sie zurück (wie die Boten)
-- [ ] **Auslöse:** gestohlenen Baum gegen Bier und Bratkartoffeln zurückholen, die Erzählfigur kommentiert; Feier bei der Übergabe
-- [ ] Allein: Nachbarorte (und Flachländer) versuchen ab und zu einen Klau, damit es auch etwas zu verteidigen gibt
-- [ ] Maijungen auch für anderes: **Mailehen** (bringt Zuzug), Helfer bei Festen und beim Schützenfest, beim „Finden“ von Grenzsteinen
-- [ ] Mehrspieler: Klau, Abwehr und Auslöse im Gleichschritt, getestet in `tests/partie.test.ts` und `tests/mehrspieler.mjs`
+- [x] **Junggesellenverein** (Gebäude, ab Dorf): macht aus Bewohnern und Landbier **Maijungen** (nur Jungs, wie im Brauch)
+- [x] **Maibaum stellen** in der **Mainacht** (zu Beginn des Frühjahrs, nur an diesem Tag): Stamm mit Bändern am Kirmesplatz; ein stehender Baum gibt Eifel-Punkte und macht das **Maifest** größer
+- [x] **Maibaumklau** nur in der Mainacht: Maijungen ziehen ins Nachbardorf und tragen den Baum weg, er steht dann beim Dieb (Punkte für ihn). Regeln wie im Brauch: nie den eigenen, nichts geht kaputt, keine Gewalt
+- [x] **Abwehr:** Maijungen wachen am eigenen Baum (Hand am Stamm = tabu), oder man gibt den Angreifern **Bier** – dann torkeln sie zurück (wie die Boten)
+- [x] **Auslöse:** gestohlenen Baum gegen Bier und Bratkartoffeln zurückholen, die Erzählfigur kommentiert; Feier bei der Übergabe
+- [x] Allein: Nachbarorte (und Flachländer) versuchen ab und zu einen Klau, damit es auch etwas zu verteidigen gibt
+- [x] **Mailehen**: am Ende der Mainacht bringt der Verein Zuzug (2 Bewohner, einmal im Jahr)
+- [ ] Maijungen als Helfer bei Festen und beim Schützenfest, beim „Finden“ von Grenzsteinen (später)
+- [x] Zahlen in `data/mai.json`; Mainacht ist Nacht (Optik), Uhr und „Mainacht in … min“ in der Statusleiste, Meldungen der Erzählfigur, Tusch
+- [x] Mehrspieler: Klau, Abwehr und Auslöse im Gleichschritt, getestet in `tests/partie.test.ts` und `tests/mehrspieler.mjs`
 
 **Abnahme:** In einer Mehrspieler-Partie stellen beide Dörfer in der Mainacht ihren Baum, einer wird geklaut, mit Bier abgewehrt oder ausgelöst – und alle lachen.
 

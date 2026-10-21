@@ -11,7 +11,7 @@ import {
   RODUNG_STAMM_MAX, START_BAUARBEITER, START_BEWOHNER, START_PLANIERER, START_STEIN_ABSTAND_MIN, START_STEIN_MIN, START_STEIN_RADIUS,
   START_VORRAT, STAT_MAX, STAT_TAKT, STEIL_GRAD, ABNEHMER_ZAHL, VERTEILUNG_JE_WARE, SUCHE_WARTE, TREE_MAX, UEBERGABE_TICKS, WARE, WAREN, WEG_MAX_SCHRITTE,
   AUE_DM, AUFSAMMELN_TICKS, BAULEUTE_MAX, BAULEUTE_TAKT, BOTE_AB_HEX, BOTE_TICKS, BOTE_TORKELN_PROZENT, BOTE_VERLIERT_JEDE, ERNTE_PROZENT,
-  FEST_OBERGRENZE, FRIEREN_PROZENT, HOEHE_PROZENT, JAHRESZEIT_TICKS, KLEINE_FESTE, KLEINES_FEST_TICKS, MISCHKORB, SAAT_TICKS, SCHNEE_PROZENT,
+  FEST_OBERGRENZE, FRIEREN_PROZENT, HOEHE_PROZENT, JAHR_TICKS, JAHRESZEIT_TICKS, KLEINE_FESTE, KLEINES_FEST_TICKS, MISCHKORB, SAAT_TICKS, SCHNEE_PROZENT,
   TAL_DM, WETTER, WETTER_ANKUENDIGUNG, WINTER, WINTER_ESSEN_TICKS, WINTER_JE_BEWOHNER,
 } from './daten';
 import { inJahreszeit, jahreszeitVon, jahrVon, Wetterkalender } from './jahr';
@@ -26,11 +26,16 @@ import type { OrtDaten, PostenDaten, Regeln } from './nachbarn';
 import { BOOTE_PUNKTE, BOOTE_TAKT, HECKE_WACHSEN, KIRMES_JE_VOELKCHEN, VOELKCHEN, voelkchenIndex, type VoelkchenRegeln } from './voelkchen';
 import type { GebaeudeTyp } from './daten';
 import { SimKarte } from './karte';
+import {
+  MAI_AB, MAI_ANKUENDIGUNG, MAI_AUSLOESE, MAI_BIER, MAI_BIER_JE_JUNGE, MAI_DAUER, MAI_FREMDE_CHANCE, MAI_FREMDE_N, MAI_FREMDE_VERZUG,
+  MAI_KLAU_MIN, MAI_LEHEN_MIN, MAI_LEHEN_ZUZUG, MAI_MAIFEST_BONUS, MAI_MAX, MAI_ORT_WACHE, MAI_PUNKTE_ABWEHR, MAI_PUNKTE_KLAU,
+  MAI_PUNKTE_STEHT, MAI_TAKT, MAI_TORKELN_PROZENT, MAIBAUM_STELLEN, MAIBAUM_WAREN,
+} from './mai';
 import { FELS_FELS, FELS_KLIPPE, FELS_LESE as ART_LESE, hashHex, hashHex2, hashHex3 } from './natur';
 import { sucheWeg, ZahlenHeap } from './pfad';
 import { PROMILLE, STAT_KOPF } from './typen';
 import type {
-  Befehl, GebaeudeZustand, Id, KarteDaten, Protokoll, ProtokollEintrag, SichtArbeiter, SichtBaumann, SichtBote, SichtEreignis, SichtJahr, SichtNatur,
+  Befehl, GebaeudeZustand, Id, KarteDaten, Protokoll, ProtokollEintrag, SichtArbeiter, SichtBaumann, SichtBote, SichtEreignis, SichtTrupp, SichtJahr, SichtNatur,
   SichtStatistik, SimSicht, StartDaten, SichtGebiet, SichtDorf,
 } from './typen';
 import { ausBase64, inBase64, kopie, STAND_ZAHLEN } from './stand';
@@ -167,6 +172,28 @@ interface Dorf {
   einstandP: number; fundP: number; schuetzenN: number; schuetzenJahr: number; sfest: number; schuss: number; koenig: number; koenigN: number;
   /** M11: Völkchen (Index in VOELKCHEN, -1 keins); Punkte aus dem Bootsverleih. */
   vk: number; bootP: number;
+  /**
+   * M14 Der Mai: Maijungen (Bewohner beim Junggesellenverein, auch die unterwegs), davon als Wache am Baum, Bier für Angreifer (1 an);
+   * Maibaum 0 keiner, 1 steht, 2 geklaut (von maiDieb: Spieler, -2 Burschen aus einem Nachbarort), Jahr des Baums, Punkte aus dem Mai,
+   * Jahr des letzten Mailehens, in diesem Jahr schon beklaute Orte.
+   */
+  maiJungen: number; maiWache: number; maiBier: number; maiBaum: number; maiDieb: number; maiJahr: number; maiP: number; maiLehen: number;
+  maiOrte: number[];
+}
+
+/** M14: Trupp Maijungen auf dem Weg zum Maibaum der Nachbarn (oder Burschen aus einem Nachbarort, sp -1). */
+interface Trupp {
+  id: Id; sp: number;
+  /** Ziel: Spieler (>= 0) oder Ort (-1 - Index); Mann; Phase (MT_*); ab diesem Tick geht es los; Heimat-Hex (Rückweg). */
+  ziel: number; n: number; phase: number; ab: number; heim: number;
+  route: number[]; ri: number; t: number; dauer: number;
+}
+/** Bier für n Angreifer (je MAI_BIER_JE_JUNGE Landbier). */
+const MAI_BIER_EIMER = (n: number): number[] => WAREN.map((id) => (id === 'landbier' ? n * MAI_BIER_JE_JUNGE : 0));
+const MT_HIN = 0, MT_MIT_BAUM = 1, MT_LEER = 2, MT_TORKELT = 3;
+
+function dorfM14(): Pick<Dorf, 'maiJungen' | 'maiWache' | 'maiBier' | 'maiBaum' | 'maiDieb' | 'maiJahr' | 'maiP' | 'maiLehen' | 'maiOrte'> {
+  return { maiJungen: 0, maiWache: 0, maiBier: 0, maiBaum: 0, maiDieb: -1, maiJahr: -1, maiP: 0, maiLehen: -1, maiOrte: [] };
 }
 
 function neuesDorf(bewohner: number): Dorf {
@@ -174,7 +201,7 @@ function neuesDorf(bewohner: number): Dorf {
     bewohner, frei: bewohner, bauGesamt: START_BAUARBEITER, bauFrei: START_BAUARBEITER, planGesamt: START_PLANIERER, planFrei: START_PLANIERER,
     stufe: 0, fest: 0, notnagelT: 0, verwalter: 0, ereignisse: [], wohnFrei: 0,
     vert: standardVerteilung(), erzeugt: new Array<number>(WAREN.length).fill(0), statPunkte: [], statTakt: STAT_TAKT, statNaechst: 0,
-    ...dorfM8(), ...dorfM10(), vk: -1, bootP: 0,
+    ...dorfM8(), ...dorfM10(), vk: -1, bootP: 0, ...dorfM14(),
   };
 }
 
@@ -331,6 +358,8 @@ export class Simulation {
   private besitzHash: { rev: number; hex: string } | null = null;
   private gebietCache: SichtGebiet | null = null;
   private orte: OrtDaten[];
+  /** M14: Maijungen und Burschen unterwegs. */
+  private trupps = new Map<Id, Trupp>();
   private ortVonHex: Int16Array;
   private ortBesitz: number[];
   private posten: PostenDaten[];
@@ -602,6 +631,7 @@ export class Simulation {
     if (t % 4 === 0) { this.lagerPull(); for (let sp = 0; sp < this.doerfer.length; sp++) this.bauleuteSchicken(sp); }
     for (const b of [...this.bauleute.values()]) this.baumannSchritt(b);
     for (const b of [...this.boten.values()]) this.boteSchritt(b);
+    this.maiTick();
     if (t % 20 === 0) this.aufsammeln();
     this.traegerPhase();
     // M10: Lieferungen an Orte und Marktposten, Gebiet, Ende der Partie
@@ -655,6 +685,7 @@ export class Simulation {
         besitz: inBase64(Uint8Array.from(this.besitz, (v) => v + 1)), rev: this.besitzRev, orte: this.ortBesitz,
         lieferungen: this.lieferungen as unknown as Record<string, unknown>[], ende: this.ende,
       },
+      mai: { trupps: [...this.trupps.values()] as unknown as Record<string, unknown>[] },
     });
   }
 
@@ -692,7 +723,10 @@ export class Simulation {
       if (typeof d.bootP !== 'number') d.bootP = 0;
       const m10 = dorfM10() as unknown as Record<string, unknown>;
       for (const key of Object.keys(m10)) if ((d as unknown as Record<string, unknown>)[key] === undefined) (d as unknown as Record<string, unknown>)[key] = m10[key];
+      const m14 = dorfM14() as unknown as Record<string, unknown>;
+      for (const key of Object.keys(m14)) if ((d as unknown as Record<string, unknown>)[key] === undefined) (d as unknown as Record<string, unknown>)[key] = m14[key];
     }
+    this.trupps = new Map(((st.mai?.trupps ?? []) as unknown as Trupp[]).map((x) => [x.id, x] as [Id, Trupp]));
     this.erzeugtJe = aufLaenge(st.erzeugtJe, nw);
     const map = <T extends { id: Id }>(a: Record<string, unknown>[]) => new Map((a as unknown as T[]).map((x) => [x.id, x] as [Id, T]));
     this.fahnen = map<Fahne>(st.fahnen);
@@ -800,6 +834,7 @@ export class Simulation {
         break;
       }
       case 'einstand': this.einstandSchicken(sp, b.ort); break;
+      case 'mai': this.maiBefehl(sp, b); break;
       case 'handel': this.handelSchicken(sp, b.posten, b.tausch, b.mal); break;
       case 'bauleute': {
         const ok = (x: unknown) => Number.isInteger(x) && (x as number) >= 0 && (x as number) <= BAULEUTE_MAX;
@@ -936,7 +971,7 @@ export class Simulation {
       spieler: this.doerfer.map((d, sp) => ({
         stufe: d.stufe, bewohner: d.bewohner, festPunkte: d.festPunkte, verwalter: d.verwalter === 1,
         punkte: this.punkte(sp), hexe: this.hexeVon(sp), orte: this.ortBesitz.filter((b) => b === sp).length, koenig: d.koenig === 1,
-        voelkchen: this.vkVon(sp).id,
+        voelkchen: this.vkVon(sp).id, maibaum: d.maiBaum, maiDieb: d.maiDieb,
       })),
       fahnen: [...this.fahnen.values()].map((f) => ({ id: f.id, sp: f.sp, ...hx(f.h), waren: f.waren.map((w) => w.art), ziele: f.waren.map((w) => w.ziel), gebaeude: f.gebaeude })),
       segmente: [...this.segmente.values()].map((s) => ({ id: s.id, sp: s.sp, a: s.a, b: s.b, pfad: s.pfad.map(hx), traeger: s.traeger, verkehr: s.verkehr })),
@@ -973,6 +1008,8 @@ export class Simulation {
       ereignisse: dorf.ereignisse.map((e) => ({ ...e })),
       jahr: this.jahrSicht(),
       boten: [...this.boten.values()].map((b) => this.boteSicht(b)),
+      mainacht: this.mainachtSicht(),
+      trupps: [...this.trupps.values()].filter((x) => x.ab <= this._tick && x.route.length).map((x) => this.truppSicht(x)),
       liegend: this.liegend.map((x) => ({ q: k.qs[x.h], r: k.rs[x.h], ware: x.art, sp: x.sp })),
       gebiet: this.gebietSicht(),
       orte: this.orte.map((o, i) => {
@@ -1069,6 +1106,10 @@ export class Simulation {
       schuetzen: this.schuetzenSicht(sp),
       koenig: d.koenig === 1,
       voelkchen: this.vkVon(sp).id,
+      mai: {
+        jungen: d.maiJungen, wache: d.maiWache, frei: this.maiFrei(sp), bier: d.maiBier === 1, baum: d.maiBaum, dieb: d.maiDieb,
+        gestellt: d.maiJahr === jahrVon(this._tick), punkte: d.maiP, orte: d.maiOrte.slice(), verein: this.hatVerein(sp),
+      },
     };
   }
 
@@ -1126,6 +1167,11 @@ export class Simulation {
       return d.schuetzenJahr === jahrVon(this._tick) ? 'bereit' : 'wartet_material';
     }
     if (t.funktion === 'hecke') return this.heckeGross(g) ? 'bereit' : 'waechst';
+    if (t.funktion === 'maijungen') {
+      const d = this.doerfer[g.sp];
+      if (d.maiJungen >= MAI_MAX) return 'bereit';
+      return g.puffer[WARE.landbier] < MAI_BIER ? 'wartet_material' : d.frei <= 0 ? 'kein_arbeiter' : 'arbeitet';
+    }
     if (t.funktion === 'fonds') return g.ausgang[t.ausgangWare] + t.fondsMenge > t.ausgangMax ? 'voll' : this.dorfArm(g.sp) ? 'arbeitet' : 'bereit';
     if (t.arbeiter && this.festPause(g.sp)) return 'fest';
     if (t.funktion === 'zier' || (t.funktion === 'wache' && !t.arbeiter) || t.funktion === 'schnellweg') return 'bereit';
@@ -1241,9 +1287,11 @@ export class Simulation {
     }
     this.doerfer.forEach((d, sp) => {
       const v = this.doerfer.length > 1 ? `Spieler ${sp}: ` : '';
-      if (d.frei < 0 || d.frei + traegerJe[sp] + arbeiter[sp] + botenJe[sp] !== d.bewohner) {
-        fehler.push(`${v}Bewohner: ${d.frei} frei + ${traegerJe[sp]} Träger + ${arbeiter[sp]} Arbeiter + ${botenJe[sp]} Boten statt ${d.bewohner}`);
+      if (d.frei < 0 || d.frei + traegerJe[sp] + arbeiter[sp] + botenJe[sp] + d.maiJungen !== d.bewohner) {
+        fehler.push(`${v}Bewohner: ${d.frei} frei + ${traegerJe[sp]} Träger + ${arbeiter[sp]} Arbeiter + ${botenJe[sp]} Boten + ${d.maiJungen} Maijungen statt ${d.bewohner}`);
       }
+      const unterwegs = [...this.trupps.values()].filter((x) => x.sp === sp).reduce((a, x) => a + x.n, 0);
+      if (d.maiWache < 0 || d.maiWache + unterwegs > d.maiJungen) fehler.push(`${v}Maijungen: ${d.maiWache} Wache + ${unterwegs} unterwegs bei ${d.maiJungen}`);
       if (d.bauFrei < 0 || d.bauFrei + bau[sp] !== d.bauGesamt) fehler.push(`${v}Bauarbeiter: ${d.bauFrei} frei + ${bau[sp]} unterwegs statt ${d.bauGesamt}`);
       for (let a = 0; a < WAREN.length; a++) {
         if (new Set(d.vert.slice(a * ABNEHMER_ZAHL, (a + 1) * ABNEHMER_ZAHL)).size !== ABNEHMER_ZAHL) fehler.push(`${v}Verteilung der Ware ${a} kaputt`);
@@ -1342,6 +1390,10 @@ export class Simulation {
     for (const l of this.lieferungen) { w(l.id); w(l.sp); w(l.art); w(l.ziel); w(l.ankunft); liste(l.waren); liste(l.nimm); w(l.lager); }
     w(this.ende ? this.ende.sieger : -1); w(this.ende ? this.ende.tick : -1);
     for (const d of this.doerfer) { w(d.vk); w(d.bootP); w(d.einstandP); w(d.fundP); w(d.schuetzenN); w(d.schuetzenJahr); w(d.sfest); w(d.schuss); w(d.koenig); w(d.koenigN); }
+    // M14: Mai
+    for (const d of this.doerfer) { w(d.maiJungen); w(d.maiWache); w(d.maiBier); w(d.maiBaum); w(d.maiDieb); w(d.maiJahr); w(d.maiP); w(d.maiLehen); liste(d.maiOrte); }
+    w(this.trupps.size);
+    for (const x of this.trupps.values()) { w(x.id); w(x.sp); w(x.ziel); w(x.n); w(x.phase); w(x.ab); w(x.heim); liste(x.route); w(x.ri); w(x.t); w(x.dauer); }
     return f.hex();
   }
 
@@ -1756,7 +1808,7 @@ export class Simulation {
     const d = this.doerfer[sp];
     if (!d) return 0;
     return PUNKTE_STUFE[Math.min(d.stufe, PUNKTE_STUFE.length - 1)] + PUNKTE_KIRMES * d.stufe + d.festPunkte + d.einstandP + d.fundP
-      + (d.bootP ?? 0) + PUNKTE_SCHUETZENFEST * d.schuetzenN + PUNKTE_KOENIG * d.koenigN + PUNKTE_BEWOHNER * d.bewohner + Math.floor(this.hexeVon(sp) / HEXE_JE_PUNKT);
+      + (d.bootP ?? 0) + (d.maiP ?? 0) + PUNKTE_SCHUETZENFEST * d.schuetzenN + PUNKTE_KOENIG * d.koenigN + PUNKTE_BEWOHNER * d.bewohner + Math.floor(this.hexeVon(sp) / HEXE_JE_PUNKT);
   }
 
   /** Ende der Partie: Wettlauf (zuerst Marktflecken) oder Zielpunktzahl erreicht; bei mehreren gewinnt der mit den meisten Punkten. */
@@ -2479,6 +2531,14 @@ export class Simulation {
     switch (t.funktion) {
       case 'holzfaeller': case 'steinbruch': case 'foerster': this.laeuferTick(g, t); break;
       case 'hecke': if (!this.heckeGross(g)) g.zeit++; break;
+      case 'maijungen': {
+        // Junggesellenverein: aus einem freien Bewohner und Landbier wird ein Maijunge
+        const d = this.doerfer[g.sp];
+        if (d.maiJungen >= MAI_MAX || d.frei <= 0 || g.puffer[WARE.landbier] < MAI_BIER) { g.arbeit = 0; break; }
+        g.arbeit = 1;
+        if (++g.zeit >= MAI_TAKT) { g.zeit = 0; g.puffer[WARE.landbier] -= MAI_BIER; this.stat.verbraucht += MAI_BIER; d.frei--; d.maiJungen++; }
+        break;
+      }
       case 'fonds': {
         // Eifelfonds („Preußisch Sibirien“): zahlt nur aus, wenn das Dorf friert oder kaum Essen im Lager hat
         if (!this.dorfArm(g.sp)) { g.arbeit = 0; g.zeit = 0; break; }
@@ -2829,6 +2889,8 @@ export class Simulation {
     d.kfest = Math.max(1, Math.floor((KLEINES_FEST_TICKS * this.vkVon(g.sp).fest) / 100)); d.kfestNr = f;
     d.festJahr[f] = jahrVon(this._tick);
     d.festPunkte += Math.max(0, Math.min(fest.punkte, FEST_OBERGRENZE - d.festPunkte));
+    // M14: Maifest unterm eigenen Maibaum feiert sich besser
+    if (fest.id === 'maifest' && d.maiBaum === 1) d.maiP += MAI_MAIFEST_BONUS;
     this.ereignis(g.sp, 'kleines_fest', g.id, f);
   }
 
@@ -3140,6 +3202,216 @@ export class Simulation {
       if (!this.lageAue[f.h]) continue;
       for (let i = 0; i < n && f.waren.length; i++) this.wareVerloren(f.waren.pop()!);
     }
+  }
+
+  // ------------------------------------------------------------------ M14: Der Mai (Maibaum, Maijungen, Maibaumklau)
+
+  /** Mainacht für die Sicht: läuft sie, und bis wann bzw. ab wann (Tick). */
+  private mainachtSicht(): SimSicht['mainacht'] {
+    const t = this._tick, jahr = jahrVon(t);
+    if (this.inMainacht()) return { an: true, bis: jahr * JAHR_TICKS + MAI_AB + MAI_DAUER, ab: jahr * JAHR_TICKS + MAI_AB };
+    const ab = jahr * JAHR_TICKS + MAI_AB;
+    return { an: false, ab: t < ab ? ab : ab + JAHR_TICKS, bis: 0 };
+  }
+
+  private truppSicht(x: Trupp): SichtTrupp {
+    const k = this.karte, hx = (h: number) => ({ q: k.qs[h], r: k.rs[h] });
+    const i = Math.min(x.ri, x.route.length - 1), j = Math.min(x.ri + 1, x.route.length - 1);
+    return {
+      id: x.id, sp: x.sp, ziel: x.ziel, n: x.n, phase: x.phase, von: hx(x.route[i]), nach: hx(x.route[j]),
+      fortschritt: x.dauer > 0 && i !== j ? Math.min(PROMILLE - 1, Math.floor((PROMILLE * x.t) / x.dauer)) : 0,
+      schritt: x.dauer > 0 && i !== j ? Math.max(1, Math.floor(PROMILLE / x.dauer)) : 0,
+    };
+  }
+
+  /** Läuft gerade die Mainacht (einmal im Frühjahr)? */
+  inMainacht(t = this._tick): boolean {
+    const ij = inJahreszeit(t);
+    return jahreszeitVon(t) === 0 && ij >= MAI_AB && ij < MAI_AB + MAI_DAUER;
+  }
+
+  /** Maijungen von `sp`, die weder Wache stehen noch unterwegs sind. */
+  private maiFrei(sp: number): number {
+    const d = this.doerfer[sp];
+    let weg = 0;
+    for (const x of this.trupps.values()) if (x.sp === sp) weg += x.n;
+    return Math.max(0, d.maiJungen - d.maiWache - weg);
+  }
+
+  /** Wo der Maibaum eines Dorfs steht: am fertigen Kirmesplatz, sonst am ersten Lager. */
+  private maiPlatz(sp: number): number {
+    let lager = -1;
+    for (const g of this.gebaeude.values()) {
+      if (g.sp !== sp || !g.fertig) continue;
+      if (g.typ === 'kirmesplatz') return g.h;
+      if (lager < 0 && istLager(g)) lager = g.h;
+    }
+    return lager;
+  }
+
+  private hatKirmesplatz(sp: number): boolean {
+    for (const g of this.gebaeude.values()) if (g.sp === sp && g.fertig && g.typ === 'kirmesplatz') return true;
+    return false;
+  }
+
+  private hatVerein(sp: number): boolean {
+    for (const g of this.gebaeude.values()) if (g.sp === sp && g.fertig && GEBAEUDE[g.typ].funktion === 'maijungen') return true;
+    return false;
+  }
+
+  /** Befehl „mai“: Baum stellen, klauen (nur in der Mainacht), Wache und Bier einstellen, geklauten Baum auslösen. */
+  private maiBefehl(sp: number, b: Extract<Befehl, { art: 'mai' }>): void {
+    const d = this.doerfer[sp];
+    const jahr = jahrVon(this._tick);
+    switch (b.was) {
+      case 'wache': {
+        if (!Number.isInteger(b.n)) return;
+        const weg = d.maiJungen - d.maiWache - this.maiFrei(sp);
+        d.maiWache = Math.max(0, Math.min(b.n!, d.maiJungen - weg));
+        return;
+      }
+      case 'bier': if (typeof b.an === 'boolean') d.maiBier = b.an ? 1 : 0; return;
+      case 'stellen': {
+        if (!this.inMainacht() || d.maiBaum === 1 || d.maiJahr === jahr || !this.hatKirmesplatz(sp)) return;
+        if (d.maiJungen - (d.maiJungen - d.maiWache - this.maiFrei(sp)) < MAIBAUM_STELLEN) return;
+        if (!this.ausLagern(sp, MAIBAUM_WAREN)) return;
+        d.maiBaum = 1; d.maiDieb = -1; d.maiJahr = jahr;
+        this.ereignis(sp, 'maibaum', 0, 0);
+        return;
+      }
+      case 'klau': {
+        if (!this.inMainacht() || !Number.isInteger(b.ziel)) return;
+        const z = b.ziel!;
+        if (z === sp || z >= this.doerfer.length || (z < 0 && (-1 - z >= this.orte.length || this.ortBesitz[-1 - z] === sp || d.maiOrte.includes(-1 - z)))) return;
+        for (const x of this.trupps.values()) if (x.sp === sp && x.ziel === z) return;
+        const n = Math.min(this.maiFrei(sp), Number.isInteger(b.n) && b.n! > 0 ? b.n! : this.maiFrei(sp));
+        if (n < MAI_KLAU_MIN) return;
+        const von = this.maiPlatz(sp), nach = z >= 0 ? this.maiPlatz(z) : this.orte[-1 - z].h;
+        if (von < 0 || nach < 0) return;
+        const route = this.torkelPfad(von, nach);
+        if (!route) return;
+        if (z < 0) d.maiOrte.push(-1 - z);
+        this.truppLos({ id: this.naechsteId++, sp, ziel: z, n, phase: MT_HIN, ab: this._tick, heim: von, route: [], ri: 0, t: 0, dauer: 0 }, route);
+        return;
+      }
+      case 'loese': {
+        if (d.maiBaum !== 2 || !this.ausLagern(sp, MAI_AUSLOESE)) return;
+        // die Auslöse geht an die Diebe (Burschen aus dem Nachbarort trinken sie gleich aus)
+        if (d.maiDieb >= 0) { const l = this.eigeneLager(d.maiDieb)[0]; if (l) for (let a = 0; a < MAI_AUSLOESE.length; a++) l.vorrat[a] += MAI_AUSLOESE[a]; }
+        this.ereignis(sp, 'mailoese', 0, d.maiDieb);
+        if (d.maiDieb >= 0) this.ereignis(d.maiDieb, 'mailoese', 0, -10 - sp);
+        d.maiBaum = 1; d.maiDieb = -1;
+        return;
+      }
+    }
+  }
+
+  private truppLos(x: Trupp, route: number[]): void {
+    x.route = route; x.ri = 0; x.t = 0;
+    x.dauer = route.length > 1 ? this.truppSchrittDauer(x, route[0], route[1]) : 0;
+    this.trupps.set(x.id, x);
+  }
+
+  private truppSchrittDauer(x: Trupp, a: number, b: number): number {
+    const s = this.karte.schritt(a, b);
+    return x.phase === MT_TORKELT ? Math.floor((s * (100 + MAI_TORKELN_PROZENT)) / 100) : s;
+  }
+
+  /** Mainacht ankündigen, beginnen und beenden; Trupps laufen lassen. */
+  private maiTick(): void {
+    const t = this._tick, jahr = jahrVon(t), ij = inJahreszeit(t);
+    if (jahreszeitVon(t) === 0) {
+      if (ij === MAI_AB - MAI_ANKUENDIGUNG) for (let sp = 0; sp < this.doerfer.length; sp++) this.ereignis(sp, 'mainacht', 0, 0);
+      if (ij === MAI_AB) this.mainachtBeginnt(jahr);
+      if (ij === MAI_AB + MAI_DAUER) this.mainachtEndet(jahr);
+    }
+    for (const x of [...this.trupps.values()]) this.truppSchritt(x);
+  }
+
+  private mainachtBeginnt(jahr: number): void {
+    for (let sp = 0; sp < this.doerfer.length; sp++) {
+      const d = this.doerfer[sp];
+      // der alte Baum kommt weg, ein geklauter bleibt bei den Dieben; jedes Jahr wird neu gestellt
+      d.maiBaum = 0; d.maiDieb = -1; d.maiOrte = [];
+      this.ereignis(sp, 'mainacht', 0, 1);
+      // Burschen aus einem Nachbarort (nicht dem eigenen) kommen später in der Nacht
+      if (this.zufall(100) >= MAI_FREMDE_CHANCE || !this.orte.length) continue;
+      const ziel = this.maiPlatz(sp);
+      let best = -1, bd = Infinity;
+      for (let i = 0; i < this.orte.length; i++) {
+        if (this.ortBesitz[i] === sp || ziel < 0) continue;
+        const a = this.karte.abstand(this.orte[i].h, ziel);
+        if (a < bd) { bd = a; best = i; }
+      }
+      if (best < 0) continue;
+      const ab = this._tick + 1 + this.zufall(Math.max(1, MAI_FREMDE_VERZUG));
+      this.trupps.set(this.naechsteId, { id: this.naechsteId++, sp: -1, ziel: sp, n: MAI_FREMDE_N, phase: MT_HIN, ab, heim: this.orte[best].h, route: [], ri: 0, t: 0, dauer: 0 });
+    }
+    void jahr;
+  }
+
+  private mainachtEndet(jahr: number): void {
+    for (let sp = 0; sp < this.doerfer.length; sp++) {
+      const d = this.doerfer[sp];
+      if (d.maiBaum === 1) { d.maiP += MAI_PUNKTE_STEHT; this.ereignis(sp, 'mainacht', 0, 2); } else this.ereignis(sp, 'mainacht', 0, 3);
+      // Mailehen: der Verein versteigert die Mai-Paare, das bringt Zuzug
+      if (this.hatVerein(sp) && d.maiJungen >= MAI_LEHEN_MIN && d.maiLehen !== jahr) {
+        d.maiLehen = jahr;
+        this.neuerBewohner(sp, MAI_LEHEN_ZUZUG);
+        this.ereignis(sp, 'mailehen', 0, MAI_LEHEN_ZUZUG);
+      }
+    }
+    // Burschen, die noch nicht losgezogen sind, bleiben zu Hause
+    for (const x of [...this.trupps.values()]) if (x.sp < 0 && x.ab > this._tick) this.trupps.delete(x.id);
+  }
+
+  private truppSchritt(x: Trupp): void {
+    if (x.ab > this._tick) return;
+    if (!x.route.length) {
+      // Burschen ziehen jetzt los
+      const nach = this.maiPlatz(x.ziel);
+      const route = nach >= 0 ? this.torkelPfad(x.heim, nach) : null;
+      if (!route) { this.trupps.delete(x.id); return; }
+      this.truppLos(x, route);
+      return;
+    }
+    if (x.ri + 1 < x.route.length) {
+      x.t++;
+      if (x.t < x.dauer) return;
+      x.t = 0; x.ri++;
+      if (x.ri + 1 < x.route.length) { x.dauer = this.truppSchrittDauer(x, x.route[x.ri], x.route[x.ri + 1]); return; }
+    }
+    if (x.phase === MT_HIN) this.truppAmBaum(x);
+    else this.trupps.delete(x.id);
+  }
+
+  /** Angekommen: Wache (Hand am Stamm), Bier oder Klau. Ergebnis 0 geklaut, 1 Wache, 2 Bier, 3 kein Baum. */
+  private truppAmBaum(x: Trupp): void {
+    let ergebnis = 3;
+    if (!this.inMainacht()) ergebnis = 3;
+    else if (x.ziel < 0) {
+      // Nachbarort: dort passt manchmal einer auf
+      if (this.zufall(100) < MAI_ORT_WACHE) ergebnis = this.zufall(2) ? 1 : 2;
+      else ergebnis = 0;
+      if (ergebnis === 0 && x.sp >= 0) this.doerfer[x.sp].maiP += MAI_PUNKTE_KLAU;
+    } else {
+      const d = this.doerfer[x.ziel];
+      if (d.maiBaum !== 1) ergebnis = 3;
+      else if (d.maiWache > 0) ergebnis = 1;
+      else if (d.maiBier && this.ausLagern(x.ziel, MAI_BIER_EIMER(x.n))) ergebnis = 2;
+      else ergebnis = 0;
+      if (ergebnis === 1 || ergebnis === 2) d.maiP += MAI_PUNKTE_ABWEHR;
+      if (ergebnis === 0) {
+        d.maiBaum = 2; d.maiDieb = x.sp >= 0 ? x.sp : -2;
+        if (x.sp >= 0) this.doerfer[x.sp].maiP += MAI_PUNKTE_KLAU;
+      }
+      if (ergebnis !== 3) this.ereignis(x.ziel, 'maibesuch', 0, ergebnis * 10 + (x.sp >= 0 ? 0 : 1));
+    }
+    if (x.sp >= 0) this.ereignis(x.sp, 'maiklau', 0, ergebnis * 100 + (x.ziel < 0 ? 50 - x.ziel : x.ziel));
+    x.phase = ergebnis === 0 ? MT_MIT_BAUM : ergebnis === 2 ? MT_TORKELT : MT_LEER;
+    const route = this.torkelPfad(x.route[x.route.length - 1], x.heim);
+    if (!route || route.length < 2) { this.trupps.delete(x.id); return; }
+    this.truppLos(x, route);
   }
 
   // ------------------------------------------------------------------ Beschwipste Boten (DESIGN §10.3)
