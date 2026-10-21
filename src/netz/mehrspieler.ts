@@ -1,5 +1,6 @@
 // Mehrspieler im Browser zusammenstecken: nach dem Start (oder beim Wiederkommen) WebRTC-Netz und Partie aufbauen, den
 // Vermittlungs-Server mit beiden verbinden und warten, bis die Partie ihren Stand hat (Drehbuch 8.3).
+import type { Regeln } from '../sim/nachbarn';
 import { Simulation } from '../sim/sim';
 import type { KarteDaten, StartDaten } from '../sim/typen';
 import type { Spielstand } from '../spiel/spielstand';
@@ -26,7 +27,7 @@ export interface PartieStart {
   karte: KarteDaten;
   kartePruef: string;
   /** Nur der Taktgeber beim ersten Start: Startplätze (Lager-Hexe) oder ein geladener Spielstand, Saat und Tempo. */
-  neu?: { starts: StartDaten[]; saat: number; tempo: number; spielstand: Spielstand | null };
+  neu?: { starts: StartDaten[]; saat: number; tempo: number; spielstand: Spielstand | null; regeln?: Regeln };
 }
 
 /** Baut Netz und Partie auf und wartet, bis die Simulation da ist (Start: vom Gastgeber; Wiederkommen: vom Taktgeber). */
@@ -38,7 +39,7 @@ export function startePartie(s: PartieStart): Promise<Laufend> {
   let tempo = 1;
   if (s.neu && du === raum.taktgeber) {
     const st = s.neu.spielstand;
-    sim = st ? Simulation.ausStand(s.karte, st.stand) : new Simulation(s.karte, s.neu.saat, s.neu.starts);
+    sim = st ? Simulation.ausStand(s.karte, st.stand) : new Simulation(s.karte, s.neu.saat, s.neu.starts, s.neu.regeln);
     if (sim.spielerZahl !== n) throw new Error(`Der Stand hat ${sim.spielerZahl} Dörfer, im Raum sind ${n} Spieler.`);
     pausen = st?.pausen;
     tempo = s.neu.tempo;

@@ -59,6 +59,8 @@ export interface StatusDaten {
     /** Kleines Fest der Jahreszeit (wie die Kirmes-Zeile), Punkte aus kleinen Festen, Winter ohne Essen (friert). */
     fest?: { text: string; prozent: number; fest: boolean } | null;
     punkte?: number; friert?: boolean;
+    /** M10: Eifel-Punkte als fertiger Text („⭐ 340 / 1000“). */
+    eifelPunkte?: string;
     /** Jahreszeit und Wetter als fertiger Text; Winter (Leiste in Winterfarben). */
     jahr?: string; winter?: boolean;
   };
@@ -365,7 +367,7 @@ export class Spielleiste {
         this.festZeile.classList.toggle('fest', d.fest.fest);
       }
       const voll = d.bewohner >= d.wohnraum;
-      this.zeileDorf.innerHTML = `<b class="stufe">${d.stufe}</b> · <span title="Bewohner / Wohnraum (Wohnhäuser bauen für mehr Platz)"${voll ? ' class="warn"' : ''}>👪 <b>${d.bewohner}</b>/${d.wohnraum}</span>` +
+      this.zeileDorf.innerHTML = `<b class="stufe">${d.stufe}</b>` + (d.eifelPunkte ? ` · <span class="eifelpunkte" title="Eifel-Punkte (Ziel der Partie)"><b>${d.eifelPunkte}</b></span>` : '') + ` · <span title="Bewohner / Wohnraum (Wohnhäuser bauen für mehr Platz)"${voll ? ' class="warn"' : ''}>👪 <b>${d.bewohner}</b>/${d.wohnraum}</span>` +
         ` · <span title="freie Bewohner (werden Träger und Arbeiter)">frei <b>${d.frei}</b></span>` +
         ` · <span title="Bauarbeiter frei / gesamt">🔨 <b>${d.bauarbeiter[0]}</b>/${d.bauarbeiter[1]}</span>` +
         ` · <span title="Planierer frei / gesamt">⛏️ <b>${d.planierer[0]}</b>/${d.planierer[1]}</span>` +

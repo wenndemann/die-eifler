@@ -429,6 +429,7 @@ async function main() {
       const neu = !raum.gestartet && start.du === start.raum.taktgeber ? {
         starts: start.startorte.map((n) => waehleLagerHex(ausschnitt.hex, ausschnitt.kerne, n)),
         saat: saatAusPruefsumme(ausschnitt.pruefsumme), tempo: start.einstellungen.tempo, spielstand: start.spielstand,
+        regeln: { gebiet: 1, ziel: start.einstellungen.ziel ?? 'normal' },
       } : undefined;
       const lauf = await startePartie({ v, du: start.du, raum: start.raum, karte: ausschnitt.hex, kartePruef: ausschnitt.pruefsumme, neu });
       spiel = new Spiel(spielKontext({ mehrspieler: { partie: lauf.partie, namen: lauf.namen, anwesend: (sp) => lauf.netz.istOffen(sp) } }));

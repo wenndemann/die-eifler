@@ -501,6 +501,79 @@ const TYPEN: Record<string, Typ> = {
         boxR(1, 4, 1, -2, G + 7, -1, '#7a6a5a'), paint(new THREE.TorusGeometry(0.45, 0.1, 4, 8, Math.PI * 1.4).rotateZ(-0.5).translate(0, G + 3.2, t.d / 2 + 0.2), '#9aa0a6')];
     },
   },
+  finderhuette: {
+    w: 4.5, d: 4, floors: 1, wand: '#d9c9a8', dach: '#4a4a3a', laden: '#2f3a4a', skala: 0.95, hoehe: 8,
+    grund: [-6, 8, -5, 8],
+    fertig() {
+      const t = TYPEN.finderhuette;
+      // dunkle Hütte mit Laterne, Sack an der Wand, Spaten und Leiter (zum „Finden“)
+      return [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach), ...laeden(t.w, t.d, t.floors, t.laden),
+        boxR(0.18, 0.18, 1.3, 2.6, G + 3.2, t.d / 2 + 0.6, DUNKEL), boxR(0.55, 0.7, 0.55, 2.6, G + 2.7, t.d / 2 + 1.2, '#2a2a2a'),
+        paint(new THREE.SphereGeometry(0.22, 6, 5).translate(2.6, G + 2.7, t.d / 2 + 1.2), '#ffd27a'),
+        paint(new THREE.SphereGeometry(0.75, 7, 5).scale(1, 1.2, 0.8).translate(-2.9, G + 0.8, t.d / 2 + 0.5), '#b08850'),
+        boxR(0.12, 2.4, 0.12, 4.2, G + 1.2, 1, HOLZ, 0, 0, 0.25), boxR(0.5, 0.6, 0.08, 4.5, G + 0.2, 1, '#7d8a96', 0, 0, 0.25),
+        boxR(0.12, 4.2, 0.12, -3.2, G + 2.1, -0.6, HOLZ, 0, 0, -0.3), boxR(0.12, 4.2, 0.12, -3.2, G + 2.1, 0.4, HOLZ, 0, 0, -0.3)];
+    },
+  },
+  hundehuette: {
+    w: 3, d: 3, floors: 1, wand: '#c89a5a', dach: '#b0563e', laden: '#4a3220', skala: 0.8, hoehe: 5,
+    grund: [-4, 5, -4, 5],
+    fertig() {
+      // Hundehütte mit rundem Eingang, Napf, Knochen und Hund (sitzend)
+      return [boxR(3, 2.2, 3, 0, G + 1.1, 0, '#c89a5a'), boxR(3.6, 0.2, 2.2, 0, G + 2.6, 0.8, '#b0563e', 0.6), boxR(3.6, 0.2, 2.2, 0, G + 2.6, -0.8, '#b0563e', -0.6),
+        paint(new THREE.CircleGeometry(0.75, 10).translate(0, G + 0.8, 1.52), '#2a1f14'),
+        walze(0.45, 0.2, 1.8, G + 0.1, 2.2, '#c8402e', 0, 0, 9),
+        paint(new THREE.SphereGeometry(0.7, 8, 6).scale(0.9, 1.1, 1.2).translate(-1.6, G + 0.8, 2.2), '#8a5a30'),
+        paint(new THREE.SphereGeometry(0.5, 8, 6).translate(-1.6, G + 1.8, 2.7), '#8a5a30'),
+        paint(new THREE.SphereGeometry(0.2, 6, 5).translate(-1.6, G + 1.7, 3.2), '#2a1f14'),
+        boxR(0.2, 0.5, 0.35, -2.0, G + 2.2, 2.6, '#6a4020'), boxR(0.2, 0.5, 0.35, -1.2, G + 2.2, 2.6, '#6a4020')];
+    },
+  },
+  polizeiwache: {
+    w: 5, d: 4.5, floors: 1, wand: '#f2ecdc', dach: '#2f4a6a', laden: '#2f4a6a', skala: 1, hoehe: 9,
+    grund: [-6, 8, -5, 8],
+    fertig() {
+      const t = TYPEN.polizeiwache;
+      // Wache mit blauem Dach, Schild „Polizei“, Fahrrad und Laterne
+      return [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach), ...laeden(t.w, t.d, t.floors, t.laden),
+        boxR(2.4, 0.7, 0.12, 0, G + 3.6, t.d / 2 + 0.15, '#2f4a6a'), boxR(2.0, 0.3, 0.14, 0, G + 3.6, t.d / 2 + 0.2, '#f2ecdc'),
+        paint(new THREE.TorusGeometry(0.5, 0.07, 4, 10).translate(3.6, G + 0.55, t.d / 2 + 0.8), '#2a2a2a'),
+        paint(new THREE.TorusGeometry(0.5, 0.07, 4, 10).translate(5.0, G + 0.55, t.d / 2 + 0.8), '#2a2a2a'),
+        boxR(1.5, 0.08, 0.08, 4.3, G + 1.0, t.d / 2 + 0.8, '#2f4a6a'), boxR(0.08, 0.6, 0.08, 4.8, G + 1.2, t.d / 2 + 0.8, '#2f4a6a')];
+    },
+  },
+  schuetzenhaus: {
+    w: 10, d: 7, floors: 1, wand: '#f4e2c2', dach: '#2f6a3a', laden: '#2f7a55', skala: 1, hoehe: 15,
+    grund: [-10, 12, -8, 11],
+    fertig() {
+      const t = TYPEN.schuetzenhaus;
+      // grünes Schützenhaus mit Vogelstange (Holzvogel oben), Fahne, Wimpeln, Biertisch
+      const out = [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach), ...laeden(t.w, t.d, t.floors, t.laden), ...blumenkasten(t.w, t.d, t.floors),
+        walze(0.3, 18, 9, G + 9, -4, '#e9dcbc', 0, 0, 7),
+        boxR(1.4, 0.9, 0.5, 9, G + 18.4, -4, '#c8402e'), paint(new THREE.ConeGeometry(0.35, 0.8, 5).rotateZ(-Math.PI / 2).translate(9.9, G + 18.5, -4), '#e0a830'),
+        boxR(0.3, 1.4, 1.6, 8.6, G + 18.9, -4, '#c8402e'),
+        boxR(0.15, 6, 0.15, -6, G + 3, t.d / 2 + 2, HOLZ), boxR(2.2, 1.3, 0.08, -4.9, G + 5.2, t.d / 2 + 2, '#2f6a3a'), boxR(0.8, 0.8, 0.1, -4.9, G + 5.2, t.d / 2 + 2.05, '#f2c230'),
+        boxR(3, 0.2, 1.3, 2, G + 1.1, t.d / 2 + 2.3, HOLZ), ...fass(5.6, t.d / 2 + 1.5)];
+      for (let k = 0; k < 8; k++) out.push(paint(new THREE.ConeGeometry(0.35, 0.8, 3).rotateX(Math.PI).translate(-4 + k * 1.6, G + 6.2 - Math.sin((k / 7) * Math.PI) * 0.8, t.d / 2 + 0.6), ['#2f6a3a', '#f4f1e8', '#c8402e'][k % 3]));
+      return out;
+    },
+  },
+  schiessstand: {
+    w: 4, d: 3, floors: 1, wand: '#d9c9a8', dach: '#5a4a3c', laden: '#4a3220', skala: 1, hoehe: 7,
+    grund: [-8, 8, -6, 6],
+    fertig() {
+      // offener Unterstand mit Brüstung, dahinter Erdwall mit Zielscheiben
+      const out = [boxR(5, 0.3, 3.5, -4, G + 0.15, 0, HOLZ), boxR(0.25, 3, 0.25, -6.3, G + 1.5, -1.5, HOLZ), boxR(0.25, 3, 0.25, -1.7, G + 1.5, -1.5, HOLZ),
+        boxR(0.25, 3, 0.25, -6.3, G + 1.5, 1.5, HOLZ), boxR(0.25, 3, 0.25, -1.7, G + 1.5, 1.5, HOLZ), boxR(5.4, 0.25, 4, -4, G + 3.1, 0, '#5a4a3c', 0, 0, 0.12),
+        boxR(0.2, 1, 3.2, -1.8, G + 0.9, 0, HOLZ),
+        paint(new THREE.SphereGeometry(3, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(0.8, 0.9, 1.6).translate(6, G, 0), '#7a6a40')];
+      for (const z of [-2.5, 0, 2.5]) {
+        out.push(walze(1.0, 0.2, 4.2, G + 2.2, z, '#f4f1e8', 0, Math.PI / 2, 12), walze(0.65, 0.22, 4.15, G + 2.2, z, '#c8402e', 0, Math.PI / 2, 12),
+          walze(0.3, 0.24, 4.1, G + 2.2, z, '#2a2a2a', 0, Math.PI / 2, 10), boxR(0.15, 1.6, 0.15, 4.3, G + 0.9, z, HOLZ));
+      }
+      return out;
+    },
+  },
   lagerhaus: {
     w: 13, d: 8, floors: 1, wand: '#ece0c8', dach: '#5a4a3c', laden: '#2f7a55', skala: 1, hoehe: 10,
     grund: [-8, 8.5, -5, 8],

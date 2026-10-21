@@ -53,6 +53,8 @@ export interface MeldungsKontext {
   fest?: string;
   wetter?: string;
   feld?: string;
+  /** M10: Ortsname, Stadt, Ausrede oder Spielername. */
+  text?: string;
 }
 
 /** Namen für die Meldungen ab M8: kleine Feste, Wetterarten (Id und Anzeigename), Feldtypen. */
@@ -60,6 +62,11 @@ export interface MeldungsNamen {
   fest: (nr: number) => string;
   wetter: (art: number) => { id: string; name: string };
   feld: (typ: string) => string;
+  /** M10: Name des Orts (Index in SimSicht.orte), des Marktpostens, eines Spielers, eine Ausrede. */
+  ort?: (i: number) => string;
+  posten?: (i: number) => string;
+  spieler?: (sp: number) => string;
+  ausrede?: (i: number) => string;
 }
 
 /** Text Nummer `nr` (reihum) eines Anlasses mit ersetzten Platzhaltern. */
@@ -150,6 +157,15 @@ export class MeldungsFilter {
         case 'friert': add('friert', k({}), true); break;
         case 'satt': add('satt', k({})); break;
         case 'bauleute': add('bauleute', k({ gebaeude: ev.wert === 0 ? 'Bauarbeiter' : 'Planierer' })); break;
+        case 'einstand': add('einstand', k({ text: namen?.ort?.(ev.wert) ?? 'dem Ort' }), true, true, ev.gebaeude); break;
+        case 'zu_spaet': add('zu_spaet', k({ text: namen?.ort?.(ev.wert) ?? 'dem Ort' }), true); break;
+        case 'handel': add('handel', k({ text: namen?.posten?.(ev.wert) ?? 'dem Flachland' }), false, false, ev.gebaeude); break;
+        case 'fund': add('fund', k({ ware: wareName(ev.wert) }), false, true, ev.gebaeude); break;
+        case 'erwischt': add('erwischt', k({ text: namen?.ausrede?.(ev.wert) ?? '' }), false, false, ev.gebaeude); break;
+        case 'ertappt': add('ertappt', k({ text: namen?.spieler?.(ev.wert) ?? 'nebenan' })); break;
+        case 'schuetzenfest': add('schuetzenfest', k({ n: ev.wert }), true, true, ev.gebaeude); break;
+        case 'koenig': add('koenig', k({ text: namen?.spieler?.(ev.wert) ?? 'Einer' }), true, true); break;
+        case 'ende': add('ende', k({ text: namen?.spieler?.(ev.wert) ?? 'Einer' }), true, true); break;
         case 'verloren': {
           const n = aus.length;
           add('verloren', k({ ware: wareName(ev.wert) }));

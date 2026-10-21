@@ -135,6 +135,18 @@ nach Gebrauch wieder. Unterbrochen? Einfach neu starten, es setzt fort. Details 
   Bienenkörbe, Kürbisse), Wiesen-Deko (Büsche, Blumen, Pilze, Holzstapel), Bruchstein mit Moos, Schnee auf Dächern und Felsen.
   Figuren mit großem Kopf, sichtbarem Gesicht und Kappe in Trachtfarbe, getragene Waren größer. Statusfenster mit einklappbarer
   Lagerzeile. Leitfaden in `STIL.md`, Prüfung über `tools/bildstrecke.mjs` und Gutachter-Agenten.
+- **Gebiet, Nachbarn, Finden, Ziele (M10):** Lager, Wohnhäuser, Kirmesplatz, Schützenhaus und Dorfpolizist strahlen **Einfluss**
+  aus (das Lager +1 je Dorfstufe, +1 wenn keiner friert, +1 für den Schützenkönig); gebaut wird nur auf eigenem Gebiet, Wege
+  gehen auch über freies Land, nie über fremdes. Die Grenze zeigt ein Band mit Grenzsteinen in der Spielerfarbe; Gebäude auf
+  fremdem Gebiet stehen still. **Orte mit Einstand:** Jeder Ortskern ist ein Ort mit Ortsschild und Wunschliste; Weg bis an den
+  Ortskern, „Einstand liefern“ – dann gibt es ein Lager mit Fundkiste, Gebiet, Bewohner und Punkte; im Mehrspieler gewinnt, wer
+  zuerst ankommt. **Flachländer:** Marktposten mit Wegweiser zur echten Stadt (z. B. „Nach Düren, 9 km“) am Kartenrand, Handel
+  mit sechs Tauschangeboten. **Finderhütte** (ab Dorf) holt Waren bei Marktposten und Nachbarn; **Wachhund** und
+  **Dorfpolizist** machen wachsamer, Erwischte sitzen in der Ausredenstube. **Schützenhaus** mit **Schießstand** (ab Kirchdorf):
+  einmal im Jahr Schützenfest mit Vogelschuss, der König bekommt Punkte und Einfluss und zahlt die Runde. **Eifel-Punkte**
+  (Dorfstufe, Kirmes, Feste, Einstände, Funde, Schützenfest, König, Bewohner, Gebiet) mit Ziel kurz 600 / normal 1000 / lang 1500,
+  Wettlauf zum Marktflecken oder ohne Ende (allein) – in der Lobby bzw. den Einstellungen; am Ende eine Rangliste. Zahlen:
+  `data/nachbarn.json`.
 - **Simulation** (`src/sim/`): fester Tick (20/s), nur Ganzzahlen, jede Aktion ist ein Befehl mit Tick-Nummer,
   Prüfsumme über den Zustand (Statusleiste „Sim“), Befehlsprotokoll zum Abspielen (`spieleAb`). Der Smoke-Test
   prüft, dass Node und Browser dieselbe Prüfsumme bekommen und ein Replay im zweiten Browser-Fenster gleich ausgeht.

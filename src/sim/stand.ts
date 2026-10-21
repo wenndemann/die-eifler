@@ -2,6 +2,7 @@
 // Enthält alles, was die Prüfsumme abdeckt, dazu Protokoll und ausstehende Befehle. Abgeleitetes (Distanzen, Verbindungen,
 // Hex-Belegung) wird beim Laden neu berechnet. Läuft in Node und im Browser gleich (btoa/atob, keine Buffer).
 import type { ProtokollEintrag, StartDaten } from './typen';
+import type { Regeln } from './nachbarn';
 
 /** Zahlenfelder in fester Reihenfolge. */
 export const STAND_ZAHLEN = ['tick', 'rng', 'naechsteId', 'ereignisNr', 'befehlZahl', 'natRev'] as const;
@@ -24,6 +25,9 @@ export interface SimStand {
   /** Beschwipste Boten und liegengebliebene Waren (ab M8; fehlt in älteren Spielständen). */
   boten?: Record<string, unknown>[];
   liegend?: Record<string, unknown>[];
+  /** M10: Regeln der Partie, Besitz je Hex (Base64, Wert + 1), Besitzer je Ort, Lieferungen, Ende (fehlt in älteren Spielständen). */
+  regeln?: Regeln;
+  gebiet?: { besitz: string; rev: number; orte: number[]; lieferungen: Record<string, unknown>[]; ende: { sieger: number; tick: number } | null };
   log: ProtokollEintrag[];
   ausstehend: ProtokollEintrag[];
   stat: { angekommen: number; verbraucht: number; erzeugt: number; maxWarte: number; verbaut: number };

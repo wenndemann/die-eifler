@@ -8,6 +8,7 @@ import { leseSpielstand } from '../spiel/spielstand';
 import { pruefeStartplaetze, verteileStartplaetze, type Ort } from '../netz/startplaetze';
 import { NAME_SPEICHER, speicher, type RaumSicht, type Vermittlung } from '../netz/vermittlung';
 import { SPIELER_FARBEN } from './partieleiste';
+import { ZIELE } from '../sim/nachbarn';
 
 /** Was der Gastgeber in den Raum schreibt (alle sehen es). */
 export interface LobbyEinstellungen {
@@ -16,6 +17,8 @@ export interface LobbyEinstellungen {
   /** Startort (Ortsname) je Platz, wie die Plätze vor dem Start nummeriert sind (null = frei). */
   startorte: (string | null)[];
   tempo: number;
+  /** M10: Ziel der Partie (Id aus data/nachbarn.json: punkte.ziele; fehlt = normal). */
+  ziel?: string;
   /** Geladener Spielstand: Spielernamen und Spielzeit (der Stand selbst bleibt beim Gastgeber). */
   spielstand: { spieler: string[]; tick: number; gespeichert: string } | null;
 }
@@ -96,6 +99,7 @@ export class Lobby {
   private hinweis = el('div', 'lobby-hinweis');
   private los = el('button', 'lobby-los');
   private tempoWahl = el('select', 'lobby-wahl');
+  private zielWahl = el('select', 'lobby-wahl');
   private standZeile = el('div', 'lobby-stand');
   private einst: LobbyEinstellungen | null = null;
   private spielstand: Spielstand | null;
@@ -130,6 +134,9 @@ export class Lobby {
     const reihe = el('div', 'lobby-reihe');
     for (const t of [1, 2, 3]) { const op = el('option', '', `Tempo ${t}×`); op.value = String(t); this.tempoWahl.append(op); }
     this.tempoWahl.addEventListener('change', () => this.schreibe());
+    for (const z of ZIELE) if (z.id !== 'ohne_ende') { const op = el('option', '', `Ziel: ${z.name}${z.punkte ? ` (${z.punkte} Punkte)` : ''}`); op.value = z.id; this.zielWahl.append(op); }
+    this.zielWahl.value = 'normal';
+    this.zielWahl.addEventListener('change', () => this.schreibe());
     const laden = el('label', 'lobby-knopf', '📂 Spielstand laden');
     const datei = el('input');
     datei.type = 'file'; datei.accept = '.json,application/json'; datei.hidden = true;
@@ -148,7 +155,7 @@ export class Lobby {
     const neu = el('button', 'lobby-knopf', 'Neues Spiel');
     neu.type = 'button';
     neu.addEventListener('click', () => { this.spielstand = null; this.schreibe(); });
-    reihe.append(this.tempoWahl, laden, neu);
+    reihe.append(this.tempoWahl, this.zielWahl, laden, neu);
     this.wurzel.append(reihe, this.standZeile, this.hinweis, this.los);
     this.los.type = 'button';
     this.los.addEventListener('click', () => { if (!gast()) v.start(); });
@@ -196,7 +203,7 @@ export class Lobby {
       });
     }
     this.einst = {
-      param: this.o.param, kartenName: this.o.kartenName, startorte, tempo: Number(this.tempoWahl.value) || 1,
+      param: this.o.param, kartenName: this.o.kartenName, startorte, tempo: Number(this.tempoWahl.value) || 1, ziel: this.zielWahl.value || 'normal',
       spielstand: this.spielstand ? { spieler: this.spielstand.spieler, tick: this.spielstand.stand.zahlen[0], gespeichert: this.spielstand.gespeichert } : null,
     };
     v.einstellungen(this.einst, neueKarte);
@@ -233,6 +240,8 @@ export class Lobby {
     }));
     // Spielstand und Tempo
     this.tempoWahl.value = String(e?.tempo ?? 1);
+    this.zielWahl.value = e?.ziel ?? 'normal';
+    this.zielWahl.disabled = ich !== r.gastgeber;
     const st = e?.spielstand;
     this.standZeile.textContent = st ? `Fortsetzen: Spielstand vom ${new Date(st.gespeichert).toLocaleString('de-DE')} mit ${st.spieler.join(', ')} (Spielzeit ${Math.floor(st.tick / 1200)} min)` : '';
     // Startbedingung (der Server prüft sie noch einmal)

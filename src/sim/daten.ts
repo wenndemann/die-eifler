@@ -18,7 +18,7 @@ interface GebaeudeJson {
   wandelt?: { ein: string | Record<string, number>; menge?: number; aus: string; dauer_s: number };
   zeiten?: { arbeit_s?: number; ruhe_s?: number };
   nahrung_plaetze?: number; ab_stufe?: number; einmalig?: boolean; taste?: string;
-  saison?: string; werkzeug?: number; boten?: number;
+  saison?: string; werkzeug?: number; boten?: number; leistung?: string;
 }
 
 const warenListe = (warenJson as { waren: WareJson[] }).waren;
@@ -130,7 +130,8 @@ export const PRIO_STANDARD = 2;
 /** Wartezeit, bis ein Arbeiter ohne Ziel (kein Baum, kein Fels, kein Platz) neu sucht. */
 export const SUCHE_WARTE = 2 * TICK_HZ;
 
-export type Funktion = 'lager' | 'wohnen' | 'holzfaeller' | 'foerster' | 'steinbruch' | 'erzeuger' | 'verarbeiter' | 'kirmes' | 'schaenke';
+export type Funktion = 'lager' | 'wohnen' | 'holzfaeller' | 'foerster' | 'steinbruch' | 'erzeuger' | 'verarbeiter' | 'kirmes' | 'schaenke'
+  | 'finder' | 'wache' | 'schuetzen' | 'zier';
 
 export interface GebaeudeTyp {
   id: string; name: string; gruppe: string; symbol: string; spruch: string;
@@ -174,6 +175,8 @@ export interface GebaeudeTyp {
   werkzeug: number;
   /** Schänke: höchstens so viele Boten zugleich. */
   boten: number;
+  /** Satz fürs Gebäudefenster (data/buildings.json: leistung) oder ''. */
+  leistung: string;
 }
 
 const ticks = (s: number | undefined) => Math.round((s ?? 0) * TICK_HZ);
@@ -222,6 +225,7 @@ function baue(j: GebaeudeJson): GebaeudeTyp {
     feld: j.saison === 'feld',
     werkzeug: j.werkzeug ?? 0,
     boten: j.boten ?? 0,
+    leistung: j.leistung ?? '',
   };
 }
 
