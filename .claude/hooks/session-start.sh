@@ -5,7 +5,9 @@ set -euo pipefail
 [ "${CLAUDE_CODE_REMOTE:-}" = "true" ] || exit 0
 cd "${CLAUDE_PROJECT_DIR:-$(dirname "$0")/../..}"
 [ -d node_modules ] || npm ci --no-audit --no-fund
-# Weltdaten (welt-daten/ ist nicht in Git): Nideggen für den Smoke-Test, Nordeifel für die Vorschläge; das zuletzt geladene ist „aktuell“
+# Weltdaten (welt-daten/ ist nicht in Git): die ganze Eifel, sobald es das Release gibt; sonst Nordeifel und Nideggen.
+# Das zuletzt geladene ist „aktuell“.
+if ls welt-daten/eifel-*-eifel/manifest.json >/dev/null 2>&1 || tools/welt-laden.sh eifel 2>/dev/null; then exit 0; fi
 for g in nordeifel nideggen; do
   ls welt-daten/*-"$g"/manifest.json >/dev/null 2>&1 || tools/welt-laden.sh "$g" || echo "Weltdaten $g nicht geladen (Release fehlt?)"
 done
