@@ -10,7 +10,7 @@ import type { HexGrid } from '../map/hex';
 import { PROMILLE, type Id, type SichtArbeiter, type SimSicht } from '../sim/typen';
 import { paint } from './mockup';
 import { Instanzen } from './instanzen';
-import { TRAEGER_H, fernFaktor } from './massstab';
+import { TRAEGER_H, WARE_TRAGEN, fernFaktor } from './massstab';
 import { WAREN_ANZAHL, warenGeometrie } from './waren';
 import { figur, material } from './traeger';
 
@@ -202,8 +202,8 @@ export class Arbeiter {
     }
     if (traegt && a.ware >= 0 && a.ware < WAREN_ANZAHL) {
       const wip = Math.abs(Math.sin(st.phase)) * 0.05 * sk;
-      s.set(k, k, k);
-      mw.compose(p.set(x, y + 1.18 * sk + wip, z), q, s);
+      s.set(k * WARE_TRAGEN, k * WARE_TRAGEN, k * WARE_TRAGEN);
+      mw.compose(p.set(x, y + 1.24 * sk + wip, z), q, s);
       this.waren[a.ware].fuege(mw);
     }
   }

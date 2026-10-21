@@ -10,6 +10,7 @@
 //   Lesesteine = kleiner flacher Steinhaufen. Zahl und Größe schrumpfen stufenweise mit der Restmenge, bei 0 ist alles weg.
 // Es wird nur neu gerechnet, wenn natur.rev steigt, und nur für Hexe, die sich gegenüber der vorigen Kopie geändert haben.
 import * as THREE from 'three';
+import { mitSchnee } from './kulisse';
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { MapData } from '../map/mapdata';
 import type { HexGrid } from '../map/hex';
@@ -47,10 +48,12 @@ function felsGeometrie(variante: number): THREE.BufferGeometry {
   g.computeVertexNormals();
   const nor = g.attributes.normal;
   const col = new Float32Array(pos.count * 3);
-  const c = new THREE.Color(), unten = new THREE.Color('#8f806e'), oben = new THREE.Color('#d6c6a8');
+  // Eifeler Bruchstein: warmes Grau (STIL.md #a39a8c), oben Moos
+  const c = new THREE.Color(), unten = new THREE.Color('#6f665a'), oben = new THREE.Color('#aa9f8c'), moos = new THREE.Color('#6d8a3e');
   for (let i = 0; i < pos.count; i++) {
     const hell = 0.5 + 0.5 * nor.getY(i);
-    c.copy(unten).lerp(oben, hell).multiplyScalar(0.94 + hash(i, 9 + variante) * 0.12);
+    c.copy(unten).lerp(oben, hell).multiplyScalar(0.92 + hash(i, 9 + variante) * 0.16);
+    if (nor.getY(i) > 0.72 && hash(i, 3 + variante) < 0.55) c.lerp(moos, 0.65);
     col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
   }
   g.setAttribute('color', new THREE.BufferAttribute(col, 3));
@@ -116,7 +119,7 @@ export class Natur {
     for (let dr = -feld.n; dr <= feld.n; dr++) {
       for (let dq = Math.max(-feld.n, -dr - feld.n); dq <= Math.min(feld.n, -dr + feld.n); dq++) { this.qs[i] = feld.q + dq; this.rs[i] = feld.r + dr; i++; }
     }
-    const fels = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 });
+    const fels = mitSchnee(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }));
     for (let v = 0; v < 2; v++) this.felsSaetze.push(new Instanzen(this.group, felsGeometrie(v), fels, true, true, [], 256));
     if (trees) {
       for (const sp of ['fichte', 'buche'] as const) this.baumSaetze.push(new Instanzen(this.group, trees.geos[sp][0], trees.material, true, true, [], 64));

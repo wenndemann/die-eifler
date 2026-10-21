@@ -8,9 +8,9 @@ import * as THREE from 'three';
 /** Stilwerte (STIL.md): Linienfarbe, Linienstärke in Pixeln, Empfindlichkeit, Sättigung, Wärme. */
 export const BUCH = {
   linie: new THREE.Color('#5a3622'),
-  dicke: 0.9,
+  dicke: 1.1,
   schwelle: 0.014,
-  deckkraft: 0.72,
+  deckkraft: 0.85,
   saettigung: 1.28,
   waerme: 0.035,
 };
@@ -46,7 +46,7 @@ void main() {
   float obj = max(max(max(c.a, texture2D(tFarbe, vUv + vec2(o.x, 0.0)).a), max(texture2D(tFarbe, vUv - vec2(o.x, 0.0)).a, texture2D(tFarbe, vUv + vec2(0.0, o.y)).a)), texture2D(tFarbe, vUv - vec2(0.0, o.y)).a);
   kante *= step(0.5, obj);
   // zur Ferne hin zarter (Übersicht wie gemalt, nicht wie ein Ausmalbild)
-  kante *= 1.0 - 0.75 * smoothstep(500.0, 2600.0, d);
+  kante *= 1.0 - 0.6 * smoothstep(900.0, 3200.0, d);
   vec3 f = c.rgb;
   // Kraft und Wärme
   float l = dot(f, vec3(0.2126, 0.7152, 0.0722));

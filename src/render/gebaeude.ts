@@ -9,6 +9,7 @@
 // angelieferte Stapel samt Bauschild, am Kirmesplatz die gelieferte Warenliste; beim Fest dreht sich das Karussell, es gibt
 // Feuerwerk. Reiner Leser der SimSicht, ohne Simulation nutzbar.
 import * as THREE from 'three';
+import { mitSchnee } from './kulisse';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { MapData } from '../map/mapdata';
 import type { HexGrid } from '../map/hex';
@@ -694,7 +695,7 @@ function kleinkram(typ: string, t: Typ): THREE.BufferGeometry[] {
   return out.map((g) => g.translate(-vx, 0, -vz).scale(KLEINKRAM, KLEINKRAM, KLEINKRAM).translate(vx, 0, vz));
 }
 /** Kleinkram-Vergrößerung (STIL.md §6). */
-const KLEINKRAM = 1.35;
+const KLEINKRAM = 1.6;
 
 /** Unbekannte Typen zeigen das Wohnhaus. */
 function modellTyp(typ: string): string {
@@ -888,6 +889,17 @@ interface Planung { idx: Int32Array; alt: Float32Array; ziel: Float32Array; erde
 
 interface Platz { x: number; z: number; y: number; hex: string; plan: Planung }
 
+/** Runder, weicher Funke für das Feuerwerk (ohne Textur zeichnet WebGL eckige Punkte). */
+function funkeTextur(): THREE.Texture {
+  const c = document.createElement('canvas'); c.width = c.height = 32;
+  const g = c.getContext('2d')!;
+  const v = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+  v.addColorStop(0, 'rgba(255,255,255,1)'); v.addColorStop(0.45, 'rgba(255,255,255,0.85)'); v.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = v; g.fillRect(0, 0, 32, 32);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 export class Gebaeude {
   readonly group = new THREE.Group();
   /** Wenn gesetzt: Warnzeichen wachsen mit dem Kameraabstand. */
@@ -897,7 +909,7 @@ export class Gebaeude {
   /** Zeichen und Zustandsschilder über den Gebäuden zeigen (die Bildstrecke blendet sie aus). */
   hinweise = true;
   private saetze = new Map<string, Instanzen>();
-  private mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, flatShading: false, side: THREE.DoubleSide });
+  private mat = mitSchnee(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, flatShading: false, side: THREE.DoubleSide }));
   private plaetze = new Map<Id, Platz>();
   private warn = new Map<Id, { sp: THREE.Sprite; art: string }>();
   private symbolMat = new Map<string, THREE.SpriteMaterial>();
@@ -929,7 +941,7 @@ export class Gebaeude {
     fw.setAttribute('position', new THREE.BufferAttribute(new Float32Array(FUNKEN_MAX * 3), 3));
     fw.setAttribute('color', new THREE.BufferAttribute(new Float32Array(FUNKEN_MAX * 3), 3));
     fw.setDrawRange(0, 0);
-    this.feuerwerk = new THREE.Points(fw, new THREE.PointsMaterial({ size: 9, vertexColors: true, transparent: true, depthWrite: false, fog: false }));
+    this.feuerwerk = new THREE.Points(fw, new THREE.PointsMaterial({ size: 9, map: funkeTextur(), alphaTest: 0.05, vertexColors: true, transparent: true, depthWrite: false, fog: false }));
     this.feuerwerk.frustumCulled = false;
     this.group.add(this.feuerwerk);
   }

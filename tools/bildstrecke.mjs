@@ -94,9 +94,9 @@ try {
   const bild = async (name) => { await page.screenshot({ path: join(AUS, name), timeout: 180000 }); console.log(name); };
   await zu(info.L, 1500, 48, 120); await bild('01-uebersicht.png');
   await zu(info.L, 650, 40, 60); await bild('02-dorf.png');
-  await page.addStyleTag({ content: 'body.nah .spielstatus, body.nah .minimap, body.nah #minimap { visibility: hidden; }' });
+  await page.addStyleTag({ content: 'body.nah .spielstatus, body.nah .minimap, body.nah #minimap, body.nah .partieleiste { visibility: hidden; }' });
   await page.evaluate(() => document.body.classList.add('nah'));
-  await zu(info.wh ?? info.L, 190, 42, 12); await bild('03-gebaeude-nah.png');
+  await zu(info.wh ?? info.L, 240, 42, -30); await bild('03-gebaeude-nah.png');
   // Figuren nah: der erste Träger mit Ware
   // Figuren nah: ein Träger mit Ware frontal (Kamera in seiner Laufrichtung vor ihm), dazu ein Bote nah dabei
   await page.evaluate(() => {

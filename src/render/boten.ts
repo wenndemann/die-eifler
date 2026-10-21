@@ -9,7 +9,7 @@ import type { HexGrid } from '../map/hex';
 import { PROMILLE, type Id, type SimSicht } from '../sim/typen';
 import { paint } from './mockup';
 import { Instanzen } from './instanzen';
-import { TRAEGER_H, fernFaktor } from './massstab';
+import { TRAEGER_H, WARE_TRAGEN, fernFaktor } from './massstab';
 import { figur, material } from './traeger';
 import { WAREN_ANZAHL, warenGeometrie } from './waren';
 
@@ -112,8 +112,8 @@ export class Boten {
       m.compose(p.set(x, y, z), q, s);
       this.figuren.fuege(m, this.farbe, [st.phase, b.ware >= 0 ? 1 : 0, geht ? 1.2 : 0.2]);
       if (b.ware >= 0 && b.ware < WAREN_ANZAHL) {
-        s.set(k, k, k);
-        m.compose(p.set(x, y + 1.18 * sk, z), q, s);
+        s.set(k * WARE_TRAGEN, k * WARE_TRAGEN, k * WARE_TRAGEN);
+        m.compose(p.set(x, y + 1.24 * sk, z), q, s);
         this.waren[b.ware].fuege(m);
       }
       // Hicks-Bläschen steigen über dem Kopf auf

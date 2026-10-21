@@ -43,7 +43,7 @@ export class Stage {
     this.sun.shadow.bias = -0.0004;
     this.sun.shadow.normalBias = 1.5;
     // Stil: Schatten hell und farbig, nie schwarz
-    this.sun.shadow.intensity = 0.62;
+    this.sun.shadow.intensity = 0.45;
     this.scene.add(this.sun, this.sun.target);
     // Himmel kühl, Boden warm: weiche, farbige Schatten wie gemalt; Gegenlicht für runde Formen
     this.scene.add(new THREE.HemisphereLight('#cfe3f2', '#8a7350', 0.95));

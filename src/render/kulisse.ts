@@ -13,7 +13,10 @@ export const kulisseUniforms = {
 };
 
 /** Schneedecke setzen (0..1), wirkt auf Gelände und Wald. */
-export function setzeSchnee(anteil: number) { kulisseUniforms.uSchnee.value = Math.max(0, Math.min(1, anteil)); }
+export function setzeSchnee(anteil: number) {
+  kulisseUniforms.uSchnee.value = Math.max(0, Math.min(1, anteil));
+  if (typeof document !== 'undefined') document.body.classList.toggle('schnee', anteil > 0.5);   // Minikarte im Winter weiß
+}
 
 export function setzeKulisse(originX: number, originZ: number, q: number, r: number, radius: number) {
   kulisseUniforms.uKOrigin.value.set(-originX, -originZ);
@@ -45,3 +48,24 @@ export const KULISSE_FOG = /* glsl */ `
 gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, vKFade);
 #endif
 `;
+
+/**
+ * Schnee auf Dächern, Felsen und Kleinkram (Drehbuch 7.4, STIL.md): nach oben zeigende Flächen werden mit uSchnee weiß.
+ * Hängt sich an ein vorhandenes onBeforeCompile an.
+ */
+export function mitSchnee<M extends THREE.Material>(mat: M, staerke = 0.6): M {
+  const vorher = mat.onBeforeCompile;
+  mat.onBeforeCompile = (shader, renderer) => {
+    vorher.call(mat, shader, renderer);
+    shader.uniforms.uSchnee = kulisseUniforms.uSchnee;
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform float uSchnee;')
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+{
+  vec3 obenV = normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
+  float auf = smoothstep(0.5, 0.9, dot(normal, obenV));
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.97, 0.96, 0.93), clamp(uSchnee * auf * ${staerke.toFixed(2)}, 0.0, 1.0));
+}`);
+  };
+  return mat;
+}

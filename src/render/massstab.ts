@@ -4,7 +4,7 @@
 /** Gebäude in etwa 3-facher echter Größe (Drehbuch 3): so sind sie aus der Spielansicht lesbar.
  *  Ein Hofhaus (14 × 9 m echt, also 42 × 27 m im Spiel) füllt ein 60-m-Hex (104 m breit) gut aus,
  *  daneben bleibt Platz für Nebengebäude und Wege. */
-export const HAUS_SKALE = 3.4;
+export const HAUS_SKALE = 4.4;   // M9: aus der Spielkamera klar größer als die Figuren (Gutachter)
 
 /** Bäume in rund 1,6-facher echter Größe (Geometrie ist in echten Metern gebaut): neben 3×-Häusern
  *  wirken sie nicht wie Gras, ein Wald bleibt trotzdem keine Mauer. */
@@ -31,12 +31,15 @@ export const FAHNE_H = 21;
 /** Breite eines Erdpfads in Metern (Mindestverkehr / Höchstverkehr). */
 export const WEG_BREITE: readonly [number, number] = [8, 14];
 /** Mit wachsendem Kameraabstand werden Figuren, Waren und Fahnen bis zu diesem Faktor größer (Lesbarkeit von weit weg). */
-export const FERN_MAX = 2.4;
+export const FERN_MAX = 2.3;
 /** Ab diesem Kameraabstand (m) beginnt die Vergrößerung; bei FERN_ENDE ist FERN_MAX erreicht. */
-export const FERN_START = 450, FERN_ENDE = 2200;
+export const FERN_START = 400, FERN_ENDE = 2000;
 
 /** Vergrößerungsfaktor für Figuren/Waren/Fahnen bei Kameraabstand d (m). */
 export function fernFaktor(d: number): number {
   const t = Math.min(1, Math.max(0, (d - FERN_START) / (FERN_ENDE - FERN_START)));
   return 1 + (FERN_MAX - 1) * t;
 }
+
+/** Getragene Waren größer als liegende (STIL.md §2): über dem Kopf aus der Spielkamera als Käselaib, Fass, Brett erkennbar. */
+export const WARE_TRAGEN = 1.45;

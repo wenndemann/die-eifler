@@ -21,13 +21,13 @@ const UNUSED_MS = 8000;                  // ungenutzte Netze nach dieser Zeit fr
 // Farben je Bedeckung (sRGB), Reihenfolge wie MapInfo.cover
 const COVER_COLORS = [
   '#5e5a40', // wasser (Grund)
-  '#93b85e', // wiese (STIL.md: warmes Wimmelbuch-Grün)
+  '#7dab4c', // wiese (STIL.md: sattes Wimmelbuch-Grün)
   '#c9b06a', // acker
   '#4a6a3a', // wald (Waldboden)
   '#a08a78', // heide
   '#9a9468', // moor
   '#9a9284', // fels
-  '#93b85e', // siedlung außerhalb der Kerne: wie Wiese
+  '#7dab4c', // siedlung außerhalb der Kerne: wie Wiese
 ];
 const KERN_COLOR = '#a3ac6a';            // Ortskern-Hex: Gärten, Höfe
 /** Einheitliche Felsfarbe: grau mit leichtem Rotstich (Buntsandstein der Rureifel, ohne Geologie-Daten überall gleich). */
@@ -182,7 +182,7 @@ export class Terrain {
       if (performance.now() - t0 > budgetMs) break;
       const m = new THREE.Mesh(this.buildGeometry(n), this.material);
       m.receiveShadow = true;
-      m.castShadow = true;
+      m.castShadow = false;   // M9: keine großen Hang-Schattenflecken (Relief kommt aus der Schattierung)
       m.visible = false;
       n.mesh = m;
       this.group.add(m);

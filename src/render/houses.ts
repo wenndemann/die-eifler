@@ -4,6 +4,7 @@
 // Jedes Haus steht auf einem planierten Sockel: das Gelände (map.ground, nur Darstellung) wird unter dem Grundriss
 // eingeebnet und weich ins Hang-Gelände übergeblendet. Keine Häuser auf Wasser-, Fluss- und Bahn-Hexen.
 import * as THREE from 'three';
+import { mitSchnee } from './kulisse';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { MapData } from '../map/mapdata';
 import { HexGrid } from '../map/hex';
@@ -146,7 +147,7 @@ export class Houses {
     for (const h of haeuser) this.planiere(h);
 
     // Instanzen je Bautyp
-    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, flatShading: true, side: THREE.DoubleSide });
+    const mat = mitSchnee(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, flatShading: true, side: THREE.DoubleSide }));
     TYPEN.forEach((ty, n) => {
       const liste = haeuser.filter((h) => h.typ === n);
       if (!liste.length) return;

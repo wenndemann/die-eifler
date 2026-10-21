@@ -10,7 +10,7 @@ feinen braunen Linie. Siedler 2 liefert die Lesbarkeit und den Maßstab, der Com
   Kegel und Baumkronen sind weich schattiert. Nur dünne Teile (Balken, Leisten, Stäbe) bleiben scharf.
 - **Leicht schief.** Jedes Gebäude neigt sich um bis zu 3 % (fest je Typ), Dachfirste und Fensterläden dürfen schief sitzen.
   Nie so schief, dass es kaputt aussieht.
-- **Übertrieben, aber lesbar.** Gebäude in etwa 3× echter Größe (Drehbuch 3), Dächer mit kräftigem Überstand, Schornsteine mit
+- **Übertrieben, aber lesbar.** Gebäude in gut 4× echter Größe (Drehbuch 3: „etwa 3×“, in M9 für die Spielkamera auf 4,4 angehoben), Dächer mit kräftigem Überstand, Schornsteine mit
   Rauchwölkchen. Was ein Gebäude tut, sieht man von außen (Fässer an der Brauerei, Käseregal an der Käserei).
 
 ## 2. Figuren
@@ -28,7 +28,7 @@ feinen braunen Linie. Siedler 2 liefert die Lesbarkeit und den Maßstab, der Com
 
   | Wofür | Farbe |
   |---|---|
-  | Wiese | `#93b85e` |
+  | Wiese | `#7dab4c` |
   | Acker | `#c9b06a` |
   | Waldboden | `#4a6a3a` |
   | Buche | `#6f9a48`, `#7aa652` |
@@ -37,7 +37,7 @@ feinen braunen Linie. Siedler 2 liefert die Lesbarkeit und den Maßstab, der Com
   | Fachwerkbalken | `#5a3a26` |
   | Ziegeldach | `#b0563e`, `#c96a52` |
   | Schieferdach | `#5f7090` |
-  | Sockel, Bruchstein | `#a39a8c` |
+  | Sockel, Bruchstein | `#a39a8c` (Felsen oben mit Moos `#6d8a3e`) |
   | Fensterläden | grün `#2f7a55`, blau `#3b5a78`, rot `#c8402e` |
   | Linie | `#4a2e1c` |
 
