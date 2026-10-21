@@ -307,6 +307,7 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 ## Danach (offen)
 
 - **Verbundene Regionen** im Mehrspieler: jeder spielt seinen eigenen Ausschnitt und schickt Händler und Finder hinüber (Drehbuch 2.3)
+- **Die Karte wächst in andere Gebiete** (Wunsch aus M11, „die Eifel erobern“), in Stufen: (1) Kampagne M13 wandert von Karte zu Karte, Völkchen, Punkte und ein Teil der Waren kommen mit; (2) im freien Spiel „umziehen“: am Kartenrand den Ausschnitt vergrößern, das Dorf bleibt (Spielstand auf größerer Karte); (3) echtes Wachsen während der Partie, auch im Mehrspieler (neues Speicherformat, Kacheln nachladen im Gleichschritt, Leistung) – eigener Meilenstein
 - Volle KI-Gegner, die selbst bauen (Drehbuch 6.2)
 - Desktop- oder Store-App (Drehbuch 8.2)
 
