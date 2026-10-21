@@ -109,6 +109,13 @@ export interface Welt {
   datei(pfad: string): string;
 }
 
+/** Alle Datenversionen (z. B. je Völkchen-Gebiet eine), die aktuelle zuerst. */
+export async function alleVersionen(base = WELT_URL): Promise<string[]> {
+  const v = await holeJson<Versionen>(`${base}/versions.json`, false);
+  const ids = (v.versionen ?? []).map((x) => x.id);
+  return [v.aktuell, ...ids.filter((id) => id !== v.aktuell)];
+}
+
 /** Lädt Manifest und Ortsverzeichnis einer Datenversion (Standard: aktuelle). */
 export async function ladeWelt(version?: string, base = WELT_URL): Promise<Welt> {
   if (!version) {

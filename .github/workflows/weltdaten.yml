@@ -1,15 +1,17 @@
 # Weltdaten auf GitHub rechnen und als Release ablegen (statt in jeder Session neu zu laden).
 # Start: im Tab „Actions“ → „Weltdaten“ → „Run workflow“ (Gebiet wählen), oder einen Branch weltdaten/<gebiet> pushen.
-# Ergebnis: Release „welt-daten-<gebiet>“ mit welt-daten-<gebiet>.tar.gz; laden mit tools/welt-laden.sh <gebiet>.
+# Gebiete: nideggen, nordeifel, eifelsteig (Kampagne) und die Kerngebiete der 10 Völkchen; „alle-voelkchen“ rechnet alle 10
+# nebeneinander (je ein Job, je ein Release).
+# Ergebnis: Release „welt-daten-<gebiet>“ mit welt-daten-<gebiet>.tar.gz; laden mit tools/welt-laden.sh <gebiet> (oder alle).
 name: Weltdaten
 
 on:
   workflow_dispatch:
     inputs:
       gebiet:
-        description: 'Gebiet (nideggen ~10 min, nordeifel ~1 h, eifelsteig (Kampagne) einige Stunden, welt viele Stunden)'
+        description: 'Gebiet (nideggen ~10 min, ein Völkchen ~1 h, nordeifel ~1 h, eifelsteig (Kampagne) einige Stunden; alle-voelkchen = alle 10 nebeneinander)'
         type: choice
-        options: [nideggen, nordeifel, eifelsteig]
+        options: [nideggen, nordeifel, eifelsteig, alle-voelkchen, monschau, rursee, rureifel, vulkaneifel, ahr, laach, suedeifel, schneifel, ostbelgien, oesling]
         default: nideggen
   push:
     branches: ['weltdaten/**']
@@ -18,17 +20,37 @@ permissions:
   contents: write
 
 jobs:
-  rechnen:
+  plan:
     runs-on: ubuntu-latest
-    timeout-minutes: 340
+    outputs:
+      gebiete: ${{ steps.g.outputs.gebiete }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Gebiet bestimmen
+      - name: Gebiete bestimmen
+        id: g
         run: |
           G="${{ inputs.gebiet }}"
           if [ -z "$G" ]; then G="${GITHUB_REF_NAME#weltdaten/}"; fi
-          case "$G" in nideggen|nordeifel|eifelsteig) ;; *) echo "Unbekanntes Gebiet: $G"; exit 1 ;; esac
-          echo "GEBIET=$G" >> "$GITHUB_ENV"
+          V='["monschau","rursee","rureifel","vulkaneifel","ahr","laach","suedeifel","schneifel","ostbelgien","oesling"]'
+          case "$G" in
+            alle-voelkchen) echo "gebiete=$V" >> "$GITHUB_OUTPUT" ;;
+            nideggen|nordeifel|eifelsteig|monschau|rursee|rureifel|vulkaneifel|ahr|laach|suedeifel|schneifel|ostbelgien|oesling)
+              echo "gebiete=[\"$G\"]" >> "$GITHUB_OUTPUT" ;;
+            *) echo "Unbekanntes Gebiet: $G"; exit 1 ;;
+          esac
+
+  rechnen:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        gebiet: ${{ fromJSON(needs.plan.outputs.gebiete) }}
+    env:
+      GEBIET: ${{ matrix.gebiet }}
+    steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'

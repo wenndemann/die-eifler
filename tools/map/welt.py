@@ -47,8 +47,54 @@ def _kampagnen_kacheln():
     return sorted(aus, key=lambda k: (k[1], k[0]))
 
 
+def _utm32(lon, lat):
+    """WGS84 -> EPSG:25832 (Ost, Nord) ohne pyproj (für die Gebietsgrenzen, auf Meter genau genug)."""
+    a, f, k0 = 6378137.0, 1 / 298.257223563, 0.9996
+    e2 = f * (2 - f)
+    ep2 = e2 / (1 - e2)
+    phi, lam = math.radians(lat), math.radians(lon)
+    n = a / math.sqrt(1 - e2 * math.sin(phi) ** 2)
+    t, c, aa = math.tan(phi) ** 2, ep2 * math.cos(phi) ** 2, math.cos(phi) * (lam - math.radians(9))
+    m = a * ((1 - e2 / 4 - 3 * e2 ** 2 / 64 - 5 * e2 ** 3 / 256) * phi - (3 * e2 / 8 + 3 * e2 ** 2 / 32 + 45 * e2 ** 3 / 1024) * math.sin(2 * phi)
+             + (15 * e2 ** 2 / 256 + 45 * e2 ** 3 / 1024) * math.sin(4 * phi) - (35 * e2 ** 3 / 3072) * math.sin(6 * phi))
+    ost = k0 * n * (aa + (1 - t + c) * aa ** 3 / 6 + (5 - 18 * t + t * t + 72 * c - 58 * ep2) * aa ** 5 / 120) + 500000
+    nord = k0 * (m + n * math.tan(phi) * (aa * aa / 2 + (5 - t + 9 * c + 4 * c * c) * aa ** 4 / 24 + (61 - 58 * t + t * t + 600 * c - 330 * ep2) * aa ** 6 / 720))
+    return ost, nord
+
+
+# Kerngebiete der 10 Völkchen (data/regions.json): Mitte (lon, lat) und Radius in km; die Kacheln decken den Kreis plus Kulisse ab.
+VOELKCHEN_GEBIETE = {
+    "monschau": (6.22, 50.58, 12),      # Monschau, Mützenich, Höfen, Kalterherberg, Konzen, Roetgen
+    "rursee": (6.42, 50.60, 12),        # Einruhr, Rurberg, Woffelsberg, Schwammenauel, Simonskall, Gemünd, Schleiden
+    "rureifel": (6.47, 50.70, 12),      # Nideggen, Heimbach, Abenden, Zerkall, Kreuzau, Obermaubach, Hürtgenwald
+    "vulkaneifel": (6.78, 50.17, 16),   # Gerolstein, Daun, Hillesheim, Manderscheid, Ulmen, Gillenfeld, Strohn
+    "ahr": (7.00, 50.50, 14),           # Altenahr, Mayschoß, Rech, Dernau, Ahrweiler, Bad Neuenahr, Adenau, Ahrbrück
+    "laach": (7.25, 50.38, 12),         # Maria Laach, Mayen, Mendig, Kruft, Andernach, Nickenich, Ettringen
+    "suedeifel": (6.45, 49.92, 16),     # Bitburg, Neuerburg, Irrel, Echternacherbrück, Kyllburg, Speicher
+    "schneifel": (6.38, 50.22, 14),     # Prüm, Bleialf, Schönecken, Olzheim, Habscheid, Büdesheim, Auw
+    "ostbelgien": (6.10, 50.45, 20),    # Eupen, St. Vith, Büllingen, Bütgenbach, Raeren, Kelmis, Weismes, Sourbrodt
+    "oesling": (6.00, 49.98, 16),       # Wiltz, Clervaux, Vianden, Troisvierges, Hosingen, Bastendorf, Esch-sur-Sûre
+}
+
+
+def _kreis_kacheln(lon, lat, km):
+    """Kacheln, die einen Kreis (Radius km plus 3 km Kulisse) um lon/lat berühren, in der Welt."""
+    ost, nord = _utm32(lon, lat)
+    x, z, rad = ost - E0, N0 - nord, (km + 3) * 1000
+    aus = []
+    for tz in range(max(0, int((z - rad) // KACHEL)), min(NTZ - 1, int((z + rad) // KACHEL)) + 1):
+        for tx in range(max(0, int((x - rad) // KACHEL)), min(NTX - 1, int((x + rad) // KACHEL)) + 1):
+            # nächster Punkt der Kachel zum Mittelpunkt innerhalb des Radius
+            nx = min(max(x, tx * KACHEL), (tx + 1) * KACHEL)
+            nz = min(max(z, tz * KACHEL), (tz + 1) * KACHEL)
+            if (nx - x) ** 2 + (nz - z) ** 2 <= rad * rad:
+                aus.append((tx, tz))
+    return sorted(aus, key=lambda k: (k[1], k[0]))
+
+
 GEBIETE = {
     "welt": [(tx, tz) for tz in range(NTZ) for tx in range(NTX)],
+    **{name: _kreis_kacheln(*v) for name, v in VOELKCHEN_GEBIETE.items()},
     "eifelsteig": _kampagnen_kacheln(),
     "nordeifel": [(tx, tz) for tz in range(0, 8) for tx in range(5, 11)],
     "nideggen": [(tx, tz) for tz in range(3, 6) for tx in range(8, 11)],

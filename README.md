@@ -21,10 +21,13 @@ Voraussetzungen: Node.js ≥ 20, Python ≥ 3.10, Internet (die Geodaten werden 
 
 **Schneller:** fertig gerechnete Weltdaten aus dem GitHub-Release laden, statt sie selbst zu rechnen:
 
-    tools/welt-laden.sh nideggen            # oder nordeifel
+    tools/welt-laden.sh nideggen            # oder nordeifel, eifelsteig, ein Völkchen-Gebiet – oder: alle
 
 Die Releases rechnet der Workflow „Weltdaten“ (`.github/workflows/weltdaten.yml`) auf GitHub: im Tab „Actions“
-starten oder einen Branch `weltdaten/<gebiet>` pushen.
+starten oder einen Branch `weltdaten/<gebiet>` pushen. Gebiete: `nideggen`, `nordeifel`, `eifelsteig` (Kampagne) und die
+**Kerngebiete der 10 Völkchen** (`monschau`, `rursee`, `rureifel`, `vulkaneifel`, `ahr`, `laach`, `suedeifel`, `schneifel`,
+`ostbelgien`, `oesling`, je etwa 1 Stunde); `alle-voelkchen` rechnet alle 10 nebeneinander, je ein Release. Jedes Gebiet ist eine
+eigene Datenversion; die Kampagne sucht sich für jede Etappe eine passende, die Kartenwahl zeigt die aktuelle (zuletzt geladene).
 
 `npm run setup` ruft `tools/map/setup.py` auf und legt eine Datenversion unter `welt-daten/` ab (nicht in Git).
 Ohne `--gebiet` wird die **ganze Welt** gerechnet (Aachen – Trier – Maria Laach, mit Ostbelgien und

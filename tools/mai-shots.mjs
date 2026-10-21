@@ -56,7 +56,7 @@ try {
       let best = null;
       for (let d = 2; d <= 8 && !best; d++) for (let dq = -d; dq <= d && !best; dq++) for (let dr = -d; dr <= d && !best; dr++) {
         const c = { q: L.q + dq, r: L.r + dr };
-        if (dist(c, L) === d && sim.kannBauen(typ, c.q, c.r)) {
+        if (dist(c, L) === d && sim.kannBauen(typ === 'junggesellen' ? 'wohnhaus' : typ, c.q, c.r)) {
           const fs = sp.sicht.fahnen.slice().sort((a, b) => dist(a, c) - dist(b, c)).slice(0, 6);
           const von = fs.find((f) => sim.wegVorschau(f, c));
           if (von) best = { c, von };
@@ -96,7 +96,7 @@ try {
   await zu(info.kp.q, info.kp.r, 700, 45, 80); await bild('mai-2-uebersicht-nacht.png');
   await page.evaluate((id) => window.eifeler.spiel.oeffneGebaeude(id), info.ids.junggesellen);
   await page.waitForTimeout(1500); await bild('mai-3-verein-fenster.png');
-  await page.keyboard.press('Escape');
+  await page.evaluate((id) => window.eifeler.spiel.fenster.schliesse(`geb:${id}`), info.ids.junggesellen);
   // Wache weg, Bier an; eigene Maijungen klauen im Nachbarort
   await page.evaluate((ort) => { const sp = window.eifeler.spiel; sp.befehl({ art: 'mai', was: 'wache', n: 0 }); sp.befehl({ art: 'mai', was: 'bier', an: true }); sp.befehl({ art: 'mai', was: 'klau', ziel: -1 - ort, n: 4 }); sp.schritte(4); }, info.ort);
   const warte = async (fn, max = 400) => { for (let i = 0; i < max; i++) { const t = await page.evaluate(fn); if (t) return t; await page.evaluate(() => window.eifeler.spiel.schritte(15)); } return null; };

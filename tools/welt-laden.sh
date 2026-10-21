@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
 # Fertige Weltdaten aus dem GitHub-Release laden (gerechnet von .github/workflows/weltdaten.yml), statt sie mit
-# npm run setup neu zu rechnen. Aufruf: tools/welt-laden.sh [nideggen|nordeifel|eifelsteig]  (Standard nideggen)
+# npm run setup neu zu rechnen. Aufruf: tools/welt-laden.sh [gebiet …|alle]  (Standard nideggen)
+# Gebiete: nideggen, nordeifel, eifelsteig und die Kerngebiete der Völkchen (monschau, rursee, rureifel, vulkaneifel, ahr, laach,
+# suedeifel, schneifel, ostbelgien, oesling). „alle“ lädt jedes, das als Release da ist, und überspringt die anderen.
 set -euo pipefail
+if [ "${1:-}" = "alle" ]; then
+  for g in nideggen nordeifel eifelsteig monschau rursee rureifel vulkaneifel ahr laach suedeifel schneifel ostbelgien oesling; do
+    "$0" "$g" || echo "($g: kein Release, übersprungen)"
+  done
+  exit 0
+fi
+if [ "$#" -gt 1 ]; then for g in "$@"; do "$0" "$g"; done; exit 0; fi
 GEBIET="${1:-nideggen}"
 REPO="${WELT_REPO:-wenndemann/die-eifler}"
 WURZEL="$(cd "$(dirname "$0")/.." && pwd)"

@@ -17,25 +17,25 @@ const BAENDER = ['#d23a3a', '#2f6db5', '#f2c230', '#3c9a46', '#f4ead8', '#c8402e
 export function maibaumGeometrie(): THREE.BufferGeometry {
   const teile: THREE.BufferGeometry[] = [];
   // Birkenstamm: weiß mit dunklen Flecken
-  teile.push(paint(new THREE.CylinderGeometry(0.018, 0.028, 0.86, 8).translate(0, 0.43, 0), '#f1eee6'));
+  teile.push(paint(new THREE.CylinderGeometry(0.03, 0.045, 0.86, 9).translate(0, 0.43, 0), '#f1eee6'));
   for (let i = 0; i < 9; i++) {
     const y = 0.08 + i * 0.085, a = i * 2.1;
-    teile.push(paint(new THREE.BoxGeometry(0.018, 0.012, 0.004).translate(Math.cos(a) * 0.024, y, Math.sin(a) * 0.024).lookAt(new THREE.Vector3(0, y, 0)), '#2b2b2b'));
+    teile.push(paint(new THREE.BoxGeometry(0.03, 0.016, 0.006).translate(Math.cos(a) * 0.038, y, Math.sin(a) * 0.038).lookAt(new THREE.Vector3(0, y, 0)), '#2b2b2b'));
   }
   // grüne Krone (Birkenspitze) oben
-  for (const [x, y, z, r] of [[0, 0.93, 0, 0.07], [0.04, 0.88, 0.02, 0.055], [-0.04, 0.89, -0.02, 0.05], [0.01, 0.98, -0.03, 0.045]]) {
+  for (const [x, y, z, r] of [[0, 0.93, 0, 0.1], [0.06, 0.87, 0.03, 0.08], [-0.06, 0.88, -0.03, 0.075], [0.01, 1.0, -0.04, 0.065]]) {
     teile.push(paint(new THREE.SphereGeometry(r, 7, 5).scale(0.8, 1.2, 0.8).translate(x, y, z), '#5fae4a'));
   }
   // Kranz mit Bändern unter der Krone
-  teile.push(paint(new THREE.TorusGeometry(0.09, 0.016, 5, 14).rotateX(Math.PI / 2).translate(0, 0.76, 0), '#3f8a3a'));
+  teile.push(paint(new THREE.TorusGeometry(0.14, 0.026, 6, 16).rotateX(Math.PI / 2).translate(0, 0.74, 0), '#3f8a3a'));
   for (let i = 0; i < 10; i++) {
-    const a = (i / 10) * Math.PI * 2, x = Math.cos(a) * 0.09, z = Math.sin(a) * 0.09;
-    teile.push(paint(new THREE.BoxGeometry(0.012, 0.22, 0.004).rotateY(-a).rotateZ(Math.cos(a) * 0.12).translate(x * 1.15, 0.65, z * 1.15), BAENDER[i % BAENDER.length]));
+    const a = (i / 10) * Math.PI * 2, x = Math.cos(a) * 0.14, z = Math.sin(a) * 0.14;
+    teile.push(paint(new THREE.BoxGeometry(0.022, 0.3, 0.006).rotateY(-a).rotateZ(Math.cos(a) * 0.15).translate(x * 1.12, 0.6, z * 1.12), BAENDER[i % BAENDER.length]));
   }
   // Herz-Schild am Stamm (der Verein ist stolz)
-  teile.push(paint(new THREE.BoxGeometry(0.07, 0.05, 0.006).translate(0, 0.3, 0.03), '#c8402e'));
+  teile.push(paint(new THREE.BoxGeometry(0.1, 0.07, 0.008).translate(0, 0.3, 0.046), '#c8402e'));
   // Sockel aus Brettern
-  teile.push(paint(new THREE.CylinderGeometry(0.06, 0.07, 0.03, 8).translate(0, 0.015, 0), '#8a6038'));
+  teile.push(paint(new THREE.CylinderGeometry(0.09, 0.1, 0.035, 8).translate(0, 0.017, 0), '#8a6038'));
   return mergeGeometries(teile)!;
 }
 
@@ -50,7 +50,7 @@ function getragenerBaum(): THREE.BufferGeometry {
 }
 
 /** Höhe des Maibaums in Metern (deutlich über die Häuser, damit man ihn aus der Übersicht sieht). */
-const BAUM_H = HAUS_SKALE * 14;
+const BAUM_H = HAUS_SKALE * 17;
 const MAIGRUEN = new THREE.Color('#3c8a3a');
 const BURSCHEN = new THREE.Color('#7a5a3a');
 
@@ -84,7 +84,8 @@ export class MaiDarstellung {
     const g = s.gebaeude.find((x) => x.sp === sp && x.typ === 'kirmesplatz' && x.bau >= PROMILLE) ?? s.gebaeude.find((x) => x.sp === sp && x.typ === 'lager');
     if (!g) return null;
     const w = this.grid.toWorld(g);
-    return { x: w.x + 26, z: w.z - 18 };
+    // frei neben dem Platz, nicht im Karussell
+    return { x: w.x + 46, z: w.z - 34 };
   }
 
   update(s: SimSicht, alpha = 0, dt = 0): void {

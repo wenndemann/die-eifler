@@ -15,9 +15,9 @@ import nachbarn from '../../data/nachbarn.json';
 const STAEDTE: { name: string; q: number; r: number }[] = nachbarn.flachland.staedte;
 import { WELT } from '../welt/format';
 import { ausschnittMoeglich } from '../welt/ausschnitt';
-import { holeBildUrl, type Welt } from '../welt/laden';
+import { alleVersionen, holeBildUrl, ladeWelt, type Welt } from '../welt/laden';
 
-export type KampagnenWahl = { art: 'etappe'; stand: KampagnenStand; index: number } | { art: 'zurueck' };
+export type KampagnenWahl = { art: 'etappe'; stand: KampagnenStand; index: number; version: string } | { art: 'zurueck' };
 
 export function ladeKampagne(): KampagnenStand | null {
   try { return leseKampagne(localStorage.getItem(KAMPAGNE_SPEICHER)); } catch { return null; }
@@ -29,6 +29,11 @@ export function speichereKampagne(k: KampagnenStand | null): void {
 /** Kann die Etappe mit den geladenen Weltdaten gespielt werden? */
 export function etappeSpielbar(welt: Welt, e: Etappe): boolean {
   return ausschnittMoeglich(welt.manifest, e.q, e.r, e.groesse);
+}
+
+/** Erste Datenversion, in der die Etappe ganz liegt (Weltdaten je Gebiet), sonst null. */
+export function versionFuer(welten: readonly Welt[], e: Etappe): Welt | null {
+  return welten.find((w) => etappeSpielbar(w, e)) ?? null;
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''): HTMLElementTagNameMap[K] {
@@ -45,7 +50,7 @@ function svg<K extends keyof SVGElementTagNameMap>(tag: K, attr: Record<string, 
 }
 
 /** Eifel-Karte mit Weg (gestrichelt), gewandertem Stück (kräftig) und Etappenpunkten. */
-function karte(welt: Welt, weg: Weg, k: KampagnenStand | null, aktiv: number, waehle: (i: number) => void): SVGSVGElement {
+function karte(welt: Welt, welten: readonly Welt[], weg: Weg, k: KampagnenStand | null, aktiv: number, waehle: (i: number) => void): SVGSVGElement {
   const et = etappenVon(weg);
   const pts = [et[0].start, ...et.map((e) => e.ziel)].map((h) => hexToWorld(h.q, h.r));
   const xs = pts.map((p) => p.x), zs = pts.map((p) => p.z);
@@ -58,7 +63,7 @@ function karte(welt: Welt, weg: Weg, k: KampagnenStand | null, aktiv: number, wa
   void holeBildUrl(welt.datei('uebersicht/relief.webp')).then((u) => bild.setAttribute('href', u)).catch(() => undefined);
   s.append(bild);
   // Kacheln mit Weltdaten leicht hell, damit man sieht, wo schon gespielt werden kann
-  for (const [tx, tz] of welt.manifest.kacheln) s.append(svg('rect', { x: tx * welt.manifest.tile, y: tz * welt.manifest.tile, width: welt.manifest.tile, height: welt.manifest.tile, fill: '#fff6d8', opacity: 0.25 }));
+  for (const w of welten) for (const [tx, tz] of w.manifest.kacheln) s.append(svg('rect', { x: tx * welt.manifest.tile, y: tz * welt.manifest.tile, width: welt.manifest.tile, height: welt.manifest.tile, fill: '#fff6d8', opacity: 0.25 }));
   // Flachland-Städte zur Orientierung (data/nachbarn.json)
   const rs = (x1 - x0) / 90;
   for (const st of STAEDTE) {
@@ -99,6 +104,13 @@ export function zeigeKampagne(root: HTMLElement, welt: Welt): Promise<KampagnenW
     let gewaehlt = stand ? Math.max(0, naechsteEtappe(stand)) : 0;
     let wegId = stand?.weg ?? WEGE[0].id;
     const ende = (w: KampagnenWahl) => { hinter.remove(); fertig(w); };
+    // weitere Datenversionen (je Gebiet eine) nachladen: eine Etappe ist spielbar, wenn irgendeine sie ganz enthält
+    let welten: Welt[] = [welt];
+    void alleVersionen(welt.base).then(async (ids) => {
+      const mehr = await Promise.all(ids.filter((id) => id !== welt.version).map((id) => ladeWelt(id, welt.base).catch(() => null)));
+      welten = [welt, ...mehr.filter((w): w is Welt => !!w)];
+      if (hinter.isConnected) zeichne();
+    }).catch(() => undefined);
 
     const zeichne = () => {
       box.replaceChildren();
@@ -109,7 +121,7 @@ export function zeigeKampagne(root: HTMLElement, welt: Welt): Promise<KampagnenW
       box.append(kopf);
       const inhalt = el('div', 'kp-inhalt');
       box.append(inhalt);
-      inhalt.append(karte(welt, weg, stand, gewaehlt, (i) => { gewaehlt = i; zeichne(); }));
+      inhalt.append(karte(welt, welten, weg, stand, gewaehlt, (i) => { gewaehlt = i; zeichne(); }));
       const rechts = el('div', 'kp-rechts');
       inhalt.append(rechts);
 
@@ -175,13 +187,13 @@ export function zeigeKampagne(root: HTMLElement, welt: Welt): Promise<KampagnenW
         const zl = el('ul', 'kp-ziele');
         for (const z of sel.ziele) zl.append(el('li', '', zielText(z)));
         det.append(el('h3', '', 'Ziele'), zl);
-        const spielbar = etappeSpielbar(welt, sel), offen = etappeOffen(k, gewaehlt);
-        if (!spielbar) det.append(el('p', 'kp-hinweis', `Für diese Etappe fehlen die Kartendaten in dieser Version (${welt.manifest.gebiet}). Gebiet „eifelsteig“ rechnen und laden: Actions → Weltdaten, dann tools/welt-laden.sh eifelsteig.`));
+        const passend = versionFuer(welten, sel), spielbar = !!passend, offen = etappeOffen(k, gewaehlt);
+        if (!spielbar) det.append(el('p', 'kp-hinweis', `Für diese Etappe fehlen die Kartendaten (geladen: ${welten.map((w) => w.manifest.gebiet).join(', ')}). Gebiet „eifelsteig“ rechnen und laden: Actions → Weltdaten, dann tools/welt-laden.sh eifelsteig.`));
         else if (!offen) det.append(el('p', 'kp-hinweis', 'Erst die Etappen davor schaffen.'));
         const start = el('button', 'sm-knopf sm-frei kp-start', k.geschafft.includes(gewaehlt) ? '↻ Nochmal wandern' : '🥾 Etappe starten');
         start.type = 'button';
         start.disabled = !spielbar || !offen;
-        start.onclick = () => ende({ art: 'etappe', stand: k, index: gewaehlt });
+        start.onclick = () => { if (passend) ende({ art: 'etappe', stand: k, index: gewaehlt, version: passend.version }); };
         det.append(start);
         if (naechsteEtappe(k) < 0) det.append(el('p', 'kp-fertig', `Geschafft! ${weg.name} ist gewandert – ${kampagnenPunkte(k)} Eifel-Punkte.`));
         rechts.append(det);

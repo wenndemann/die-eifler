@@ -124,7 +124,7 @@ async function main() {
         if (k.art === 'zurueck') continue;
         kampagne = { stand: k.stand, index: k.index };
         const e = etappenVon(wegVon(k.stand.weg)!)[k.index];
-        param = { version: welt.version, q: e.q, r: e.r, size: e.groesse };
+        param = { version: k.version, q: e.q, r: e.r, size: e.groesse };
         break;
       }
       if (start.art === 'weiter') wahl = { art: 'laden', spielstand: start.spielstand };

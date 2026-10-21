@@ -24,10 +24,17 @@ import util  # noqa: E402
 ROOT = os.path.dirname(os.path.dirname(HERE))
 
 
+def welt_gebiete():
+    """Namen der Gebiete aus welt.py (ohne die schweren Pakete zu laden)."""
+    import welt
+    return list(welt.GEBIETE)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--gebiet", default="welt", choices=["welt", "nordeifel", "nideggen", "eifelsteig"],
-                    help="welt = alle 21×23 Kacheln, nordeifel = tx 5..10/tz 0..7, nideggen = tx 8..10/tz 3..5")
+    ap.add_argument("--gebiet", default="welt", choices=sorted(welt_gebiete()),
+                    help="welt = alle 21×23 Kacheln, nordeifel = tx 5..10/tz 0..7, nideggen = tx 8..10/tz 3..5, eifelsteig = Kampagne, "
+                         "dazu die Kerngebiete der 10 Völkchen (monschau, rursee, rureifel, vulkaneifel, ahr, laach, suedeifel, schneifel, ostbelgien, oesling)")
     ap.add_argument("--version", help="Versionsname (Standard eifel-JJJJ.MM, bei Teilgebiet mit -<gebiet>)")
     ap.add_argument("--daten", default=os.path.join(ROOT, "welt-daten"), help="Ausgabeordner (Standard welt-daten/)")
     ap.add_argument("--arbeit", default=os.path.join(HERE, "arbeit"), help="Arbeitsordner (Standard tools/map/arbeit/)")
