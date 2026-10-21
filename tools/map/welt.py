@@ -26,8 +26,30 @@ LAENDER = {"DE": 1, "BE": 2, "LU": 3, "NL": 4}
 # Startpunkte je Land (lon, lat) als Rückfall für die Landeszuordnung
 LAND_START = {1: (6.083, 50.776), 2: (6.036, 50.628), 3: (6.032, 50.054), 4: (5.69, 50.85)}
 
+def _kampagnen_kacheln():
+    """Kacheln aller Kampagnen-Etappen (data/kampagne.json): Spielfeld plus 2 km Kulisse je Etappe (ROADMAP M13)."""
+    import json
+    import os
+    pfad = os.path.join(os.path.dirname(__file__), "..", "..", "data", "kampagne.json")
+    groessen = {"klein": 45, "mittel": 60, "gross": 80}
+    aus = set()
+    with open(pfad, encoding="utf-8") as f:
+        daten = json.load(f)
+    for weg in daten["wege"]:
+        for ab in weg["abschnitte"]:
+            for e in ab["etappen"]:
+                x = HEX_W * (e["q"] + e["r"] / 2)
+                z = 1.5 * R * e["r"]
+                rad = (groessen[e["groesse"]] + 1) * HEX_W + 2000
+                for tz in range(max(0, int((z - rad) // KACHEL)), min(NTZ - 1, int((z + rad) // KACHEL)) + 1):
+                    for tx in range(max(0, int((x - rad) // KACHEL)), min(NTX - 1, int((x + rad) // KACHEL)) + 1):
+                        aus.add((tx, tz))
+    return sorted(aus, key=lambda k: (k[1], k[0]))
+
+
 GEBIETE = {
     "welt": [(tx, tz) for tz in range(NTZ) for tx in range(NTX)],
+    "eifelsteig": _kampagnen_kacheln(),
     "nordeifel": [(tx, tz) for tz in range(0, 8) for tx in range(5, 11)],
     "nideggen": [(tx, tz) for tz in range(3, 6) for tx in range(8, 11)],
 }

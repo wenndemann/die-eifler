@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Fertige Weltdaten aus dem GitHub-Release laden (gerechnet von .github/workflows/weltdaten.yml), statt sie mit
-# npm run setup neu zu rechnen. Aufruf: tools/welt-laden.sh [nideggen|nordeifel]  (Standard nideggen)
+# npm run setup neu zu rechnen. Aufruf: tools/welt-laden.sh [nideggen|nordeifel|eifelsteig]  (Standard nideggen)
 set -euo pipefail
 GEBIET="${1:-nideggen}"
 REPO="${WELT_REPO:-wenndemann/die-eifler}"

@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       gebiet:
-        description: 'Gebiet (nideggen ~10 min, nordeifel ~1 h, welt viele Stunden)'
+        description: 'Gebiet (nideggen ~10 min, nordeifel ~1 h, eifelsteig (Kampagne) einige Stunden, welt viele Stunden)'
         type: choice
-        options: [nideggen, nordeifel]
+        options: [nideggen, nordeifel, eifelsteig]
         default: nideggen
   push:
     branches: ['weltdaten/**']
@@ -27,7 +27,7 @@ jobs:
         run: |
           G="${{ inputs.gebiet }}"
           if [ -z "$G" ]; then G="${GITHUB_REF_NAME#weltdaten/}"; fi
-          case "$G" in nideggen|nordeifel) ;; *) echo "Unbekanntes Gebiet: $G"; exit 1 ;; esac
+          case "$G" in nideggen|nordeifel|eifelsteig) ;; *) echo "Unbekanntes Gebiet: $G"; exit 1 ;; esac
           echo "GEBIET=$G" >> "$GITHUB_ENV"
       - uses: actions/setup-python@v5
         with:

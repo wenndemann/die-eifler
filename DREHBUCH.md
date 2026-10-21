@@ -91,6 +91,7 @@ Die Einzelkampagne folgt dem echten **Eifelsteig**: 15 Etappen, rund 313 km, von
 - **Weitere Wege** als Zusatzkampagnen. Die Rureifel mit Düren liegt nicht am Eifelsteig, sie wird ein eigener Weg entlang der Rur.
 - Zwischen den Etappen: Eifel-Übersichtskarte mit dem gewanderten Weg.
 - **Kampagnenkarten sind feste Ausschnitte** aus denselben Weltdaten wie das freie Spiel (3.1), mit fest eingestellter Datenversion und handgesetzten Extras für die Mission.
+- **Umgesetzt in M13 (Startwerte):** Etappen, Ziele und Erzähltexte in `data/kampagne.json`; Völkchen und Eifel-Punkte bleiben über die Etappen, ein Rucksack mit bis zu 15 Waren wandert mit. Der erste Zusatzweg ist „Entlang der Rur“ (Monschau bis Kreuzau, Düren in Sicht).
 
 ### 2.2 Freies Spiel
 

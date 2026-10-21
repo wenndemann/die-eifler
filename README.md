@@ -162,6 +162,12 @@ nach Gebrauch wieder. Unterbrochen? Einfach neu starten, es setzt fort. Details 
   Blasmusik und Fiedel, Tusch auf den Festen, Gebrabbel statt Sprecher, Säge, Amboss, Schafe, Vögel, nachts der spukende
   Grenzsteinversetzer (Regler in den Einstellungen; der Ton startet nach dem ersten Tipp). Running Gags: „Mer renne nit.“,
   „Noch keine Eifel.“, der Eifelfonds für arme Dörfer. Zahlen: `data/optik.json`, `data/klang.json`, `data/einfuehrung.json`.
+- **Kampagne „Der Eifelsteig“ (M13):** Im Startmenü „Kampagne“: mit dem eigenen Völkchen von Kornelimünster bis Trier in
+  15 Etappen (Nordeifel, Kalkeifel, Vulkaneifel, Südeifel), dazu der Zusatzweg „Entlang der Rur“. Jede Etappe ist ein fester
+  Ausschnitt mit eigenem Ziel (Bewohner, Kirmes, Waren, Gebäude, Punkte, Schützenkönig, Zielort gewinnen); die Erzählfigur führt
+  durch, die Übersicht zeigt den gewanderten Weg. Völkchen und Punkte bleiben, ein Rucksack mit bis zu 15 Waren kommt mit.
+  Daten: `data/kampagne.json`. Die Karten brauchen das Weltdaten-Gebiet `eifelsteig` (Actions → Weltdaten, dann
+  `tools/welt-laden.sh eifelsteig`); mit den Nideggen-Daten geht die Rur-Etappe „Heimbach – Nideggen“.
 - **Simulation** (`src/sim/`): fester Tick (20/s), nur Ganzzahlen, jede Aktion ist ein Befehl mit Tick-Nummer,
   Prüfsumme über den Zustand (Statusleiste „Sim“), Befehlsprotokoll zum Abspielen (`spieleAb`). Der Smoke-Test
   prüft, dass Node und Browser dieselbe Prüfsumme bekommen und ein Replay im zweiten Browser-Fenster gleich ausgeht.

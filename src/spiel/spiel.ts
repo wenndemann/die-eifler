@@ -15,7 +15,7 @@ import { AUTOSAVE_SPEICHER, baueSpielstand, dateiname, holeAutosave, leseSpielst
 import { spieleAb } from '../sim/replay';
 import {
   ARBEIT_MITTE_MAX, AUTOSAVE_MIN, BAULEUTE_MAX, DORFSTUFEN, FEST_OBERGRENZE, FLAG_CAP, GEBAEUDE, GEBAEUDE_IDS, JAHRESZEIT_TICKS, JAHRESZEITEN, KIRMES, KLEINE_FESTE,
-  WAREN, WAREN_NAMEN, WETTER, WETTER_ANKUENDIGUNG, zutatMenge,
+  WARE, WAREN, WAREN_NAMEN, WETTER, WETTER_ANKUENDIGUNG, zutatMenge,
 } from '../sim/daten';
 import { PROMILLE, TICK_HZ } from '../sim/typen';
 import type { Befehl, Id, Protokoll, SichtFahne, SichtGebaeude, SichtSegment, SimSicht } from '../sim/typen';
@@ -31,7 +31,11 @@ import type { Stimmung } from '../render/scene';
 import { stunde, tageszeit, wetterStimmung } from './stimmung';
 import { klangLage } from './klanglage';
 import { geschafft, SCHRITTE } from './einfuehrung';
-import { EinfuehrungsListe } from '../ui/einfuehrung';
+import { EinfuehrungsListe, ZielListe } from '../ui/einfuehrung';
+import {
+  RUCKSACK_MAX, etappeAbschliessen, etappenVon, kampagnenPunkte, rucksackPruefen, rucksackVorschlag, warenName, wegVon, zieleStand,
+  type Etappe, type KampagnenStand,
+} from './kampagne';
 import { Klang } from '../klang/klang';
 import { setzeSchnee } from '../render/kulisse';
 import { Natur } from '../render/natur';
@@ -87,12 +91,21 @@ export interface SpielKontext {
   /** Grafik-Einstellungen (HUD) für das Einstellungsfenster und das Kamera-Tempo (Steuerung). */
   grafik?: { felder: () => Eingabe[]; setze: (id: string, wert: boolean | string | number) => void };
   kameraTempo?: (f: number) => void;
+  /** M13: Etappe einer Kampagne (Kampagnenstand, Etappen-Index) und was nach dem Abschluss passiert. */
+  kampagne?: { stand: KampagnenStand; index: number; weiter: (neu: KampagnenStand) => void };
   /** M12: Blickpunkt der Kamera (Ausschnitt-Meter), Stimmung an die Bühne (Tageszeit, Wolken), grobe Qualität. */
   ziel?: () => THREE.Vector3;
   stimmung?: (s: Stimmung) => void;
   grob?: () => boolean;
 }
 
+
+/** Name des Ortskerns, der dem Hex am nächsten liegt (Kampagne: Start, wenn der Ort „von“ anders heißt). */
+function naechsterKern(kerne: readonly { name: string; q: number; r: number }[], h: Hx): string | undefined {
+  let best: { name: string; q: number; r: number } | undefined;
+  for (const k of kerne) if (k.name && (!best || hexAbstand(k, h) < hexAbstand(best, h))) best = k;
+  return best?.name;
+}
 
 /** Anzeigenamen der Gebäude aus data/buildings.json. */
 const NAMEN: Record<string, string> = Object.fromEntries(Object.values(GEBAEUDE).map((t) => [t.id, t.name]));
@@ -183,6 +196,11 @@ export class Spiel {
   private einfuehrungGemeldet: boolean[] | null = null;
   private einfuehrungAn = false;
   private tempoGags = 0;
+  /** M13: Etappe der Kampagne (sonst null), Zielliste, schon geschafft. */
+  private etappe: Etappe | null = null;
+  private zielListe: ZielListe | null = null;
+  private etappeFertig = false;
+  private rucksack: Record<string, number> = {};
   private nachbarNr = 0;
   private klangRechts = new THREE.Vector3();
   private readonly natur: Natur;
@@ -270,10 +288,21 @@ export class Spiel {
       this.partie.onNeueSim = (sim) => this.simErsetzt(sim);
       setInterval(() => { if (performance.now() - this.letzterTakt > 200) this.netzTakt(); }, 100);
     } else {
-      this._sim = ctx.laden ? Simulation.ausStand(ausschnitt.hex, ctx.laden)
-        : new Simulation(ausschnitt.hex, saatAusPruefsumme(ausschnitt.pruefsumme),
+      const km = ctx.kampagne;
+      this.etappe = km ? etappenVon(wegVon(km.stand.weg)!)[km.index] ?? null : null;
+      if (ctx.laden) this._sim = Simulation.ausStand(ausschnitt.hex, ctx.laden);
+      else if (km && this.etappe) {
+        // M13: Start im Ort „von“ der Etappe, Völkchen der Kampagne, Rucksack im Startlager; die Etappe endet über ihre Ziele
+        const e = this.etappe;
+        const lager = waehleLagerHex(ausschnitt.hex, ausschnitt.kerne, ausschnitt.kerne.some((k) => k.name === e.von) ? e.von : naechsterKern(ausschnitt.kerne, e.start));
+        this._sim = new Simulation(ausschnitt.hex, saatAusPruefsumme(ausschnitt.pruefsumme),
+          { ...lager, voelkchen: km.stand.voelkchen, ...(Object.keys(km.stand.rucksack).length ? { waren: km.stand.rucksack } : {}) },
+          { gebiet: 1, ziel: 'ohne_ende' });
+      } else {
+        this._sim = new Simulation(ausschnitt.hex, saatAusPruefsumme(ausschnitt.pruefsumme),
           { ...waehleLagerHex(ausschnitt.hex, ausschnitt.kerne, map.info.start), voelkchen: waehleVoelkchen(ladeEinstellungen().voelkchen, map.info.start, ausschnitt.kerne.map((k) => k.name)) },
           { gebiet: 1, ziel: ladeEinstellungen().ziel });
+      }
       this.ich = 0;
     }
     this.lagerHex = this._sim.startDaten()[this.ich];
@@ -378,7 +407,7 @@ export class Spiel {
 
   /** Spielstand als Datei herunterladen. */
   speichern(): Spielstand {
-    const st = baueSpielstand(this.karteInfo, this.namen, this._sim.stand(), this.partie?.zug?.pausen);
+    const st = baueSpielstand(this.karteInfo, this.namen, this._sim.stand(), this.partie?.zug?.pausen, this.ctx.kampagne ? { weg: this.ctx.kampagne.stand.weg, etappe: this.ctx.kampagne.index } : undefined);
     const blob = new Blob([JSON.stringify(st)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -637,7 +666,8 @@ export class Spiel {
     // Begrüßung erst, wenn das Spiel läuft (beim Laden wäre sie schon wieder weg)
     if (!this.begruesst && s.tick >= 20) {
       this.begruesst = true;
-      this.zeigeMeldung(this.filter.begruessung(KIRMES[0] ? listeText(KIRMES[0].liste) : ''));
+      if (this.etappe) this.zeigeMeldung({ text: mitTick(`Etappe ${this.etappe.nr}, ${this.etappe.name}: ${this.etappe.einleitung}`, this.erzaehler), gross: true });
+      else this.zeigeMeldung(this.filter.begruessung(KIRMES[0] ? listeText(KIRMES[0].liste) : ''));
       // M11: Völkchen-Gebäude, die auf diesem Ausschnitt nirgends gehen (z. B. Bootsverleih ohne Wasser) – einmal sagen
       const fehlt = this._sim.fehltAufKarte(this.ich);
       if (fehlt.length) this.zeigeMeldung({ text: `⚠ Auf diesem Ausschnitt geht nicht: ${fehlt.map((t) => GEBAEUDE[t]?.name ?? t).join(', ')} (kein ${fehlt.some((t) => GEBAEUDE[t]?.amMoor) ? 'Moor' : 'Wasser'} in der Nähe). Die Spezialität klappt hier nur über Umwege.`, gross: false });
@@ -650,10 +680,11 @@ export class Spiel {
       const m = this.filter.tipp(i, liste);
       if (m) this.zeigeMeldung(m);
     };
+    if (this.etappe) this.etappePruefen();
     // M12: Einführung – Liste links, beim Abhaken ein Kommentar der Figur (nur neue Spiele im Weiler, nicht nach dem Laden eines späteren Stands)
     if (!this.einfuehrung) this.einfuehrung = new EinfuehrungsListe(this.ctx.root, this.erzaehler.name.split(',')[0]);
     const g = geschafft(s, this.ich);
-    if (!this.einfuehrungGemeldet) { this.einfuehrungGemeldet = g.slice(); this.einfuehrungAn = s.dorf.stufe === 0; }
+    if (!this.einfuehrungGemeldet) { this.einfuehrungGemeldet = g.slice(); this.einfuehrungAn = s.dorf.stufe === 0 && (!this.ctx.kampagne || this.ctx.kampagne.index === 0); }
     this.einfuehrung.zeige(SCHRITTE, g, this.einst.tipps && this.einfuehrungAn);
     g.forEach((ok, i) => {
       if (!ok || this.einfuehrungGemeldet![i]) return;
@@ -1456,7 +1487,7 @@ export class Spiel {
   /** Autosave: der ganze Stand in den Browser-Speicher (ein Platz). */
   autosave(): boolean {
     try {
-      const st = baueSpielstand(this.karteInfo, this.namen, this._sim.stand(), this.partie?.zug?.pausen);
+      const st = baueSpielstand(this.karteInfo, this.namen, this._sim.stand(), this.partie?.zug?.pausen, this.ctx.kampagne ? { weg: this.ctx.kampagne.stand.weg, etappe: this.ctx.kampagne.index } : undefined);
       localStorage.setItem(AUTOSAVE_SPEICHER, JSON.stringify({ ort: this.ctx.map.info.start ?? this.ctx.map.info.name ?? '', stand: st }));
       this.autosaveZuletzt = `Spielzeit ${Math.floor(this._sim.tick / (60 * TICK_HZ))} min`;
       this.insProtokoll('Automatisch gespeichert.', false);
@@ -1630,6 +1661,68 @@ export class Spiel {
   }
 
   /** Zeilen fürs Info-Feld (HTML) zu einem Hex: Gebäude, Fahne, Weg, Bauplatz-Prüfung. */
+  /** M13: Etappenziele zeigen; sind alle erfüllt, einmal das Fenster „Etappe geschafft“ mit Rucksack. */
+  private etappePruefen(): void {
+    const e = this.etappe!, s = this._sicht;
+    const st = zieleStand(e.ziele, s, this.ich, (i) => this.ortName(i));
+    if (!this.zielListe) this.zielListe = new ZielListe(this.ctx.root, `Etappe ${e.nr}: ${e.name}`);
+    this.zielListe.zeige(st);
+    if (this.etappeFertig || !st.every((z) => z.erfuellt)) return;
+    this.etappeFertig = true;
+    this.klang.tusch();
+    const lager = new Array<number>(WAREN.length).fill(0);
+    for (const g of s.gebaeude) if (g.sp === this.ich && g.typ === 'lager' && g.vorrat) g.vorrat.forEach((n, a) => { lager[a] += n; });
+    this.rucksack = rucksackVorschlag(lager);
+    this.zeigeMeldung({ text: mitTick(e.geschafft, this.erzaehler), gross: true });
+    this.insProtokoll(`🥾 Etappe ${e.nr} geschafft: ${e.name}`, false);
+    this.zeigeEtappe();
+  }
+
+  /** Fenster „Etappe geschafft“: Punkte, Rucksack für die nächste Etappe (Regler je Ware), Weiterwandern oder bleiben. */
+  zeigeEtappe(): void {
+    const km = this.ctx.kampagne;
+    if (!this.etappe || !km) return;
+    const e = this.etappe;
+    this.fenster.oeffne({
+      id: 'etappe', gruppe: 'auswahl', breite: 360,
+      daten: () => {
+        const s = this._sicht, punkte = s.spieler[this.ich]?.punkte ?? 0;
+        const lager = new Array<number>(WAREN.length).fill(0);
+        for (const g of s.gebaeude) if (g.sp === this.ich && g.typ === 'lager' && g.vorrat) g.vorrat.forEach((n, a) => { lager[a] += n; });
+        const summe = Object.values(this.rucksack).reduce((a, b) => a + b, 0);
+        const ids = ['werkzeug', 'eisen', 'bretter', 'stein', 'kaese', 'bratkartoffeln', 'most', 'landbier', 'kartoffeln', 'schnaps', 'honig', 'milch'];
+        return {
+          titel: `Etappe ${e.nr} geschafft!`, symbol: '🥾',
+          abschnitte: [
+            { art: 'status', text: e.name, spruch: `${this.erzaehler.name}: „${mitTick(e.geschafft, this.erzaehler)}“` },
+            { art: 'zeilen', zeilen: [`Eifel-Punkte dieser Etappe: ${punkte}`, `Kampagne bisher: ${kampagnenPunkte(km.stand) + punkte} Punkte`] },
+            {
+              art: 'eingaben', titel: `🎒 Rucksack für die nächste Etappe (${summe}/${RUCKSACK_MAX} Stück)`,
+              felder: ids.filter((id) => (lager[WARE[id]] ?? 0) > 0 || this.rucksack[id]).map((id) => ({
+                id: `rs:${id}`, text: warenName(id), typ: 'regler' as const, wert: this.rucksack[id] ?? 0, min: 0,
+                max: Math.min(RUCKSACK_MAX, lager[WARE[id]] ?? 0), schritt: 1,
+              })),
+            },
+            { art: 'knoepfe', knoepfe: [{ id: 'weiter', text: '🥾 Weiterwandern' }, { id: 'bleiben', text: 'Noch ein bisschen bleiben' }] },
+          ],
+        };
+      },
+      onEingabe: (k, v) => {
+        if (!k.startsWith('rs:')) return;
+        const id = k.slice(3), alt = this.rucksack[id] ?? 0;
+        const andere = Object.entries(this.rucksack).reduce((a, [x, n]) => a + (x === id ? 0 : n), 0);
+        this.rucksack = rucksackPruefen({ ...this.rucksack, [id]: Math.min(Number(v), RUCKSACK_MAX - andere) });
+        if ((this.rucksack[id] ?? 0) !== alt || Number(v) !== alt) this.fenster.jetzt('etappe');
+      },
+      onKnopf: (k) => {
+        if (k === 'bleiben') { this.fenster.schliesse('etappe'); return; }
+        if (k !== 'weiter') return;
+        const punkte = this._sicht.spieler[this.ich]?.punkte ?? 0;
+        km.weiter(etappeAbschliessen(km.stand, km.index, punkte, this.rucksack));
+      },
+    });
+  }
+
   /** „Noch keine Eifel.“ – fester Spruch je Nachbar (Spieler oder Ort), damit der Tooltip nicht flackert. */
   private nachbarSpruch(n: number): string {
     return textFuer('nachbar', n + this.nachbarNr, { ort: '' }, this.erzaehler);

@@ -1,0 +1,40 @@
+/* Kampagnen-Übersicht (M13): Karte links, Etappen rechts; am Handy untereinander */
+.kp-box {
+  width: min(1100px, 100%); max-height: calc(100vh - 32px); overflow: auto; box-sizing: border-box; padding: 18px 20px;
+  border-radius: 16px; background: linear-gradient(180deg, rgba(64, 50, 38, 0.98), rgba(38, 30, 24, 0.97));
+  border: 1px solid rgba(231, 194, 122, 0.5); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.55);
+}
+.kp-kopf { text-align: center; margin-bottom: 10px; }
+.kp-titel { font-size: 36px; }
+.kp-inhalt { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 400px); gap: 16px; align-items: start; }
+.kp-karte { width: 100%; height: auto; max-height: 72vh; border-radius: 10px; border: 1px solid rgba(231, 194, 122, 0.35); background: #cdbf98; }
+.kp-weg { fill: none; stroke: #6b4a2e; stroke-width: 450; stroke-dasharray: 900 700; stroke-linecap: round; opacity: 0.8; }
+.kp-gewandert { fill: none; stroke: #c8402e; stroke-width: 900; stroke-linecap: round; stroke-linejoin: round; }
+.kp-punkt { cursor: pointer; }
+.kp-punkt circle { fill: #f3ead8; stroke: #5a3622; stroke-width: 300; }
+.kp-punkt.akt circle { fill: #e7c27a; }
+.kp-punkt text { fill: #2a1e12; font-family: 'Alegreya SC', serif; font-weight: 700; paint-order: stroke; stroke: rgba(243, 234, 216, 0.85); stroke-width: 500; }
+.kp-rechts { display: flex; flex-direction: column; gap: 8px; color: #f3ead8; font-family: 'Alegreya Sans', 'Segoe UI', sans-serif; }
+.kp-rechts h2 { margin: 4px 0; font: 700 20px 'Alegreya SC', serif; color: #e7c27a; }
+.kp-rechts h3 { margin: 6px 0 0; font: 700 12px 'Alegreya SC', serif; letter-spacing: 0.08em; text-transform: uppercase; color: #a8844a; }
+.kp-wege { display: flex; flex-direction: column; gap: 6px; }
+.kp-wegwahl.an { border-color: #e7c27a; background: rgba(231, 194, 122, 0.18); }
+.kp-voelkchen { min-height: 40px; border-radius: 8px; padding: 6px 8px; font-size: 15px; background: rgba(0, 0, 0, 0.3); color: #f3ead8; border: 1px solid rgba(231, 194, 122, 0.45); }
+.kp-erzaehler { margin: 4px 0; padding: 8px 10px; border-left: 3px solid #a8844a; background: rgba(0, 0, 0, 0.22); border-radius: 8px; font-style: italic; }
+.kp-hinweis { margin: 2px 0; color: #f0b58f; font-size: 13px; }
+.kp-stand, .kp-rucksack { font-size: 14px; color: #e5dcc8; }
+.kp-liste { display: flex; flex-direction: column; gap: 3px; max-height: 32vh; overflow: auto; padding-right: 4px; }
+.kp-etappe { all: unset; cursor: pointer; padding: 5px 8px; border-radius: 7px; font-size: 14px; color: #c9bda6; }
+.kp-etappe:hover, .kp-etappe:focus-visible { background: rgba(231, 194, 122, 0.12); }
+.kp-etappe.an { background: rgba(231, 194, 122, 0.22); color: #f3ead8; font-weight: 700; }
+.kp-etappe.ok { color: #9fc48a; }
+.kp-detail { padding: 8px 10px; border-radius: 10px; background: rgba(0, 0, 0, 0.18); }
+.kp-ziele { margin: 2px 0 8px; padding-left: 20px; }
+.kp-fertig { color: #9fc48a; font-weight: 700; }
+@media (max-width: 760px) {
+  .kp-inhalt { grid-template-columns: 1fr; }
+  .kp-karte { max-height: 40vh; }
+  .kp-titel { font-size: 28px; }
+}
+.kp-stadt { fill: #8a6a4a; stroke: #3a2a1a; stroke-width: 200; }
+.kp-stadtname { fill: #5a4632; font-family: 'Alegreya SC', serif; font-style: italic; }

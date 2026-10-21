@@ -295,21 +295,23 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 
 ---
 
-## M13 – Kampagne „Der Eifelsteig“
+## M13 – Kampagne „Der Eifelsteig“ ✅ (erster Stand) → 🔨 Weltdaten „eifelsteig“ rechnen, Etappen durchspielen
 
 **Ziel:** Mit dem eigenen Völkchen den Eifelsteig entlang wandern (Drehbuch 2.1).
 
-- [ ] Kampagnenkarten als feste Ausschnitte mit fester Datenversion und Missionsdaten
-- [ ] 15 Etappen in 4 Abschnitten (Nordeifel, Kalkeifel, Vulkaneifel, Südeifel), je eigenes Ziel
-- [ ] Eifel-Übersicht mit dem gewanderten Weg zwischen den Etappen, Erzählfigur führt durch
-- [ ] Danach Zusatzwege, z. B. entlang der Rur mit Düren
+- [x] Kampagnenkarten als feste Ausschnitte (globales Hex und Größe je Etappe, aus der Lage der echten Orte gerechnet) mit Missionsdaten in `data/kampagne.json`; Start im Ort „von“, gewandert wird nach „nach“. Neues Weltdaten-Gebiet **„eifelsteig“** (nur die Kacheln der Etappen, Workflow „Weltdaten“ und `tools/welt-laden.sh eifelsteig`); fehlen die Daten, sagt die Übersicht es
+- [x] 15 Etappen in 4 Abschnitten (Nordeifel, Kalkeifel, Vulkaneifel, Südeifel), je eigenes Ziel: Bewohner, Kirmes/Stufe, Waren im Lager, Gebäude, Eifel-Punkte, Schützenkönig und den Zielort gewinnen (Einstand). Die Etappenziele stehen links im Spiel
+- [x] Eifel-Übersicht mit dem gewanderten Weg (rot) und den Flachland-Städten zwischen den Etappen; die Erzählfigur des gewählten Völkchens führt durch (Einleitung je Etappe, Kommentar beim Abschluss)
+- [x] **Mitnahme** (Stufe 1 von „die Karte wächst“): Völkchen und Punkte bleiben, ein **Rucksack** mit bis zu 15 Waren aus dem Lager kommt als Startwaren in die nächste Etappe (`StartDaten.waren`, Teil von Stand und Replay)
+- [x] Zusatzweg **„Entlang der Rur“** (Monschau – Einruhr – Heimbach – Nideggen – Kreuzau, Düren in Sicht); „Heimbach – Nideggen“ ist mit den Nideggen-Daten spielbar und wird im Rauchtest durchlaufen
+- [ ] Alle Etappen mit echten Weltdaten durchspielen und die Ziele einstellen (Spieltest)
 
 ---
 
 ## Danach (offen)
 
 - **Verbundene Regionen** im Mehrspieler: jeder spielt seinen eigenen Ausschnitt und schickt Händler und Finder hinüber (Drehbuch 2.3)
-- **Die Karte wächst in andere Gebiete** (Wunsch aus M11, „die Eifel erobern“), in Stufen: (1) Kampagne M13 wandert von Karte zu Karte, Völkchen, Punkte und ein Teil der Waren kommen mit; (2) im freien Spiel „umziehen“: am Kartenrand den Ausschnitt vergrößern, das Dorf bleibt (Spielstand auf größerer Karte); (3) echtes Wachsen während der Partie, auch im Mehrspieler (neues Speicherformat, Kacheln nachladen im Gleichschritt, Leistung) – eigener Meilenstein
+- **Die Karte wächst in andere Gebiete** (Wunsch aus M11, „die Eifel erobern“), in Stufen: (1) Kampagne M13 wandert von Karte zu Karte, Völkchen, Punkte und ein Teil der Waren kommen mit (✅ M13: Rucksack); (2) im freien Spiel „umziehen“: am Kartenrand den Ausschnitt vergrößern, das Dorf bleibt (Spielstand auf größerer Karte); (3) echtes Wachsen während der Partie, auch im Mehrspieler (neues Speicherformat, Kacheln nachladen im Gleichschritt, Leistung) – eigener Meilenstein
 - Volle KI-Gegner, die selbst bauen (Drehbuch 6.2)
 - Desktop- oder Store-App (Drehbuch 8.2)
 
