@@ -83,8 +83,8 @@ function buildGeometries() {
     cone(7, 13, 12, 7, '#356240'),
     cone(4.8, 11, 20, 7, '#3b6a46'),
   ])!;
-  const buchenKrone = new THREE.IcosahedronGeometry(10.5, 0).scale(1, 0.85, 1).translate(0, 17, 0);
-  const buchenKrone2 = new THREE.IcosahedronGeometry(7, 0).translate(3.5, 22, 2);
+  const buchenKrone = new THREE.IcosahedronGeometry(10.5, 1).scale(1, 0.85, 1).translate(0, 17, 0);
+  const buchenKrone2 = new THREE.IcosahedronGeometry(7, 1).translate(3.5, 22, 2);
   const bucheNear = mergeGeometries([
     colored(new THREE.CylinderGeometry(0.9, 1.4, 11, 5, 1, true).translate(0, 5.5, 0), trunk),
     colored(buchenKrone, '#6f9a48'),
