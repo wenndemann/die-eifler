@@ -52,6 +52,9 @@ export async function bedienungsTest({ browser, url, aus, info, fail }) {
 
   // ------------------------------------------------------------ Desktop: Maus
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  // Bedienung prüft die Oberfläche, nicht die Grafik: Stufe „Niedrig“ (ohne Bilderbuch-Pass und Schatten), damit der
+  // Software-Renderer im Container genug Bilder je Sekunde schafft, dass echte Mausklicks nicht in den Wartezeiten hängen
+  await ctx.addInitScript(() => { try { localStorage.setItem('eifeler.view', JSON.stringify({ quality: 'niedrig', shadows: false })); } catch { /* egal */ } });
   const page = await ctx.newPage();
   page.on('pageerror', (e) => fail(`Bedienung (pageerror): ${e.message}`));
   await page.goto(url, { timeout: 120000 });
