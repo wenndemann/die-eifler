@@ -555,9 +555,9 @@ export class Spiel {
     const s = this._sicht, j = s.jahr;
     const st = wetterStimmung(s.tick + alpha, j);
     if (this.wetterVorgabe) {
-      const v = this.wetterVorgabe;
+      const { tag: _tag, ...v } = this.wetterVorgabe;
       Object.assign(st.lage, v);
-      if (v.tag !== undefined) st.stimmung.tag = v.tag;
+      if (_tag !== undefined) st.stimmung.tag = _tag;
       st.stimmung.wolken = v.wolken ?? Math.max(st.lage.regen, st.lage.schnee * 0.8, st.lage.nebel * 0.5);
     }
     if (this.ctx.ziel) {

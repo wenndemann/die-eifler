@@ -384,7 +384,7 @@ try {
     const sp = window.eifeler.spiel;
     sp.wetterVorgabe = { tag: 0.85, regen: 1, nebel: 1, hochwasser: 1, wind: 1 };
     await new Promise((ok) => setTimeout(ok, 1500));
-    const lage = sp.wetterOptik.lage();
+    const lage = { ...sp.wetterOptik.lage() };
     sp.wetterVorgabe = { tag: 0.5, schnee: 1, regen: 0, nebel: 0, hochwasser: 0, wind: 0 };
     await new Promise((ok) => setTimeout(ok, 800));
     sp.wetterVorgabe = null;
