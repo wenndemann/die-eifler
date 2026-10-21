@@ -201,7 +201,16 @@ export class WetterOptik {
         if (x >= 0 && nass(x) && f.height[h] <= f.height[x] + 30) { aue.push(h); break; }
       }
     }
-    const scheiben = (liste: number[], farbe: string, gross: number, ueber: number, deck: number) => {
+    // Hochwasser: der Wasserspiegel steht 3,5 m über dem tiefsten Nachbarn (Bach oder Fluss), nicht über der Hex-Mitte
+    const pegel = (h: number) => {
+      let lo = f.height[h];
+      for (const [a, b] of [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]]) {
+        const x = f.index(qs[h] + a, rs[h] + b);
+        if (x >= 0) lo = Math.min(lo, f.height[x]);
+      }
+      return lo / 10 + 3.5;
+    };
+    const scheiben = (liste: number[], farbe: string, gross: number, ueber: number, deck: number, hoehe?: (h: number) => number) => {
       const geo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
       const mat = new THREE.ShaderMaterial({
         vertexShader: NEBEL_VERT, fragmentShader: NEBEL_FRAG, transparent: true, depthWrite: false, fog: false,
@@ -211,7 +220,7 @@ export class WetterOptik {
       im.count = liste.length;
       liste.forEach((h, k) => {
         const w = this.grid.toWorld({ q: qs[h], r: rs[h] });
-        const y = (this.map.heightAt(w.x, w.z) - this.base) * this.ex + ueber * this.ex * (0.7 + 0.6 * ZUFALL(k));
+        const y = hoehe ? (hoehe(h) - this.base) * this.ex : (this.map.heightAt(w.x, w.z) - this.base) * this.ex + ueber * this.ex * (0.7 + 0.6 * ZUFALL(k));
         const s = this.grid.size * gross * (0.85 + 0.4 * ZUFALL(k + 50));
         this.m.compose(this.v.set(w.x, y, w.z), this.q.setFromAxisAngle(this.v.clone().set(0, 1, 0), ZUFALL(k + 99) * 6.28), this.sk.set(s, 1, s));
         im.setMatrixAt(k, this.m);
@@ -223,7 +232,7 @@ export class WetterOptik {
       return im;
     };
     this.nebel = scheiben(tal, '#e4e9ec', 3.4, 14, optik.talnebel.dichte);
-    this.flut = scheiben(aue, '#6f8a8c', 2.2, 1.2, 0.75);
+    this.flut = scheiben(aue, '#8c7d58', 2.4, 0, 0.9, pegel);
   }
 
   /** Ein Bild: Wetterlage weich annähern, Kiste um den Blickpunkt, Wolken ziehen lassen. */

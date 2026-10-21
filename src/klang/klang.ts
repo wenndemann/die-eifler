@@ -20,6 +20,8 @@ export interface KlangLage {
   betrunken: { pan: number; naehe: number }[];
   /** Kamera nah dran (0 weit … 1 ganz nah): Geräusche lauter, Musik etwas leiser. */
   nah: number;
+  /** Bach, Fluss oder See nah am Blickpunkt (0..1): Plätschern. */
+  wasser: number;
 }
 
 type Bus = 'musik' | 'geraeusche' | 'stimmen' | 'natur';
@@ -38,6 +40,7 @@ export class Klang {
   private rauschen: AudioBuffer | null = null;
   private windQuelle: { g: GainNode; f: BiquadFilterNode } | null = null;
   private regenQuelle: { g: GainNode } | null = null;
+  private bachQuelle: { g: GainNode; f: BiquadFilterNode } | null = null;
   private musikBis = 0;
   private naechstesStueck = 8;
   private stueckNr = 0;
@@ -86,6 +89,13 @@ export class Klang {
     const wind = this.rauschQuelle('lowpass', 380), regen = this.rauschQuelle('highpass', 1400);
     this.windQuelle = wind;
     this.regenQuelle = regen;
+    // Bach: Rauschen durch einen schmalen Bandpass, dessen Mitte unruhig wandert (Plätschern)
+    const bach = this.rauschQuelle('bandpass', 900);
+    bach.f.Q.value = 2.5;
+    const lfo = ac.createOscillator(), tiefe = ac.createGain();
+    lfo.type = 'triangle'; lfo.frequency.value = 3.3; tiefe.gain.value = 350;
+    lfo.connect(tiefe).connect(bach.f.frequency); lfo.start();
+    this.bachQuelle = bach;
   }
 
   get an(): boolean { return !!this.ac && this.ac.state === 'running'; }
@@ -116,6 +126,7 @@ export class Klang {
     this.windQuelle?.g.gain.setTargetAtTime(0.25 + l.wind * 0.9 + l.regen * 0.2, t, 1.5);
     this.windQuelle?.f.frequency.setTargetAtTime(300 + l.wind * 500, t, 2);
     this.regenQuelle?.g.gain.setTargetAtTime(l.regen * 0.7, t, 1.5);
+    this.bachQuelle?.g.gain.setTargetAtTime(l.wasser * (0.25 + 0.5 * l.nah), t, 1.2);
     // Musik: Fest → Blasmusik ohne Pause, sonst ein Stück, dann Pause
     if (l.fest !== this.festMusik) { this.festMusik = l.fest; if (l.fest) this.naechstesStueck = t; }
     if (t >= this.musikBis && t >= this.naechstesStueck) {

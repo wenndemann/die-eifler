@@ -49,6 +49,7 @@ export class Stage {
     container.appendChild(this.renderer.domElement);
     this.buch = new Buchpass(this.renderer);
     this.buch.an = q !== 'niedrig';
+    this.buch.qualitaet(this.quali.ao, this.quali.glanz);
 
     this.scene.background = this.fogColor;
     this.scene.fog = new THREE.Fog(this.fogColor, 4000, 30000);
@@ -136,9 +137,9 @@ export class Stage {
     // Farbton im Bilderbuch-Pass: goldenes Morgen- und Abendlicht, blaue Nacht (gedämpft, aber spielbar), graue Regentage
     const gold = flach * tag, nacht = 1 - tag;
     this.buch.stimmung(
-      this.tmp.setRGB(1, 1, 1).lerp(this.ton1.setRGB(1.16, 0.93, 0.74), gold).lerp(this.ton1.setRGB(0.5, 0.6, 0.92), nacht * 0.9)
+      this.tmp.setRGB(1, 1, 1).lerp(this.ton1.setRGB(1.26, 0.9, 0.64), gold).lerp(this.ton1.setRGB(0.42, 0.52, 0.95), nacht * 0.92)
         .multiplyScalar(1 - 0.12 * st.wolken),
-      (1 - 0.3 * st.wolken - 0.15 * st.duerre) * (1 - 0.45 * nacht) * (1 + 0.1 * gold), st.duerre * 0.06 + gold * 0.03);
+      (1 - 0.3 * st.wolken - 0.15 * st.duerre) * (1 - 0.6 * nacht) * (1 + 0.15 * gold), st.duerre * 0.06 + gold * 0.05);
   }
 
   setShadows(on: boolean) {
@@ -158,6 +159,7 @@ export class Stage {
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, p.pixel));
     if (this.breite) { this.renderer.setSize(this.breite, this.hoehe); this.buch.groesse(this.breite, this.hoehe); }
     this.buch.an = q !== 'niedrig';
+    this.buch.qualitaet(p.ao, p.glanz);
   }
 
   /** Ein Bild: mit Bilderbuch-Pass (Linie, Farbkraft) oder direkt. */

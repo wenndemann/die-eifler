@@ -537,6 +537,19 @@ export class Spiel {
     if (this.meldung && performance.now() > this.meldung.bis) { this.meldung = null; this.hinweisSetzen(); }
   }
 
+  /** Anteil Wasser (See, Bach, Fluss) im Umkreis 3 Hexe um h, für das Plätschern. */
+  private wasserNah(h: Hx): number {
+    const f = this.ctx.ausschnitt.hex;
+    let n = 0, w = 0;
+    for (let dr = -3; dr <= 3; dr++) for (let dq = Math.max(-3, -dr - 3); dq <= Math.min(3, -dr + 3); dq++) {
+      const i = f.index(h.q + dq, h.r + dr);
+      if (i < 0) continue;
+      n++;
+      if (f.terrain[i] === 0 || (f.flags[i] & (FLAG.fluss | FLAG.ufer)) !== 0) w++;
+    }
+    return n ? Math.min(1, (w / n) * 4) : 0;
+  }
+
   /** M12: Wetter- und Tageszeit-Optik aus der Sicht (nur Darstellung, data/optik.json). */
   private wetterZeigen(alpha: number, dt: number): void {
     const s = this._sicht, j = s.jahr;
@@ -557,8 +570,9 @@ export class Spiel {
     if (this.klangTimer <= 0 && this.klang.an && this.ctx.ziel) {
       this.klangTimer = 0.15;
       this.klangRechts.setFromMatrixColumn(this.ctx.camera.matrixWorld, 0);
-      this.klang.update(klangLage(s, this.ich, (h) => this.ctx.grid.toWorld(h), this.ctx.ziel(), { x: this.klangRechts.x, z: this.klangRechts.z },
-        this.ctx.abstand(), st.stimmung.tag, st.lage));
+      const z = this.ctx.ziel();
+      this.klang.update(klangLage(s, this.ich, (h) => this.ctx.grid.toWorld(h), z, { x: this.klangRechts.x, z: this.klangRechts.z },
+        this.ctx.abstand(), st.stimmung.tag, st.lage, this.wasserNah(this.ctx.grid.fromWorld(z.x, z.z))));
     }
   }
 

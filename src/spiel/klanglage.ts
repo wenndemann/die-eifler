@@ -10,7 +10,7 @@ export const KLANG_QUELLEN = 8;
 
 export function klangLage(
   s: SimSicht, ich: number, wo: (h: { q: number; r: number }) => { x: number; z: number },
-  ziel: { x: number; z: number }, rechts: { x: number; z: number }, abstand: number, tag: number, wetter: WetterLage,
+  ziel: { x: number; z: number }, rechts: { x: number; z: number }, abstand: number, tag: number, wetter: WetterLage, wasser = 0,
 ): KlangLage {
   const reich = klang.arbeit.reichweite_m * Math.max(1, abstand / 900);
   const quelle = (h: { q: number; r: number }) => {
@@ -36,6 +36,6 @@ export function klangLage(
   return {
     tag, jahreszeit: s.jahr.jahreszeit, regen: Math.max(wetter.regen, wetter.schnee * 0.3), wind: wetter.wind, fest,
     arbeit: arbeit.slice(0, KLANG_QUELLEN).map(({ d: _d, ...a }) => a), betrunken: betrunken.slice(0, 3),
-    nah: Math.max(0, Math.min(1, 1 - (abstand - 200) / 1800)),
+    nah: Math.max(0, Math.min(1, 1 - (abstand - 200) / 1800)), wasser,
   };
 }

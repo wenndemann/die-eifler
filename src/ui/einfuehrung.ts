@@ -30,6 +30,10 @@ export class EinfuehrungsListe {
     const alle = fertig.every(Boolean);
     this.el.hidden = !an || alle;
     if (this.el.hidden) return;
+    // unter die Statusleiste (deren Höhe wechselt mit Fest- und Kirmeszeilen)
+    const st = document.querySelector('.spielstatus')?.getBoundingClientRect();
+    const zoom = Number.parseFloat(getComputedStyle(this.el).zoom) || 1;
+    if (st && st.height) this.el.style.top = `${Math.round((st.bottom + 8) / zoom)}px`;
     const sig = fertig.map((f) => (f ? 1 : 0)).join('');
     if (sig === this.sig) return;
     this.sig = sig;

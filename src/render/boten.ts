@@ -10,7 +10,7 @@ import { PROMILLE, type Id, type SimSicht } from '../sim/typen';
 import { paint } from './mockup';
 import { Instanzen } from './instanzen';
 import { TRAEGER_H, WARE_TRAGEN, fernFaktor } from './massstab';
-import { figur, material } from './traeger';
+import { FIGUR_ATTRIBUTE, figur, GESTE, material } from './traeger';
 import { WAREN_ANZAHL, warenGeometrie } from './waren';
 
 /** Teil ohne Gelenk (Rumpf) für die Zusatzteile der Figur. */
@@ -61,7 +61,7 @@ export class Boten {
   private farbe = new THREE.Color('#8a5a9a');
 
   constructor(private map: MapData, private grid: HexGrid, private base: number, private ex: number) {
-    this.figuren = new Instanzen(this.group, botenFigur(), material(), true, true, [{ name: 'aAnim', size: 3 }], 16);
+    this.figuren = new Instanzen(this.group, botenFigur(), material(), true, true, FIGUR_ATTRIBUTE, 16);
     const glas = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.2, transparent: true, opacity: 0.75 });
     this.blasen = new Instanzen(this.group, new THREE.SphereGeometry(0.5, 8, 6), glas, false, false, [], 32);
     const matte = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: false });
@@ -110,7 +110,8 @@ export class Boten {
       q.setFromAxisAngle(this.yAchse, st.yaw).multiply(q2.setFromAxisAngle(this.zAchse, kipp));
       s.set(sk, sk, sk);
       m.compose(p.set(x, y, z), q, s);
-      this.figuren.fuege(m, this.farbe, [st.phase, b.ware >= 0 ? 1 : 0, geht ? 1.2 : 0.2]);
+      // beschwipst: breites Grinsen; wer steht und sternhagelvoll ist, jubelt (singt)
+      this.figuren.fuege(m, this.farbe, [st.phase, b.ware >= 0 ? 1 : 0, geht ? 1.2 : 0.2, 1, !geht && b.pegel >= 3 ? GESTE.jubeln : GESTE.keine]);
       if (b.ware >= 0 && b.ware < WAREN_ANZAHL) {
         s.set(k * WARE_TRAGEN, k * WARE_TRAGEN, k * WARE_TRAGEN);
         m.compose(p.set(x, y + 1.24 * sk, z), q, s);

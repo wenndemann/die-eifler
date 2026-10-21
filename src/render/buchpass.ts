@@ -23,7 +23,7 @@ const FRAG = /* glsl */ `
 #include <common>
 uniform sampler2D tFarbe; uniform sampler2D tTiefe;
 uniform vec2 uPixel; uniform float uNah; uniform float uFern;
-uniform vec3 uLinie; uniform vec3 uTon; uniform float uDicke; uniform float uSchwelle; uniform float uDeck; uniform float uSatt; uniform float uWarm;
+uniform vec3 uLinie; uniform vec3 uTon; uniform float uAO; uniform float uGlanz; uniform float uDicke; uniform float uSchwelle; uniform float uDeck; uniform float uSatt; uniform float uWarm;
 varying vec2 vUv;
 float tiefe(vec2 uv) {
   float z = texture2D(tTiefe, uv).x * 2.0 - 1.0;
@@ -48,6 +48,28 @@ void main() {
   // zur Ferne hin zarter (Übersicht wie gemalt, nicht wie ein Ausmalbild)
   kante *= 1.0 - 0.6 * smoothstep(900.0, 3200.0, d);
   vec3 f = c.rgb;
+  // M12 Qualität: weiche Verdeckung aus der Tiefe (Ecken, Fugen, unter Dächern dunkler) und dezentes Leuchten heller Stellen
+  if (uAO > 0.0) {
+    float r = clamp(9.0 * 400.0 / max(d, 1.0), 2.0, 12.0);
+    float occ = 0.0;
+    for (int i = 0; i < 8; i++) {
+      float a = float(i) * 0.78539816 + 0.39;
+      float rr = r * (0.5 + 0.5 * fract(float(i) * 0.618));
+      float dn = tiefe(vUv + vec2(cos(a), sin(a)) * uPixel * rr);
+      float dz = d - dn;
+      occ += smoothstep(0.004 * d, 0.03 * d, dz) * (1.0 - smoothstep(0.06 * d, 0.15 * d, dz));
+    }
+    f *= 1.0 - uAO * 0.42 * (occ / 8.0);
+  }
+  if (uGlanz > 0.0) {
+    vec3 g = vec3(0.0);
+    for (int i = 0; i < 8; i++) {
+      float a = float(i) * 0.78539816;
+      vec3 s = texture2D(tFarbe, vUv + vec2(cos(a), sin(a)) * uPixel * 6.0).rgb;
+      g += max(s - vec3(0.9), vec3(0.0));
+    }
+    f += uGlanz * 0.18 * g;
+  }
   // Kraft und Wärme
   float l = dot(f, vec3(0.2126, 0.7152, 0.0722));
   f = mix(vec3(l), f, uSatt);
@@ -73,7 +95,7 @@ export class Buchpass {
       uniforms: {
         tFarbe: { value: this.ziel.texture }, tTiefe: { value: this.ziel.depthTexture }, uPixel: { value: new THREE.Vector2() },
         uNah: { value: 1 }, uFern: { value: 1000 }, uLinie: { value: BUCH.linie }, uDicke: { value: BUCH.dicke }, uSchwelle: { value: BUCH.schwelle },
-        uDeck: { value: BUCH.deckkraft }, uSatt: { value: BUCH.saettigung }, uWarm: { value: BUCH.waerme }, uTon: { value: new THREE.Color(1, 1, 1) },
+        uDeck: { value: BUCH.deckkraft }, uSatt: { value: BUCH.saettigung }, uWarm: { value: BUCH.waerme }, uTon: { value: new THREE.Color(1, 1, 1) }, uAO: { value: 0 }, uGlanz: { value: 0 },
       },
     }));
     this.quad.frustumCulled = false;
@@ -87,6 +109,12 @@ export class Buchpass {
     if (this.ziel.width === bw && this.ziel.height === bh) return;
     this.ziel.setSize(bw, bh);
     this.quad.material.uniforms.uPixel.value.set(1 / bw, 1 / bh);
+  }
+
+  /** Qualitätsstufe (M12): Verdeckung (0..1) und Leuchten (0..1). */
+  qualitaet(ao: number, glanz: number): void {
+    this.quad.material.uniforms.uAO.value = ao;
+    this.quad.material.uniforms.uGlanz.value = glanz;
   }
 
   /** Stimmung (M12): Farbton (Multiplikator), Faktor auf die Sättigung, zusätzliche Wärme. */
