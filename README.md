@@ -23,6 +23,7 @@ Voraussetzungen: Node.js ≥ 20, Python ≥ 3.10, Internet (die Geodaten werden 
 
     tools/welt-laden.sh nideggen            # oder nordeifel, eifelsteig, ein Völkchen-Gebiet – oder: alle
 
+In Cloud-Sessions von Claude Code passiert das beim Start von selbst (`.claude/hooks/session-start.sh`: `npm ci` und beide Gebiete).
 Die Releases rechnet der Workflow „Weltdaten“ (`.github/workflows/weltdaten.yml`) auf GitHub: im Tab „Actions“
 starten oder einen Branch `weltdaten/<gebiet>` pushen. Gebiete: `nideggen`, `nordeifel`, `eifelsteig` (Kampagne) und die
 **Kerngebiete der 10 Völkchen** (`monschau`, `rursee`, `rureifel`, `vulkaneifel`, `ahr`, `laach`, `suedeifel`, `schneifel`,
