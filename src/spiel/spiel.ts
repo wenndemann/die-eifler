@@ -25,6 +25,7 @@ import { Traeger } from '../render/traeger';
 import { Arbeiter } from '../render/arbeiter';
 import { Boten } from '../render/boten';
 import { Deko } from '../render/deko';
+import { GebietDarstellung } from '../render/gebiet';
 import { setzeSchnee } from '../render/kulisse';
 import { Natur } from '../render/natur';
 import { Gebaeude, type GebaeudeHaken } from '../render/gebaeude';
@@ -37,8 +38,9 @@ import { Meldeleiste } from '../ui/meldeleiste';
 import { Fensterflaeche, type Eingabe, type FensterArt, type FensterDaten } from '../ui/fenster';
 import { ladeEinstellungen, speichereEinstellungen, wendeAn, type Einstellungen } from '../ui/einstellungen';
 import { icons, wennIconsDa, type Icons } from '../render/icons';
+import { AUSREDEN, ZIELE } from '../sim/nachbarn';
 import {
-  bauTooltip, fahneFenster, gebaeudeFenster, hilfeFenster, LAGERREGEL_NAMEN, Produktivitaet, protokollFenster, statistikFenster, verteilungFenster,
+  bauTooltip, endeFenster, zielName, fahneFenster, gebaeudeFenster, hilfeFenster, ortFenster, postenFenster, punkteText, LAGERREGEL_NAMEN, Produktivitaet, protokollFenster, statistikFenster, verteilungFenster,
   verteilungKnopf, warenFenster, warnungen, wegFenster, type FensterKontext, type ProtokollZeile, type StatMass,
 } from './fensterdaten';
 import { erzaehlerFuer, MeldungsFilter, type Erzaehler, type Meldung, type MeldungsNamen } from './meldungen';
@@ -156,6 +158,7 @@ export class Spiel {
   private readonly arbeiter: Arbeiter;
   private readonly boten: Boten;
   private readonly deko: Deko;
+  private readonly gebiet: GebietDarstellung;
   private readonly natur: Natur;
   private readonly gebaeude: Gebaeude;
   private readonly markierung: Markierung;
@@ -242,7 +245,8 @@ export class Spiel {
       setInterval(() => { if (performance.now() - this.letzterTakt > 200) this.netzTakt(); }, 100);
     } else {
       this._sim = ctx.laden ? Simulation.ausStand(ausschnitt.hex, ctx.laden)
-        : new Simulation(ausschnitt.hex, saatAusPruefsumme(ausschnitt.pruefsumme), waehleLagerHex(ausschnitt.hex, ausschnitt.kerne, map.info.start));
+        : new Simulation(ausschnitt.hex, saatAusPruefsumme(ausschnitt.pruefsumme), waehleLagerHex(ausschnitt.hex, ausschnitt.kerne, map.info.start),
+          { gebiet: 1, ziel: ladeEinstellungen().ziel });
       this.ich = 0;
     }
     this.lagerHex = this._sim.startDaten()[this.ich];
@@ -254,13 +258,14 @@ export class Spiel {
     this.arbeiter = new Arbeiter(map, grid, base, ex);
     this.boten = new Boten(map, grid, base, ex);
     this.deko = new Deko(map, grid, base, ex);
+    this.gebiet = new GebietDarstellung(map, grid, base, ex);
     this.natur = new Natur(map, grid, base, ex, ctx.haken.trees);
     this.markierung = new Markierung(map, grid, base, ex);
     this.bauplaetze = new Bauplaetze(map, grid, base, ex);
     this.geist = new Geist(map, grid, base, ex);
     this.wege.wald = ctx.haken.trees ?? null;
     this.fahnen.kamera = ctx.camera; this.traeger.kamera = ctx.camera; this.gebaeude.kamera = ctx.camera; this.arbeiter.kamera = ctx.camera; this.boten.kamera = ctx.camera;
-    this.group.add(this.wege.group, this.fahnen.group, this.traeger.group, this.gebaeude.group, this.arbeiter.group, this.boten.group, this.deko.group, this.natur.group,
+    this.group.add(this.wege.group, this.fahnen.group, this.traeger.group, this.gebaeude.group, this.arbeiter.group, this.boten.group, this.deko.group, this.gebiet.group, this.natur.group,
       this.bauplaetze.group, this.geist.group, this.markierung.group);
     ctx.scene.add(this.group);
 
@@ -408,7 +413,7 @@ export class Spiel {
     this.ctx.ex = ex;
     this.wege.setExaggeration(ex); this.fahnen.setExaggeration(ex); this.traeger.setExaggeration(ex);
     this.gebaeude.setExaggeration(ex); this.markierung.setExaggeration(ex);
-    this.arbeiter.setExaggeration(ex); this.natur.setExaggeration(ex); this.boten.setExaggeration(ex); this.deko.setExaggeration(ex);
+    this.arbeiter.setExaggeration(ex); this.natur.setExaggeration(ex); this.boten.setExaggeration(ex); this.deko.setExaggeration(ex); this.gebiet.setExaggeration(ex);
     this.bauplaetze.setExaggeration(ex); this.geist.setExaggeration(ex);
   }
 
@@ -454,6 +459,7 @@ export class Spiel {
     this.arbeiter.update(this._sicht, a, dt);
     this.boten.update(this._sicht, a, dt);
     this.deko.update(this._sicht);
+    this.gebiet.update(this._sicht);
     // Schnee kommt mit dem Winter und taut in den ersten Minuten des Frühjahrs (Drehbuch 7.4)
     const j = this._sicht.jahr, zt = JAHRESZEIT_TICKS - j.rest;
     setzeSchnee(j.jahreszeit === 3 ? Math.min(1, zt / (90 * 20)) : j.jahreszeit === 0 && j.jahr > 0 ? Math.max(0, 1 - zt / (120 * 20)) : 0);
@@ -535,7 +541,9 @@ export class Spiel {
       else if (e.art === 'verloren') this.insProtokoll(`Ein Bote hat ${WARE_TEXT[e.wert]?.eins ?? 'etwas'} verloren.`, true, e.q !== undefined && e.r !== undefined ? { q: e.q, r: e.r } : undefined);
     }
     for (const m of this.filter.neue(s.ereignisse, s.dorf, name, (a) => WARE_TEXT[a]?.mehr ?? '', (n) => DORFSTUFEN[n] ?? '', freiText(s.dorf.stufe), liste,
-      MELDUNGS_NAMEN, s.jahr.kommt)) this.zeigeMeldung(m);
+      this.meldungsNamen, s.jahr.kommt)) this.zeigeMeldung(m);
+    // M10: Ende der Partie einmal als Fenster zeigen
+    if (s.ende && !this.endeGezeigt) { this.endeGezeigt = true; this.zeigeEnde(); }
     // Begrüßung erst, wenn das Spiel läuft (beim Laden wäre sie schon wieder weg)
     if (!this.begruesst && s.tick >= 20) {
       this.begruesst = true;
@@ -685,7 +693,9 @@ export class Spiel {
       const f = this.fahneAt.get(key(h));
       const sg = this.segAt.get(key(h));
       if (g && g.sp !== this.ich) this.melde(`${NAMEN[g.typ] ?? g.typ} von ${this.namen[g.sp] ?? 'einem Nachbarn'}.`, false);
-      if (g) this.oeffneGebaeude(g.id);
+      if (g && !(g.typ === 'lager' && this.ortBei(h) >= 0 && g.sp !== this.ich)) this.oeffneGebaeude(g.id);
+      else if (this.ortBei(h) >= 0 && !(f && f.sp === this.ich && !this.ortMitte(h))) this.oeffneOrt(this.ortBei(h));
+      else if (this.postenBei(h) >= 0) this.oeffnePosten(this.postenBei(h));
       else if (f && f.sp === this.ich) this.oeffneFahne(f.id);
       else if (sg && sg.sp === this.ich) this.oeffneWeg(sg.id);
       return;
@@ -1121,6 +1131,72 @@ export class Spiel {
     });
   }
 
+  /** M10: Ort, dessen Ortskern auf Hex `h` liegt (Mitte oder Ortskern-Hex mit demselben Namen), sonst -1. */
+  ortBei(h: Hx): number {
+    const s = this._sicht;
+    const i = s.orte.findIndex((o) => o.q === h.q && o.r === h.r);
+    if (i >= 0) return i;
+    const kern = this.ctx.ausschnitt.kerne.find((k) => k.q === h.q && k.r === h.r);
+    if (!kern || !kern.name) return -1;
+    return s.orte.findIndex((o) => this.ortName(s.orte.indexOf(o)) === kern.name);
+  }
+
+  private ortMitte(h: Hx): boolean { return this._sicht.orte.some((o) => o.q === h.q && o.r === h.r); }
+
+  /** M10: Marktposten auf oder neben Hex `h`, sonst -1. */
+  postenBei(h: Hx): number {
+    return this._sicht.posten.findIndex((p) => hexAbstand(p, h) <= 1);
+  }
+
+  /** Name eines Orts aus den Ortskernen des Ausschnitts. */
+  ortName(i: number): string {
+    const o = this._sicht.orte[i];
+    if (!o) return 'Ort';
+    return this.ctx.ausschnitt.kerne.find((k) => k.q === o.q && k.r === o.r)?.name || 'Ort';
+  }
+
+  private get meldungsNamen(): MeldungsNamen {
+    return {
+      ...MELDUNGS_NAMEN, ort: (i) => this.ortName(i), posten: (i) => this._sicht.posten[i]?.stadt ?? 'dem Flachland',
+      spieler: (sp) => (sp === this.ich && !this.partie ? 'Unser Dorf' : this.namen[sp] ?? `Spieler ${sp + 1}`), ausrede: (i) => AUSREDEN[i] ?? '',
+    };
+  }
+
+  oeffneOrt(i: number): void {
+    const fid = `ort:${i}`;
+    this.fenster.oeffne({
+      id: fid, gruppe: 'auswahl', daten: () => ortFenster(i, this.ortName(i), this.fensterKontext()),
+      onKnopf: (k) => {
+        const o = this._sicht.orte[i];
+        if (k === 'einstand') { this.befehl({ art: 'einstand', ort: i }); this.melde(`Der Einstand für ${this.ortName(i)} ist unterwegs.`, false); }
+        else if (k === 'kamera' && o) this.springeZu(o);
+        this.fenster.jetzt(fid);
+      },
+    });
+  }
+
+  oeffnePosten(i: number): void {
+    const fid = `posten:${i}`;
+    this.fenster.oeffne({
+      id: fid, gruppe: 'auswahl', daten: () => postenFenster(i, this.fensterKontext()),
+      onKnopf: (k) => {
+        const p = this._sicht.posten[i];
+        const m = /^handel:(\d+):(\d+)$/.exec(k);
+        if (m) this.befehl({ art: 'handel', posten: i, tausch: Number(m[1]), mal: Number(m[2]) });
+        else if (k === 'kamera' && p) this.springeZu(p);
+        this.fenster.jetzt(fid);
+      },
+    });
+  }
+
+  private endeGezeigt = false;
+  zeigeEnde(): void {
+    this.fenster.oeffne({
+      id: 'ende', gruppe: 'auswahl', daten: () => endeFenster(this.fensterKontext()),
+      onKnopf: (k) => { this.fenster.schliesse('ende'); if (k === 'statistik') this.fensterUmschalten('statistik'); },
+    });
+  }
+
   oeffneFahne(id: Id): void {
     const fid = `fahne:${id}`;
     this.fenster.oeffne({ id: fid, gruppe: 'auswahl', daten: () => fahneFenster(id, this.fensterKontext()), onKnopf: (k) => this.auswahlKnopf(fid, k) });
@@ -1237,6 +1313,10 @@ export class Spiel {
       art: 'eingaben', titel: 'Spiel', felder: [
         { id: 'autosave', text: `Autosave alle ${AUTOSAVE_MIN} Spielminuten`, typ: 'schalter', wert: e.autosave },
         { id: 'tipps', text: `Tipps von ${this.erzaehler.name}`, typ: 'schalter', wert: e.tipps },
+        ...(this.partie ? [] : [{
+          id: 'ziel', text: 'Ziel für neue Spiele', typ: 'auswahl' as const, wert: e.ziel, optionen: ZIELE.map((z) => ({ wert: z.id, text: z.punkte ? `${z.name} (${z.punkte} Punkte)` : z.name })),
+          hilfe: `Diese Partie: ${zielName(this._sicht.regeln.ziel)}. Gilt ab dem nächsten neuen Spiel.`,
+        }]),
       ],
     });
     const z = [this.autosaveZuletzt ? `Letzter Autosave: ${this.autosaveZuletzt}` : 'Noch kein Autosave in dieser Partie.'];
@@ -1414,7 +1494,7 @@ export class Spiel {
       dorf: {
         stufe: DORFSTUFEN[d.stufe] ?? '', bewohner: d.bewohner, wohnraum: d.wohnraum, frei: d.frei,
         bauarbeiter: [d.bauarbeiter.frei, d.bauarbeiter.gesamt], planierer: [d.planierer.frei, d.planierer.gesamt], kirmes,
-        fest, punkte: d.festPunkte, friert: d.friert, jahr, winter: j.jahreszeit === 3,
+        fest, punkte: d.festPunkte, friert: d.friert, jahr, winter: j.jahreszeit === 3, eifelPunkte: punkteText(s, this.ich),
       },
     });
     // Baumenü: noch nicht freigeschaltete und schon gebaute einmalige Gebäude sperren

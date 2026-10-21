@@ -18,7 +18,7 @@ interface GebaeudeJson {
   wandelt?: { ein: string | Record<string, number>; menge?: number; aus: string; dauer_s: number };
   zeiten?: { arbeit_s?: number; ruhe_s?: number };
   nahrung_plaetze?: number; ab_stufe?: number; einmalig?: boolean; taste?: string;
-  saison?: string; werkzeug?: number; boten?: number;
+  saison?: string; werkzeug?: number; boten?: number; leistung?: string;
 }
 
 const warenListe = (warenJson as { waren: WareJson[] }).waren;
@@ -175,6 +175,8 @@ export interface GebaeudeTyp {
   werkzeug: number;
   /** Schänke: höchstens so viele Boten zugleich. */
   boten: number;
+  /** Satz fürs Gebäudefenster (data/buildings.json: leistung) oder ''. */
+  leistung: string;
 }
 
 const ticks = (s: number | undefined) => Math.round((s ?? 0) * TICK_HZ);
@@ -223,6 +225,7 @@ function baue(j: GebaeudeJson): GebaeudeTyp {
     feld: j.saison === 'feld',
     werkzeug: j.werkzeug ?? 0,
     boten: j.boten ?? 0,
+    leistung: j.leistung ?? '',
   };
 }
 

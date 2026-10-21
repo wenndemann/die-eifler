@@ -127,7 +127,10 @@ export function zustandsText(zustand: string, baustelle: boolean, bedarf: string
     case 'saat': return { titel: 'Wird gesät', spruch: 'Erst säen, dann ernten. So war das schon immer.', warn: false };
     case 'hochwasser': return { titel: 'Hochwasser – steht still', spruch: 'Das Wasser geht wieder. Nicht in die Aue bauen hilft.', warn: true };
     case 'kein_werkzeug': return { titel: 'Wartet auf Werkzeug', spruch: 'Ohne Hammer kein Handwerk. Die Schmiede macht welches.', warn: true };
-    case 'arbeitet': return { titel: 'Arbeitet', spruch: 'Läuft.', warn: false };
+    case 'fremd': return { titel: 'Steht auf fremdem Gebiet still', spruch: 'Die Grenze ist gewandert. Das Haus nicht.', warn: true };
+    case 'ausrede': return { titel: 'Finder sitzt in der Ausredenstube', spruch: 'Je besser die Ausrede, desto schneller ist er frei.', warn: true };
+    case 'arbeitet': return funktion === 'finder' ? { titel: 'Der Finder ist unterwegs', spruch: 'Er „findet“. Fragen Sie nicht.', warn: false }
+      : funktion === 'wache' ? { titel: 'Passt auf', spruch: 'Keiner kommt ungesehen durch.', warn: false } : { titel: 'Arbeitet', spruch: 'Läuft.', warn: false };
     default: return { titel: 'Fertig', spruch: 'Steht und wartet auf Arbeit.', warn: false };
   }
 }

@@ -6,6 +6,7 @@ import {
   ABNEHMER, DORFSTUFEN, FEST_OBERGRENZE, FLAG_CAP, GEBAEUDE, GEBAEUDE_IDS, JAHRESZEITEN, KIRMES, KLEINE_FESTE, MISCHKORB, NAHRUNG, VERTEILUNG_JE_WARE, WAREN, WAREN_GRUPPEN, zutatMenge,
 } from '../sim/daten';
 import type { GebaeudeTyp } from '../sim/daten';
+import { AUSREDEN, KOENIG_AB, ORT_GROESSEN, SCHUSS_GLUECK, SCHUSS_GRUND, SCHUSS_STAND, ZIELE } from '../sim/nachbarn';
 import { PROMILLE, STAT_KOPF, TICK_HZ } from '../sim/typen';
 import type { Id, SichtFahne, SichtGebaeude, SichtSegment, SichtStatistik, SimSicht } from '../sim/typen';
 import type { Abschnitt, FensterDaten, Knopf, KurvenReihe, Rangzeile, TabZeile, WareMenge } from '../ui/fenster';
@@ -101,6 +102,7 @@ export function leistungText(t: GebaeudeTyp, w: readonly WareText[]): string[] {
   if (t.boten) z.push(`macht aus 1 Schnaps einen beschwipsten Boten (höchstens ${t.boten}): trägt querfeldein zu weiten Abnehmern`);
   if (t.funktion === 'lager' && !t.wohnraum) z.push('Lager für lange Wege: nimmt Waren auf und gibt sie aus, Lagerregeln je Ware');
   if (t.wohnraum > 0) z.push(`Wohnraum für ${t.wohnraum}`);
+  if (t.leistung) z.push(t.leistung);
   if (t.arbeiter) z.push(`braucht ${t.arbeiter} Bewohner als Arbeiter`);
   return z;
 }
@@ -203,6 +205,20 @@ export function gebaeudeFenster(id: Id, k: FensterKontext): FensterDaten | null 
       ab.push({ art: 'zeilen', zeilen: [`Punkte aus kleinen Festen: ${s.dorf.festPunkte} von höchstens ${FEST_OBERGRENZE} · jedes Fest einmal im Jahr, nur in seiner Jahreszeit`] });
     }
     if (t.boten) ab.push({ art: 'zeilen', titel: 'Boten', zeilen: [`${g.boten ?? 0} von höchstens ${t.boten} unterwegs`] });
+    if (t.funktion === 'schuetzen' && s.dorf.schuetzen) {
+      const sch = s.dorf.schuetzen;
+      ab.push({ art: 'waren', titel: sch.gefeiert ? 'Schützenfest dieses Jahr gefeiert – nächstes Jahr wieder' : 'Warenliste Schützenfest', waren: warenListe(sch.geliefert, sch.liste) });
+      const z = [`Vogelschuss: ${SCHUSS_GRUND} Grundwert + ${SCHUSS_STAND} mit Schießstand + bis ${SCHUSS_GLUECK} Glück · König ab ${KOENIG_AB} und besser als die Nachbarn`];
+      if (sch.schuss) z.push(`Letzter Schuss: ${sch.schuss}${s.dorf.koenig ? ' – wir haben den Schützenkönig! 👑' : ''}`);
+      ab.push({ art: 'zeilen', zeilen: z });
+    }
+    if (g.finder) {
+      const f = g.finder, rest = Math.max(0, Math.ceil((f.bis - s.tick) / TICK_HZ));
+      const z = f.tut === 'unterwegs' ? [`Unterwegs nach ${f.ziel || '…'} – zurück in ${rest} s`]
+        : f.tut === 'ausrede' ? [`In der Ausredenstube, noch ${rest} s`, `Ausrede: ${AUSREDEN[f.ausrede] ?? ''}`]
+        : ['Bereit für den nächsten Gang (Ziele: erreichte Marktposten und Nachbardörfer)'];
+      ab.push({ art: 'zeilen', titel: 'Finder', zeilen: z });
+    }
     if (t.ausgangMax > 0) ab.push({ art: 'waren', titel: 'Ausgang (wartet auf Abholung)', waren: [{ ware: t.ausgangWare, n: g.ausgang?.[t.ausgangWare] ?? 0, max: t.ausgangMax }] });
     const leistung = leistungText(t, w);
     if (t.arbeiter) {
@@ -518,3 +534,87 @@ export function hilfeFenster(touch: boolean): FensterDaten {
     abschnitte: [{ art: 'zeilen', titel: 'So geht es', zeilen: schritte }, { art: 'tabelle', titel: touch ? 'Bedienung' : 'Tasten', kopf: [], zeilen: tasten }],
   };
 }
+
+// ---------------------------------------------------------------------------------------------- M10: Orte, Marktposten, Punkte
+
+const GROESSE_NAMEN = ['Weiler', 'Dorf', 'Städtchen'];
+
+/** Fenster eines Eifel-Orts (Drehbuch 6.2): Wunschliste, was das Lager hat, Lohn, Knopf „Einstand liefern“. */
+export function ortFenster(i: number, name: string, k: FensterKontext): FensterDaten | null {
+  const s = k.sicht, o = s.orte[i];
+  if (!o) return null;
+  const ab: Abschnitt[] = [];
+  const kopf = { titel: `${name} (${GROESSE_NAMEN[o.groesse] ?? ''})`, symbol: '🏘️' };
+  if (o.besitzer >= 0) {
+    ab.push({ art: 'status', text: o.besitzer === k.ich ? 'Gehört zu unserem Dorf' : `Gehört ${k.namen[o.besitzer] ?? `Spieler ${o.besitzer + 1}`}`, spruch: o.besitzer === k.ich ? 'Einstand gefeiert. Jetzt sind wir Nachbarn.' : 'Zu spät. Die feiern schon mit wem anders.' });
+    return { ...kopf, abschnitte: ab };
+  }
+  const vorrat = new Array<number>(WAREN.length).fill(0);
+  for (const g of s.gebaeude) if (g.sp === k.ich && g.vorrat) g.vorrat.forEach((n, a) => { vorrat[a] += n; });
+  const fehlt = o.wunsch.some((n, a) => n > vorrat[a]);
+  if (o.unterwegs) ab.push({ art: 'status', text: `Lieferung unterwegs – Ankunft in ${Math.max(0, Math.ceil((o.unterwegs - s.tick) / TICK_HZ))} s`, spruch: 'Hoffentlich ist keiner schneller.' });
+  else if (!o.erreicht) ab.push({ art: 'status', text: 'Noch nicht erreicht: einen Weg bis an den Ortskern bauen', warn: true, spruch: '„Wer seid ihr denn? Kommt mal mit was zu essen wieder.“' });
+  else ab.push({ art: 'status', text: fehlt ? 'Erreicht – im Lager fehlt noch etwas' : 'Erreicht – der Einstand kann los', warn: fehlt, spruch: '„Na gut. Zeigt mal, was ihr habt.“' });
+  ab.push({ art: 'waren', titel: 'Wunsch des Ortsvorstehers (im Lager / gewünscht)', waren: warenListe(o.wunsch.map((n, a) => Math.min(n, vorrat[a])), o.wunsch) });
+  ab.push({ art: 'waren', titel: `Lohn: ${o.bewohner} Bewohner, ${o.punkte} Punkte, ein Lager mit Fundkiste`, waren: warenListe(o.fundkiste) });
+  ab.push({ art: 'zeilen', zeilen: ['Im Mehrspieler gewinnt, wer zuerst liefert – wer zu spät kommt, hat umsonst geliefert.'] });
+  ab.push({ art: 'knoepfe', knoepfe: [
+    { id: 'einstand', text: '🎉 Einstand liefern', titel: 'Die Wunschliste geht aus dem Lager auf den Weg', aus: !o.erreicht || fehlt || !!o.unterwegs },
+    { id: 'kamera', text: '🎯 Hinsehen', titel: 'Kamera zum Ort' },
+  ] });
+  return { ...kopf, abschnitte: ab };
+}
+
+/** Fenster eines Marktpostens der Flachländer: Wegweiser, Tauschangebote mit Knöpfen (handel:Tausch:Mal). */
+export function postenFenster(i: number, k: FensterKontext): FensterDaten | null {
+  const s = k.sicht, p = s.posten[i];
+  if (!p) return null;
+  const w = k.ware;
+  const ab: Abschnitt[] = [];
+  const vorrat = new Array<number>(WAREN.length).fill(0);
+  for (const g of s.gebaeude) if (g.sp === k.ich && g.vorrat) g.vorrat.forEach((n, a) => { vorrat[a] += n; });
+  ab.push({ art: 'status', text: `Wegweiser: Nach ${p.stadt}, ${p.km} km`, warn: !p.erreicht, spruch: p.erreicht ? `„${p.stadt}? Dat es noch kein Eifel.“` : 'Erst einen Weg bis an den Posten bauen.' });
+  if (p.unterwegs.length) ab.push({ art: 'zeilen', zeilen: p.unterwegs.map((t) => `Händler unterwegs – zurück in ${Math.max(0, Math.ceil((t - s.tick) / TICK_HZ))} s`) });
+  ab.push({
+    art: 'tabelle', titel: 'Tauschen (antippen: einmal tauschen)', kopf: ['Wir geben', 'Wir bekommen', ''],
+    zeilen: p.handel.map((h, ti) => {
+      const gib = h.gib.map((n, a) => (n ? `${n} ${n === 1 ? w[a]?.eins : w[a]?.mehr}` : '')).filter(Boolean).join(' + ');
+      const nimm = h.nimm.map((n, a) => (n ? `${n} ${n === 1 ? w[a]?.eins : w[a]?.mehr}` : '')).filter(Boolean).join(' + ');
+      const geht = p.erreicht && h.gib.every((n, a) => n <= vorrat[a]);
+      return { zellen: [{ text: gib, warn: !geht }, { text: nimm }, { text: geht ? '↔' : '–' }], knopf: geht ? `handel:${ti}:1` : undefined, aktiv: false };
+    }),
+  });
+  ab.push({ art: 'zeilen', zeilen: ['Ab Marktflecken geben die Flachländer je Tausch ein Stück mehr. Finder können hier auch „finden“.'] });
+  ab.push({ art: 'knoepfe', knoepfe: [{ id: 'kamera', text: '🎯 Hinsehen', titel: 'Kamera zum Posten' }] });
+  return { titel: `Marktposten ${p.stadt}`, symbol: '🪧', abschnitte: ab };
+}
+
+/** Name des Ziels einer Partie. */
+export function zielName(id: string): string {
+  return ZIELE.find((z) => z.id === id)?.name ?? 'Ohne Ende';
+}
+
+/** Ende der Partie (Drehbuch 6.4): Sieger und Rangliste mit Punkten, Gebiet und Orten. */
+export function endeFenster(k: FensterKontext): FensterDaten | null {
+  const s = k.sicht;
+  if (!s.ende) return null;
+  const rang = s.spieler.map((p, sp) => ({ sp, p })).sort((a, b) => b.p.punkte - a.p.punkte || a.sp - b.sp);
+  const sieger = k.namen[s.ende.sieger] ?? `Spieler ${s.ende.sieger + 1}`;
+  const ab: Abschnitt[] = [];
+  ab.push({ art: 'status', text: s.ende.sieger === k.ich ? `Gewonnen! ${sieger} ist vorn.` : `${sieger} hat gewonnen.`, spruch: s.ende.sieger === k.ich ? 'Dat wor schön. Noch eine?' : 'Nächstes Mal. Erst mal Kirmes.' });
+  ab.push({
+    art: 'tabelle', titel: `Ziel: ${zielName(s.regeln.ziel)}`, kopf: ['Dorf', 'Punkte', 'Stufe', 'Bewohner', 'Gebiet', 'Orte'],
+    zeilen: rang.map(({ sp, p }) => ({ zellen: [{ text: `${p.koenig ? '👑 ' : ''}${k.namen[sp] ?? `Spieler ${sp + 1}`}` }, { text: String(p.punkte) }, { text: DORFSTUFEN[p.stufe] ?? '' }, { text: String(p.bewohner) }, { text: `${p.hexe} Hexe` }, { text: String(p.orte) }], aktiv: sp === k.ich })),
+  });
+  ab.push({ art: 'zeilen', zeilen: [`Gespielt: ${Math.floor(s.ende.tick / TICK_HZ / 60)} Minuten · Weiterspielen geht trotzdem.`] });
+  ab.push({ art: 'knoepfe', knoepfe: [{ id: 'statistik', text: '📈 Statistik', titel: 'Alle Dörfer im Vergleich' }, { id: 'weiter', text: '▶ Weiterspielen' }] });
+  return { titel: 'Partie entschieden', symbol: '🏆', abschnitte: ab };
+}
+
+/** Kurzzeile Eifel-Punkte für das Statusfenster: „⭐ 340 / 1000“. */
+export function punkteText(s: SimSicht, ich: number): string {
+  const p = s.spieler[ich]?.punkte ?? 0;
+  return s.regeln.ziel === 'wettlauf' ? `⭐ ${p} · Wettlauf zum Marktflecken` : s.regeln.zielPunkte > 0 ? `⭐ ${p} / ${s.regeln.zielPunkte}` : `⭐ ${p}`;
+}
+
+export { ORT_GROESSEN };
