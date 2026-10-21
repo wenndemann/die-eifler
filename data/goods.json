@@ -40,6 +40,10 @@
   {"id": "butter", "name": "Eupener Butter", "gruppe": "Völkchen", "nahrung": 3, "form": "rad", "farbe": "#f2d660", "farbe_fb": "#f0e442"},
   {"id": "lohe", "name": "Eichenlohe", "gruppe": "Völkchen", "form": "sack", "farbe": "#8a5a30", "farbe_fb": "#8a5a30"},
   {"id": "leder", "name": "Wiltzer Leder", "gruppe": "Völkchen", "mischkorb": true, "form": "bretter", "farbe": "#8a4a2a", "farbe_fb": "#d55e00"},
-  {"id": "ham", "name": "Éislécker Ham", "gruppe": "Völkchen", "nahrung": 3, "form": "stamm", "farbe": "#d98a8a", "farbe_fb": "#cc79a7"}
+  {"id": "ham", "name": "Éislécker Ham", "gruppe": "Völkchen", "nahrung": 3, "form": "stamm", "farbe": "#d98a8a", "farbe_fb": "#cc79a7"},
+  {"id": "garn", "name": "Monschauer Garn", "gruppe": "Völkchen", "form": "sack", "farbe": "#e8d8c8", "farbe_fb": "#e8d8c8"},
+  {"id": "traubenmost", "name": "Ahr-Traubenmost", "gruppe": "Völkchen", "nahrung": 1, "form": "krug", "farbe": "#9a3a6a", "farbe_fb": "#cc79a7"},
+  {"id": "dachschiefer", "name": "Mayener Dachschiefer", "gruppe": "Völkchen", "mischkorb": true, "form": "bretter", "farbe": "#2f3a48", "farbe_fb": "#0072b2"},
+  {"id": "torf", "name": "Venn-Torf", "gruppe": "Völkchen", "form": "kohle", "farbe": "#5a4030", "farbe_fb": "#5a4030"}
  ]
 }

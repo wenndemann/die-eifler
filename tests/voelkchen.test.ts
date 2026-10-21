@@ -9,30 +9,30 @@ import type { SimStand } from '../src/sim/stand';
 import type { Befehl, KarteDaten } from '../src/sim/typen';
 import { VOELKCHEN } from '../src/sim/voelkchen';
 import { baueTestKarte, gerade, KARTE_INFO } from './sim-szenario';
+import { SimKarte } from '../src/sim/karte';
 
 function tu(sim: Simulation, sp: number, b: Befehl) { sim.befehl(sim.tick, sp, b); }
 function lauf(sim: Simulation, n: number) { for (let i = 0; i < n; i++) sim.schritt(); }
 function aendere(sim: Simulation, k: KarteDaten, f: (st: SimStand) => void) { const st = sim.stand(); f(st); return Simulation.ausStand(k, st); }
 
 describe('M11 Völkchen: Daten', () => {
-  it('zehn Völkchen wie in regions.json, jedes mit Spezialkette (2–3 Gebäude, ab Stufe 2) und edler Spezialität aus der eigenen Kette', () => {
+  it('zehn Völkchen wie in regions.json, jedes mit Spezialkette ab Stufe 2 und edler Spezialität aus der eigenen Kette', () => {
     const ids = (regionen as { voelkchen: { id: string }[] }).voelkchen.map((v) => v.id);
     expect(VOELKCHEN.map((v) => v.id)).toEqual(ids);
     expect(VOELKCHEN.length).toBe(10);
     for (const v of VOELKCHEN) {
-      const kette = GEBAEUDE_IDS.filter((id) => GEBAEUDE[id].voelkchen.includes(v.id));
-      const produktion = kette.filter((id) => GEBAEUDE[id].funktion !== 'zier');
-      expect(produktion.length, v.id).toBeGreaterThanOrEqual(2);
-      expect(produktion.length, v.id).toBeLessThanOrEqual(3);
-      for (const id of produktion) expect(GEBAEUDE[id].abStufe, id).toBe(2);
-      // die Spezialität kommt aus der eigenen Kette und zählt als veredelt oder edel
-      expect(kette.some((id) => GEBAEUDE[id].ausgangWare === v.spezialitaet), v.id).toBe(true);
+      const eigene = GEBAEUDE_IDS.filter((id) => GEBAEUDE[id].voelkchen.includes(v.id));
+      // Spezialkette (Drehbuch 5.3): ab Kirchdorf, 2 bis 4 Gebäude (wo die Kette es braucht, ein Vorprodukt mehr)
+      const kette = eigene.filter((id) => GEBAEUDE[id].abStufe === 2);
+      expect(kette.length, v.id).toBeGreaterThanOrEqual(2);
+      expect(kette.length, v.id).toBeLessThanOrEqual(4);
+      expect(eigene.some((id) => GEBAEUDE[id].ausgangWare === v.spezialitaet), v.id).toBe(true);
       expect(NAHRUNG[v.spezialitaet] === 3 || MISCHKORB[v.spezialitaet], WAREN[v.spezialitaet]).toBe(true);
       // Faustregel fürs Gleichgewicht: kein Bonus über +25 %, keine Schwäche unter −20 %
       for (const p of Object.values(v.tempo)) { expect(p).toBeLessThanOrEqual(25); expect(p).toBeGreaterThanOrEqual(-20); }
       expect(v.bauzeit).toBeGreaterThanOrEqual(90); expect(v.bauzeit).toBeLessThanOrEqual(115);
     }
-    // jede Zutat einer Kette hat einen Erzeuger (eigene Kette oder Grundwirtschaft)
+    // jede Zutat einer Kette hat einen Erzeuger (eigene Gebäude oder Grundwirtschaft)
     for (const id of GEBAEUDE_IDS) {
       const t = GEBAEUDE[id];
       for (const z of t.wandelt?.ein ?? []) {
@@ -66,7 +66,7 @@ describe('M11 Völkchen in der Simulation', () => {
     expect(neutral.sicht().dorf.kirmes!.liste[WARE.bergkaese]).toBe(10);
   });
 
-  it('Bonus und Schwäche wirken: Schneifeler Felder langsamer, Öslinger mit mehr Brettern und teurerem Handel', () => {
+  it('Bonus und Schwäche wirken: Schneifeler Felder langsamer, Öslinger bauen mit Schiefer günstiger und handeln teurer', () => {
     const felder = (vk?: string) => {
       const sim = new Simulation(k, 1, vk ? { q: 0, r: 0, voelkchen: vk } : { q: 0, r: 0 });
       tu(sim, 0, { art: 'gebaeude', typ: 'kartoffelfeld', q: 4, r: 0 });
@@ -78,9 +78,97 @@ describe('M11 Völkchen in der Simulation', () => {
     expect(normal).toBeGreaterThan(0);
     expect(schneifel).toBeLessThan(normal);
     const oe = new Simulation(k, 1, { q: 0, r: 0, voelkchen: 'oesling' }, { gebiet: 1, ziel: '' });
-    expect(oe.sicht().gebaeude.find((g) => g.typ === 'lager')!.vorrat![WARE.bretter]).toBe(new Simulation(k, 1, { q: 0, r: 0 }).sicht().gebaeude[0].vorrat![WARE.bretter] + 4);
+    tu(oe, 0, { art: 'gebaeude', typ: 'wohnhaus', q: 3, r: 0 });
+    lauf(oe, 1);
+    const wh = oe.sicht().gebaeude.find((g) => g.typ === 'wohnhaus')!;
+    expect(wh.bedarf![WARE.stein]).toBe(GEBAEUDE.wohnhaus.kosten[WARE.stein] - 1);
     // 3 Käse für 1 Werkzeug – die Öslinger geben 4
     expect(oe.sicht().posten[0].handel[0].gib[WARE.kaese]).toBe(4);
+  });
+
+  it('Monschauer: bauen ungern im Moor (teurer), Hecken wachsen erst heran', () => {
+    const km = baueTestKarte(false);
+    const sk = new SimKarte(km);
+    const moor = sk.index(4, 0);
+    km.terrain[moor] = 4;
+    let m = new Simulation(km, 1, { q: 0, r: 0, voelkchen: 'monschau' });
+    tu(m, 0, { art: 'gebaeude', typ: 'wohnhaus', q: 4, r: 0 });
+    tu(m, 0, { art: 'gebaeude', typ: 'hecke', q: 0, r: 4 });
+    tu(m, 0, { art: 'weg', pfad: gerade(0, 0, 5, 4) });
+    lauf(m, 1);
+    const wh = m.sicht().gebaeude.find((g) => g.typ === 'wohnhaus')!;
+    expect(wh.bedarf![WARE.bretter]).toBe(Math.ceil(GEBAEUDE.wohnhaus.kosten[WARE.bretter] * 1.5));
+    m = aendere(m, km, (st) => { for (const g of st.gebaeude) if (g.typ === 'lager') (g.vorrat as number[])[WARE.setzling] = 10; });
+    let z = '';
+    for (let i = 0; i < 20 && z !== 'waechst'; i++) { lauf(m, 500); z = m.sicht().gebaeude.find((g) => g.typ === 'hecke')!.zustand; }
+    expect(z).toBe('waechst');
+    lauf(m, 6 * 60 * 20);
+    expect(m.sicht().gebaeude.find((g) => g.typ === 'hecke')!.zustand).toBe('bereit');
+  });
+
+  it('Rursee-Bootsverleih bringt Punkte, Laacher bauen keinen Lärm an der Abtei, Ostbelgier heizen mit Torf, Ahrtaler feiern statt zu arbeiten', () => {
+    // Bootsverleih am Teich der Testkarte (-15, 8)
+    let r = new Simulation(k, 1, { q: -10, r: 8, voelkchen: 'rursee' });
+    r = aendere(r, k, (st) => { st.doerfer[0].stufe = 2; });
+    tu(r, 0, { art: 'gebaeude', typ: 'bootsverleih', q: -12, r: 9 });
+    tu(r, 0, { art: 'weg', pfad: gerade(-10, 8, 4, 2) });
+    const p0 = r.punkte(0);
+    lauf(r, 8000);
+    expect(r.punkte(0)).toBeGreaterThan(p0);
+    // Laacher: Abtei, dann kein Steinbruch daneben
+    let l = new Simulation(k, 1, { q: 0, r: 0, voelkchen: 'laach' });
+    expect(l.kannBauen('steinbruch', 3, 0)).toBe(true);
+    tu(l, 0, { art: 'gebaeude', typ: 'abtei', q: 0, r: 4 });
+    lauf(l, 1);
+    expect(l.kannBauen('steinbruch', 3, 0)).toBe(false);
+    expect(l.kannBauen('steinbruch', -5, -2)).toBe(true);
+    expect(l.kannBauen('kartoffelfeld', 3, 0)).toBe(true);
+    // Ostbelgier: Torfstich nur am Moor, die Eisenhütte nimmt Torf statt Holzkohle
+    const ko = baueTestKarte(false);
+    const sk = new SimKarte(ko);
+    ko.terrain[sk.index(6, 0)] = 4;
+    let o = new Simulation(ko, 1, { q: 0, r: 0, voelkchen: 'ostbelgien' });
+    expect(o.kannBauen('torfstich', 5, 1)).toBe(true);
+    expect(o.kannBauen('torfstich', -5, 1)).toBe(false);
+    o = aendere(o, ko, (st) => {
+      st.doerfer[0].stufe = 2;
+      for (const g of st.gebaeude) if (g.typ === 'lager') { const v = g.vorrat as number[]; v[WARE.erz] = 6; v[WARE.torf] = 6; v[WARE.bretter] = 20; v[WARE.stein] = 20; v[WARE.werkzeug] = 4; }
+    });
+    tu(o, 0, { art: 'gebaeude', typ: 'eisenhuette', q: -4, r: 0 });
+    tu(o, 0, { art: 'weg', pfad: gerade(0, 0, 3, 4) });
+    for (let i = 0; i < 30 && !o.sicht().dorf.erzeugt[WARE.eisen]; i++) lauf(o, 500);
+    expect(o.sicht().dorf.erzeugt[WARE.eisen]).toBeGreaterThan(0);
+    // Ahrtaler: während eines Fests ruht die Arbeit
+    let a = new Simulation(k, 1, { q: 0, r: 0, voelkchen: 'ahr' });
+    tu(a, 0, { art: 'gebaeude', typ: 'holzfaeller', q: 3, r: 0 });
+    tu(a, 0, { art: 'weg', pfad: gerade(0, 0, 0, 3) });
+    lauf(a, 3000);
+    a = aendere(a, k, (st) => { st.doerfer[0].fest = 2000; });
+    expect(a.sicht().gebaeude.find((g) => g.typ === 'holzfaeller')!.zustand).toBe('fest');
+  });
+
+  it('Römerstraße (Südeifel) macht Wege in der Nähe schneller, und beim Bauen tauchen alte Steine auf', () => {
+    let s = new Simulation(k, 8, { q: 0, r: 0, voelkchen: 'suedeifel' });
+    s = aendere(s, k, (st) => { st.doerfer[0].stufe = 2; for (const g of st.gebaeude) if (g.typ === 'lager') (g.vorrat as number[])[WARE.stein] = 30; });
+    tu(s, 0, { art: 'weg', pfad: gerade(0, 0, 0, 5) });
+    lauf(s, 1);
+    const seg = () => [...(s as unknown as { segmente: Map<number, { kab: number }> }).segmente.values()][0].kab;
+    const vorher = seg();
+    tu(s, 0, { art: 'gebaeude', typ: 'roemerstrasse', q: 0, r: 3 });
+    tu(s, 0, { art: 'weg', pfad: gerade(0, 0, 5, 3) });
+    for (const [q, r] of [[-3, 0], [3, -3], [-3, 3], [0, -3]]) tu(s, 0, { art: 'gebaeude', typ: 'wohnhaus', q, r });
+    tu(s, 0, { art: 'weg', pfad: gerade(0, 0, 3, 3) }); tu(s, 0, { art: 'weg', pfad: gerade(0, 0, 1, 3) });
+    tu(s, 0, { art: 'weg', pfad: gerade(0, 0, 4, 3) }); tu(s, 0, { art: 'weg', pfad: gerade(0, 0, 2, 3) });
+    lauf(s, 1);
+    const gesehen = new Set<string>();
+    for (let i = 0; i < 30 && s.sicht().gebaeude.some((g) => g.bau < 1000); i++) {
+      lauf(s, 500);
+      for (const e of s.sicht().ereignisse) gesehen.add(e.art);
+    }
+    expect(s.sicht().gebaeude.find((g) => g.typ === 'roemerstrasse')!.bau).toBe(1000);
+    expect(seg()).toBeLessThan(vorher);
+    expect(Math.round((seg() / vorher) * 10)).toBe(7);
+    expect(gesehen.has('altstein')).toBe(true);
   });
 
   it('Fischer brauchen Wasser in der Nähe; die Vulkaneifeler bauen nicht direkt am Wasser', () => {
