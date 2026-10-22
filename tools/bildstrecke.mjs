@@ -142,7 +142,11 @@ try {
   await zu(info.L, 650, 40, 60); await bild('10-herbst.png');
   await page.evaluate(() => { const sp = window.eifeler.spiel; sp.sim._tick = 1 * 18000 + 6000; sp.schritte(2); sp.wetterVorgabe = { tag: 0.93 }; });
   await zu(info.L, 420, 35, 40); await bild('11-nacht.png');
-  await page.evaluate(() => { window.eifeler.spiel.wetterVorgabe = { tag: 0.45, wind: 0.6 }; });
+  // zurück in den Tag: die Uhr der Simulation einen halben Tag weiter (sonst zeigt die Leiste „0 Uhr“ bei Tageslicht)
+  await page.evaluate(async () => {
+    const sp = window.eifeler.spiel, { TAG_TICKS } = await import('/src/sim/grenzland.ts');
+    sp.sim._tick += Math.round(TAG_TICKS / 2); sp.schritte(2); sp.wetterVorgabe = { wind: 0.6 };
+  });
   const stall = await page.evaluate(() => { const g = window.eifeler.spiel.sicht.gebaeude.find((x) => x.typ === 'schafstall'); return g && { q: g.q, r: g.r }; });
   if (stall) { await zu(stall, 210, 38, -40); await bild('12-tiere-nah.png'); }
   // Wild am Waldrand (Rotte bzw. Rudel nah) und ein Meister in Tracht vor seiner Werkstatt

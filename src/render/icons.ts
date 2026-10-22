@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { GEBAEUDE, GEBAEUDE_IDS, WAREN, WAREN_FARBE, WAREN_FORM } from '../sim/daten';
 import { Fnv2 } from '../welt/pruefsumme';
 import { gebaeudeGeometrie, lebenAnker, modellGrund } from './gebaeude';
+import { C, mitDach } from './mockup';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { warenGeometrie } from './waren';
 
@@ -17,7 +18,8 @@ const GROESSE = 96;
  * der Käserei, das Garn vor der Spinnerei, das Brett vor dem Sägewerk.
  */
 function mitWare(id: string): THREE.BufferGeometry {
-  const haus = gebaeudeGeometrie(id, true);
+  // Dach in Schiefer wie im Spiel (die Völkchen-Dächer sind fast überall Schiefer), nicht in der Grundfarbe des Typs
+  const haus = mitDach(C.dach, () => gebaeudeGeometrie(id, true));
   const ware = GEBAEUDE[id]?.ausgangWare ?? -1;
   if (ware < 0) return haus;
   const schild = lebenAnker(id).find((a) => a.art === 'schild');
@@ -57,7 +59,7 @@ const SPEICHER = 'eifeler.icons';
 /** Schlüssel: ändert sich mit Waren (Form, Farbe), Gebäuden und Größe. */
 const SCHLUESSEL = (() => {
   const f = new Fnv2();
-  f.text(`${GROESSE}|motiv4|${WAREN.join(',')}|${WAREN_FORM.join(',')}|${WAREN_FARBE.join(',')}|${GEBAEUDE_IDS.join(',')}`);
+  f.text(`${GROESSE}|motiv5|${WAREN.join(',')}|${WAREN_FORM.join(',')}|${WAREN_FARBE.join(',')}|${GEBAEUDE_IDS.join(',')}`);
   return f.hex();
 })();
 

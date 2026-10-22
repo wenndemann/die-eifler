@@ -123,7 +123,7 @@ export class Stage {
     this.sunDir.set(Math.cos(elev) * Math.sin(azim), Math.sin(elev), -Math.cos(elev) * Math.cos(azim)).normalize();
     const licht = st.nachtLicht + (1 - st.nachtLicht) * tag;
     const wolke = 1 - 0.45 * st.wolken;
-    this.sun.intensity = 2.75 * (0.25 + 0.75 * tag) * licht * wolke;
+    this.sun.intensity = 2.75 * (0.12 + 0.88 * tag) * licht * wolke;
     this.sun.color.set('#ffe4bc').lerp(this.tmp.set('#ffa560'), flach * tag * 0.75).lerp(this.tmp.set('#9fb6e8'), 1 - tag);
     this.hemi.intensity = 1.3 * licht * (1 + 0.15 * st.wolken);
     this.hemi.color.set('#d6e6f0').lerp(this.tmp.set('#8f84bf'), (1 - tag) * 0.7);
@@ -136,7 +136,7 @@ export class Stage {
         // Farbton im Bilderbuch-Pass: goldenes Morgen- und Abendlicht, violettblaue Nacht (gedämpft, aber gemütlich und spielbar), graue Regentage
     const gold = flach * tag, nacht = 1 - tag;
     this.buch.stimmung(
-      this.tmp.setRGB(1, 1, 1).lerp(this.ton1.setRGB(1.26, 0.9, 0.64), gold).lerp(this.ton1.setRGB(0.68, 0.52, 0.98), nacht * 0.9)
+      this.tmp.setRGB(1, 1, 1).lerp(this.ton1.setRGB(1.26, 0.9, 0.64), gold).lerp(this.ton1.setRGB(0.72, 0.5, 1.0), nacht * 0.95)
         .multiplyScalar(1 - 0.12 * st.wolken),
       (1 - 0.3 * st.wolken - 0.15 * st.duerre) * (1 - 0.4 * nacht) * (1 + 0.2 * gold), st.duerre * 0.06 + gold * 0.05);
   }

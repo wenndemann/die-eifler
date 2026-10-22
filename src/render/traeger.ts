@@ -14,6 +14,7 @@ import { paint } from './mockup';
 import { VOELKCHEN } from '../sim/voelkchen';
 import { Instanzen } from './instanzen';
 import { Kontaktschatten } from './kontakt';
+import { entzerren, meisterPlaetze, traegerPlaetze, type Platz } from './gedraenge';
 import { TRAEGER_H, WARE_TRAGEN, fernFaktor } from './massstab';
 import { WAREN_ANZAHL, warenGeometrie } from './waren';
 import { kurvenPunkt, type Pkt } from './wege';
@@ -127,8 +128,8 @@ function hut(t: Tracht, nacken: (g: THREE.BufferGeometry) => THREE.BufferGeometr
 
 /** Großes Werkzeug je Beruf: in der rechten Hand (Teil 4, schwingt mit dem Arm), der Käselaib vor dem Bauch. Aufrecht, Kopf oben. */
 function werkzeug(w: Werkzeug): void {
-  const sch: [number, number, number] = [0.25, 0.54, 0], hx = 0.34, hz = 0.07;
-  // gut 1,5-mal so groß wie echt (um die Hand): aus der Spielkamera als Werkzeug erkennbar
+  const sch: [number, number, number] = [0.25, 0.54, 0], hx = 0.36, hz = 0.16;
+  // gut 1,5-mal so groß wie echt (um die Hand) und etwas vor dem Körper: aus der Spielkamera als Werkzeug erkennbar
   const gross = (g: THREE.BufferGeometry) => g.translate(-hx, -0.27, -hz).scale(1.5, 1.5, 1.5).translate(hx, 0.27, hz + 0.04);
   const stiel = (unten: number, oben: number, f = '#8a6340', r = 0.026) => add(gross(paint(new THREE.CylinderGeometry(r, r, oben - unten, 6).translate(hx, (oben + unten) / 2, hz), f)), 4, sch);
   const teil = (g: THREE.BufferGeometry, f: string) => add(gross(paint(g, f)), 4, sch);
@@ -417,10 +418,21 @@ export class Traeger {
     for (const w of this.waren) w.beginne();
     const { map, base, ex, m, q, p, s, farbe } = this;
     const dl = dorfLaune(sicht);
+    // erst alle Plätze, dann das Gedränge auflösen (stehende Träger rücken auseinander und weichen den Meistern aus)
+    const plaetze: Platz[] = [], laeuft: boolean[] = [];
     for (const t of sicht.traeger) {
       const f = Math.min(1, Math.max(0, (t.fortschritt + (t.tut === 'laeuft' ? alpha * t.schritt : 0)) / PROMILLE));
       const a = this.ort(t.von, t.nach, f, this.tmpA);
-      const x = a.x, z = a.z;
+      plaetze.push({ x: a.x, z: a.z, r: TRAEGER_H * 0.32, fest: false });
+      laeuft.push(t.tut === 'laeuft');
+    }
+    entzerren(plaetze, meisterPlaetze, laeuft);
+    traegerPlaetze.length = 0;
+    for (const p of plaetze) traegerPlaetze.push(p);
+    for (let ti = 0; ti < sicht.traeger.length; ti++) {
+      const t = sicht.traeger[ti];
+      const f = Math.min(1, Math.max(0, (t.fortschritt + (t.tut === 'laeuft' ? alpha * t.schritt : 0)) / PROMILLE));
+      const x = plaetze[ti].x, z = plaetze[ti].z;
       // Blickrichtung: Tangente der Kurve
       const f0 = Math.max(0, f - 0.04), f1 = Math.min(1, f + 0.04);
       const p0 = this.ort(t.von, t.nach, f0, this.tmpA), p1 = this.ort(t.von, t.nach, f1, this.tmpB);

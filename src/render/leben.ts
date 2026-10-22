@@ -13,6 +13,7 @@ import { PROMILLE } from '../sim/typen';
 import { lebenAnker, modellGrund, radGeometrie } from './gebaeude';
 import { Instanzen } from './instanzen';
 import { Kontaktschatten } from './kontakt';
+import { meisterPlaetze } from './gedraenge';
 import { fernFaktor, TRAEGER_H, WARE_M } from './massstab';
 import { paint, weicheKiste, type Anker } from './mockup';
 import { FIGUR_ATTRIBUTE, GESTE, figur, material, type Tracht } from './traeger';
@@ -306,6 +307,7 @@ export class LebenDarstellung {
     }
     for (const x of this.alle()) x.beginne();
     this.kontakt.beginne();
+    meisterPlaetze.length = 0;
     // Windrichtung (fest von Westen, leicht pendelnd) in m/s für Rauch und Wäsche
     const wx = (1.5 + 6 * wind) * Math.cos(0.3 + 0.2 * Math.sin(t * 0.05)), wz = (1.5 + 6 * wind) * Math.sin(0.3 + 0.2 * Math.sin(t * 0.05)) * 0.5;
     const fest = s.dorf.fest && s.dorf.fest.laeuft > 0 ? KLEINE_FESTE[s.dorf.fest.nr]?.id ?? '' : '';
@@ -386,6 +388,7 @@ export class LebenDarstellung {
     const takt = (t * 0.12 + h01(g.id, 9)) % 1;
     const geste = takt < 0.12 ? GESTE.winken : takt > 0.55 && takt < 0.65 ? GESTE.kratzen : GESTE.keine;
     const yaw = 0.4 * Math.sin(t * 0.3 + g.id);
+    meisterPlaetze.push({ x, z, r: TRAEGER_H * 0.35, fest: true });
     this.figur(x, z, yaw, t * 2 + g.id, tracht.hemd ? this.c.set(tracht.hemd) : SCHWAETZER[g.id % SCHWAETZER.length], 0, geste, 0.7, 0, 0.9, zahl, satz, 0.45);
   }
 
@@ -442,7 +445,7 @@ export class LebenDarstellung {
         if (a.y < 4) {
           const bz = z + seite * 2.2 * sk;
           this.c.set(leben.fenster.farbe).multiplyScalar(o.nacht * leben.fenster.boden * flacker);
-          m.compose(p.set(x, this.hoehe(x, bz) + 0.4, bz), this.q2.setFromAxisAngle(this.X, -Math.PI / 2), sc.set(5 * sk, 4 * sk, sk));
+          m.compose(p.set(x, this.hoehe(x, bz) + 0.4, bz), this.q2.setFromAxisAngle(this.X, -Math.PI / 2), sc.set(6.5 * sk, 5 * sk, sk));
           this.schein.fuege(m, this.c);
         }
         o.zahl.fenster++;

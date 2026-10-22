@@ -38,7 +38,7 @@
     "hell": 2.4,
     "glanz": 1.6,
     "abstand": 0.15,
-    "boden": 0.9
+    "boden": 1.4
   },
   "wind": {
     "grund": 0.25,

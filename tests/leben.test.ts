@@ -5,6 +5,7 @@ import leben from '../data/leben.json';
 import { lebenAnker } from '../src/render/gebaeude';
 import { LebenDarstellung } from '../src/render/leben';
 import { WILD_ARTEN, wildModelle } from '../src/render/wild';
+import { entzerren, type Platz } from '../src/render/gedraenge';
 import { fachwerk, ohneSchindeln } from '../src/render/mockup';
 import { figur, TRAEGER_TRACHT, type Tracht } from '../src/render/traeger';
 import { GEBAEUDE, GEBAEUDE_IDS } from '../src/sim/daten';
@@ -84,6 +85,19 @@ describe('Lebendige Eifel', () => {
     // Wolf und Wildkatze sind selten, Rehe häufig
     expect(leben.wild.arten.wolf.anteil).toBeLessThan(leben.wild.arten.reh.anteil);
     expect(leben.wild.arten.wildkatze.anteil).toBeLessThan(leben.wild.arten.reh.anteil);
+  });
+
+  it('Gedränge: stehende Figuren rücken auseinander, feste Plätze (Meister) bleiben, niemand steckt im anderen', () => {
+    const r = 6;
+    const leute: Platz[] = [0, 1, 2, 3, 4].map((i) => ({ x: 100 + i * 0.5, z: 100, r, fest: false }));
+    const meister: Platz[] = [{ x: 103, z: 103, r, fest: true }];
+    entzerren(leute, meister);
+    entzerren(leute, meister);
+    expect(meister[0]).toEqual({ x: 103, z: 103, r, fest: true });
+    for (let i = 0; i < leute.length; i++) {
+      for (let j = i + 1; j < leute.length; j++) expect(Math.hypot(leute[i].x - leute[j].x, leute[i].z - leute[j].z)).toBeGreaterThan(r * 1.4);
+      expect(Math.hypot(leute[i].x - 103, leute[i].z - 103)).toBeGreaterThan(r * 1.4);
+    }
   });
 
   it('Nacht aus der Tageszeit: Mittag hell, Mitternacht dunkel, weiche Dämmerung', () => {
