@@ -27,6 +27,7 @@ Leitideen:
 | M12 | Feinschliff Figuren, Wetter, Klang, Erzählerin | Version 1.0 (freies Spiel + Mehrspieler) |
 | M13 | Kampagne „Der Eifelsteig“ | 15 Etappen von Aachen nach Trier |
 | M14 | Der Mai: Maibaum und Maijungen | Maibaum stellen, Maibaumklau statt Krieg |
+| M15 | Grenzland und lebendige Eifel | Grenzsteine, Zöllner, Kaffeeschmuggel, Fundbüro, Der Große Fund; alles bewegt sich |
 
 ---
 
@@ -226,7 +227,7 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 - [x] **Stilprobe** (Wohnhaus, Träger, Ware) in drei Varianten, der Nutzer wählt eine aus (`tools/stilprobe/`): **gewählt: Wimmelbuch kräftig mit Linie** (`?v=m`: Kleinkram aus C1, Farben und Licht aus C2, feine Linie aus C3, ohne Unschärfe)
 - [x] **Stil-Leitfaden** (`STIL.md`): Proportionen der Figuren, Farbpalette je Region, Dachneigung und „Schiefe“, Konturen/Schattierung, Licht und Farb-Grading, Oberfläche
 - [x] **Alle Gebäude** im gewählten Stil: gemalte Verläufe, weiche Kanten, Schiefe, Ziegelreihen, Rauch, Kleinkram je Hof (Hühner, Beete, Fässer, Bienenkörbe, Wäsche); drei Bauphasen wie bisher
-- [ ] Weitere kleine Animationen (Mühlrad, Bienen, Schafe) – mit M12
+- [ ] Weitere kleine Animationen (Mühlrad, Bienen, Schafe) – in M15 (Lebendige Eifel)
 - [x] **Figuren** (Träger, Arbeiter, Bauleute, Boten) im gewählten Stil: großer Kopf, Bauch, Gesicht unter der Kappe sichtbar, Kappe in Trachtfarbe
 - [x] **Waren** an den Stil angepasst (getragen größer) (lesbar bleibt Pflicht, Drehbuch 7.6)
 - [x] Gelände, Wald und Wasser farblich zum Stil passend, Wiesen-Deko, Schnee auf Dächern und Felsen; Oberfläche im selben Ton, Lagerzeile einklappbar
@@ -244,16 +245,16 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 
 - [x] **Einfluss:** Lager (+1 je Dorfstufe), Wohnhäuser, Kirmesplatz, Schützenhaus und Dorfpolizist strahlen aus, gut versorgt (friert nicht) +1, Schützenkönig +1; bauen und Fahnen nur auf eigenem Gebiet, Wege auch über freies Land, nie über fremdes; Gebäude auf fremdem Gebiet stehen still; Grenzband und Grenzsteine in Spielerfarbe (`data/nachbarn.json`: gebiet). Eine Kirche gibt es noch nicht
 - [ ] Erkundung und Nebel in Kartenpapier-Optik (DESIGN §8, im Drehbuch noch nicht festgelegt) – offen
-- [ ] **Grenzsteine versetzen** (nachts, mit Risiko) und **Abwerben** über Kirmes und Essen – offen; Gebäude werden nie zerstört, sie stehen still (umgesetzt)
+- [ ] **Grenzsteine versetzen** (nachts, mit Risiko) und **Abwerben** über Kirmes und Essen – in M15; Gebäude werden nie zerstört, sie stehen still (umgesetzt)
 - [x] **Orte mit Einstand** (Drehbuch 6.2): jeder Ortskern im Spielfeld ist ein Ort (Weiler/Dorf/Städtchen nach Größe), Ortsschild, Wunschliste je Ort, Weg bis an den Ortskern, „Einstand liefern“ aus dem Lager, dann Lager mit Fundkiste, Gebiet, Bewohner und Punkte; im Mehrspieler gewinnt, wer zuerst ankommt, der andere hat umsonst geliefert
-- [ ] Jahresfest je gewonnenem Ort – offen
+- [ ] Jahresfest je gewonnenem Ort – in M15
 - [x] **Flachländer am Kartenrand:** die zwei nächsten Städte (Aachen, Düren, Euskirchen, Bonn, Koblenz, Trier, Lüttich) als Marktposten mit Wegweiser in ihre echte Richtung und echter Entfernung; Handel sofort (6 Tauschangebote, ab Marktflecken je Tausch 1 Stück mehr), Wachsamkeit gegen Finder, nicht zu gewinnen
 - [x] Finderhütte, **Finden mit Gegenwehr** (Wachhund, Dorfpolizist), **Ausredenstube** mit Sprüchen (Gänge abstrakt, ohne Figur auf der Karte)
-- [ ] Fundbüro, Finder als Figur – offen
-- [ ] Zöllner an der Staatsgrenze, Kaffeeschmuggel – offen
+- [ ] Fundbüro, Finder als Figur – in M15
+- [ ] Zöllner an der Staatsgrenze, Kaffeeschmuggel – in M15
 - [x] **Schützenfest** mit Schützenhaus, Schießstand und **Vogelschuss** (Vorbereitung + etwas Glück), Schützenkönig zahlt die Runde, bringt Punkte und Einfluss
 - [x] Siegbedingungen: **Eifel-Punkte** bis zur Zielpunktzahl (kurz 600, normal 1000, lang 1500) aus Lobby bzw. Einstellungen, Zwischenstand im Status, **Wettlauf** zum Marktflecken, allein auch **„ohne Ende“**
-- [ ] **Der Große Fund** – offen
+- [ ] **Der Große Fund** – in M15
 - [x] Abschluss-Bildschirm (Rangliste mit Punkten, Stufe, Bewohnern, Gebiet, Orten; Statistik; Weiterspielen)
 
 **Abnahme:** Vier Testspieler (oder zwei plus Flachländer) spielen eine 2-Stunden-Partie bis zum Ende ohne Abbruch. Danach sagen sie: „Noch eine.“
@@ -320,11 +321,39 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 - [x] **Auslöse:** gestohlenen Baum gegen Bier und Bratkartoffeln zurückholen, die Erzählfigur kommentiert; Feier bei der Übergabe
 - [x] Allein: Nachbarorte (und Flachländer) versuchen ab und zu einen Klau, damit es auch etwas zu verteidigen gibt
 - [x] **Mailehen**: am Ende der Mainacht bringt der Verein Zuzug (2 Bewohner, einmal im Jahr)
-- [ ] Maijungen als Helfer bei Festen und beim Schützenfest, beim „Finden“ von Grenzsteinen (später)
+- [ ] Maijungen als Helfer bei Festen und beim Schützenfest, beim „Finden“ von Grenzsteinen – in M15
 - [x] Zahlen in `data/mai.json`; Mainacht ist Nacht (Optik), Uhr und „Mainacht in … min“ in der Statusleiste, Meldungen der Erzählfigur, Tusch
 - [x] Mehrspieler: Klau, Abwehr und Auslöse im Gleichschritt, getestet in `tests/partie.test.ts` und `tests/mehrspieler.mjs`
 
 **Abnahme:** In einer Mehrspieler-Partie stellen beide Dörfer in der Mainacht ihren Baum, einer wird geklaut, mit Bier abgewehrt oder ausgelöst – und alle lachen.
+
+## M15 – Grenzland und lebendige Eifel
+
+**Ziel:** Die offenen Teile aus M10 (Drehbuch 2.3, 6.2–6.4). Die Grenzen werden lebendig: zwischen Dörfern verschiebt man Grenzsteine und wirbt Leute ab, an der Staatsgrenze stehen Zöllner und der Kaffee kommt trotzdem rüber. Was die Finder mitbringen, macht das Fundbüro wertvoll, bis zum **Großen Fund**. Mit der ganzen Eifel liegen jetzt echte Staatsgrenzen (Belgien, Luxemburg) auf der Karte.
+
+- [ ] **Grenzsteine versetzen** (Drehbuch 6.2): ein Finder trägt nachts einen Grenzstein ein Stück weiter; gelingt es, wechseln ein paar Hexe den Besitzer. Gegenwehr wie beim Finden (Wachhund, Dorfpolizist), Erwischte in die Ausredenstube. **Hecken** der Monschauer & Venner machen Grenzsteine dahinter fast unversetzbar
+- [ ] **Maijungen als Helfer** (aus M14): tragen Grenzsteine schneller und helfen bei Festen und beim Schützenfest
+- [ ] **Abwerben:** die bessere Kirmes und das bessere Essen locken Bewohner vom Rand der Nachbarn herüber, selten zieht ein ganzer Hof mit seinem Land um; die eigenen Leute satt und bei Laune halten schützt
+- [ ] **Zöllner an der Staatsgrenze** (Drehbuch 2.3, 3.1): Zollhaus der Gegenseite an der gestrichelten Linie im Spielfeld, Wachsamkeit wie bei den Flachländern; keine harte Regel, nur Gelegenheit
+- [ ] **Kaffeeschmuggel:** Kaffee als Luxusware (neue Ware, in Verteilung, Warenübersicht und Statistik), kommt mit Findern über die Grenze; Mützenich als Schmugglernest, Zöllner a. D. Gerd merkt nie etwas. Ohne Staatsgrenze im Ausschnitt gibt es Kaffee nur bei den Flachländern
+- [ ] **Fundbüro** (Gebäude, Fenster ohne Sondercode): wertet Funde auf (Werkzeug, besseres Gewehr für den Vogelschuss, Kaffee), große Funde 30–100 Punkte
+- [ ] **Finder als Figur** auf der Karte (statt abstrakter Gänge), auch beim Grenzstein-Tragen
+- [ ] **Jahresfest je gewonnenem Ort**: der Ort feiert einmal im Jahr mit, kleine Punkte und Laune
+- [ ] **Der Große Fund** (Drehbuch 6.4): Teile eines seltenen Schatzes bei verschiedenen Nachbarn finden und im Fundbüro zusammensetzen (75 Punkte je Teil); auch als Siegbedingung in der Lobby
+- [ ] Nachts **spukende Grenzsteinversetzer** als Geräusch, Meldungen der Erzählfiguren
+
+**Lebendige Eifel (aus M9):** Das ganze Spiel soll grafisch interessanter werden – überall bewegt sich etwas, man sieht, was ein Gebäude tut. Stil nach `STIL.md`, Leistung im Rahmen (Instanzen, wenige Draw-Calls, aus der Ferne ausblenden).
+
+- [ ] **Arbeitende Gebäude:** Mühlrad und Windmühlenflügel drehen sich, Säge und Amboss bewegen sich, Rauch aus Schornsteinen, Brennerei und Köhlerei dampft, Brauerei mit Fässern, nur wenn das Gebäude wirklich arbeitet (Sicht)
+- [ ] **Tiere:** Schafe auf den Weiden am Schafstall, Kühe, Hühner im Hof, Bienen um die Bienenkörbe, Hund am Hof; ein paar Vögel und Raben über Feldern
+- [ ] **Natur:** Bäume und Hecken wiegen im Wind (stärker bei Sturm), Wasser mit Glitzern und Strömung an Bächen, Blätter im Herbst, Rauchschwaden im Winter
+- [ ] **Dorfleben:** Wäsche flattert, Kinder spielen am Kirmesplatz, Leute stehen schwätzend vor der Schänke, Laternen und Fensterlicht in der Nacht
+- [ ] **Feste und Ereignisse** sichtbarer: Fahnen und Wimpel, Konfetti beim Tusch, Funken beim Martinsfeuer
+- [ ] **Bildstrecke** (`tools/bildstrecke.mjs`) mit kurzen Bildfolgen für Bewegung, Gutachter-Runde wie in M9 (Vergleich mit der vorigen Version)
+- [ ] Zahlen in `data/*.json`, alles über Befehle, in Prüfsumme und Spielstand (alte Spielstände laden mit Standardwerten)
+- [ ] Mehrspieler: Grenzsteine, Abwerben, Schmuggel und Fund im Gleichschritt, getestet in `tests/partie.test.ts` und `tests/mehrspieler.mjs`
+
+**Abnahme:** In einer Mehrspieler-Partie an der belgischen Grenze (z. B. Monschau/Mützenich) verschiebt einer nachts die Grenze, der andere schmuggelt Kaffee am Zöllner vorbei, und einer setzt im Fundbüro den Großen Fund zusammen. Die Gutachter finden das Dorf deutlich lebendiger als vorher, die Bildrate bleibt im Rahmen.
 
 ## Nachtrag: Wunsch-Ort als Startpunkt ✅
 
