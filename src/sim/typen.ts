@@ -90,7 +90,12 @@ export type Befehl =
    * `ziel` (>= 0) oder im Ort -1 - ziel (nur in der Mainacht, mit `n` freien Maijungen, sonst allen), Wache am eigenen Baum (`n`), Bier für
    * Angreifer geben (`an`), geklauten Baum auslösen. Ungültig → wirkungslos.
    */
-  | { art: 'mai'; was: 'stellen' | 'klau' | 'wache' | 'bier' | 'loese'; ziel?: number; n?: number; an?: boolean };
+  | { art: 'mai'; was: 'stellen' | 'klau' | 'wache' | 'bier' | 'loese'; ziel?: number; n?: number; an?: boolean }
+  /**
+   * M15 Grenzland: Die Finderhütte `id` soll in der nächsten Nacht einen Grenzstein über die Grenze zu Spieler `ziel` tragen (nur mit
+   * Gebiets-Regel und gemeinsamer Grenze; ziel -1 nimmt den Auftrag zurück). Ungültig → wirkungslos.
+   */
+  | { art: 'grenzstein'; id: Id; ziel: number };
 
 /** Start eines Dorfs: Lager-Hex und (optional, sonst data/dorf.json) die Zahl der Bewohner. Spieler i startet mit Eintrag i. */
 /** Start eines Dorfs: Lager-Hex, (optional) Bewohner und (ab M11) das Völkchen (Id aus data/voelkchen.json; fehlt = ohne Völkchen). */
@@ -235,7 +240,7 @@ export interface SichtGebaeude {
   /** Schänke: Boten, die gerade unterwegs sind. */
   boten?: number;
   /** Finderhütte (M10): unterwegs bis Tick, in der Ausredenstube bis Tick (mit Ausrede-Index in AUSREDEN), sonst bereit. */
-  finder?: { tut: 'bereit' | 'unterwegs' | 'ausrede'; bis: number; ausrede: number; ziel: string };
+  finder?: { tut: 'bereit' | 'unterwegs' | 'ausrede' | 'stein' | 'heim'; bis: number; ausrede: number; ziel: string; grenzstein?: number };
 }
 
 /** Besitz je Hex (M10), indiziert wie SimKarte; -1 = niemand. Kopie, nur bei Änderung neu (dann steigt rev) – nicht beschreiben. */
@@ -302,7 +307,8 @@ export interface SichtEreignis {
   art: 'bewohner' | 'notnagel' | 'fertig' | 'kirmes' | 'stufe' | 'zuzug'
     | 'jahreszeit' | 'wetter' | 'friert' | 'satt' | 'kleines_fest' | 'bauleute' | 'verloren'
     | 'einstand' | 'zu_spaet' | 'handel' | 'fund' | 'erwischt' | 'ertappt' | 'schuetzenfest' | 'koenig' | 'ende' | 'altstein' | 'fonds'
-    | 'mainacht' | 'maibaum' | 'maiklau' | 'maibesuch' | 'mailoese' | 'mailehen';
+    | 'mainacht' | 'maibaum' | 'maiklau' | 'maibesuch' | 'mailoese' | 'mailehen'
+    | 'grenzstein' | 'grenzstein_weg' | 'abwerben' | 'abgeworben' | 'schmuggel' | 'grossfund' | 'schatzteil' | 'jahresfest' | 'spuk' | 'kaffee';
   /** Gebäude (bewohner, fertig, kirmes, kleines_fest) oder 0. */
   gebaeude: Id;
   /**
@@ -347,6 +353,16 @@ export interface SichtDorf {
    * Nachbarort), dieses Jahr schon gestellt, Punkte aus dem Mai, dieses Jahr beklaute Orte, Junggesellenverein steht.
    */
   mai?: { jungen: number; wache: number; frei: number; bier: boolean; baum: number; dieb: number; gestellt: boolean; punkte: number; orte: number[]; verein: boolean };
+  /**
+   * M15 Grenzland: Fundbüro steht; große Funde (Index in FUNDE, src/sim/grenzland.ts) und Punkte daraus; besseres Gewehr; Punkte aus
+   * Kaffeekränzchen; Teile des Großen Funds (Herkunft: Marktposten p, 1000 + Mitspieler, 2000 + Zollhaus, 3000 + Ort); Punkte der
+   * Maijungen als Helfer und aus Jahresfesten; laufendes Jahresfest (Restticks); abgeworbene und verlorene Bewohner; Reiz fürs Abwerben;
+   * eigene Grenzsteine.
+   */
+  grenz?: {
+    fundbuero: boolean; funde: number[]; fundP: number; gewehr: boolean; kaffeeP: number; teile: number[]; teilP: number;
+    helferP: number; jfestP: number; jfest: number; jfestOrt: number; abgeworben: number; verloren: number; reiz: number; steine: number;
+  };
   koenig?: boolean;
   /** M11: Völkchen (Id) oder ''. */
   voelkchen?: string;
@@ -368,6 +384,8 @@ export interface SichtSpieler {
   voelkchen: string;
   /** M14: Maibaum (0 keiner, 1 steht, 2 geklaut) und wer ihn hat (Spieler, -2 Nachbarort, -1 keiner). */
   maibaum?: number; maiDieb?: number;
+  /** M15: Teile des Großen Funds. */
+  teile?: number;
   /** Der Verwalter führt das Dorf (Spieler fehlt länger als 5 Minuten). */
   verwalter: boolean;
 }
@@ -386,6 +404,12 @@ export interface SichtBote {
 export interface SichtTrupp {
   id: Id; sp: number; ziel: number; n: number; phase: number;
   von: { q: number; r: number }; nach: { q: number; r: number }; fortschritt: number; schritt: number;
+}
+
+/** M15: Finder unterwegs (Figur): von Hex nach Hex wie SichtTrupp; trägt nichts, einen Sack (Rückweg) oder einen Grenzstein. */
+export interface SichtFinder {
+  id: Id; sp: number; von: { q: number; r: number }; nach: { q: number; r: number }; fortschritt: number; schritt: number;
+  traegt: '' | 'sack' | 'stein';
 }
 
 /** Jahreszeit und Wetter (Drehbuch 7.4): für alle gleich. */
@@ -419,6 +443,16 @@ export interface SimSicht {
   /** M14: Mainacht (läuft sie, bis wann; sonst ab wann die nächste) und Maijungen bzw. Burschen unterwegs. */
   mainacht?: { an: boolean; ab: number; bis: number };
   trupps?: SichtTrupp[];
+  /**
+   * M15 Grenzland: Nacht (und Ticks bis zur nächsten), versetzte Grenzsteine (art 0 Grenzstein, 1 umgezogener Hof), Zollhäuser an der
+   * Staatsgrenze, Finder unterwegs als Figuren.
+   */
+  grenzland?: {
+    nacht: boolean; bisNacht: number;
+    steine: { id: Id; q: number; r: number; sp: number; opfer: number; art: number }[];
+    zoll: { q: number; r: number; erreicht: boolean }[];
+    finder: SichtFinder[];
+  };
   /** Waren, die Boten haben fallen lassen (liegen, bis sie einer aufliest). */
   liegend: { q: number; r: number; ware: number; sp: number }[];
   /** M10: Gebiet, Orte, Marktposten, Regeln (Gebiet an/aus, Ziel und Zielpunkte) und Ende der Partie (Sieger, Tick) oder null. */
