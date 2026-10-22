@@ -125,7 +125,7 @@ try {
   await page.waitForTimeout(1500);
   await bild('06-fenster-lager.png');
   await page.evaluate(() => { document.querySelectorAll('.fe-zu').forEach((b) => b.click()); });
-  await page.locator('.werkzeug[data-w="menue"]').click();
+  await page.evaluate(() => document.querySelector('.werkzeug[data-w="menue"]').click());
   await page.waitForTimeout(1500);
   await bild('07-baumenue.png');
   await page.keyboard.press('Escape');

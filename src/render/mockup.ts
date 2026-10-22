@@ -10,7 +10,7 @@ import type { HexGrid } from '../map/hex';
 export const C = {
   // Stil (STIL.md): warmes Weiß, Eichenbraun, heller Schiefer
   wand: '#f6e6cf', balken: '#5a3a26', sockel: '#a39a8c', dach: '#5f7090', fenster: '#3b5a78',
-  tuer: '#5a3b26', holz: '#7a5636', stamm: '#8a6a48', stein: '#a39d92', blatt: '#2f5d32', fahne: '#c8402e',
+  tuer: '#5a3b26', rahmen: '#f3ead8', holz: '#7a5636', stamm: '#8a6a48', stein: '#a39d92', blatt: '#2f5d32', fahne: '#c8402e',
 };
 
 /**
@@ -66,13 +66,19 @@ export function roof(w: number, d: number, h: number, y: number, color = C.dach,
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute([gx, y, d / 2, gx, y, -d / 2, gx, y + h, 0,
     -gx, y, -d / 2, -gx, y, d / 2, -gx, y + h, 0], 3));
-  // Ziegel- bzw. Schieferreihen: dunklere Leisten quer über beide Dachflächen
+  // Ziegel- bzw. Schieferreihen: dunklere Leisten quer über beide Dachflächen (dicht, damit das Dach gedeckt wirkt), First und Ortgang
   const reihen: THREE.BufferGeometry[] = [];
   const dunkel = `#${new THREE.Color(color).multiplyScalar(0.72).getHexString()}`;
-  const neig = Math.atan2(h, z);
-  for (const sz of [1, -1]) for (let k = 1; k <= 3; k++) {
-    const t = k / 4;
-    reihen.push(paint(new THREE.BoxGeometry(2 * x + 0.1, 0.16, 0.3).rotateX(sz * neig).translate(0, y + h * (1 - t) + 0.12, sz * z * t), dunkel));
+  const tief = `#${new THREE.Color(color).multiplyScalar(0.55).getHexString()}`;
+  const neig = Math.atan2(h, z), lang = Math.hypot(h, z);
+  const n = Math.max(4, Math.round(lang / 1.3));
+  for (const sz of [1, -1]) for (let k = 1; k < n; k++) {
+    const t = k / n;
+    reihen.push(paint(new THREE.BoxGeometry(2 * x + 0.1, 0.14, 0.26).rotateX(sz * neig).translate(0, y + h * (1 - t) + 0.1, sz * z * t), k % 2 ? dunkel : color));
+  }
+  reihen.push(paint(new THREE.BoxGeometry(2 * x + 0.3, 0.45, 0.8).translate(0, y + h + 0.12, 0), tief));
+  for (const sx of [1, -1]) for (const sz of [1, -1]) {
+    reihen.push(paint(new THREE.BoxGeometry(0.32, 0.34, lang + 0.2).rotateX(sz * neig).translate(sx * (x + 0.05), y + h / 2 + 0.15, sz * z / 2), tief));
   }
   return [paint(r, color), paint(g, giebel), ...reihen];
 }
@@ -116,6 +122,11 @@ export function fachwerk(w: number, d: number, floors: number, wall = C.wand, da
   if (dachErsatz) dach = dachErsatz;
   const fh = 3, H = floors * fh, y0 = 1;
   const parts = [box(w + 0.4, 5, d + 0.4, 0, y0 - 2.5, 0, C.sockel), box(w, H, d, 0, y0 + H / 2, 0, wall)];
+  // Bruchsteine im Sockel: einzelne Steine treten hervor (heller und dunkler), damit der Sockel gemauert wirkt
+  for (const side of [1, -1]) for (let i = 0; i < Math.round(w / 1.6); i++) {
+    const k = Math.sin(i * 12.9 + side * 78.2 + w) * 0.5 + 0.5, sx = -w / 2 + 0.6 + (i + 0.5) * (w - 1.2) / Math.round(w / 1.6);
+    parts.push(box(1.1 + k * 0.5, 0.5 + k * 0.25, 0.16, sx, y0 - 0.35 - (i % 2) * 0.45, side * (d / 2 + 0.24), k > 0.5 ? '#b6ad9e' : '#8d8476'));
+  }
   for (const side of [1, -1]) {
     const z = side * (d / 2 + 0.06);
     const n = Math.max(2, Math.round(w / 2.2));
@@ -127,7 +138,12 @@ export function fachwerk(w: number, d: number, floors: number, wall = C.wand, da
       parts.push(box(Math.hypot(fh, w / n), 0.24, 0.14, -w / 2 + w / n / 2, y0 + f * fh + fh / 2, z, C.balken, 0, ang));
       parts.push(box(Math.hypot(fh, w / n), 0.24, 0.14, w / 2 - w / n / 2, y0 + f * fh + fh / 2, z, C.balken, 0, -ang));
       for (let i = 1; i < n - 1; i += 2) {
-        parts.push(box(Math.min(1.1, (w / n) * 0.6), 1.2, 0.12, -w / 2 + (w * (i + 0.5)) / n, y0 + f * fh + 1.6, z + side * 0.05, C.fenster));
+        const fw = Math.min(1.1, (w / n) * 0.6), fx = -w / 2 + (w * (i + 0.5)) / n, fy = y0 + f * fh + 1.6;
+        parts.push(box(fw, 1.2, 0.12, fx, fy, z + side * 0.05, C.fenster));
+        // heller Rahmen, Fensterkreuz und Fensterbank: aus der Spielhöhe als Fenster erkennbar, nicht als dunkler Fleck
+        parts.push(box(fw + 0.3, 0.16, 0.1, fx, fy + 0.68, z + side * 0.14, C.rahmen), box(0.16, 1.36, 0.1, fx - fw / 2 - 0.07, fy, z + side * 0.14, C.rahmen),
+          box(0.16, 1.36, 0.1, fx + fw / 2 + 0.07, fy, z + side * 0.14, C.rahmen), box(0.09, 1.2, 0.08, fx, fy, z + side * 0.13, C.rahmen),
+          box(fw, 0.09, 0.08, fx, fy + 0.1, z + side * 0.13, C.rahmen), box(fw + 0.6, 0.16, 0.36, fx, fy - 0.7, z + side * 0.2, C.rahmen));
         anker({ art: 'fenster', x: -w / 2 + (w * (i + 0.5)) / n, y: y0 + f * fh + 1.6, z: z + side * 0.13, w: Math.min(1.1, (w / n) * 0.6), seite: side });
       }
     }
@@ -138,9 +154,13 @@ export function fachwerk(w: number, d: number, floors: number, wall = C.wand, da
     for (let i = 0; i <= n; i++) parts.push(box(0.14, H, 0.28, x, y0 + H / 2, -d / 2 + (d * i) / n, C.balken));
     for (let f = 0; f <= floors; f++) parts.push(box(0.14, 0.28, d, x, y0 + f * fh, 0, C.balken));
   }
-  parts.push(box(1.4, 2.3, 0.2, 0, y0 + 1.15, d / 2 + 0.12, C.tuer));
+  // Tür mit Sturz, Brettern, Klinke und Treppenstein
+  parts.push(box(1.4, 2.3, 0.2, 0, y0 + 1.15, d / 2 + 0.12, C.tuer), box(2.0, 0.34, 0.26, 0, y0 + 2.45, d / 2 + 0.16, C.balken),
+    box(0.06, 2.1, 0.06, -0.35, y0 + 1.1, d / 2 + 0.23, C.balken), box(0.06, 2.1, 0.06, 0.35, y0 + 1.1, d / 2 + 0.23, C.balken),
+    paint(new THREE.SphereGeometry(0.1, 6, 4).translate(0.48, y0 + 1.1, d / 2 + 0.27), '#e8c14a'),
+    box(2.4, 0.4, 1.0, 0, y0 - 0.2, d / 2 + 0.6, C.sockel));
   parts.push(...roof(w, d, d * 0.75, y0 + H, dach, wall));
-  parts.push(box(1.2, 3, 1.2, w * 0.28, y0 + H + d * 0.45, 0, '#8a5a48'));
+  parts.push(box(1.2, 3, 1.2, w * 0.28, y0 + H + d * 0.45, 0, '#8a5a48'), box(1.6, 0.3, 1.6, w * 0.28, y0 + H + d * 0.45 + 1.5, 0, '#6e463a'));
   // Rauchwölkchen über dem Schornstein (Stil: Wimmelbuch); im Spiel steigt echter Rauch auf (Lebendige Eifel)
   if (!anker({ art: 'kamin', x: w * 0.28, y: y0 + H + d * 0.45 + 1.6, z: 0, staerke: 0.6 })) for (let k = 0; k < 3; k++) parts.push(paint(new THREE.SphereGeometry(0.75 + k * 0.32, 8, 6).translate(w * 0.28 + k * 0.6, y0 + H + d * 0.45 + 2.6 + k * 1.2, -k * 0.3), '#eeeae2'));
   return parts;

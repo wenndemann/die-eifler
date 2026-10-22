@@ -45,12 +45,19 @@ export function figur(): THREE.BufferGeometry {
     add(paint(new THREE.BoxGeometry(0.15, 0.08, 0.24).translate(sx * 0.13, 0.04, 0.07), STIEFEL), i, hip);
   }
   // Rumpf: dicker Bauch, Gürtel
-  add(paint(new THREE.SphereGeometry(0.23, 8, 6).scale(1, 1.05, 0.95).translate(0, 0.42, 0), '#ffffff'), 0, [0, 0, 0], 1);
-  add(paint(new THREE.CylinderGeometry(0.235, 0.235, 0.05, 8).translate(0, 0.33, 0), '#4a3220'));
+  add(paint(new THREE.SphereGeometry(0.23, 12, 9).scale(1, 1.05, 0.95).translate(0, 0.42, 0), '#ffffff'), 0, [0, 0, 0], 1);
+  add(paint(new THREE.CylinderGeometry(0.235, 0.235, 0.05, 12).translate(0, 0.33, 0), '#4a3220'));
   add(paint(new THREE.BoxGeometry(0.07, 0.06, 0.02).translate(0, 0.33, 0.235), '#e8c14a'));
-  // Kopf: groß, Knollennase, Augen
-  add(paint(new THREE.SphereGeometry(0.235, 9, 7).translate(0, 0.74, 0), HAUT));
-  add(paint(new THREE.SphereGeometry(0.1, 7, 5).scale(1, 0.95, 1.1).translate(0, 0.71, 0.24), NASE));
+  // Hosenträger und heller Hemdkragen: der Rumpf liest sich als Kleidung, nicht als farbige Kugel
+  for (const sx of [-1, 1]) {
+    add(paint(new THREE.TorusGeometry(0.245, 0.018, 4, 12, 1.6).rotateY(-Math.PI / 2).rotateX(0.35).translate(sx * 0.09, 0.42, 0), HOSE));
+    add(paint(new THREE.SphereGeometry(0.024, 5, 4).translate(sx * 0.09, 0.47, 0.24), '#e8c14a'));
+  }
+  add(paint(new THREE.TorusGeometry(0.12, 0.035, 5, 12).rotateX(Math.PI / 2).translate(0, 0.6, 0), '#f3ead8'));
+  // Kopf: groß, Knollennase, Augen, Ohren
+  add(paint(new THREE.SphereGeometry(0.235, 14, 10).translate(0, 0.74, 0), HAUT));
+  add(paint(new THREE.SphereGeometry(0.1, 9, 7).scale(1, 0.95, 1.1).translate(0, 0.71, 0.24), NASE));
+  for (const sx of [-1, 1]) add(paint(new THREE.SphereGeometry(0.06, 6, 5).scale(0.6, 1, 1).translate(sx * 0.235, 0.73, 0), HAUT));
   for (const sx of [-1, 1]) {
     // Augen (blinzeln): Weißes und Pupille um die Augenmitte
     add(paint(new THREE.SphereGeometry(0.062, 6, 5).translate(sx * 0.09, 0.785, 0.195), '#ffffff'), 7, [sx * 0.09, 0.785, 0.2]);
@@ -66,7 +73,7 @@ export function figur(): THREE.BufferGeometry {
   // Kappe in den Nacken geschoben, damit man das Gesicht auch von schräg oben sieht (Spielkamera)
   const nacken = (g: THREE.BufferGeometry) => g.translate(0, -0.74, 0).rotateX(-0.42).translate(0, 0.74, -0.02);
   // Kappe in der Trachtfarbe (Tint), damit das Gewimmel bunt ist und nicht lauter rote Punkte
-  add(nacken(paint(new THREE.SphereGeometry(0.245, 9, 5, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, 0.83, 0), '#d8cfc4')), 0, [0, 0, 0], 1);
+  add(nacken(paint(new THREE.SphereGeometry(0.245, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, 0.83, 0), '#d8cfc4')), 0, [0, 0, 0], 1);
   add(nacken(paint(new THREE.BoxGeometry(0.26, 0.03, 0.12).translate(0, 0.84, 0.2), '#9a9088')), 0, [0, 0, 0], 1);
   add(nacken(paint(new THREE.SphereGeometry(0.06, 5, 4).translate(0, 1.08, 0), '#f3e9d2')));
   // Arme: Gelenk an der Schulter, Hand als Kugel
@@ -130,6 +137,9 @@ export function dorfLaune(s: SimSicht): { laune: number; fest: boolean } {
 export function material(): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75, flatShading: false });
   mat.onBeforeCompile = (shader) => {
+    // Randlicht: ein heller Saum an der Silhouette hebt die Figuren vom Boden und von den Häusern ab
+    shader.fragmentShader = shader.fragmentShader.replace('#include <opaque_fragment>', `#include <opaque_fragment>
+gl_FragColor.rgb += vec3(1.0, 0.93, 0.8) * pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.0) * 0.35;`);
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', `#include <common>
 attribute float aTeil; attribute vec3 aGelenk; attribute float aTint; attribute vec3 aAnim; attribute vec2 aMimik;`)

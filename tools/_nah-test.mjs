@@ -1,7 +1,7 @@
 // Prüfskript: ein Gebäude nah ansehen (Typ als Argument), Leben auf „arbeitet“, optional Martinsfeuer
 import { chromium } from 'playwright';
 import { createServer } from 'vite';
-const [aus, typ, tag = '0.45', fest = ''] = process.argv.slice(2);
+const [aus, typ, tag = '0.45', fest = '', abstand = '150'] = process.argv.slice(2);
 const vite = await createServer({ root: '/home/user/die-eifler', logLevel: 'warn', server: { port: 5203, strictPort: true, host: '127.0.0.1', hmr: false, watch: null } });
 await vite.listen();
 const browser = await chromium.launch({ headless: false, executablePath: '/opt/pw-browsers/chromium', args: ['--headless=new', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
@@ -11,7 +11,7 @@ await page.goto('http://127.0.0.1:5203/#v=eifel-2026.10&q=152&r=458&g=klein&o=15
 await page.waitForFunction(() => window.eifeler?.spiel, null, { timeout: 600000, polling: 500 });
 await page.evaluate(() => window.eifeler.skipIntro());
 await page.addStyleTag({ content: '.meldeleiste, .einfuehrung, .meldung { display: none !important; }' });
-const r = await page.evaluate(async ({ typ, tag, fest }) => {
+const r = await page.evaluate(async ({ typ, tag, fest, abstand }) => {
   const e = window.eifeler, sp = e.spiel, L = sp.lagerHex, sim = sp.sim;
   const dist = (a, b) => (Math.abs(a.q - b.q) + Math.abs(a.r - b.r) + Math.abs(a.q + a.r - b.q - b.r)) / 2;
   let ziel = null;
@@ -28,10 +28,10 @@ const r = await page.evaluate(async ({ typ, tag, fest }) => {
   sp.wetterVorgabe = { tag: Number(tag) };
   const g = sp.sicht.gebaeude.find((x) => x.typ === typ);
   const lg = sp.gebaeude.modellLage(g.id, g.typ);
-  e.cam.pitchOverride = 32; e.cam.jumpTo(lg.x + 10, lg.z + 20, 150, 0.5); e.settle();
+  e.cam.pitchOverride = 32; e.cam.jumpTo(lg.x + 10, lg.z + 20, abstand, 0.5); e.settle();
   return ziel;
-}, { typ, tag, fest });
+}, { typ, tag, fest, abstand: Number(abstand) });
 await page.waitForTimeout(5000);
 console.log(JSON.stringify(r), JSON.stringify(await page.evaluate(() => window.eifeler.spiel.leben.zahlen)));
-await page.screenshot({ path: aus });
+await page.screenshot({ path: aus, timeout: 300000 });
 await browser.close(); await vite.close();

@@ -364,7 +364,7 @@ export class LebenDarstellung {
         const px = x + Math.cos(tt * 0.3) * r * sk, pz = z + Math.sin(tt * 0.3) * r * sk;
         const pick = Math.pow(Math.max(0, Math.sin(tt * 3.1)), 6) * 0.6;
         q.setFromAxisAngle(this.Y, (a.r ?? 0) + Math.sin(tt * 0.5) * 1.2).multiply(this.q2.setFromAxisAngle(this.Z, -pick));
-        m.compose(p.set(px, this.hoehe(px, pz) + 0.02, pz), q, sc.setScalar(sk * 1.6));
+        m.compose(p.set(px, this.hoehe(px, pz) + 0.02, pz), q, sc.setScalar(sk * 1.05));
         this.huehner.fuege(m, a.farbe && a.farbe !== '#f4efe4' ? HUHN_BRAUN : WEISS);
         o.zahl.tiere++;
         break;

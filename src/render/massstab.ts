@@ -23,7 +23,7 @@ export const NACHBAR_P: Record<string, number> = { stadt: 0.45, dorf: 0.2, weile
 // müssen Figuren und Waren lesbar sein, deshalb deutlich übertrieben.
 
 /** Höhe eines Trägers samt Kappe in Metern (Richtwert 8–12 m, per Screenshot auf 13 abgestimmt). */
-export const TRAEGER_H = 17.5;
+export const TRAEGER_H = 20.5;   // Lebendige Eifel: etwas größer, aus der Spielkamera deutlicher
 /** Kantenlänge einer Ware (Würfel-Äquivalent) in Metern. */
 export const WARE_M = 6.5;
 /** Höhe der Fahnenstange in Metern. */
