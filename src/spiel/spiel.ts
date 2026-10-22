@@ -29,6 +29,7 @@ import { GebietDarstellung } from '../render/gebiet';
 import { WetterOptik, type WetterLage } from '../render/wetter';
 import { MaiDarstellung } from '../render/mai';
 import { GrenzlandDarstellung } from '../render/grenzland';
+import { LebenDarstellung } from '../render/leben';
 import type { Stimmung } from '../render/scene';
 import { stunde, tageszeit, wetterStimmung } from './stimmung';
 import { klangLage } from './klanglage';
@@ -191,6 +192,9 @@ export class Spiel {
   private readonly wetterOptik: WetterOptik;
   private readonly mai: MaiDarstellung;
   private readonly grenzland: GrenzlandDarstellung;
+  /** Lebendige Eifel: Rauch, Tiere, Leute, Licht, Konfetti. */
+  readonly leben: LebenDarstellung;
+  private lebenLage = { tag: 0.5, wind: 0, regen: 0, jahreszeit: 0 };
   /** Für Screenshots und Tests: Wetterlage und Tageszeit fest vorgeben (Teile genügen). */
   wetterVorgabe: (Partial<WetterLage> & { tag?: number }) | null = null;
   /** M12: Musik, Gebrabbel und Geräusche (WebAudio; in automatisierten Tests aus, außer mit #ton=1). */
@@ -322,6 +326,8 @@ export class Spiel {
     this.mai.kamera = ctx.camera;
     this.grenzland = new GrenzlandDarstellung(map, grid, base, ex);
     this.grenzland.kamera = ctx.camera;
+    this.leben = new LebenDarstellung(map, base, ex, (id, typ) => this.gebaeude.modellLage(id, typ));
+    this.leben.kamera = ctx.camera;
     this.deko = new Deko(map, grid, base, ex);
     this.gebiet = new GebietDarstellung(map, grid, base, ex);
     this.wetterOptik = new WetterOptik(map, grid, base, ex);
@@ -331,7 +337,7 @@ export class Spiel {
     this.geist = new Geist(map, grid, base, ex);
     this.wege.wald = ctx.haken.trees ?? null;
     this.fahnen.kamera = ctx.camera; this.traeger.kamera = ctx.camera; this.gebaeude.kamera = ctx.camera; this.arbeiter.kamera = ctx.camera; this.boten.kamera = ctx.camera;
-    this.group.add(this.wege.group, this.fahnen.group, this.traeger.group, this.gebaeude.group, this.arbeiter.group, this.boten.group, this.mai.group, this.grenzland.group, this.deko.group, this.gebiet.group, this.wetterOptik.group, this.natur.group,
+    this.group.add(this.wege.group, this.fahnen.group, this.traeger.group, this.gebaeude.group, this.arbeiter.group, this.boten.group, this.mai.group, this.grenzland.group, this.leben.group, this.deko.group, this.gebiet.group, this.wetterOptik.group, this.natur.group,
       this.bauplaetze.group, this.geist.group, this.markierung.group);
     ctx.scene.add(this.group);
 
@@ -495,7 +501,7 @@ export class Spiel {
     this.ctx.ex = ex;
     this.wege.setExaggeration(ex); this.fahnen.setExaggeration(ex); this.traeger.setExaggeration(ex);
     this.gebaeude.setExaggeration(ex); this.markierung.setExaggeration(ex);
-    this.arbeiter.setExaggeration(ex); this.natur.setExaggeration(ex); this.boten.setExaggeration(ex); this.deko.setExaggeration(ex); this.gebiet.setExaggeration(ex); this.mai.setExaggeration(ex); this.grenzland.setExaggeration(ex); this.wetterOptik.setExaggeration(ex);
+    this.arbeiter.setExaggeration(ex); this.natur.setExaggeration(ex); this.boten.setExaggeration(ex); this.deko.setExaggeration(ex); this.gebiet.setExaggeration(ex); this.mai.setExaggeration(ex); this.grenzland.setExaggeration(ex); this.leben.setExaggeration(ex); this.wetterOptik.setExaggeration(ex);
     this.bauplaetze.setExaggeration(ex); this.geist.setExaggeration(ex);
   }
 
@@ -548,6 +554,7 @@ export class Spiel {
     const j = this._sicht.jahr, zt = JAHRESZEIT_TICKS - j.rest;
     setzeSchnee(j.jahreszeit === 3 ? Math.min(1, zt / (90 * 20)) : j.jahreszeit === 0 && j.jahr > 0 ? Math.max(0, 1 - zt / (120 * 20)) : 0);
     this.wetterZeigen(a, dt);
+    this.leben.update(this._sicht, this.pausiert ? 0 : dt, this.lebenLage);
 
     // Maus: Hex unter dem Zeiger (gedrosselt, folgt auch der bewegten Kamera)
     this.mausTimer -= dt;
@@ -612,6 +619,7 @@ export class Spiel {
       this.wetterOptik.update(st.lage, this.ctx.ziel(), this.ctx.abstand(), dt, !!this.wetterVorgabe);
     }
     this.ctx.stimmung?.(st.stimmung);
+    this.lebenLage = { tag: st.stimmung.tag, wind: st.lage.wind, regen: st.lage.regen, jahreszeit: j.jahreszeit };
     // Klang: Lage gedrosselt neu berechnen (die Quellen ändern sich langsam), Planung jedes Bild
     this.klangTimer -= dt;
     if (this.klangTimer <= 0 && this.klang.an && this.ctx.ziel) {

@@ -80,6 +80,32 @@ export function roof(w: number, d: number, h: number, y: number, color = C.dach,
 /** Fachwerkhaus: Bruchsteinsockel, weiße Gefache, dunkle Balken, Fenster, Schieferdach. Front = +z. */
 /** Regionale Dachfarbe (M11, Drehbuch 7.3: Schiefer, Buntsandstein …): gesetzt, während die Modelle eines Völkchens entstehen. */
 let dachErsatz: string | null = null;
+
+/**
+ * Lebendige Eifel: Anker für bewegte Teile (Rauch aus dem Schornstein, Fensterlicht, Hühner, Wäsche …) in Modell-Metern. Solange ein
+ * Sammler gesetzt ist, legen die Bausteine ihre Anker dort ab und lassen das Statische weg, das sich nun bewegt (Rauchwölkchen).
+ */
+export interface Anker {
+  art: 'kamin' | 'fenster' | 'huhn' | 'waesche' | 'rad' | 'saege' | 'hammer' | 'esse' | 'schafe' | 'kuehe' | 'bienen' | 'muehle'
+    | 'kinder' | 'schwaetzer' | 'feuer' | 'dampf';
+  x: number; y: number; z: number;
+  /** je nach Art: Drehung/Blickrichtung (rad), Radius bzw. Breite, Tiefe, Anzahl, Stärke, Farbe. */
+  r?: number; w?: number; d?: number; n?: number; staerke?: number; farbe?: string; achse?: 'x' | 'z'; seite?: number;
+}
+let sammler: Anker[] | null = null;
+/** f() mit Anker-Sammler ausführen: liefert Ergebnis und gesammelte Anker. */
+export function mitAnkern<T>(f: () => T): { wert: T; anker: Anker[] } {
+  const alt = sammler;
+  const anker: Anker[] = [];
+  sammler = anker;
+  try { return { wert: f(), anker }; } finally { sammler = alt; }
+}
+/** Anker ablegen (nur, wenn gesammelt wird); true = es wird gesammelt. */
+export function anker(a: Anker): boolean {
+  if (!sammler) return false;
+  sammler.push(a);
+  return true;
+}
 export function mitDach<T>(farbe: string | null, f: () => T): T {
   const alt = dachErsatz;
   dachErsatz = farbe;
@@ -102,6 +128,7 @@ export function fachwerk(w: number, d: number, floors: number, wall = C.wand, da
       parts.push(box(Math.hypot(fh, w / n), 0.24, 0.14, w / 2 - w / n / 2, y0 + f * fh + fh / 2, z, C.balken, 0, -ang));
       for (let i = 1; i < n - 1; i += 2) {
         parts.push(box(Math.min(1.1, (w / n) * 0.6), 1.2, 0.12, -w / 2 + (w * (i + 0.5)) / n, y0 + f * fh + 1.6, z + side * 0.05, C.fenster));
+        anker({ art: 'fenster', x: -w / 2 + (w * (i + 0.5)) / n, y: y0 + f * fh + 1.6, z: z + side * 0.13, w: Math.min(1.1, (w / n) * 0.6), seite: side });
       }
     }
   }
@@ -114,8 +141,8 @@ export function fachwerk(w: number, d: number, floors: number, wall = C.wand, da
   parts.push(box(1.4, 2.3, 0.2, 0, y0 + 1.15, d / 2 + 0.12, C.tuer));
   parts.push(...roof(w, d, d * 0.75, y0 + H, dach, wall));
   parts.push(box(1.2, 3, 1.2, w * 0.28, y0 + H + d * 0.45, 0, '#8a5a48'));
-  // Rauchwölkchen über dem Schornstein (Stil: Wimmelbuch)
-  for (let k = 0; k < 3; k++) parts.push(paint(new THREE.SphereGeometry(0.75 + k * 0.32, 8, 6).translate(w * 0.28 + k * 0.6, y0 + H + d * 0.45 + 2.6 + k * 1.2, -k * 0.3), '#eeeae2'));
+  // Rauchwölkchen über dem Schornstein (Stil: Wimmelbuch); im Spiel steigt echter Rauch auf (Lebendige Eifel)
+  if (!anker({ art: 'kamin', x: w * 0.28, y: y0 + H + d * 0.45 + 1.6, z: 0, staerke: 0.6 })) for (let k = 0; k < 3; k++) parts.push(paint(new THREE.SphereGeometry(0.75 + k * 0.32, 8, 6).translate(w * 0.28 + k * 0.6, y0 + H + d * 0.45 + 2.6 + k * 1.2, -k * 0.3), '#eeeae2'));
   return parts;
 }
 

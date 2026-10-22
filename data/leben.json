@@ -1,0 +1,13 @@
+{
+  "hinweis": "Lebendige Eifel (ROADMAP M15, aus M9): Werte nur für die Darstellung, nicht für die Simulation. fern_m: Leben (Rauch, Tiere, Leute, Licht) nur an Gebäuden bis so weit von der Kamera. rauch: Teilchen je Sekunde bei Stärke 1 (rate), Steigen und Wachsen je Sekunde (m), Lebensdauer, Höchstzahl; arbeitet_faktor für arbeitende Gebäude, ruhig_faktor sonst (nur Herdfeuer), winter_faktor und nacht_faktor dazu. tiere: Tempo in m/s (Modell-Meter). voegel: je Feld ein Schwarm (n Vögel) in hoehe_m über dem Feld, Kreis mit radius_m. fenster: Farbe und Helligkeit des Fensterlichts nachts. wind: Grundwind und Wind bei Sturm (0..1). konfetti: Teilchen je Ausbruch, Dauer. feuer: Funken je Sekunde beim Martinsfeuer und an der Esse.",
+  "fern_m": 2200,
+  "rauch": { "rate": 3, "steigen": 6, "wachsen": 2.6, "dauer_s": 7, "max": 1400, "arbeitet_faktor": 1, "ruhig_faktor": 0.3, "winter_faktor": 1.7, "nacht_faktor": 1.2, "groesse": 5 },
+  "dampf": { "rate": 3, "steigen": 8, "wachsen": 3, "dauer_s": 3.5 },
+  "tiere": { "schaf": 0.9, "kuh": 0.6, "huhn": 0.5 },
+  "voegel": { "n": 6, "hoehe_m": 55, "radius_m": 45, "tempo": 0.45 },
+  "bienen": { "tempo": 2.4 },
+  "fenster": { "farbe": "#ff9a30", "hell": 3.2, "glanz": 1.3, "abstand": 0.15 },
+  "wind": { "grund": 0.25, "sturm": 1 },
+  "konfetti": { "n": 140, "dauer_s": 6 },
+  "feuer": { "funken": 28, "esse_funken": 10 }
+}
