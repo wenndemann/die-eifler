@@ -40,7 +40,13 @@ function rohr(a: [number, number, number], b: [number, number, number], r1: numb
  * Trachtfarbe an), das Hemd färbt weiter die Instanzfarbe.
  */
 export type Hut = 'kappe' | 'pudel' | 'jaeger' | 'leder' | 'zimmermann' | 'stroh' | 'koch' | 'haube' | 'stirnband' | 'imker' | 'ohne';
-export interface Tracht { hut: Hut; hutFarbe?: string; schuerze?: string; bart?: string; /** feste Hemdfarbe (sonst Instanzfarbe) */ hemd?: string }
+export type Werkzeug = 'hammer' | 'kaese' | 'loeffel' | 'krug' | 'gabel' | 'angel' | 'schaufel' | 'smoker' | 'kelle';
+export interface Tracht {
+  hut: Hut; hutFarbe?: string; schuerze?: string; bart?: string;
+  /** feste Hemdfarbe (sonst Instanzfarbe) */ hemd?: string;
+  /** großes Werkzeug in der rechten Hand (bzw. Käselaib vor dem Bauch), STIL.md §6b */ werkzeug?: Werkzeug;
+  /** Frau: ohne Schnauzer, mit Zöpfen */ frau?: boolean;
+}
 export const TRAEGER_TRACHT: Tracht = { hut: 'kappe' };
 
 /** Kopfbedeckung um den Kopf (Mitte 0, 0.74, 0; Radius 0.235), leicht in den Nacken geschoben wie die Kappe. */
@@ -96,9 +102,9 @@ function hut(t: Tracht, nacken: (g: THREE.BufferGeometry) => THREE.BufferGeometr
       add(paint(new THREE.SphereGeometry(0.26, 12, 8).scale(1, 0.7, 1).translate(0, 1.18, 0), '#fbfbf8'));
       break;
     case 'haube':
-      // weiße Haube mit Knoten hinten (Käserei, Molkerei, Spinnerei)
-      add(nacken(halbkugel(0.255, 0.8, '#f6f3ec', 1.05)));
-      add(nacken(paint(new THREE.SphereGeometry(0.07, 6, 5).translate(0, 0.86, -0.24), '#f6f3ec')));
+      // Haube bzw. Kopftuch mit Knoten hinten (Käserin, Spinnerin)
+      add(nacken(halbkugel(0.255, 0.8, f ?? '#f6f3ec', 1.05)));
+      add(nacken(paint(new THREE.SphereGeometry(0.07, 6, 5).translate(0, 0.86, -0.24), f ?? '#f6f3ec')));
       break;
     case 'stirnband':
       // Schmied: Stirnband, kurzes Haar
@@ -115,6 +121,34 @@ function hut(t: Tracht, nacken: (g: THREE.BufferGeometry) => THREE.BufferGeometr
     case 'ohne':
       // Glatze mit Haarkranz (Wirt)
       add(paint(new THREE.TorusGeometry(0.2, 0.045, 5, 14).rotateX(Math.PI / 2).translate(0, 0.78, -0.03), '#8a6a50'));
+      break;
+  }
+}
+
+/** Großes Werkzeug je Beruf: in der rechten Hand (Teil 4, schwingt mit dem Arm), der Käselaib vor dem Bauch. Aufrecht, Kopf oben. */
+function werkzeug(w: Werkzeug): void {
+  const sch: [number, number, number] = [0.25, 0.54, 0], hx = 0.34, hz = 0.07;
+  const stiel = (unten: number, oben: number, f = '#8a6340', r = 0.022) => add(paint(new THREE.CylinderGeometry(r, r, oben - unten, 6).translate(hx, (oben + unten) / 2, hz), f), 4, sch);
+  const teil = (g: THREE.BufferGeometry, f: string) => add(paint(g, f), 4, sch);
+  switch (w) {
+    case 'hammer': stiel(0.18, 0.62); teil(new THREE.BoxGeometry(0.1, 0.11, 0.24).translate(hx, 0.64, hz), '#4a4d52'); break;
+    case 'kelle': stiel(0.2, 0.75); teil(new THREE.SphereGeometry(0.09, 8, 5, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2).translate(hx, 0.78, hz), '#a87a4a'); break;
+    case 'loeffel': stiel(0.2, 0.72, '#c89a5a', 0.018); teil(new THREE.SphereGeometry(0.07, 8, 6).scale(1, 1.4, 0.4).translate(hx, 0.78, hz), '#c89a5a'); break;
+    case 'krug': teil(new THREE.CylinderGeometry(0.075, 0.065, 0.17, 10).translate(hx, 0.36, hz + 0.02), '#d8c8a0'); teil(new THREE.CylinderGeometry(0.08, 0.08, 0.05, 10).translate(hx, 0.46, hz + 0.02), '#fbfaf2'); break;
+    case 'gabel':
+      stiel(-0.02, 0.95);
+      for (const dx of [-0.05, 0, 0.05]) teil(new THREE.CylinderGeometry(0.012, 0.008, 0.18, 4).translate(hx + dx, 1.03, hz), '#9aa0a6');
+      teil(new THREE.BoxGeometry(0.13, 0.02, 0.02).translate(hx, 0.95, hz), '#9aa0a6');
+      break;
+    case 'schaufel': stiel(0.05, 0.85); teil(new THREE.BoxGeometry(0.16, 0.2, 0.025).translate(hx, 0.95, hz), '#5a5d63'); break;
+    case 'angel': add(paint(new THREE.CylinderGeometry(0.012, 0.022, 1.1, 5).rotateZ(-0.6).translate(hx + 0.3, 0.7, hz), '#8a6340'), 4, sch); break;
+    case 'smoker':
+      teil(new THREE.CylinderGeometry(0.06, 0.06, 0.15, 10).translate(hx, 0.3, hz + 0.02), '#b8bcc0');
+      teil(new THREE.ConeGeometry(0.06, 0.09, 8).translate(hx, 0.42, hz + 0.02), '#9aa0a6');
+      break;
+    case 'kaese':
+      add(paint(new THREE.CylinderGeometry(0.15, 0.15, 0.1, 14).rotateX(Math.PI / 2).translate(0, 0.38, 0.3), '#f2c94c'));
+      add(paint(new THREE.CylinderGeometry(0.155, 0.155, 0.02, 14).rotateX(Math.PI / 2).translate(0, 0.38, 0.35), '#e0a830'));
       break;
   }
 }
@@ -161,7 +195,13 @@ export function figur(tracht: Tracht = TRAEGER_TRACHT): THREE.BufferGeometry {
     // Brauen: dick und beweglich (hoch bei Freude, innen runter bei Ärger)
     add(paint(new THREE.BoxGeometry(0.12, 0.028, 0.03).rotateZ(sx * 0.2).translate(sx * 0.085, 0.85, 0.215), '#5a3b26'), 5, [sx * 0.085, 0.85, 0.215]);
   }
-  add(paint(new THREE.BoxGeometry(0.2, 0.05, 0.03).translate(0, 0.655, 0.215), '#b5835a'));  // Schnauzer
+  if (!tracht.frau) add(paint(new THREE.BoxGeometry(0.2, 0.05, 0.03).translate(0, 0.655, 0.215), '#b5835a'));  // Schnauzer
+  else for (const sx of [-1, 1]) {
+    // Zöpfe mit Schleife, Wimpern
+    add(paint(new THREE.CylinderGeometry(0.045, 0.035, 0.32, 6).rotateZ(sx * 0.25).translate(sx * 0.24, 0.6, -0.08), '#b8743a'));
+    add(paint(new THREE.SphereGeometry(0.04, 5, 4).translate(sx * 0.27, 0.46, -0.08), '#d6262a'));
+    add(paint(new THREE.BoxGeometry(0.05, 0.015, 0.02).rotateZ(sx * 0.5).translate(sx * 0.15, 0.82, 0.205), '#2a1a12'), 5, [sx * 0.085, 0.85, 0.215]);
+  }
   // Mund unter dem Schnauzer: Bogen, im Shader zwischen Lachen (∪), Strich und Flunsch (∩) gebogen, beim Jubeln offen
   add(paint(new THREE.TorusGeometry(0.06, 0.017, 4, 9, Math.PI).rotateZ(Math.PI).translate(0, 0.625, 0.205), '#7a2a22'), 6, [0, 0.625, 0.205]);
   // Kappe mit Schirm und Bommel
@@ -176,6 +216,7 @@ export function figur(tracht: Tracht = TRAEGER_TRACHT): THREE.BufferGeometry {
     add(rohr(sch, [sx * 0.32, 0.3, 0.03], 0.065, 0.06, '#ffffff'), i, sch, 1);
     add(paint(new THREE.SphereGeometry(0.07, 5, 4).translate(sx * 0.32, 0.27, 0.03), HAUT), i, sch);
   }
+  if (tracht.werkzeug) werkzeug(tracht.werkzeug);
   // Stil (STIL.md): großer Kopf und runder Bauch – Kopfteile um den Hals vergrößert, Bauch breiter
   for (const t of teile) {
     t.geo.computeBoundingBox();

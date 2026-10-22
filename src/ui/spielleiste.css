@@ -90,7 +90,7 @@
 }
 .bm-eintrag:hover { background: rgba(231, 194, 122, 0.18); }
 .bm-eintrag.an { border-color: #ffe9b8; box-shadow: 0 0 0 2px rgba(255, 226, 160, 0.35); }
-.bm-sym { font-size: 30px; line-height: 1; flex: none; width: 38px; text-align: center; }
+.bm-sym { font-size: 30px; line-height: 1; flex: none; width: 62px; text-align: center; }
 .bm-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .bm-name { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 15px; color: #ffe9b8; }
 .bm-platz { font-style: normal; font-weight: 600; font-size: 10.5px; padding: 0 6px; border-radius: 99px; color: #1d2a22; background: #b9d9a6; white-space: nowrap; }
@@ -111,7 +111,7 @@
 .bm-reiter-knopf.an { background: linear-gradient(180deg, #f0cf8c, #c39447); color: #2a1f14; border-color: #ffe9b8; }
 .bm-gruppe[hidden] { display: none; }
 .bm-eintrag { position: relative; }
-.bm-sym img { width: 40px; height: 40px; object-fit: contain; display: block; margin: 0 auto; }
+.bm-sym img { width: 60px; height: 60px; object-fit: contain; display: block; margin: 0 auto; background: rgba(255, 238, 205, 0.16); border-radius: 9px; }
 .bm-taste { position: absolute; top: 3px; right: 5px; font-size: 10px; color: var(--gold-dim); background: none; border: none; }
 .bm-tipp {
   position: absolute; z-index: 5; width: 250px; padding: 8px 10px; border-radius: 8px; pointer-events: none; font-size: 12.5px; line-height: 1.35;

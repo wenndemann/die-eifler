@@ -88,7 +88,7 @@ function blumenkasten(w: number, d: number, floors: number): THREE.BufferGeometr
   for (let f = 0; f < floors; f++) for (let i = 1; i < n - 1; i += 2) {
     const cx = -w / 2 + (w * (i + 0.5)) / n, y = 1 + f * 3 + 0.95;
     out.push(box(1.3, 0.35, 0.5, cx, y, d / 2 + 0.38, '#6b4a2e'));
-    for (let k = -1; k <= 1; k++) out.push(paint(new THREE.SphereGeometry(0.22, 4, 3).translate(cx + k * 0.4, y + 0.32, d / 2 + 0.38), (k + f) % 2 ? '#e0392b' : '#f0b429'));
+    for (let k = -1; k <= 1; k++) out.push(paint(new THREE.SphereGeometry(0.22, 7, 5).translate(cx + k * 0.4, y + 0.32, d / 2 + 0.38), (k + f) % 2 ? '#e0392b' : '#f0b429'));
   }
   return out;
 }
@@ -308,11 +308,11 @@ const TYPEN: Record<string, Typ> = {
       const baeume = [[7, -3], [13, -3.5], [19, -2.5], [8, 5], [14, 5.5], [19.5, 6]];
       baeume.forEach(([bx, bz], i) => {
         out.push(walze(0.45, 3.2, bx, G + 1.6, bz, HOLZ, 0, 0, 6), paint(new THREE.SphereGeometry(2.6, 7, 5).scale(1, 0.85, 1).translate(bx, G + 4.6, bz), i % 2 ? '#4f8f3a' : '#5a9a42'));
-        for (let k = 0; k < 5; k++) out.push(paint(new THREE.SphereGeometry(0.38, 4, 3).translate(bx + Math.cos(k * 1.3 + i) * 2.2, G + 4.2 + (k % 2) * 1.1, bz + Math.sin(k * 1.3 + i) * 2.2), '#d0312d'));
+        for (let k = 0; k < 5; k++) out.push(paint(new THREE.SphereGeometry(0.45, 8, 6).translate(bx + Math.cos(k * 1.3 + i) * 2.2, G + 4.2 + (k % 2) * 1.1, bz + Math.sin(k * 1.3 + i) * 2.2), '#d0312d'));
       });
       out.push(boxR(0.2, 5, 0.2, 10.6, G + 2.4, 1.1, HOLZ, 0, 0, 0.3), boxR(0.2, 5, 0.2, 11.4, G + 2.4, 1.1, HOLZ, 0, 0, 0.3));
       out.push(walze(0.9, 0.8, -2.5, G + 0.4, 4.4, '#b0844e', 0, 0, 9), walze(0.9, 0.8, -0.3, G + 0.4, 4.6, '#b0844e', 0, 0, 9));
-      for (let k = 0; k < 4; k++) out.push(paint(new THREE.SphereGeometry(0.35, 4, 3).translate(-2.5 + (k % 2) * 0.4, G + 1.0, 4.2 + Math.floor(k / 2) * 0.4), '#d0312d'));
+      for (let k = 0; k < 4; k++) out.push(paint(new THREE.SphereGeometry(0.35, 8, 6).translate(-2.5 + (k % 2) * 0.4, G + 1.0, 4.2 + Math.floor(k / 2) * 0.4), '#d0312d'));
       return out;
     },
   },
@@ -390,7 +390,7 @@ const TYPEN: Record<string, Typ> = {
       });
       out.push(boxR(10, 0.2, 3.2, 7.5, G + 4.2, 0.3, '#8a5a30', 0.25));
       for (const px of [3, 12]) out.push(boxR(0.3, 3.8, 0.3, px, G + 2.1, -0.9, HOLZ));
-      for (let k = 0; k < 12; k++) out.push(paint(new THREE.SphereGeometry(0.32, 4, 3).translate(3.5 + (k % 6) * 1.6, G + 0.45, 3.2 + Math.floor(k / 6) * 1.1), ['#e05a9a', '#f0d040', '#9a6ad0'][k % 3]));
+      for (let k = 0; k < 12; k++) out.push(paint(new THREE.SphereGeometry(0.32, 7, 5).translate(3.5 + (k % 6) * 1.6, G + 0.45, 3.2 + Math.floor(k / 6) * 1.1), ['#e05a9a', '#f0d040', '#9a6ad0'][k % 3]));
       anker({ art: 'bienen', x: 7.5, y: G + 2.4, z: 2, w: 8, n: 30 });
       return out;
     },
@@ -451,7 +451,7 @@ const TYPEN: Record<string, Typ> = {
         out.push(paint(new THREE.SphereGeometry(0.7, 5, 4).scale(1.4, 0.4, 1.2).translate(bx + 1.4, G + 0.3, bz + 1.2), '#9a5aa8'));
       });
       out.push(walze(0.8, 0.7, -2.4, G + 0.35, 3.4, '#b0844e', 0, 0, 9));
-      for (let k = 0; k < 5; k++) out.push(paint(new THREE.SphereGeometry(0.25, 4, 3).translate(-2.6 + (k % 3) * 0.3, G + 0.8, 3.2 + (k % 2) * 0.3), '#3f4f8a'));
+      for (let k = 0; k < 5; k++) out.push(paint(new THREE.SphereGeometry(0.25, 7, 5).translate(-2.6 + (k % 3) * 0.3, G + 0.8, 3.2 + (k % 2) * 0.3), '#3f4f8a'));
       return out;
     },
   },

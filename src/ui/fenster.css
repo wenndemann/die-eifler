@@ -31,7 +31,7 @@
 .fe-balkenbox i { display: block; height: 100%; background: linear-gradient(90deg, #c39447, #f0cf8c); }
 .fe-warenreihe { display: flex; flex-wrap: wrap; gap: 4px 10px; }
 .fe-ware { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; vertical-align: middle; }
-.fe-ware img { width: 24px; height: 24px; object-fit: contain; }
+.fe-ware img { width: 32px; height: 32px; object-fit: contain; background: rgba(255, 238, 205, 0.16); border-radius: 7px; }
 .fe-ware i { font-style: normal; font-size: 17px; }
 .fe-ware b { font-variant-numeric: tabular-nums; }
 .fe-leer { color: var(--ink-dim); font-style: italic; }

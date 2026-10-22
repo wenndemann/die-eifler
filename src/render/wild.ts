@@ -26,17 +26,27 @@ const kugel = (r: number, x: number, y: number, z: number, f: string, sx = 1, sy
   paint(new THREE.SphereGeometry(r, 10, 7).scale(sx, sy, sz).translate(x, y, z), f);
 const kegel = (r: number, h: number, x: number, y: number, z: number, f: string, rz = 0, rx = 0) =>
   paint(new THREE.ConeGeometry(r, h, 6).rotateX(rx).rotateZ(rz).translate(x, y, z), f);
-const beine = (out: THREE.BufferGeometry[], dx: number, dz: number, h: number, dicke: number, f: string) => {
-  for (const [lx, lz] of [[dx, dz], [-dx, dz], [dx, -dz], [-dx, -dz]]) out.push(k(dicke, h, dicke, lx, h / 2, lz, f));
+/** Runde, kräftige Beine (oben dicker, unten Huf bzw. Pfote) wie bei den Figuren: keine Brettbeine. */
+const beine = (out: THREE.BufferGeometry[], dx: number, dz: number, h: number, dicke: number, f: string, huf = '#2e2218') => {
+  for (const [lx, lz] of [[dx, dz], [-dx, dz], [dx, -dz], [-dx, -dz]]) {
+    out.push(paint(new THREE.CylinderGeometry(dicke * 0.45, dicke * 0.75, h, 8).translate(lx, h / 2 + 0.08, lz), f));
+    out.push(kugel(dicke * 0.55, lx + 0.03, 0.1, lz, huf, 1.3, 0.7, 1));
+  }
+};
+/** Comic-Augen: weißer Augapfel mit großer Pupille und Lichtpunkt, je Seite (Blick +x). */
+const augen = (out: THREE.BufferGeometry[], x: number, y: number, z: number, r: number) => {
+  for (const s of [1, -1]) {
+    out.push(kugel(r, x, y, s * z, '#ffffff'), kugel(r * 0.6, x + r * 0.55, y, s * (z + r * 0.15), '#1b1b1b'), kugel(r * 0.2, x + r * 0.85, y + r * 0.3, s * (z + r * 0.2), '#ffffff'));
+  }
 };
 
 /** Reh: schlank, rotbraun, weißer Spiegel, große Ohren. */
 function reh(f = '#b0733c', geweih = false): THREE.BufferGeometry {
   const out: THREE.BufferGeometry[] = [kugel(0.55, 0, 1.45, 0, f, 1.55, 0.85, 0.75), k(0.32, 0.9, 0.3, 0.75, 1.95, 0, f, -0.45),
-    kugel(0.3, 1.05, 2.4, 0, f, 1.25, 0.95, 0.85), kugel(0.14, 1.38, 2.32, 0, '#3a2a20'), kugel(0.3, -0.78, 1.5, 0, '#f6f0e4', 0.5, 0.85, 0.8),
-    kegel(0.13, 0.42, 0.95, 2.72, 0.2, f, 0, 0.5), kegel(0.13, 0.42, 0.95, 2.72, -0.2, f, 0, -0.5),
-    kugel(0.06, 1.22, 2.5, 0.2, '#1b1b1b'), kugel(0.06, 1.22, 2.5, -0.2, '#1b1b1b')];
-  beine(out, 0.55, 0.22, 1.05, 0.2, '#6e4626');
+    kugel(0.4, 1.05, 2.4, 0, f, 1.2, 0.95, 0.9), kugel(0.17, 1.45, 2.28, 0, '#3a2a20'), kugel(0.3, -0.78, 1.5, 0, '#f6f0e4', 0.5, 0.85, 0.8),
+    kegel(0.15, 0.48, 0.95, 2.82, 0.26, f, 0, 0.6), kegel(0.15, 0.48, 0.95, 2.82, -0.26, f, 0, -0.6)];
+  augen(out, 1.22, 2.52, 0.24, 0.1);
+  beine(out, 0.55, 0.22, 1.0, 0.26, '#7a4e2a');
   if (geweih) for (const s of [1, -1]) {
     // Geweih: Stange mit drei Enden je Seite
     out.push(k(0.08, 0.95, 0.08, 0.95, 3.05, s * 0.2, '#e2d4b0', -0.25, 0), k(0.07, 0.5, 0.07, 1.1, 3.2, s * 0.32, '#e2d4b0', -0.9),
@@ -46,19 +56,21 @@ function reh(f = '#b0733c', geweih = false): THREE.BufferGeometry {
 }
 /** Wildschwein: dunkel, keilförmig, Rüssel, Hauer, Borstenkamm. */
 function wildschwein(): THREE.BufferGeometry {
-  const f = '#4a3c32';
+  const f = '#5a4636';
   const out = [kugel(0.75, 0, 1.0, 0, f, 1.5, 0.95, 0.85), kegel(0.55, 1.0, 1.2, 0.95, 0, '#3e322a', -Math.PI / 2), k(0.14, 0.3, 0.3, 1.72, 0.92, 0, '#2a201a'),
     kugel(0.2, -0.05, 1.62, 0, '#2e2620', 4.2, 0.6, 0.6), kegel(0.04, 0.22, 1.55, 0.8, 0.14, '#f2ead8', -1.2), kegel(0.04, 0.22, 1.55, 0.8, -0.14, '#f2ead8', -1.2),
-    kegel(0.12, 0.3, 0.95, 1.55, 0.22, f, 0.3), kegel(0.12, 0.3, 0.95, 1.55, -0.22, f, 0.3), kugel(0.05, 1.3, 1.2, 0.2, '#111'), kugel(0.05, 1.3, 1.2, -0.2, '#111'),
+    kegel(0.12, 0.3, 0.95, 1.55, 0.22, f, 0.3), kegel(0.12, 0.3, 0.95, 1.55, -0.22, f, 0.3), 
     k(0.05, 0.35, 0.05, -1.15, 1.0, 0, '#2a201a', 0.6)];
-  beine(out, 0.55, 0.28, 0.55, 0.18, '#2a201a');
+  augen(out, 1.22, 1.22, 0.2, 0.08);
+  beine(out, 0.55, 0.28, 0.5, 0.28, '#3a2e26');
   return mergeGeometries(out)!;
 }
 /** Frischling: klein, hellbraun mit Längsstreifen. */
 function frischling(): THREE.BufferGeometry {
   const out = [kugel(0.4, 0, 0.55, 0, '#a07a4e', 1.5, 0.9, 0.85), kegel(0.28, 0.5, 0.62, 0.52, 0, '#a07a4e', -Math.PI / 2), k(0.08, 0.16, 0.16, 0.9, 0.5, 0, '#5a4030')];
   for (const s of [-0.14, 0.14]) out.push(k(1.0, 0.05, 0.06, -0.05, 0.75, s, '#e8d4a8'));
-  beine(out, 0.3, 0.16, 0.3, 0.1, '#5a4030');
+  augen(out, 0.62, 0.66, 0.13, 0.06);
+  beine(out, 0.3, 0.16, 0.28, 0.16, '#5a4030');
   return mergeGeometries(out)!;
 }
 /** Fuchs: orange, weiße Brust, spitze Schnauze, große Ohren, buschiger Schwanz mit weißer Spitze. */
@@ -66,37 +78,41 @@ function fuchs(): THREE.BufferGeometry {
   const f = '#d9742a';
   const out = [kugel(0.4, 0, 0.85, 0, f, 1.7, 0.8, 0.75), kugel(0.3, 0.75, 1.15, 0, f), kegel(0.16, 0.5, 1.12, 1.08, 0, '#f2e8d8', -Math.PI / 2),
     kugel(0.05, 1.37, 1.08, 0, '#111'), kugel(0.22, 0.45, 0.8, 0, '#f6efe2', 0.8, 0.9, 0.8), kegel(0.12, 0.34, 0.68, 1.48, 0.15, f), kegel(0.12, 0.34, 0.68, 1.48, -0.15, f),
-    kugel(0.24, -0.95, 0.75, 0, f, 2.0, 0.75, 0.75), kugel(0.15, -1.38, 0.66, 0, '#f6efe2'), kugel(0.045, 0.98, 1.24, 0.13, '#111'), kugel(0.045, 0.98, 1.24, -0.13, '#111')];
-  beine(out, 0.45, 0.15, 0.6, 0.11, '#3a2a20');
+    kugel(0.24, -0.95, 0.75, 0, f, 2.0, 0.75, 0.75), kugel(0.15, -1.38, 0.66, 0, '#f6efe2')];
+  augen(out, 0.95, 1.25, 0.13, 0.08);
+  beine(out, 0.45, 0.15, 0.55, 0.18, '#3a2a20');
   return mergeGeometries(out)!;
 }
 /** Feldhase: graubraun, lange Ohren, Blume. */
 function hase(): THREE.BufferGeometry {
   const f = '#9a8160';
   const out = [kugel(0.42, 0, 0.55, 0, f, 1.35, 0.95, 0.85), kugel(0.24, 0.5, 0.92, 0, f), k(0.1, 0.62, 0.16, 0.42, 1.38, 0.1, f, 0.25), k(0.1, 0.62, 0.16, 0.42, 1.38, -0.1, f, 0.25),
-    kugel(0.12, -0.55, 0.62, 0, '#f6efe2'), kugel(0.04, 0.68, 0.98, 0.12, '#111'), kugel(0.04, 0.68, 0.98, -0.12, '#111'), k(0.5, 0.18, 0.14, 0.2, 0.1, 0.22, f), k(0.5, 0.18, 0.14, 0.2, 0.1, -0.22, f)];
+    kugel(0.12, -0.55, 0.62, 0, '#f6efe2'), k(0.5, 0.18, 0.14, 0.2, 0.1, 0.22, f), k(0.5, 0.18, 0.14, 0.2, 0.1, -0.22, f)];
+  augen(out, 0.62, 1.0, 0.12, 0.07);
   return mergeGeometries(out)!;
 }
 /** Wildkatze: graubraun getigert, dicker Schwanz mit dunklen Ringen und stumpfer schwarzer Spitze. */
 function wildkatze(): THREE.BufferGeometry {
   const f = '#8e7d62', d = '#4a3e30';
   const out = [kugel(0.42, 0, 0.8, 0, f, 1.55, 0.8, 0.8), kugel(0.3, 0.68, 1.08, 0, f), kugel(0.12, 0.92, 1.0, 0, '#d8ccb4', 1, 0.8, 1.2),
-    kegel(0.11, 0.24, 0.62, 1.4, 0.15, f), kegel(0.11, 0.24, 0.62, 1.4, -0.15, f), kugel(0.05, 0.92, 1.16, 0.13, '#3a5a20'), kugel(0.05, 0.92, 1.16, -0.13, '#3a5a20'),
+    kegel(0.11, 0.24, 0.62, 1.4, 0.15, f), kegel(0.11, 0.24, 0.62, 1.4, -0.15, f), 
     kugel(0.1, -0.05, 1.13, 0, d, 5, 0.5, 0.9)];
   // Tigerung: dunkle Querstreifen nur auf dem Rücken
   for (let i = 0; i < 4; i++) out.push(kugel(0.08, -0.42 + i * 0.27, 1.08, 0, d, 0.6, 0.45, 3.4));
   // dicker, waagrecht getragener Schwanz mit Ringen
   for (let i = 0; i < 5; i++) out.push(paint(new THREE.CylinderGeometry(0.15, 0.15, 0.17, 8).rotateZ(Math.PI / 2 - 0.25).translate(-0.72 - i * 0.17, 0.82 - i * 0.04, 0), i === 4 ? '#1e1a16' : i % 2 ? d : f));
-  beine(out, 0.4, 0.16, 0.55, 0.12, f);
+  augen(out, 0.88, 1.16, 0.13, 0.075);
+  beine(out, 0.4, 0.16, 0.5, 0.2, f, '#5a4e40');
   return mergeGeometries(out)!;
 }
 /** Wolf: grau mit heller Brust, lange Beine, buschiger, hängender Schwanz. */
 function wolf(): THREE.BufferGeometry {
-  const f = '#7c7a74', h = '#c9c4b8';
+  const f = '#8a8378', h = '#d4cbbb';
   const out = [kugel(0.55, 0, 1.25, 0, f, 1.6, 0.8, 0.72), kugel(0.36, 0.9, 1.6, 0, f), kegel(0.2, 0.55, 1.35, 1.5, 0, h, -Math.PI / 2), kugel(0.06, 1.62, 1.5, 0, '#111'),
-    kugel(0.3, 0.55, 1.15, 0, h, 0.8, 1, 0.8), kegel(0.13, 0.36, 0.82, 1.98, 0.17, f), kegel(0.13, 0.36, 0.82, 1.98, -0.17, f), kugel(0.05, 1.12, 1.72, 0.15, '#d8a020'), kugel(0.05, 1.12, 1.72, -0.15, '#d8a020'),
+    kugel(0.3, 0.55, 1.15, 0, h, 0.8, 1, 0.8), kegel(0.13, 0.36, 0.82, 1.98, 0.17, f), kegel(0.13, 0.36, 0.82, 1.98, -0.17, f), 
     paint(new THREE.SphereGeometry(0.24, 10, 7).scale(2.2, 0.85, 0.85).rotateZ(0.75).translate(-1.05, 0.95, 0), f), kugel(0.18, -0.15, 1.62, 0, '#5a5852', 4, 0.6, 0.8)];
-  beine(out, 0.55, 0.2, 1.0, 0.16, '#5e5c58');
+  augen(out, 1.12, 1.74, 0.16, 0.09);
+  beine(out, 0.55, 0.2, 0.9, 0.24, '#6e685e');
   return mergeGeometries(out)!;
 }
 const MODELL: Record<WildArt, () => THREE.BufferGeometry> = {

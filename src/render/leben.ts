@@ -32,8 +32,10 @@ varying float vAlpha; varying vec3 vFarbe;
 uniform float uSkala;
 #include <fog_pars_vertex>
 void main() {
-  vAlpha = aAlpha; vFarbe = aFarbe;
+  vFarbe = aFarbe;
   vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+  // dicht vor der Kamera ausblenden (sonst schiebt sich ein riesiges Wölkchen übers Bild, Gutachter)
+  vAlpha = aAlpha * smoothstep(40.0, 140.0, -mvPosition.z);
   gl_PointSize = aGroesse * uSkala / max(1.0, -mvPosition.z);
   gl_Position = projectionMatrix * mvPosition;
   #include <fog_vertex>
@@ -382,7 +384,7 @@ export class LebenDarstellung {
     const takt = (t * 0.12 + h01(g.id, 9)) % 1;
     const geste = takt < 0.12 ? GESTE.winken : takt > 0.55 && takt < 0.65 ? GESTE.kratzen : GESTE.keine;
     const yaw = 0.4 * Math.sin(t * 0.3 + g.id);
-    this.figur(x, z, yaw, t * 2 + g.id, tracht.hemd ? this.c.set(tracht.hemd) : SCHWAETZER[g.id % SCHWAETZER.length], 0, geste, 0.7, 0, 1, zahl, satz);
+    this.figur(x, z, yaw, t * 2 + g.id, tracht.hemd ? this.c.set(tracht.hemd) : SCHWAETZER[g.id % SCHWAETZER.length], 0, geste, 0.7, 0, 0.9, zahl, satz);
   }
 
   /** Ein Anker eines Gebäudes. */

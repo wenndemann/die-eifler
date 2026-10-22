@@ -62,7 +62,7 @@
     "bis_abstand_m": 1600
   },
   "schild": {
-    "groesse": 0.7
+    "groesse": 1.0
   },
   "berufe": {
     "holzfaeller": {
@@ -87,66 +87,88 @@
     "schmiede": {
       "hut": "stirnband",
       "schuerze": "#4a3426",
-      "bart": "#4a3020"
+      "bart": "#4a3020",
+      "werkzeug": "hammer"
     },
     "eisenhuette": {
       "hut": "stirnband",
       "schuerze": "#4a3426",
-      "bart": "#4a3020"
+      "bart": "#4a3020",
+      "werkzeug": "hammer"
     },
     "steinmetz": {
       "hut": "stirnband",
       "schuerze": "#4a3426",
-      "bart": "#4a3020"
+      "bart": "#4a3020",
+      "werkzeug": "hammer"
     },
     "muehlsteinhauerei": {
       "hut": "stirnband",
       "schuerze": "#4a3426",
-      "bart": "#4a3020"
+      "bart": "#4a3020",
+      "werkzeug": "hammer"
     },
     "kueche": {
       "hut": "koch",
-      "schuerze": "#f4f1ea"
+      "schuerze": "#f4f1ea",
+      "werkzeug": "loeffel"
     },
     "kaeserei": {
       "hut": "haube",
-      "schuerze": "#f4f1ea"
+      "schuerze": "#f4f1ea",
+      "werkzeug": "kaese",
+      "frau": true,
+      "hutFarbe": "#f0c040"
     },
     "molkerei": {
       "hut": "haube",
-      "schuerze": "#f4f1ea"
+      "schuerze": "#f4f1ea",
+      "werkzeug": "kaese",
+      "frau": true,
+      "hutFarbe": "#f0c040"
     },
     "spinnerei": {
       "hut": "haube",
-      "schuerze": "#f4f1ea"
+      "schuerze": "#f4f1ea",
+      "frau": true,
+      "hutFarbe": "#f0c040"
     },
     "reifekeller": {
       "hut": "haube",
-      "schuerze": "#f4f1ea"
+      "schuerze": "#f4f1ea",
+      "werkzeug": "kaese",
+      "frau": true,
+      "hutFarbe": "#f0c040"
     },
     "brauerei": {
       "hut": "kappe",
-      "schuerze": "#7a5232"
+      "schuerze": "#7a5232",
+      "werkzeug": "kelle"
     },
     "edelbrauerei": {
       "hut": "kappe",
-      "schuerze": "#7a5232"
+      "schuerze": "#7a5232",
+      "werkzeug": "kelle"
     },
     "brennerei": {
       "hut": "kappe",
-      "schuerze": "#7a5232"
+      "schuerze": "#7a5232",
+      "werkzeug": "kelle"
     },
     "mostkeller": {
       "hut": "kappe",
-      "schuerze": "#7a5232"
+      "schuerze": "#7a5232",
+      "werkzeug": "kelle"
     },
     "kelter": {
       "hut": "kappe",
-      "schuerze": "#7a5232"
+      "schuerze": "#7a5232",
+      "werkzeug": "kelle"
     },
     "weinkeller": {
       "hut": "kappe",
-      "schuerze": "#7a5232"
+      "schuerze": "#7a5232",
+      "werkzeug": "kelle"
     },
     "tuchmacherei": {
       "hut": "kappe",
@@ -165,72 +187,89 @@
     "schaenke": {
       "hut": "ohne",
       "schuerze": "#f4f1ea",
-      "bart": "#8a6a50"
+      "bart": "#8a6a50",
+      "werkzeug": "krug"
     },
     "junggesellen": {
       "hut": "ohne",
-      "schuerze": "#f4f1ea"
+      "schuerze": "#f4f1ea",
+      "werkzeug": "krug"
     },
     "koehlerei": {
       "hut": "pudel",
       "hutFarbe": "#2b2b2b",
-      "bart": "#3a3a3a"
+      "bart": "#3a3a3a",
+      "werkzeug": "schaufel"
     },
     "grossmeiler": {
       "hut": "pudel",
       "hutFarbe": "#2b2b2b",
-      "bart": "#3a3a3a"
+      "bart": "#3a3a3a",
+      "werkzeug": "schaufel"
     },
     "raeucherei": {
       "hut": "pudel",
-      "hutFarbe": "#2b2b2b"
+      "hutFarbe": "#2b2b2b",
+      "werkzeug": "schaufel"
     },
     "bienenstock": {
       "hut": "imker",
       "hemd": "#f4f1ea",
-      "schuerze": "#e8e2d0"
+      "schuerze": "#e8e2d0",
+      "werkzeug": "smoker"
     },
     "kartoffelfeld": {
-      "hut": "stroh"
+      "hut": "stroh",
+      "werkzeug": "gabel"
     },
     "gerstenfeld": {
-      "hut": "stroh"
+      "hut": "stroh",
+      "werkzeug": "gabel"
     },
     "obstwiese": {
-      "hut": "stroh"
+      "hut": "stroh",
+      "werkzeug": "gabel"
     },
     "weinberg": {
-      "hut": "stroh"
+      "hut": "stroh",
+      "werkzeug": "gabel"
     },
     "hopfengarten": {
-      "hut": "stroh"
+      "hut": "stroh",
+      "werkzeug": "gabel"
     },
     "schafstall": {
-      "hut": "stroh"
+      "hut": "stroh",
+      "werkzeug": "gabel"
     },
     "schafweide": {
-      "hut": "stroh"
+      "hut": "stroh",
+      "werkzeug": "gabel"
     },
     "wacholderheide": {
-      "hut": "stroh"
+      "hut": "stroh",
+      "werkzeug": "gabel"
     },
     "lohhecke": {
-      "hut": "stroh"
+      "hut": "stroh",
+      "werkzeug": "gabel"
     },
     "senfmuehle": {
-      "hut": "stroh"
+      "hut": "stroh",
+      "werkzeug": "gabel"
     },
     "fischerhuette": {
       "hut": "pudel",
       "hutFarbe": "#2e5d8a",
-      "bart": "#9a9a9a"
+      "bart": "#9a9a9a",
+      "werkzeug": "angel"
     }
   },
   "wild": {
     "radius_m": 900,
     "zelle_m": 90,
     "anteil": 0.2,
-    "rand_m": 70,
+    "rand_m": 45,
     "streif_m": 40,
     "max_gruppen": 30,
     "neu_ab_m": 120,
@@ -314,7 +353,7 @@
           4
         ],
         "tempo": 0.9,
-        "groesse": 1.1,
+        "groesse": 0.9,
         "wald": true
       }
     }

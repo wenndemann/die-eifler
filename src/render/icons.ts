@@ -39,7 +39,7 @@ const SPEICHER = 'eifeler.icons';
 /** Schlüssel: ändert sich mit Waren (Form, Farbe), Gebäuden und Größe. */
 const SCHLUESSEL = (() => {
   const f = new Fnv2();
-  f.text(`${GROESSE}|motiv2|${WAREN.join(',')}|${WAREN_FORM.join(',')}|${WAREN_FARBE.join(',')}|${GEBAEUDE_IDS.join(',')}`);
+  f.text(`${GROESSE}|motiv3|${WAREN.join(',')}|${WAREN_FORM.join(',')}|${WAREN_FARBE.join(',')}|${GEBAEUDE_IDS.join(',')}`);
   return f.hex();
 })();
 
@@ -91,9 +91,9 @@ async function rendere(): Promise<void> {
     renderer.setClearColor(0x000000, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     const szene = new THREE.Scene();
-    const sonne = new THREE.DirectionalLight('#ffeccc', 3.2);
+    const sonne = new THREE.DirectionalLight('#ffeccc', 3.6);
     sonne.position.set(-0.6, 1, 0.8);
-    szene.add(sonne, new THREE.HemisphereLight('#c4d8ea', '#3e4a2a', 0.9));
+    szene.add(sonne, new THREE.HemisphereLight('#c4d8ea', '#6a7050', 1.4));
     const kamera = new THREE.PerspectiveCamera(28, 1, 0.1, 1000);
     const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, side: THREE.DoubleSide });
     const richt = new THREE.Vector3(0.45, 0.62, 1).normalize();
