@@ -111,8 +111,9 @@ async function rendere(): Promise<void> {
       return renderer!.domElement.toDataURL('image/png');
     };
     const neu: Icons = { ware: [], gebaeude: {} };
-    for (let a = 0; a < WAREN.length; a++) { neu.ware[a] = bild(warenGeometrie(a)); await pause(); }
-    for (const id of GEBAEUDE_IDS) { neu.gebaeude[id] = bild(gebaeudeGeometrie(id)); await pause(); }
+    // in Paketen zu je 8 (dazwischen läuft das Spiel weiter): sonst wartet jedes Icon auf ein ganzes Spielbild
+    for (let a = 0; a < WAREN.length; a++) { neu.ware[a] = bild(warenGeometrie(a)); if (a % 8 === 7) await pause(); }
+    for (let i = 0; i < GEBAEUDE_IDS.length; i++) { const id = GEBAEUDE_IDS[i]; neu.gebaeude[id] = bild(gebaeudeGeometrie(id)); if (i % 8 === 7) await pause(); }
     mat.dispose();
     aktuell.ware = neu.ware; aktuell.gebaeude = neu.gebaeude;
     try { localStorage.setItem(SPEICHER, JSON.stringify({ schluessel: SCHLUESSEL, icons: neu })); } catch { /* Speicher voll: nächstes Mal neu */ }
