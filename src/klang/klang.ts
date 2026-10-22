@@ -22,6 +22,9 @@ export interface KlangLage {
   nah: number;
   /** Bach, Fluss oder See nah am Blickpunkt (0..1): Plätschern. */
   wasser: number;
+  /** M15: versetzte Grenzsteine (Links-rechts, Nähe): nachts spuken dort die Versetzer, alle `spukTakt` Sekunden. */
+  spuk?: { pan: number; naehe: number }[];
+  spukTakt?: number;
 }
 
 type Bus = 'musik' | 'geraeusche' | 'stimmen' | 'natur';
@@ -144,8 +147,10 @@ export class Klang {
       this.naturBis = t + (60 / klang.natur.voegel_je_min) * (0.5 + Math.random());
     }
     if (!tag && t >= this.spukBis) {
-      if (Math.random() < klang.natur.spuk_je_min / 6) this.spuk(Math.random() * 1.4 - 0.7);
-      this.spukBis = t + 10;
+      // M15: wo Grenzsteine versetzt wurden, spukt es regelmäßig (der nächste Stein), sonst nur selten irgendwo
+      const st = l.spuk?.[0];
+      if (st) { this.spuk(st.pan, 0.4 + 0.6 * st.naehe); this.spukBis = t + (l.spukTakt ?? 25) * (0.8 + Math.random() * 0.4); }
+      else { if (Math.random() < klang.natur.spuk_je_min / 6) this.spuk(Math.random() * 1.4 - 0.7); this.spukBis = t + 10; }
     }
     // Arbeit: je Gebäude im eigenen Takt (leicht verschoben, sonst klopft alles gleichzeitig)
     for (const a of l.arbeit) {
@@ -353,9 +358,14 @@ export class Klang {
     for (let i = 0; i < 6; i++) this.sinus(t + i * 0.06, aus, 4400, 4500, 0.04, 0.1);
   }
 
+  /** M15: Spuk sofort (ein Grenzstein wurde versetzt, die Nacht beginnt). */
+  spukRuf(pan = 0): void {
+    if (this.an) this.spuk(pan, 1);
+  }
+
   /** Der spukende Grenzsteinversetzer: hohles Heulen in der Nacht, mit Echo. */
-  private spuk(pan: number): void {
-    const ac = this.ac!, t = ac.currentTime + 0.05, aus = this.panner(pan, 'natur', 0.7);
+  private spuk(pan: number, laut = 1): void {
+    const ac = this.ac!, t = ac.currentTime + 0.05, aus = this.panner(pan, 'natur', 0.7 * laut);
     const echo = ac.createDelay(1); echo.delayTime.value = 0.33;
     const rueck = ac.createGain(); rueck.gain.value = 0.45;
     echo.connect(rueck).connect(echo); echo.connect(aus);

@@ -4,7 +4,8 @@
 // in unter 30 Sekunden wieder drin sein, Pause, Prüfsummen gleich, Speichern. M7: Warenverteilung über das Fenster, Ruhen,
 // Statistik und Autosave im Mehrspieler. M8: Lagerregel und Bauleute-Wunsch über das Lagerfenster, Jahreszeit und Wetter bei beiden gleich.
 // M10: Regeln (Gebiet, Ziel), Gebiet und Eifel-Punkte bei beiden gleich, Ortsfenster. M11: Völkchen beider Dörfer bei beiden gleich. M12: Uhrzeit
-// und Wetter-Optik (Talnebel/Aue) bei beiden gleich. M14: Mainacht und Maibäume bei beiden gleich.
+// und Wetter-Optik (Talnebel/Aue) bei beiden gleich. M14: Mainacht und Maibäume bei beiden gleich. M15: Nacht, Zollhäuser, Grenzsteine,
+// Teile des Großen Funds und Reiz bei beiden gleich, Grenzstein-Befehl des Gasts im Protokoll beider.
 //
 // Läuft in npm run test:smoke mit; allein:  node tests/mehrspieler.mjs   (Server und Vite startet es selbst)
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
@@ -239,6 +240,24 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
     info(`Mehrspieler M14: Mainacht ab Tick / Maibäume ${m12.map((x) => x.mai).join(' | ')}`);
     if (m12[0].mai !== m12[1].mai) fail(`Mehrspieler M14: Mai verschieden: ${m12.map((x) => x.mai).join(' | ')}`);
     if (m12[0].scheiben !== m12[1].scheiben) fail(`Mehrspieler M12: Talnebel/Aue verschieden: ${m12.map((x) => x.scheiben).join(' / ')}`);
+    // M15: Grenzland – Nacht, Zollhäuser, Grenzsteine, Teile und Reiz bei beiden gleich; ein Grenzstein-Befehl des Gasts kommt beim Gastgeber an
+    await gast.evaluate(() => window.eifeler.spiel.befehl({ art: 'grenzstein', id: 1, ziel: 0 }));
+    await host.waitForTimeout(2500);
+    const m15 = await Promise.all([host, gast].map((x) => x.evaluate(() => {
+      const sp = window.eifeler.spiel, sim = sp.sim, s = sim.sicht(sp.ich), g = s.grenzland;
+      return {
+        tick: sim.tick, nacht: g.nacht, zoll: JSON.stringify(g.zoll.map((z) => [z.q, z.r])), steine: JSON.stringify(g.steine), teile: s.spieler.map((p) => p.teile).join(','),
+        reiz: [0, 1].map((i) => sim.sicht(i).dorf.grenz.reiz).join(','),
+        befehl: sim.protokoll({ version: '', q: 0, r: 0, size: '', pruefsumme: '' }).befehle.some((e) => e.befehl.art === 'grenzstein' && e.spieler === 1),
+        kaffee: s.dorf.verteilung.length === s.dorf.erzeugt.length,
+      };
+    })));
+    info(`Mehrspieler M15: Nacht ${m15.map((x) => x.nacht).join('/')}, Zollhäuser ${m15[0].zoll}, Grenzsteine ${m15[0].steine}, Teile ${m15.map((x) => x.teile).join(' / ')}, Reiz ${m15.map((x) => x.reiz).join(' / ')}`);
+    if (m15.some((x) => x.zoll !== m15[0].zoll)) fail(`Mehrspieler M15: Zollhäuser verschieden: ${m15.map((x) => x.zoll).join(' / ')}`);
+    if (m15.some((x) => x.steine !== m15[0].steine || x.teile !== m15[0].teile)) fail(`Mehrspieler M15: Grenzsteine/Teile verschieden: ${JSON.stringify(m15)}`);
+    if (m15[0].tick === m15[1].tick && (m15[0].reiz !== m15[1].reiz || m15[0].nacht !== m15[1].nacht)) fail(`Mehrspieler M15: Reiz/Nacht verschieden: ${JSON.stringify(m15)}`);
+    if (m15.some((x) => !x.befehl)) fail(`Mehrspieler M15: Grenzstein-Befehl des Gasts fehlt im Protokoll: ${m15.map((x) => x.befehl).join('/')}`);
+    if (m15.some((x) => !x.kaffee)) fail('Mehrspieler M15: Kaffee fehlt in Verteilung oder Statistik');
     if (Math.abs(m12[0].tick - m12[1].tick) < 40 && Math.abs(Number(m12[0].uhr) - Number(m12[1].uhr)) > 1) fail(`Mehrspieler M12: Uhrzeit verschieden: ${m12.map((x) => x.uhr).join(' / ')}`);
     info(`Mehrspieler M7: Verteilung gleich ${m7b[0].vert === m7b[1].vert}, Holzfäller ruht ${m7b.map((x) => x.ruht).join('/')}, Statistik-Punkte ${m7b.map((x) => x.stat).join('/')}`);
     if (m7b[0].vert !== m7b[1].vert) fail('Mehrspieler M7: Warenverteilung unterschiedlich');

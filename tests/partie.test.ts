@@ -9,6 +9,7 @@ import { SimKarte } from '../src/sim/karte';
 import { NAHRUNG, WARE } from '../src/sim/daten';
 import { STAND_ZAHLEN } from '../src/sim/stand';
 import { MAI_AB } from '../src/sim/mai';
+import { bisNacht } from '../src/sim/grenzland';
 import { GUT, Runde, SCHLECHT } from './netz-sim';
 
 const A = { q: 0, r: 0 }, B = { q: -6, r: 0 }, C = { q: 6, r: -12 };
@@ -478,5 +479,67 @@ describe('Gleichschritt', () => {
     expect(p(r, 1).tempo).toBe(1);
     expect(sim(r, 1).tick).toBeLessThan(vor + 100);
     expect(sim(r, 0).sicht(0).spieler[0].verwalter).toBe(false);
+  });
+
+  it('M15: Grenzland im Gleichschritt – Grenzstein, Schmuggel am Zollhaus, Fundbüro und Abwerben bei allen gleich, auch nach dem Neuladen', () => {
+    // Karte mit Natur und einem Hex Staatsgrenze nördlich von Dorf 1 (dort steht das Zollhaus)
+    const karte = baueTestKarte(true);
+    const sk = new SimKarte(karte);
+    { const i = sk.index(-14, -8); karte.flags[i] |= 8; karte.flags[i] &= ~1; }
+    const starts = [{ q: 0, r: 0 }, { q: -14, r: 0 }];
+    const s0 = new Simulation(karte, 43, starts, { gebiet: 1, ziel: 'grosser_fund' });
+    const gs = s0 as unknown as { karte: { index(q: number, r: number): number }; gebaeudeErzeugen(t: string, h: number, sofort: boolean, sp: number): { id: number } };
+    const huette0 = gs.gebaeudeErzeugen('finderhuette', gs.karte.index(3, 0), true, 0).id;
+    const huette1 = gs.gebaeudeErzeugen('finderhuette', gs.karte.index(-17, 0), true, 1).id;
+    const buero1 = gs.gebaeudeErzeugen('fundbuero', gs.karte.index(-11, 0), true, 1).id;
+    s0.befehl(0, 0, { art: 'weg', pfad: gerade(0, 0, 0, 3) });
+    s0.befehl(0, 1, { art: 'weg', pfad: gerade(-14, 0, 3, 3) });
+    s0.befehl(0, 1, { art: 'weg', pfad: gerade(-14, 0, 0, 3) });
+    s0.befehl(0, 1, { art: 'weg', pfad: gerade(-14, 0, 2, 7) });
+    for (let i = 0; i < 3; i++) s0.schritt();
+    const st = s0.stand();
+    st.zahlen[STAND_ZAHLEN.indexOf('tick')] = s0.tick + bisNacht(s0.tick) - 300;
+    // Dorf 0 ist weiter (Marktflecken) und lockt die Leute von Dorf 1 herüber
+    st.doerfer.forEach((d, i) => { const x = d as Record<string, number>; x.stufe = i === 0 ? 3 : 1; x.bewohner += 6; x.frei += 6; });
+    for (const g of st.gebaeude) {
+      const v = g.vorrat as number[] | undefined;
+      if (v) for (const a of [WARE.kartoffeln, WARE.bretter, WARE.landbier]) v[a] += 20;
+      if (g.id === huette0) (g as Record<string, unknown>).gz = 1;
+      if (g.id === buero1) (g.puffer as number[])[WARE.kaffee] = 4;
+    }
+    const r = new Runde(karte, starts, SCHLECHT);
+    r.starte(0, { sim: Simulation.ausStand(karte, st) }); r.starte(1);
+    r.verbindeAlle();
+    r.lauf(2000);
+    p(r, 0).setzeTempo(3);
+    expect(sim(r, 1).sicht(1).grenzland!.zoll.length).toBe(1);
+    r.lauf(12_000);
+    r.trenne(1);
+    r.lauf(1000);
+    const neu = r.starte(1);
+    r.verbindeAlle();
+    while (!neu.sim || neu.angehalten) r.lauf(16);
+    // nach dem Neuladen: Dorf 1 will seinerseits einen Grenzstein zu Dorf 0 tragen
+    p(r, 1).befehl({ art: 'grenzstein', id: huette1, ziel: 0 });
+    r.lauf(90_000);
+    p(r, 0).pause(true);
+    r.lauf(3000);
+    r.gleichziehen();
+    const s = [0, 1].map((i) => sim(r, i).sicht(i));
+    for (const i of [0, 1]) {
+      const g = s[i].grenzland!;
+      expect(JSON.stringify(g.steine)).toBe(JSON.stringify(s[0].grenzland!.steine));
+      expect(s[i].spieler.map((x) => `${x.hexe}/${x.bewohner}/${x.teile}`)).toEqual(s[0].spieler.map((x) => `${x.hexe}/${x.bewohner}/${x.teile}`));
+    }
+    const arten = (i: number) => new Set(s[i].ereignisse.map((e) => e.art));
+    // Dorf 0: der Grenzstein ist gewandert oder der Finder wurde erwischt; Dorf 1: Kaffee am Zollhaus vorbei oder erwischt
+    expect(arten(0).has('grenzstein') || arten(0).has('erwischt')).toBe(true);
+    expect(arten(1).has('schmuggel') || arten(1).has('erwischt')).toBe(true);
+    expect(s[1].dorf.grenz!.fundbuero).toBe(true);
+    expect(s[1].dorf.grenz!.kaffeeP).toBeGreaterThan(0);
+    expect(s[0].dorf.grenz!.abgeworben).toBeGreaterThan(0);
+    expect(s[1].dorf.grenz!.verloren).toBe(s[0].dorf.grenz!.abgeworben);
+    expect(sim(r, 1).pruefsumme()).toBe(sim(r, 0).pruefsumme());
+    for (const i of [0, 1]) expect(sim(r, i).pruefeInnenzustand()).toEqual([]);
   });
 });

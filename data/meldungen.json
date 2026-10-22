@@ -1,5 +1,5 @@
 {
- "hinweis": "Meldungen der Erzählfigur (Drehbuch 1.1, 1.4, 4.4): Hochdeutsch, der Sprachtick der Figur kommt aus regions.json dazu. Platzhalter: {name} Erzählfigur, {ort} Startort, {gebaeude} Gebäude, {ware} Ware, {stufe} Dorfstufe, {n} Zahl, {liste} Kirmes-Warenliste, {fest} Name eines kleinen Fests, {wetter} Wetter, {feld} betroffenes Feld; ab M10 {text} (Ortsname, Stadt, Ausrede, Spieler). Bauernregeln (wetter_<art>) kündigen das Wetter an (Drehbuch 7.4). Mehrere Texte je Anlass werden der Reihe nach verwendet. Ab M12: fonds (Eifelfonds zahlt aus), tempo_hoch (Träger-Spruch beim schnellsten Tempo), nachbar (Tooltip über fremden Dörfern und Orten, Running Gag „Die Eifel fängt erst hinter meinem Dorf an“). Ab M14 (Der Mai): mainacht_kommt, mainacht_beginnt, mainacht_steht, mainacht_ohne, maibaum, maiklau_ok/wache/bier/leer ({text} = Ziel), maibesuch_ok/wache/bier ({text} = wer), mailoese, mailoese_bekommen ({text} = wer zahlt), mailehen ({n}).",
+ "hinweis": "Meldungen der Erzählfigur (Drehbuch 1.1, 1.4, 4.4): Hochdeutsch, der Sprachtick der Figur kommt aus regions.json dazu. Platzhalter: {name} Erzählfigur, {ort} Startort, {gebaeude} Gebäude, {ware} Ware, {stufe} Dorfstufe, {n} Zahl, {liste} Kirmes-Warenliste, {fest} Name eines kleinen Fests, {wetter} Wetter, {feld} betroffenes Feld; ab M10 {text} (Ortsname, Stadt, Ausrede, Spieler). Bauernregeln (wetter_<art>) kündigen das Wetter an (Drehbuch 7.4). Mehrere Texte je Anlass werden der Reihe nach verwendet. Ab M12: fonds (Eifelfonds zahlt aus), tempo_hoch (Träger-Spruch beim schnellsten Tempo), nachbar (Tooltip über fremden Dörfern und Orten, Running Gag „Die Eifel fängt erst hinter meinem Dorf an“). Ab M14 (Der Mai): mainacht_kommt, mainacht_beginnt, mainacht_steht, mainacht_ohne, maibaum, maiklau_ok/wache/bier/leer ({text} = Ziel), maibesuch_ok/wache/bier ({text} = wer), mailoese, mailoese_bekommen ({text} = wer zahlt), mailehen ({n}). Ab M15 (Grenzland): grenzstein_ok/erwischt/hecke/keine ({text} = Nachbar), grenzstein_weg ({text} = wer), abwerben, abwerben_hof, abgeworben, abgeworben_hof ({text} = Nachbar), schmuggel (Kaffee am Zollhaus vorbei, Zöllner a. D. Gerd), kaffee ({n} Punkte), grossfund ({text} Fund, {n} Punkte), schatzteil ({n} Teile, {text} Schatz), schatz_komplett, jahresfest ({text} = Ort), spuk ({n} Steine).",
  "begruessung": [
   "Willkommen in {ort}! Hier fängt die Eifel an. Erst Holz und Stein, dann Kartoffeln – und dann feiern wir Kirmes.",
   "Na, da seid ihr ja. {ort} wartet. Holzfäller an den Wald, Weg dahin, und dann sehen wir weiter."
@@ -192,5 +192,61 @@
  ],
  "mailehen": [
   "Mailehen beim Junggesellenverein: {n} Neue ziehen zu. Man sieht sich beim Maifest."
+ ],
+ "grenzstein_ok": [
+  "Heute Nacht ist der Grenzstein ein Stück gewandert. Ganz von allein, versteht sich. {text} wird morgen staunen.",
+  "Der Grenzstein steht jetzt da, wo er schon immer hätte stehen sollen. Sagt unser Finder. Und der muss es wissen."
+ ],
+ "grenzstein_erwischt": [
+  "Unser Finder wurde mit einem Grenzstein unterm Arm erwischt. Bei {text}. Mitten in der Nacht. Das wird eine lange Ausrede."
+ ],
+ "grenzstein_hecke": [
+  "Hinter der Hecke von {text} ist kein Durchkommen. Die Hecke war schneller als unser Finder – und lauter."
+ ],
+ "grenzstein_keine": [
+  "Zu {text} haben wir gar keine gemeinsame Grenze. Da kann man keinen Stein versetzen. Erst mal hinwachsen."
+ ],
+ "grenzstein_weg": [
+  "Der Grenzstein steht heute Morgen woanders als gestern. {text} war nachts unterwegs, da wett ich drauf.",
+  "Unser Land ist geschrumpft! Ein Grenzstein ist gewandert – wer Grenzsteine versetzt, muss nach dem Tod umgehen. Hoffentlich bald."
+ ],
+ "abwerben": [
+  "Von {text} ist einer zu uns gezogen. Das Essen ist hier besser, sagt er. Und die Kirmes sowieso."
+ ],
+ "abwerben_hof": [
+  "Ein ganzer Hof von {text} kommt zu uns – mit Kühen, Kindern und Land. Die Grenze rückt gleich mit."
+ ],
+ "abgeworben": [
+  "Einer von uns ist zu {text} gezogen. Wegen dem Essen. Undankbar! Mehr Feste, mehr Essen – dann bleiben sie."
+ ],
+ "abgeworben_hof": [
+  "Ein ganzer Hof ist zu {text} gezogen, mit seinem Land! Wir müssen die Leute besser bei Laune halten."
+ ],
+ "schmuggel": [
+  "Kaffee über die Grenze! Zöllner a. D. Gerd hat wieder nichts gemerkt. Merkt er nie.",
+  "Der Finder kommt mit Bohnenkaffee zurück. Gefunden. Am Zollhaus. Rein zufällig.",
+  "Wieder ein Sack Kaffee. In Mützenich nennt man das „Heimatkunde“."
+ ],
+ "kaffee": [
+  "Kaffeekränzchen im Fundbüro: geschmuggelter Kaffee schmeckt doppelt gut. {n} Punkte bisher."
+ ],
+ "grossfund": [
+  "Großer Fund! {text} – das bringt {n} Punkte. Das Fundbüro staunt. Fragen stellt es keine.",
+  "Was der Finder da mitbringt: {text}! {n} Punkte. Gehört jetzt uns, ist ja gefunden."
+ ],
+ "schatzteil": [
+  "Ein Teil für „{text}“! Wir haben jetzt {n}. Das Fundbüro setzt es zusammen.",
+  "Noch ein Stück von „{text}“ – {n} haben wir jetzt. Die Nachbarn suchen auch, also schnell!"
+ ],
+ "schatz_komplett": [
+  "„{text}“ ist komplett! Alle Teile beisammen im Fundbüro. Die ganze Eifel spricht davon."
+ ],
+ "jahresfest": [
+  "{text} feiert sein Jahresfest – und wir feiern mit. Ein Ort mehr, ein Fest mehr.",
+  "Jahresfest in {text}! Gute Laune im ganzen Dorf, ein paar Punkte gibt es auch."
+ ],
+ "spuk": [
+  "Hört ihr das? Nachts an der Grenze spukt es. Wer Grenzsteine versetzt, muss nach dem Tod umgehen – sagt man.",
+  "Es heult an der Grenze. Ein Grenzsteinversetzer, der keine Ruhe findet. Schnell die Tür zu."
  ]
 }

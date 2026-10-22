@@ -1,0 +1,27 @@
+{
+  "hinweis": "Grenzland (ROADMAP M15, Drehbuch 2.3, 6.1–6.4). nacht: von ab_uhr bis bis_uhr (Uhr wie die Tageszeit der Optik, data/optik.json: tag), auch die Mainacht zählt als Nacht. grenzstein: ein Finder trägt nachts einen Grenzstein über die Grenze zu einem Mitspieler; gelingt es, gehören die Hexe des Nachbarn im Umkreis radius um den Stein uns (Lager bleiben, wem sie gehören). Erwischt-Chance wie beim Finden (Wachhund und Dorfpolizist im Umkreis des Steins); hinter einer ausgewachsenen Hecke des Nachbarn (bis hecke_radius) hecke_prozent. Höchstens max Steine je Spieler, der älteste fällt dann weg. maijungen: Mit mindestens helfer_min freien Maijungen trägt der Finder den Stein tempo_prozent schneller und Feste bringen Zusatzpunkte (fest_punkte je Kirmes oder kleinem Fest, schuetzenfest_punkte beim Schützenfest). abwerben: alle takt_s vergleicht jedes Dorf seinen Reiz (je_stufe je Dorfstufe, je_fest je Fest dieses Jahr bis fest_max, satt wenn genug Essen im Lager liegt – essen_je_bewohner Prozent der Bewohner –, friert wenn es friert, fest_laeuft während eines Fests, koenig für den Schützenkönig) mit jedem Nachbarn mit gemeinsamer Grenze; liegt es vorsprung vorn, zieht mit chance_prozent ein freier Bewohner herüber (nur wenn der Nachbar mehr als min_bewohner hat); mit hof_prozent davon zieht ein ganzer Hof um: hof_bewohner Bewohner und das Land im Umkreis hof_radius um den Grenz-Hex. zoll: Zollhäuser der Gegenseite an der Staatsgrenze im Spielfeld (höchstens max, mindestens abstand Hexe auseinander), Wachsamkeit wie Flachländer (wachsamkeit Prozent), Schmugglervölkchen (Monschauer & Venner, Mützenich) schmuggler_rabatt weniger; Finder bringen beute Kaffee. Ohne Staatsgrenze gibt es Kaffee nur bei den Flachländern (Handel in nachbarn.json). fundbuero: mit Fundbüro bringt jeder Fund beute_bonus mehr, und mit gross_prozent ist ein großer Fund dabei (funde: Punkte, Waren, gewehr = besseres Gewehr für den Vogelschuss, gewehr_bonus Treffer). kaffee: das Fundbüro brüht aus kaffee_takt Kaffee ein Kränzchen (kaffee_punkte Punkte, höchstens kaffee_max Punkte). grosser_fund: teile Teile eines Schatzes, je Nachbar (Marktposten, Zollhaus, Mitspieler, Ort beim Einstand) höchstens eins, mit teil_prozent bei einem Fund (Einstand: teil_prozent_ort); nur mit Fundbüro; punkte je Teil; wer zuerst alle hat, gewinnt bei Ziel „Der Große Fund“. jahresfest: jeder gewonnene Ort feiert einmal im Jahr (Zeitpunkt fest aus Ort-Nummer), punkte je Fest bis obergrenze, dauer_s lang gute Laune. spuk: in Nächten mit versetzten Grenzsteinen spuken die Versetzer (Geräusch alle geraeusch_s, Meldung einmal je Nacht).",
+  "nacht": { "ab_uhr": 21, "bis_uhr": 5 },
+  "grenzstein": { "radius": 2, "max": 6, "hecke_radius": 2, "hecke_prozent": 95 },
+  "maijungen": { "helfer_min": 2, "tempo_prozent": 50, "fest_punkte": 5, "schuetzenfest_punkte": 10 },
+  "abwerben": {
+    "takt_s": 90, "vorsprung": 15, "chance_prozent": 40, "min_bewohner": 6, "hof_prozent": 20, "hof_bewohner": 2, "hof_radius": 1,
+    "reiz": { "je_stufe": 10, "je_fest": 5, "fest_max": 4, "satt": 10, "essen_je_bewohner": 50, "friert": -20, "fest_laeuft": 10, "koenig": 5 }
+  },
+  "zoll": { "max": 2, "abstand": 20, "wachsamkeit": 35, "schmuggler_rabatt": 25, "schmuggler": ["monschau"], "beute": 2 },
+  "fundbuero": {
+    "beute_bonus": 1, "gross_prozent": 15, "gewehr_bonus": 15, "kaffee_takt_s": 60, "kaffee": 1, "kaffee_punkte": 2, "kaffee_max": 60,
+    "funde": [
+      { "id": "werkzeugkiste", "name": "Werkzeugkiste", "symbol": "🧰", "punkte": 30, "waren": { "werkzeug": 3 } },
+      { "id": "gewehr", "name": "Besseres Gewehr", "symbol": "🎯", "punkte": 40, "gewehr": true },
+      { "id": "kaffeesack", "name": "Sack Bohnenkaffee", "symbol": "☕", "punkte": 30, "waren": { "kaffee": 4 } },
+      { "id": "muenzen", "name": "Römische Münzen", "symbol": "🪙", "punkte": 60 },
+      { "id": "monstranz", "name": "Verschollene Monstranz", "symbol": "✨", "punkte": 100 }
+    ]
+  },
+  "grosser_fund": {
+    "name": "Der Schatz vom Hohen Venn", "teile": 4, "punkte": 75, "teil_prozent": 35, "teil_prozent_ort": 50,
+    "teil_namen": ["Goldener Helm", "Silberner Schild", "Kettenhemd", "Krone"]
+  },
+  "jahresfest": { "punkte": 5, "obergrenze": 100, "dauer_s": 40 },
+  "spuk": { "geraeusch_s": 25 }
+}

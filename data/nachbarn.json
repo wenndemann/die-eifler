@@ -44,7 +44,8 @@
       { "gib": { "most": 3 }, "nimm": { "kartoffeln": 8 } },
       { "gib": { "bergkaese": 1 }, "nimm": { "werkzeug": 2 } },
       { "gib": { "muehlstein": 1 }, "nimm": { "werkzeug": 3 } },
-      { "gib": { "dachschiefer": 2 }, "nimm": { "eisen": 3 } }
+      { "gib": { "dachschiefer": 2 }, "nimm": { "eisen": 3 } },
+      { "gib": { "honig": 3 }, "nimm": { "kaffee": 1 } }
     ],
     "besser": 1
   },
@@ -91,6 +92,7 @@
       { "id": "normal", "name": "Normal (rund 2 Stunden)", "punkte": 1000 },
       { "id": "lang", "name": "Lang", "punkte": 1500 },
       { "id": "wettlauf", "name": "Wettlauf zum Marktflecken", "punkte": 0 },
+      { "id": "grosser_fund", "name": "Der Große Fund (alle Teile des Schatzes)", "punkte": 0 },
       { "id": "ohne_ende", "name": "Ohne Ende (nur allein)", "punkte": 0 }
     ]
   }

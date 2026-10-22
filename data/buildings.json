@@ -633,6 +633,25 @@
    "leistung": "macht aus freien Bewohnern und je 1 Landbier Maijungen (bis 6): sie stellen in der Mainacht den Maibaum, klauen den der Nachbarn, halten Wache – und das Mailehen bringt Zuzug"
   },
   {
+   "id": "fundbuero",
+   "name": "Fundbüro",
+   "gruppe": "Nachbarn",
+   "symbol": "🗃️",
+   "spruch": "Alles hier wurde gefunden. Fragen Sie nicht, wo. Wir fragen ja auch nicht.",
+   "funktion": "funde",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 4,
+    "stein": 2
+   },
+   "eingang": {
+    "kaffee": 4
+   },
+   "ab_stufe": 1,
+   "einmalig": true,
+   "leistung": "wertet Funde auf: jeder Fund 1 Stück mehr, manchmal ein großer Fund (30–100 Punkte, Werkzeug, besseres Gewehr, Kaffee) und Teile des Großen Funds (75 Punkte je Teil); brüht aus geschmuggeltem Kaffee Kaffeekränzchen (Punkte)"
+  },
+  {
    "id": "lagerhaus",
    "taste": "I",
    "name": "Lagerhaus",

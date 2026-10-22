@@ -519,6 +519,41 @@ const TYPEN: Record<string, Typ> = {
         boxR(0.12, 4.2, 0.12, -3.2, G + 2.1, -0.6, HOLZ, 0, 0, -0.3), boxR(0.12, 4.2, 0.12, -3.2, G + 2.1, 0.4, HOLZ, 0, 0, -0.3)];
     },
   },
+  fundbuero: {
+    w: 6, d: 5, floors: 1, wand: '#e8dcc0', dach: '#6a4a7a', laden: '#6a4a7a', skala: 1, hoehe: 10,
+    grund: [-7, 8.5, -5, 8.5],
+    fertig() {
+      const t = TYPEN.fundbuero;
+      // M15: lila Fundbüro mit Schild, davor die Funde: Kiste, Kaffeesack, goldener Helm auf dem Fass, Gewehr an der Wand, ein Schirm
+      return [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach), ...laeden(t.w, t.d, t.floors, t.laden),
+        boxR(3.2, 0.8, 0.12, 0, G + 3.7, t.d / 2 + 0.15, '#6a4a7a'), boxR(2.8, 0.45, 0.14, 0, G + 3.7, t.d / 2 + 0.2, '#f4ead8'),
+        ...kiste(4.2, 3.6, 1.4, 0.3), ...fass(-4.2, 3.4),
+        paint(new THREE.SphereGeometry(0.62, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2).translate(-4.2, G + 1.3, 3.4), '#e0b030'),
+        boxR(0.18, 0.5, 0.9, -4.2, G + 1.55, 3.4, '#e0b030'),
+        paint(new THREE.SphereGeometry(0.8, 7, 5).scale(1, 1.15, 0.85).translate(2.6, G + 0.8, 4.5), '#5b3a22'),
+        boxR(0.6, 0.1, 0.62, 2.6, G + 1.75, 4.5, '#3a2414'),
+        boxR(0.12, 2.6, 0.16, -2.6, G + 1.4, t.d / 2 + 0.3, '#3a3a3a', 0, 0, 0.18), boxR(0.22, 0.7, 0.2, -2.35, G + 0.35, t.d / 2 + 0.3, HOLZ, 0, 0, 0.18),
+        paint(new THREE.ConeGeometry(0.9, 0.7, 8).translate(5.2, G + 1.9, 1.2), '#2f6db5'), walze(0.05, 1.8, 5.2, G + 0.9, 1.2, '#3a3a3a')];
+    },
+  },
+  zollhaus: {
+    w: 6, d: 4.5, floors: 1, wand: '#f2ecdc', dach: '#3a5a3a', laden: '#2a4a2a', skala: 1, hoehe: 9,
+    grund: [-7, 14, -5, 9],
+    fertig() {
+      const t = TYPEN.zollhaus;
+      // M15: Zollhaus der Gegenseite mit rot-weißem Schlagbaum, Schild „ZOLL · DOUANE“, Schilderhäuschen und Laterne
+      const out = [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach), ...laeden(t.w, t.d, t.floors, t.laden),
+        boxR(3.4, 0.8, 0.12, 0, G + 3.7, t.d / 2 + 0.15, '#2a4a2a'), boxR(3.0, 0.45, 0.14, 0, G + 3.7, t.d / 2 + 0.2, '#f2c230'),
+        boxR(1.6, 2.8, 1.6, -5.2, G + 1.4, 2.4, '#2a4a2a'), boxR(1.9, 0.25, 1.9, -5.2, G + 2.95, 2.4, '#3a5a3a'),
+        boxR(0.5, 2.2, 0.5, 4.4, G + 1.1, 5.5, '#4a4a4a'), boxR(0.9, 0.5, 0.9, 4.4, G + 0.25, 5.5, '#4a4a4a'),
+        boxR(0.18, 0.18, 1.2, 2.4, G + 3.2, t.d / 2 + 0.6, DUNKEL), boxR(0.5, 0.65, 0.5, 2.4, G + 2.7, t.d / 2 + 1.1, '#2a2a2a'),
+        paint(new THREE.SphereGeometry(0.2, 6, 5).translate(2.4, G + 2.7, t.d / 2 + 1.1), '#ffd27a')];
+      // Schlagbaum, rot-weiß gestreift, quer über den Weg
+      for (let i = 0; i < 8; i++) out.push(boxR(1.05, 0.32, 0.32, 5.1 + i * 1.05, G + 2.15, 5.5, i % 2 ? '#f4f0e6' : '#c8402e'));
+      out.push(boxR(0.4, 1.8, 0.4, 13.6, G + 0.9, 5.5, '#4a4a4a'));
+      return out;
+    },
+  },
   hundehuette: {
     w: 3, d: 3, floors: 1, wand: '#c89a5a', dach: '#b0563e', laden: '#4a3220', skala: 0.8, hoehe: 5,
     grund: [-4, 5, -4, 5],

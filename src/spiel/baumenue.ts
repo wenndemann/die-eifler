@@ -24,7 +24,7 @@ const WARE_KURZ: Record<string, [string, string, string]> = {
   bratkartoffeln: ['🍳', 'Bratkartoffel', 'Bratkartoffeln'], honig: ['🍯', 'Honig', 'Honig'], bergkaese: ['🧀', 'Bergkäse', 'Bergkäse'],
   gerste: ['🌾', 'Gerste', 'Gerste'], landbier: ['🍺', 'Landbier', 'Landbier'], wacholder: ['🫐', 'Wacholder', 'Wacholder'],
   schnaps: ['🍶', 'Schnaps', 'Schnaps'], erz: ['🪨', 'Erz', 'Erz'], holzkohle: ['⚫', 'Holzkohle', 'Holzkohle'], eisen: ['🔩', 'Eisen', 'Eisen'],
-  werkzeug: ['🔨', 'Werkzeug', 'Werkzeug'],
+  werkzeug: ['🔨', 'Werkzeug', 'Werkzeug'], kaffee: ['☕', 'Kaffee', 'Kaffee'],
 };
 
 /** Texte je Warenart (Index = Warenart). Unbekannte Waren bekommen das letzte Wort ihres Anzeigenamens. */

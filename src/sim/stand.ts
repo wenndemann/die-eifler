@@ -30,6 +30,8 @@ export interface SimStand {
   gebiet?: { besitz: string; rev: number; orte: number[]; lieferungen: Record<string, unknown>[]; ende: { sieger: number; tick: number } | null };
   /** M14: Maijungen und Burschen unterwegs (fehlt in älteren Spielständen). */
   mai?: { trupps: Record<string, unknown>[] };
+  /** M15: versetzte Grenzsteine und Jahr des letzten Jahresfests je Ort (fehlt in älteren Spielständen). */
+  grenzland?: { steine: Record<string, unknown>[]; ortFest: number[] };
   log: ProtokollEintrag[];
   ausstehend: ProtokollEintrag[];
   stat: { angekommen: number; verbraucht: number; erzeugt: number; maxWarte: number; verbaut: number };
