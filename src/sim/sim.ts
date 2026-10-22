@@ -1230,7 +1230,7 @@ export class Simulation {
       return g.puffer[WARE.landbier] < MAI_BIER ? 'wartet_material' : d.frei <= 0 ? 'kein_arbeiter' : 'arbeitet';
     }
     if (t.funktion === 'fonds') return g.ausgang[t.ausgangWare] + t.fondsMenge > t.ausgangMax ? 'voll' : this.dorfArm(g.sp) ? 'arbeitet' : 'bereit';
-    if (t.funktion === 'fundbuero') return g.puffer[WARE.kaffee] >= KAFFEE_JE && this.doerfer[g.sp].kaffeeP < KAFFEE_MAX ? 'arbeitet' : 'bereit';
+    if (t.funktion === 'funde') return g.puffer[WARE.kaffee] >= KAFFEE_JE && this.doerfer[g.sp].kaffeeP < KAFFEE_MAX ? 'arbeitet' : 'bereit';
     if (t.arbeiter && this.festPause(g.sp)) return 'fest';
     if (t.funktion === 'zier' || (t.funktion === 'wache' && !t.arbeiter) || t.funktion === 'schnellweg') return 'bereit';
     if (t.arbeiter && !g.ar) return t.werkzeug && this.doerfer[g.sp].frei > 0 ? 'kein_werkzeug' : 'kein_arbeiter';
@@ -2705,7 +2705,7 @@ export class Simulation {
       case 'schaenke': this.schaenkeTick(g, t); break;
       case 'finder': this.finderTick(g); break;
       case 'schuetzen': this.schuetzenTick(g); break;
-      case 'fundbuero': this.fundbueroTick(g); break;
+      case 'funde': this.fundbueroTick(g); break;
       default: break;
     }
   }
@@ -3538,7 +3538,7 @@ export class Simulation {
 
   /** Fertiges Fundbüro von `sp` auf eigenem Gebiet (oder undefined). */
   private fundbuero(sp: number): Gebaeude | undefined {
-    for (const g of this.gebaeude.values()) if (g.sp === sp && g.fertig && GEBAEUDE[g.typ].funktion === 'fundbuero' && !this.fremd(g)) return g;
+    for (const g of this.gebaeude.values()) if (g.sp === sp && g.fertig && GEBAEUDE[g.typ].funktion === 'funde' && !this.fremd(g)) return g;
     return undefined;
   }
 

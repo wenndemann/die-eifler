@@ -7,6 +7,10 @@ import {
 } from '../sim/daten';
 import type { GebaeudeTyp } from '../sim/daten';
 import { MAI_AUSLOESE, MAI_KLAU_MIN, MAIBAUM_STELLEN, MAIBAUM_WAREN } from '../sim/mai';
+import {
+  FUNDE, GEWEHR_BONUS, HELFER_FEST_PUNKTE, HELFER_MIN, HELFER_SCHUETZEN_PUNKTE, HELFER_TEMPO, JFEST_OBERGRENZE, KAFFEE_MAX, KAFFEE_PUNKTE,
+  SCHATZ_NAME, SCHATZ_PUNKTE, SCHATZ_TEILE, STEIN_RADIUS, TEIL_NAMEN, ZOLL_BEUTE, ZOLL_RABATT, ZOLL_WACHSAMKEIT,
+} from '../sim/grenzland';
 import { AUSREDEN, KOENIG_AB, ORT_GROESSEN, SCHUSS_GLUECK, SCHUSS_GRUND, SCHUSS_STAND, ZIELE } from '../sim/nachbarn';
 import { PROMILLE, STAT_KOPF, TICK_HZ } from '../sim/typen';
 import type { Id, SichtFahne, SichtGebaeude, SichtSegment, SichtStatistik, SimSicht } from '../sim/typen';
@@ -166,6 +170,7 @@ export function gebaeudeFenster(id: Id, k: FensterKontext): FensterDaten | null 
           `Wunsch: ${d.bauSoll} Bauarbeiter, ${d.planSoll} Planierer – fehlen welche, wird aus 1 Werkzeug und 1 freien Bewohner einer`,
         ],
       });
+      if (d.grenz && g.typ === 'lager') ab.push(grenzlandZeilen(k));
       ab.push({
         art: 'knoepfe', titel: 'Bauleute',
         knoepfe: [
@@ -220,9 +225,13 @@ export function gebaeudeFenster(id: Id, k: FensterKontext): FensterDaten | null 
       const f = g.finder, rest = Math.max(0, Math.ceil((f.bis - s.tick) / TICK_HZ));
       const z = f.tut === 'unterwegs' ? [`Unterwegs nach ${f.ziel || '…'} – zurück in ${rest} s`]
         : f.tut === 'ausrede' ? [`In der Ausredenstube, noch ${rest} s`, `Ausrede: ${AUSREDEN[f.ausrede] ?? ''}`]
-        : ['Bereit für den nächsten Gang (Ziele: erreichte Marktposten und Nachbardörfer)'];
+        : f.tut === 'stein' ? [`🪨 Trägt einen Grenzstein zu ${f.ziel || '…'} – an der Grenze in ${rest} s`]
+        : f.tut === 'heim' ? [`Grenzstein liegt. Schleicht heim – zurück in ${rest} s`]
+        : ['Bereit für den nächsten Gang (Ziele: erreichte Marktposten, Zollhäuser und Nachbardörfer)'];
       ab.push({ art: 'zeilen', titel: 'Finder', zeilen: z });
+      if (s.regeln.gebiet && s.spieler.length > 1) ab.push(...grenzsteinAbschnitte(k, f.grenzstein ?? -1));
     }
+    if (t.funktion === 'funde' && s.dorf.grenz) ab.push(...fundbueroAbschnitte(k));
     if (t.ausgangMax > 0) ab.push({ art: 'waren', titel: 'Ausgang (wartet auf Abholung)', waren: [{ ware: t.ausgangWare, n: g.ausgang?.[t.ausgangWare] ?? 0, max: t.ausgangMax }] });
     const leistung = leistungText(t, w);
     if (t.arbeiter) {
@@ -607,8 +616,8 @@ export function endeFenster(k: FensterKontext): FensterDaten | null {
   const ab: Abschnitt[] = [];
   ab.push({ art: 'status', text: s.ende.sieger === k.ich ? `Gewonnen! ${sieger} ist vorn.` : `${sieger} hat gewonnen.`, spruch: s.ende.sieger === k.ich ? 'Dat wor schön. Noch eine?' : 'Nächstes Mal. Erst mal Kirmes.' });
   ab.push({
-    art: 'tabelle', titel: `Ziel: ${zielName(s.regeln.ziel)}`, kopf: ['Dorf', 'Punkte', 'Stufe', 'Bewohner', 'Gebiet', 'Orte'],
-    zeilen: rang.map(({ sp, p }) => ({ zellen: [{ text: `${p.koenig ? '👑 ' : ''}${k.namen[sp] ?? `Spieler ${sp + 1}`}` }, { text: String(p.punkte) }, { text: DORFSTUFEN[p.stufe] ?? '' }, { text: String(p.bewohner) }, { text: `${p.hexe} Hexe` }, { text: String(p.orte) }], aktiv: sp === k.ich })),
+    art: 'tabelle', titel: `Ziel: ${zielName(s.regeln.ziel)}`, kopf: ['Dorf', 'Punkte', 'Stufe', 'Bewohner', 'Gebiet', 'Orte', 'Teile'],
+    zeilen: rang.map(({ sp, p }) => ({ zellen: [{ text: `${p.koenig ? '👑 ' : ''}${k.namen[sp] ?? `Spieler ${sp + 1}`}` }, { text: String(p.punkte) }, { text: DORFSTUFEN[p.stufe] ?? '' }, { text: String(p.bewohner) }, { text: `${p.hexe} Hexe` }, { text: String(p.orte) }, { text: `${p.teile ?? 0}/${SCHATZ_TEILE}` }], aktiv: sp === k.ich })),
   });
   ab.push({ art: 'zeilen', zeilen: [`Gespielt: ${Math.floor(s.ende.tick / TICK_HZ / 60)} Minuten · Weiterspielen geht trotzdem.`] });
   ab.push({ art: 'knoepfe', knoepfe: [{ id: 'statistik', text: '📈 Statistik', titel: 'Alle Dörfer im Vergleich' }, { id: 'weiter', text: '▶ Weiterspielen' }] });
@@ -618,6 +627,7 @@ export function endeFenster(k: FensterKontext): FensterDaten | null {
 /** Kurzzeile Eifel-Punkte für das Statusfenster: „⭐ 340 / 1000“. */
 export function punkteText(s: SimSicht, ich: number): string {
   const p = s.spieler[ich]?.punkte ?? 0;
+  if (s.regeln.ziel === 'grosser_fund') return `⭐ ${p} · 🗝️ ${s.spieler[ich]?.teile ?? 0}/${SCHATZ_TEILE} Teile`;
   return s.regeln.ziel === 'wettlauf' ? `⭐ ${p} · Wettlauf zum Marktflecken` : s.regeln.zielPunkte > 0 ? `⭐ ${p} / ${s.regeln.zielPunkte}` : `⭐ ${p}`;
 }
 
@@ -636,6 +646,7 @@ export function maiAbschnitte(k: FensterKontext): Abschnitt[] {
   ab.push({ art: 'zeilen', titel: 'Der Mai', zeilen: [
     nacht, baum,
     `Maijungen: ${m.jungen} (davon ${m.wache} Wache, ${m.frei} frei) · Punkte aus dem Mai: ${m.punkte}`,
+    `Als Helfer (ab ${HELFER_MIN} freien): tragen Grenzsteine ${HELFER_TEMPO} % schneller, +${HELFER_FEST_PUNKTE} Punkte je Fest, +${HELFER_SCHUETZEN_PUNKTE} beim Schützenfest · bisher ${s.dorf.grenz?.helferP ?? 0}`,
   ].filter(Boolean) });
   const knoepfe: Knopf[] = [];
   if (na?.an && m.baum !== 1 && !m.gestellt) knoepfe.push({ id: 'mai_stellen', text: '🌳 Maibaum stellen', titel: `braucht ${MAIBAUM_STELLEN} freie Maijungen, einen fertigen Kirmesplatz und ${listeText(MAIBAUM_WAREN, k.ware)}`, aus: m.frei < MAIBAUM_STELLEN });
@@ -663,4 +674,74 @@ export function maiAbschnitte(k: FensterKontext): Abschnitt[] {
 
 function listeText(liste: readonly number[], w: readonly WareText[]): string {
   return liste.map((n, a) => (n > 0 ? `${n} ${n === 1 ? w[a]?.eins ?? '' : w[a]?.mehr ?? ''}` : '')).filter(Boolean).join(', ');
+}
+
+// ---------------------------------------------------------------- M15 Grenzland
+
+/** Herkunft eines Schatzteils als Text (Marktposten, Mitspieler, Zollhaus, Ort). */
+function herkunftText(code: number, k: FensterKontext): string {
+  const s = k.sicht;
+  if (code >= 3000) return `Einstand in ${k.ortName?.(code - 3000) || `Ort ${code - 2999}`}`;
+  if (code >= 2000) return 'am Zollhaus';
+  if (code >= 1000) return `bei ${k.namen[code - 1000] ?? `Spieler ${code - 999}`}`;
+  return `in ${s.posten[code]?.stadt ?? 'der Stadt'}`;
+}
+
+/** Grenzsteine versetzen (im Fenster der Finderhütte): Nacht, Auftrag, Knöpfe je Nachbar. */
+export function grenzsteinAbschnitte(k: FensterKontext, auftrag: number): Abschnitt[] {
+  const s = k.sicht, gl = s.grenzland, min = (t: number) => Math.max(0, Math.ceil(t / TICK_HZ / 60));
+  const name = (i: number) => k.namen[i] ?? `Spieler ${i + 1}`;
+  const z = [
+    gl?.nacht ? '🌙 Es ist Nacht – Zeit für Grenzsteine.' : `Grenzsteine nur nachts · nächste Nacht in ${min(gl?.bisNacht ?? 0)} min`,
+    `Gelingt es, gehört uns das Land des Nachbarn im Umkreis von ${STEIN_RADIUS} Hexen um den Stein. Wachhund und Dorfpolizist passen auf, hinter einer Hecke ist fast nichts zu machen.`,
+  ];
+  if (auftrag >= 0) z.push(`Auftrag: Grenzstein zu ${name(auftrag)} – ${gl?.nacht ? 'geht gleich los' : 'wartet auf die Nacht'}`);
+  const knoepfe: Knopf[] = s.spieler.map((_, i) => i).filter((i) => i !== k.ich)
+    .map((i): Knopf => ({ id: `stein:${i}`, text: `🪨 Grenzstein zu ${name(i)}`, an: auftrag === i, titel: 'nachts trägt der Finder einen Grenzstein ein Stück weiter' }));
+  if (auftrag >= 0) knoepfe.push({ id: 'stein:-1', text: '✋ Auftrag zurück' });
+  return [{ art: 'zeilen', titel: 'Grenzsteine versetzen', zeilen: z }, { art: 'knoepfe', knoepfe }];
+}
+
+/** Fundbüro: große Funde, Gewehr, Kaffeekränzchen und der Große Fund. */
+export function fundbueroAbschnitte(k: FensterKontext): Abschnitt[] {
+  const s = k.sicht, gr = s.dorf.grenz!;
+  const ab: Abschnitt[] = [];
+  const funde = gr.funde.map((i) => FUNDE[i]).filter(Boolean);
+  ab.push({
+    art: 'zeilen', titel: `Große Funde (${gr.fundP} Punkte)`,
+    zeilen: funde.length ? funde.map((f) => `${f.symbol} ${f.name} – ${f.punkte} Punkte`) : ['Noch nichts Großes. Die Finder bringen es mit – jeder Fund mit Fundbüro ein Stück mehr.'],
+  });
+  if (gr.gewehr) ab.push({ art: 'zeilen', zeilen: [`🎯 Das bessere Gewehr: +${GEWEHR_BONUS} beim Vogelschuss`] });
+  ab.push({ art: 'zeilen', titel: 'Kaffeekränzchen', zeilen: [`Aus geschmuggeltem Kaffee: +${KAFFEE_PUNKTE} Punkte je Kränzchen · bisher ${gr.kaffeeP} von höchstens ${KAFFEE_MAX}`] });
+  const teile = Array.from({ length: SCHATZ_TEILE }, (_, i) => (i < gr.teile.length ? `✅ ${TEIL_NAMEN[i] ?? `Teil ${i + 1}`} (${herkunftText(gr.teile[i], k)})` : `▫️ ${TEIL_NAMEN[i] ?? `Teil ${i + 1}`} – noch verschollen`));
+  ab.push({ art: 'zeilen', titel: `🗝️ ${SCHATZ_NAME}: ${gr.teile.length} von ${SCHATZ_TEILE} Teilen (${SCHATZ_PUNKTE} Punkte je Teil)`, zeilen: [...teile, 'Je Nachbar (Marktposten, Zollhaus, Mitspieler, Ort beim Einstand) liegt höchstens ein Teil.'] });
+  const rang = s.spieler.map((p, sp) => ({ sp, n: p.teile ?? 0 })).filter((x) => x.sp !== k.ich && x.n > 0);
+  if (rang.length) ab.push({ art: 'zeilen', zeilen: rang.map((x) => `${k.namen[x.sp] ?? `Spieler ${x.sp + 1}`} hat ${x.n} Teile`) });
+  return ab;
+}
+
+/** Grenzland-Zeilen fürs Lagerfenster: Reiz fürs Abwerben, Abgeworbene, Jahresfeste, Grenzsteine. */
+export function grenzlandZeilen(k: FensterKontext): Abschnitt {
+  const gr = k.sicht.dorf.grenz!;
+  const z = [`Reiz für Nachbarn: ${gr.reiz} (Stufe, Feste, Essen, gute Laune) – wer deutlich besser ist, wirbt ab`];
+  if (gr.abgeworben || gr.verloren) z.push(`Abgeworben: ${gr.abgeworben} Bewohner gewonnen, ${gr.verloren} verloren`);
+  z.push(`Jahresfeste der gewonnenen Orte: ${gr.jfestP} von höchstens ${JFEST_OBERGRENZE} Punkten${gr.jfest > 0 ? ` – ${k.ortName?.(gr.jfestOrt) || 'ein Ort'} feiert gerade! 🎉` : ''}`);
+  if (gr.steine) z.push(`Versetzte Grenzsteine: ${gr.steine} 🪨 (nachts spukt's)`);
+  return { art: 'zeilen', titel: 'Grenzland', zeilen: z };
+}
+
+/** Fenster eines Zollhauses an der Staatsgrenze (Drehbuch 2.3, 3.1): Gelegenheit zum Kaffeeschmuggel. */
+export function zollFenster(i: number, k: FensterKontext, beiOrt = ''): FensterDaten | null {
+  const s = k.sicht, z = s.grenzland?.zoll[i];
+  if (!z) return null;
+  const schmuggler = s.dorf.voelkchen === 'monschau';
+  const ab: Abschnitt[] = [];
+  ab.push({ art: 'status', text: z.erreicht ? 'Erreicht – Finder gehen hier Kaffee „finden“' : 'Noch nicht erreicht: einen Weg bis ans Zollhaus bauen', warn: !z.erreicht, spruch: '„Zöllner a. D. Gerd hat wieder nichts gemerkt.“' });
+  ab.push({ art: 'zeilen', zeilen: [
+    `Wachsamkeit der Zöllner: ${Math.max(0, ZOLL_WACHSAMKEIT - (schmuggler ? ZOLL_RABATT : 0))} %${schmuggler ? ' (Schmugglernest – die kennen uns)' : ''}`,
+    `Jeder Gang bringt ${ZOLL_BEUTE} ${k.ware[WAREN.indexOf('kaffee')]?.mehr ?? 'Kaffee'} – mit Fundbüro eins mehr. Eine harte Grenze ist das nicht.`,
+  ] });
+  ab.push({ art: 'knoepfe', knoepfe: [{ id: 'kamera', text: '🎯 Hinsehen', titel: 'Kamera zum Zollhaus' }] });
+  if (beiOrt === 'Mützenich') ab.splice(1, 0, { art: 'zeilen', zeilen: ['Mützenich – das Schmugglernest der Kaffeefront. Hier kennt jeder jeden Pfad durchs Venn.'] });
+  return { titel: `Zollhaus${beiOrt ? ` bei ${beiOrt}` : ''}`, symbol: '🛃', abschnitte: ab };
 }

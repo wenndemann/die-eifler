@@ -28,6 +28,7 @@ import { Deko } from '../render/deko';
 import { GebietDarstellung } from '../render/gebiet';
 import { WetterOptik, type WetterLage } from '../render/wetter';
 import { MaiDarstellung } from '../render/mai';
+import { GrenzlandDarstellung } from '../render/grenzland';
 import type { Stimmung } from '../render/scene';
 import { stunde, tageszeit, wetterStimmung } from './stimmung';
 import { klangLage } from './klanglage';
@@ -51,8 +52,9 @@ import { Fensterflaeche, type Eingabe, type FensterArt, type FensterDaten } from
 import { ladeEinstellungen, speichereEinstellungen, wendeAn, type Einstellungen } from '../ui/einstellungen';
 import { icons, wennIconsDa, type Icons } from '../render/icons';
 import { AUSREDEN, ZIELE } from '../sim/nachbarn';
+import { FUNDE, SCHATZ_PUNKTE, SCHATZ_TEILE } from '../sim/grenzland';
 import {
-  bauTooltip, endeFenster, zielName, fahneFenster, gebaeudeFenster, hilfeFenster, ortFenster, postenFenster, punkteText, LAGERREGEL_NAMEN, Produktivitaet, protokollFenster, statistikFenster, verteilungFenster,
+  bauTooltip, endeFenster, zielName, fahneFenster, gebaeudeFenster, hilfeFenster, ortFenster, postenFenster, punkteText, zollFenster, LAGERREGEL_NAMEN, Produktivitaet, protokollFenster, statistikFenster, verteilungFenster,
   verteilungKnopf, warenFenster, warnungen, wegFenster, type FensterKontext, type ProtokollZeile, type StatMass,
 } from './fensterdaten';
 import { erzaehlerFuer, erzaehlerVon, mitTick, textFuer, waehleVoelkchen, VOELKCHEN_LISTE, MeldungsFilter, type Erzaehler, type Meldung, type MeldungsNamen } from './meldungen';
@@ -188,6 +190,7 @@ export class Spiel {
   private readonly gebiet: GebietDarstellung;
   private readonly wetterOptik: WetterOptik;
   private readonly mai: MaiDarstellung;
+  private readonly grenzland: GrenzlandDarstellung;
   /** Für Screenshots und Tests: Wetterlage und Tageszeit fest vorgeben (Teile genügen). */
   wetterVorgabe: (Partial<WetterLage> & { tag?: number }) | null = null;
   /** M12: Musik, Gebrabbel und Geräusche (WebAudio; in automatisierten Tests aus, außer mit #ton=1). */
@@ -317,6 +320,8 @@ export class Spiel {
     this.boten = new Boten(map, grid, base, ex);
     this.mai = new MaiDarstellung(map, grid, base, ex);
     this.mai.kamera = ctx.camera;
+    this.grenzland = new GrenzlandDarstellung(map, grid, base, ex);
+    this.grenzland.kamera = ctx.camera;
     this.deko = new Deko(map, grid, base, ex);
     this.gebiet = new GebietDarstellung(map, grid, base, ex);
     this.wetterOptik = new WetterOptik(map, grid, base, ex);
@@ -326,7 +331,7 @@ export class Spiel {
     this.geist = new Geist(map, grid, base, ex);
     this.wege.wald = ctx.haken.trees ?? null;
     this.fahnen.kamera = ctx.camera; this.traeger.kamera = ctx.camera; this.gebaeude.kamera = ctx.camera; this.arbeiter.kamera = ctx.camera; this.boten.kamera = ctx.camera;
-    this.group.add(this.wege.group, this.fahnen.group, this.traeger.group, this.gebaeude.group, this.arbeiter.group, this.boten.group, this.mai.group, this.deko.group, this.gebiet.group, this.wetterOptik.group, this.natur.group,
+    this.group.add(this.wege.group, this.fahnen.group, this.traeger.group, this.gebaeude.group, this.arbeiter.group, this.boten.group, this.mai.group, this.grenzland.group, this.deko.group, this.gebiet.group, this.wetterOptik.group, this.natur.group,
       this.bauplaetze.group, this.geist.group, this.markierung.group);
     ctx.scene.add(this.group);
 
@@ -490,7 +495,7 @@ export class Spiel {
     this.ctx.ex = ex;
     this.wege.setExaggeration(ex); this.fahnen.setExaggeration(ex); this.traeger.setExaggeration(ex);
     this.gebaeude.setExaggeration(ex); this.markierung.setExaggeration(ex);
-    this.arbeiter.setExaggeration(ex); this.natur.setExaggeration(ex); this.boten.setExaggeration(ex); this.deko.setExaggeration(ex); this.gebiet.setExaggeration(ex); this.mai.setExaggeration(ex); this.wetterOptik.setExaggeration(ex);
+    this.arbeiter.setExaggeration(ex); this.natur.setExaggeration(ex); this.boten.setExaggeration(ex); this.deko.setExaggeration(ex); this.gebiet.setExaggeration(ex); this.mai.setExaggeration(ex); this.grenzland.setExaggeration(ex); this.wetterOptik.setExaggeration(ex);
     this.bauplaetze.setExaggeration(ex); this.geist.setExaggeration(ex);
   }
 
@@ -536,6 +541,7 @@ export class Spiel {
     this.arbeiter.update(this._sicht, a, dt);
     this.boten.update(this._sicht, a, dt);
     this.mai.update(this._sicht, a, dt);
+    this.grenzland.update(this._sicht, a, dt);
     this.deko.update(this._sicht);
     this.gebiet.update(this._sicht);
     // Schnee kommt mit dem Winter und taut in den ersten Minuten des Frühjahrs (Drehbuch 7.4)
@@ -656,7 +662,9 @@ export class Spiel {
       this.gemeldetBis = e.nr;
       // Tusch auf Kirmes, Feste, neue Stufe und Schützenkönig (Drehbuch 7.2), nur für das eigene Dorf
       if (e.art === 'kirmes' || e.art === 'kleines_fest' || e.art === 'stufe' || e.art === 'schuetzenfest' || e.art === 'koenig' || e.art === 'maibaum'
-        || (e.art === 'maiklau' && Math.floor(e.wert / 100) === 0)) this.klang.tusch();
+        || (e.art === 'maiklau' && Math.floor(e.wert / 100) === 0) || e.art === 'jahresfest' || e.art === 'grossfund' || e.art === 'schatzteil'
+        || (e.art === 'grenzstein' && e.wert < 100)) this.klang.tusch();
+      if (e.art === 'spuk') this.klang.spukRuf();
       const g = e.gebaeude ? s.gebaeude.find((x) => x.id === e.gebaeude) : undefined;
       const ort = g ? { q: g.q, r: g.r } : undefined;
       if (e.art === 'fertig' && g) this.insProtokoll(`${NAMEN[g.typ] ?? g.typ} ist fertig.`, false, ort);
@@ -670,6 +678,14 @@ export class Spiel {
       else if (e.art === 'friert') this.insProtokoll('Es fehlt Essen für den Winter – die Leute frieren.', true);
       else if (e.art === 'satt') this.insProtokoll('Alle wieder satt.', false);
       else if (e.art === 'bauleute') this.insProtokoll(e.wert === 0 ? 'Ein neuer Bauarbeiter (1 Werkzeug).' : 'Ein neuer Planierer (1 Werkzeug).', false);
+      else if (e.art === 'grenzstein' && e.wert < 100) this.insProtokoll(`🪨 Grenzstein versetzt – das Land von ${this.namen[e.wert] ?? 'den Nachbarn'} wird kleiner.`, false, ort);
+      else if (e.art === 'grenzstein_weg') this.insProtokoll(`🪨 ${this.namen[e.wert] ?? 'Jemand'} hat nachts einen Grenzstein versetzt!`, true);
+      else if (e.art === 'abwerben') this.insProtokoll(`🏡 ${e.wert % 10 ? 'Ein ganzer Hof zieht' : 'Ein Bewohner zieht'} von ${this.namen[Math.floor(e.wert / 10)] ?? 'den Nachbarn'} zu uns.`, false);
+      else if (e.art === 'abgeworben') this.insProtokoll(`🏡 ${e.wert % 10 ? 'Ein ganzer Hof ist' : 'Ein Bewohner ist'} zu ${this.namen[Math.floor(e.wert / 10)] ?? 'den Nachbarn'} gezogen.`, true);
+      else if (e.art === 'schmuggel') this.insProtokoll('☕ Kaffee über die Grenze gebracht.', false, ort);
+      else if (e.art === 'grossfund') this.insProtokoll(`${FUNDE[e.wert]?.symbol ?? ''} Großer Fund: ${FUNDE[e.wert]?.name ?? ''} (+${FUNDE[e.wert]?.punkte ?? 0} Punkte).`, false, ort);
+      else if (e.art === 'schatzteil') this.insProtokoll(`🗝️ Teil ${e.wert} von ${SCHATZ_TEILE} des Großen Funds gefunden (+${SCHATZ_PUNKTE} Punkte).`, false, ort);
+      else if (e.art === 'jahresfest') this.insProtokoll(`🎉 ${this.ortName(e.wert)} feiert sein Jahresfest mit uns.`, false);
       else if (e.art === 'verloren') this.insProtokoll(`Ein Bote hat ${WARE_TEXT[e.wert]?.eins ?? 'etwas'} verloren.`, true, e.q !== undefined && e.r !== undefined ? { q: e.q, r: e.r } : undefined);
     }
     for (const m of this.filter.neue(s.ereignisse, s.dorf, name, (a) => WARE_TEXT[a]?.mehr ?? '', (n) => DORFSTUFEN[n] ?? '', freiText(s.dorf.stufe), liste,
@@ -845,6 +861,7 @@ export class Spiel {
       if (g && !(g.typ === 'lager' && this.ortBei(h) >= 0 && g.sp !== this.ich)) this.oeffneGebaeude(g.id);
       else if (this.ortBei(h) >= 0 && !(f && f.sp === this.ich && !this.ortMitte(h))) this.oeffneOrt(this.ortBei(h));
       else if (this.postenBei(h) >= 0) this.oeffnePosten(this.postenBei(h));
+      else if (this.zollBei(h) >= 0) this.oeffneZoll(this.zollBei(h));
       else if (f && f.sp === this.ich) this.oeffneFahne(f.id);
       else if (sg && sg.sp === this.ich) this.oeffneWeg(sg.id);
       return;
@@ -1298,6 +1315,32 @@ export class Spiel {
   private ortMitte(h: Hx): boolean { return this._sicht.orte.some((o) => o.q === h.q && o.r === h.r); }
 
   /** M10: Marktposten auf oder neben Hex `h`, sonst -1. */
+  /** M15: Zollhaus an (oder neben) Hex h, sonst -1. */
+  zollBei(h: Hx): number {
+    return this._sicht.grenzland?.zoll.findIndex((z) => hexAbstand(z, h) <= 1) ?? -1;
+  }
+
+  oeffneZoll(i: number): void {
+    const fid = `zoll:${i}`;
+    this.fenster.oeffne({
+      id: fid, gruppe: 'auswahl', daten: () => zollFenster(i, this.fensterKontext(), this.zollOrt(i)),
+      onKnopf: (k) => {
+        const z = this._sicht.grenzland?.zoll[i];
+        if (k === 'kamera' && z) this.springeZu(z);
+        this.fenster.jetzt(fid);
+      },
+    });
+  }
+
+  /** Name des nächsten Orts am Zollhaus (für „Zollhaus bei Mützenich“). */
+  zollOrt(i: number): string {
+    const z = this._sicht.grenzland?.zoll[i];
+    if (!z) return '';
+    let best = '', bd = Infinity;
+    this._sicht.orte.forEach((o, oi) => { const d = hexAbstand(o, z); if (d < bd) { bd = d; best = this.ortName(oi); } });
+    return bd <= 25 ? best : '';
+  }
+
   postenBei(h: Hx): number {
     return this._sicht.posten.findIndex((p) => hexAbstand(p, h) <= 1);
   }
@@ -1373,6 +1416,11 @@ export class Spiel {
     else if (k === 'kamera') this.springeZu(g);
     else if (k === 'mai_stellen') { this.befehl({ art: 'mai', was: 'stellen' }); this.melde('Die Maijungen stellen den Maibaum.', false); }
     else if (k === 'mai_loese') { this.befehl({ art: 'mai', was: 'loese' }); this.melde('Auslöse ist unterwegs.', false); }
+    else if (k.startsWith('stein:')) {
+      const ziel = Number(k.slice(6));
+      this.befehl({ art: 'grenzstein', id, ziel });
+      this.melde(ziel < 0 ? 'Grenzstein-Auftrag zurückgenommen.' : `Nächste Nacht trägt der Finder einen Grenzstein zu ${this.namen[ziel] ?? 'den Nachbarn'}.`, false);
+    }
     else if (k.startsWith('mai_klau:')) { this.befehl({ art: 'mai', was: 'klau', ziel: Number(k.slice(9)) }); this.melde('Die Maijungen ziehen los …', false); }
     else if (k.startsWith('regel:') && g.regel) {
       // Lagerregel durchschalten: normal → nicht einlagern → auslagern → normal

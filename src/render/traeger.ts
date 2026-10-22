@@ -121,7 +121,7 @@ export const GESTE = { keine: 0, winken: 1, jubeln: 2, schimpfen: 3, kratzen: 4,
 /** Laune des Dorfs für die Gesichter: Feste machen froh, Frieren und Hunger grimmig. */
 export function dorfLaune(s: SimSicht): { laune: number; fest: boolean } {
   const d = s.dorf;
-  const fest = !!(d.kirmes?.fest || d.fest?.laeuft || d.schuetzen?.fest);
+  const fest = !!(d.kirmes?.fest || d.fest?.laeuft || d.schuetzen?.fest || (d.grenz?.jfest ?? 0) > 0);
   if (fest) return { laune: 1, fest };
   if (d.friert) return { laune: -1, fest };
   return { laune: 0.35, fest };

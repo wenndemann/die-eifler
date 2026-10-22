@@ -638,7 +638,7 @@
    "gruppe": "Nachbarn",
    "symbol": "🗃️",
    "spruch": "Alles hier wurde gefunden. Fragen Sie nicht, wo. Wir fragen ja auch nicht.",
-   "funktion": "fundbuero",
+   "funktion": "funde",
    "groesse": 1,
    "kosten": {
     "bretter": 4,

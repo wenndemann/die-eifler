@@ -181,6 +181,15 @@ nach Gebrauch wieder. Unterbrochen? Einfach neu starten, es setzt fort. Details 
   versuchen es auch bei euch. Abwehr: Wache mit der Hand am Stamm oder Bier für die Angreifer (dann torkeln sie heim). Ein
   geklauter Baum kommt gegen Bier und Bratkartoffeln zurück. Steht der Baum am Morgen, gibt es Punkte, das Maifest wird besser,
   und das Mailehen bringt Zuzug. Zahlen: `data/mai.json`.
+- **Grenzland (M15):** Grenzen werden lebendig. Die Finderhütte bekommt einen **Grenzstein-Auftrag**: In der Nacht (21–5 Uhr)
+  trägt der Finder – jetzt als Figur auf der Karte – einen Grenzstein über die Grenze zum Nachbarn; gelingt es, gehört das Land
+  drumherum dir (Wachhund und Dorfpolizist passen auf, hinter einer Hecke der Monschauer ist fast nichts zu machen, freie
+  Maijungen tragen schneller). Nachts spuken die Grenzsteinversetzer. Wer die bessere Kirmes und das bessere Essen hat,
+  **wirbt** Bewohner vom Nachbarn ab, manchmal zieht ein ganzer Hof mit Land um. An der **Staatsgrenze** (z. B. Monschau
+  an der belgischen Grenze) steht ein **Zollhaus**: Finder bringen von dort **Kaffee** (neue Ware; ohne Grenze gibt es ihn bei
+  den Flachländern). Das **Fundbüro** macht jeden Fund größer, bringt große Funde (30–100 Punkte, besseres Gewehr für den
+  Vogelschuss) und setzt den **Großen Fund** zusammen: vier Teile von verschiedenen Nachbarn, 75 Punkte je Teil, in der Lobby
+  auch als Ziel. Gewonnene Orte feiern einmal im Jahr ihr **Jahresfest**. Zahlen: `data/grenzland.json`.
 - **Simulation** (`src/sim/`): fester Tick (20/s), nur Ganzzahlen, jede Aktion ist ein Befehl mit Tick-Nummer,
   Prüfsumme über den Zustand (Statusleiste „Sim“), Befehlsprotokoll zum Abspielen (`spieleAb`). Der Smoke-Test
   prüft, dass Node und Browser dieselbe Prüfsumme bekommen und ein Replay im zweiten Browser-Fenster gleich ausgeht.

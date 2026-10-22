@@ -3,6 +3,7 @@
 // Browser, three oder Simulation; einzeln testbar (tests/meldungen.test.ts).
 import regionenJson from '../../data/regions.json';
 import meldungenJson from '../../data/meldungen.json';
+import { FUNDE, SCHATZ_NAME, SCHATZ_TEILE } from '../sim/grenzland';
 import type { SichtDorf, SichtEreignis } from '../sim/typen';
 
 interface Spruch { platt: string; hoch: string }
@@ -119,6 +120,8 @@ export class MeldungsFilter {
   /** „Alte Steine“ (Südeifeler) höchstens alle 3 Spielminuten melden. */
   private altsteinTick = -1_000_000;
   private fondsTick = -1_000_000;
+  private schmuggelTick = -1_000_000;
+  private kaffeeTick = -1_000_000;
 
   constructor(private e: Erzaehler, private ort: string) {}
 
@@ -199,6 +202,21 @@ export class MeldungsFilter {
         case 'maibesuch': add(['maibesuch_ok', 'maibesuch_wache', 'maibesuch_bier'][Math.floor(ev.wert / 10)] ?? 'maibesuch_ok', k({ text: ev.wert % 10 ? 'die Burschen aus dem Nachbarort' : 'die Nachbarn' }), true, true); break;
         case 'mailoese': add(ev.wert <= -10 ? 'mailoese_bekommen' : 'mailoese', k({ text: ev.wert <= -10 ? namen?.spieler?.(-10 - ev.wert) ?? 'Die Nachbarn' : '' }), false, true); break;
         case 'mailehen': add('mailehen', k({ n: ev.wert }), false, true); break;
+        // M15 Grenzland
+        case 'grenzstein': {
+          const ziel = namen?.spieler?.(ev.wert % 100) ?? 'den Nachbarn';
+          add(['grenzstein_ok', 'grenzstein_erwischt', 'grenzstein_hecke', 'grenzstein_keine'][Math.floor(ev.wert / 100)] ?? 'grenzstein_ok', k({ text: ziel }), ev.wert < 100, ev.wert < 100, ev.gebaeude);
+          break;
+        }
+        case 'grenzstein_weg': add('grenzstein_weg', k({ text: namen?.spieler?.(ev.wert) ?? 'Jemand' }), true, true); break;
+        case 'abwerben': add(ev.wert % 10 ? 'abwerben_hof' : 'abwerben', k({ text: namen?.spieler?.(Math.floor(ev.wert / 10)) ?? 'den Nachbarn' }), ev.wert % 10 === 1, true); break;
+        case 'abgeworben': add(ev.wert % 10 ? 'abgeworben_hof' : 'abgeworben', k({ text: namen?.spieler?.(Math.floor(ev.wert / 10)) ?? 'den Nachbarn' }), ev.wert % 10 === 1); break;
+        case 'schmuggel': if (ev.tick - this.schmuggelTick >= 3 * 60 * 20) { this.schmuggelTick = ev.tick; add('schmuggel', k({}), false, true, ev.gebaeude); } break;
+        case 'kaffee': if (ev.tick - this.kaffeeTick >= 5 * 60 * 20) { this.kaffeeTick = ev.tick; add('kaffee', k({ n: ev.wert }), false, false, ev.gebaeude); } break;
+        case 'grossfund': add('grossfund', k({ text: FUNDE[ev.wert] ? `${FUNDE[ev.wert].symbol} ${FUNDE[ev.wert].name}` : 'etwas Großes', n: FUNDE[ev.wert]?.punkte ?? 0 }), true, true, ev.gebaeude); break;
+        case 'schatzteil': add(ev.wert >= SCHATZ_TEILE ? 'schatz_komplett' : 'schatzteil', k({ n: ev.wert, text: SCHATZ_NAME }), true, true, ev.gebaeude); break;
+        case 'jahresfest': add('jahresfest', k({ text: namen?.ort?.(ev.wert) ?? 'Der Ort' }), false, true); break;
+        case 'spuk': add('spuk', k({ n: ev.wert })); break;
         case 'altstein': if (ev.tick - this.altsteinTick >= 3 * 60 * 20) { this.altsteinTick = ev.tick; add('altstein', k({}), false, false, ev.gebaeude); } break;
         case 'ende': add('ende', k({ text: namen?.spieler?.(ev.wert) ?? 'Einer' }), true, true); break;
         case 'verloren': {

@@ -133,6 +133,10 @@ donoh widder fott. Ungebroche? Einfach neu starte, et määt do wigger wo et opj
 - **Dä Mai (M14):** En d'r Mainaach stelle de Maijunge vum Junggesellenverein dä Maibaum – un klaue dä vun de Nohbere. Wer
   sing Baum behalde well, hält Waach met d'r Hand am Stamm oder jitt de Klauer Bier, dann torkele se heem. Usjelöst weed met
   Bier un Bratkartoffele. Zahle: `data/mai.json`.
+- **Jrenzland (M15):** Naaks dräht dä Finder ene Jrenzsteen övver de Jrenz – jelingk et, jehööt dat Land dröm eröm dir.
+  Hinger ener Heck es nix ze maache, un naaks spök dä Jrenzsteenversetzer. Wer de besser Kirmes un et besser Esse hät, holt sich
+  de Lück vun de Nohbere. Am Zollhuus an d'r belgische Jrenz kütt d'r Kaffee eröver – Zöllner a. D. Gerd merk nix. Et Fundbüro
+  setz dä Jruße Fund zesamme (vier Stöck, 75 Punkte et Stöck), un jede jewonne Ort fiert eimol em Johr met. Zahle: `data/grenzland.json`.
 - **Simulation** (`src/sim/`): faste Tick (20/s), nur janze Zahle, jede Aktion es ene Befehl met Tick-Nummer,
   Prüfsumm övver dä Zostand, Befehlsprotokoll zom Avspille. Dä Smoke-Test pröf, dat Node un Browser de selve
   Prüfsumm krije.
