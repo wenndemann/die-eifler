@@ -154,3 +154,4 @@
   .kw-fuss { flex-wrap: wrap; }
   .kw-extra { flex-basis: 100%; }
 }
+.kw-chip.wunsch { background: rgba(231, 194, 122, 0.55); border-color: #ffd36b; color: #fff; }

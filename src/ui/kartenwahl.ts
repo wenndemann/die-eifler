@@ -3,7 +3,7 @@
 import './kartenwahl.css';
 import {
   GROESSEN, GROESSE_NAME, GROESSE_SPIELER, HEX, KACHEL, KULISSE, LAND, WELT, FLAG,
-  type AusschnittParam, type Groesse, type OrtEintrag,
+  type AusschnittParam, type Groesse, type OrtEintrag, type OrtWunsch,
 } from '../welt/format';
 import {
   bigHexBounds, bigHexOutline, hexCount, hexDistance, hexRound, hexTileIndex, hexToWorld, hexesInRadius, worldToHex,
@@ -121,6 +121,12 @@ export function klemmMeldung(grund: KlemmGrund, ziel?: string): string {
     : 'Zu nah am Weltrand – das Hex ist nach innen gerückt.';
 }
 
+/** Der Wunsch-Ort fällt beim Nach-innen-Schieben aus dem Hex. */
+export function wunschMeldung(name: string, grund: KlemmGrund): string {
+  const wo = grund === 'kachelende' ? 'zu nah am Rand der Kartendaten dieser Version' : 'zu nah am Weltrand';
+  return `${name} liegt ${wo} und passt nicht ins Spielfeld. Das Lager kommt in den größten Ort im Hex.`;
+}
+
 export interface KlemmErgebnis {
   q: number; r: number; geklemmt: boolean; passt: boolean;
   /** Nur wenn geklemmt: warum das gewünschte Hex nicht passte. */
@@ -217,6 +223,10 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Kartenwa
     let size: Groesse = 'mittel';
     let q = 0, r = 0;
     let marke: { x: number; z: number; name: string } | null = null;
+    /** Wunsch-Ort (Ortssuche oder Ort-Knopf): dort kommt das Lager hin, solange er im Hex liegt. x/z nur für die Anzeige. */
+    let wunsch: (OrtWunsch & { x: number; z: number }) | null = null;
+    const wunschDrin = () => !!wunsch && hexDistance(wunsch, { q, r }) <= GROESSEN[size];
+    const mitWunsch = (a: AusschnittParam): AusschnittParam => (wunsch && wunschDrin() ? { ...a, wunsch: { name: wunsch.name, q: wunsch.q, r: wunsch.r } } : a);
     const view = { cx: WELT.SX / 2, cz: WELT.SZ / 2, s: 0.01 };
     let W = 0, H = 0, dpr = 1;
     let relief: HTMLImageElement | null = null;
@@ -293,6 +303,7 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Kartenwa
       b.append(el('b', '', v.name), el('span', '', v.text), el('em', '', GROESSE_NAME[v.size]));
       b.addEventListener('click', () => {
         size = v.size;
+        wunsch = null;
         setzeMitte(v.q, v.r, v.name);
         zoomZumHex();
       });
@@ -404,7 +415,8 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Kartenwa
       q = k.q; r = k.r;
       toast.classList.remove('an'); // alte Meldung weg, sobald eine neue Aktion kommt
       if (!k.passt) toastZeigen('Für diese Größe ist hier noch nicht genug Karte gebaut.');
-      else if (k.geklemmt && k.grund && meldung) toastZeigen(klemmMeldung(k.grund, ziel));
+      else if (wunsch && !wunschDrin() && k.grund && meldung) toastZeigen(wunschMeldung(wunsch.name, k.grund));
+      else if (k.geklemmt && k.grund && meldung) toastZeigen(klemmMeldung(k.grund, ziel) + (wunsch ? ` Euer Lager steht trotzdem in ${wunsch.name}.` : ''));
       marke = ziel && mitMarke ? { ...hexToWorld(nq, nr), name: ziel } : null;
       nachAenderung();
     }
@@ -433,7 +445,7 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Kartenwa
       zeichneGroessenKnoepfe();
       zeichne();
       aktualisiereInfo();
-      merke({ version: welt.version, q, r, size });
+      merke(mitWunsch({ version: welt.version, q, r, size }));
     }
 
     let toastTimer = 0;
@@ -585,9 +597,9 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Kartenwa
         const chips = el('div', 'kw-chips');
         const zeig = ausw.starts.slice(0, 7);
         for (const o of zeig) {
-          const c = el('button', 'kw-chip ' + (kinds[o[1]] ?? ''), o[0]);
+          const c = el('button', 'kw-chip ' + (kinds[o[1]] ?? '') + (wunschDrin() && wunsch!.q === o[5] && wunsch!.r === o[6] ? ' wunsch' : ''), o[0]);
           c.type = 'button';
-          c.title = 'Dorf in die Mitte setzen';
+          c.title = 'Hier starten (Dorf in die Mitte setzen)';
           c.addEventListener('click', () => waehleOrt(o));
           chips.append(c);
         }
@@ -599,8 +611,10 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Kartenwa
       if (ausw.hoch !== null && ausw.tief !== null) {
         zeile('Höhen', `${Math.round(ausw.tief)} bis ${Math.round(ausw.hoch)} m ü. NN`);
       }
-      // Völkchen des Gebiets (die Erzählfigur kommt mit)
-      const mw = hexToWorld(q, r), vg = gebietBei(mw.x, mw.z);
+      // Startort: Wunsch-Ort, solange er im Hex liegt
+      if (wunsch) zeile('Startort', wunschDrin() ? `${wunsch.name} – hier steht euer Lager` : `${wunsch.name} liegt nicht mehr im Hex – Start im größten Ort`);
+      // Völkchen des Gebiets (die Erzählfigur kommt mit; mit Wunsch-Ort das Völkchen dort)
+      const mw = wunsch && wunschDrin() ? wunsch : hexToWorld(q, r), vg = gebietBei(mw.x, mw.z);
       zeile('Völkchen', vg ? `${vg.name} – mit ${vg.erzaehler}` : 'zwischen den Kerngebieten (Völkchen vom Startort)');
       if (anteile) {
         const bar = el('div', 'kw-bar');
@@ -690,6 +704,7 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Kartenwa
       eingabe.value = o[0];
       vorschlagListe.replaceChildren();
       treffer = [];
+      wunsch = { name: o[0], q: o[5], r: o[6], x: o[2], z: o[3] };
       setzeMitte(o[5], o[6], o[0], true);
       zoomZumHex();
     }
@@ -1108,6 +1123,7 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Kartenwa
         if (weg) zeigeTip(p.x, p.y, weg, true);
         if (modus === 'schieben') {
           const h = worldToHex(wx(p.x), wz(p.y));
+          wunsch = null;
           setzeMitte(h.q, h.r);
         }
       } else if (modus === 'hex') {
@@ -1177,7 +1193,7 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Kartenwa
 
     const waehle = (art: 'allein' | 'freunde') => {
       if (los.disabled || !fertigGeladen) return;
-      const a: AusschnittParam = { version: welt.version, q, r, size };
+      const a = mitWunsch({ version: welt.version, q, r, size });
       merke(a);
       schliesse();
       fertig({ art, param: a });
@@ -1206,7 +1222,11 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Kartenwa
       const gem = lies();
       if (gem && (gem.size === 'klein' || gem.size === 'mittel' || gem.size === 'gross')) size = gem.size;
       let start_: { q: number; r: number } | null = null;
-      if (gem && gem.version === welt.version && Number.isFinite(gem.q) && Number.isFinite(gem.r)) start_ = { q: gem.q!, r: gem.r! };
+      if (gem && gem.version === welt.version && Number.isFinite(gem.q) && Number.isFinite(gem.r)) {
+        start_ = { q: gem.q!, r: gem.r! };
+        const o = gem.wunsch && welt.orte.orte.find((e) => e[0] === gem.wunsch!.name && e[5] === gem.wunsch!.q && e[6] === gem.wunsch!.r);
+        if (o) { wunsch = { name: o[0], q: o[5], r: o[6], x: o[2], z: o[3] }; eingabe.value = o[0]; marke = { x: o[2], z: o[3], name: o[0] }; }
+      }
       if (!start_) {
         // Erster passender Vorschlag, sonst Mitte der gebauten Fläche
         const v = VORSCHLAEGE.find((x) => passtInKacheln(kachelSet, x.q, x.r, x.size));
@@ -1259,6 +1279,6 @@ export function zeigeKartenwahl(root: HTMLElement, welt: Welt): Promise<Kartenwa
     // Los ist von Anfang an möglich, sobald die Auswertung steht (Ortsdaten sind schon da)
     fertigGeladen = true;
     aktualisiereInfo();
-    merke({ version: welt.version, q, r, size });
+    merke(mitWunsch({ version: welt.version, q, r, size }));
   });
 }

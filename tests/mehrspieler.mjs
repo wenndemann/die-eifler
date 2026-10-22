@@ -7,7 +7,7 @@
 // und Wetter-Optik (Talnebel/Aue) bei beiden gleich. M14: Mainacht und Maibäume bei beiden gleich.
 //
 // Läuft in npm run test:smoke mit; allein:  node tests/mehrspieler.mjs   (Server und Vite startet es selbst)
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { createServer as netServer } from 'node:net';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -57,6 +57,20 @@ const laeuft = () => !!(window.eifeler?.spiel && window.eifeler.partie?.sim && !
  * Der Test. `param`: Ausschnitt (version, q, r, size). `browser`: wird hier selbst gestartet (eigene Schalter für WebRTC).
  * Meldet Fehler über fail(), Fortschritt über info().
  */
+const hexAbstand = (a, b) => (Math.abs(a.q - b.q) + Math.abs(a.r - b.r) + Math.abs(a.q + a.r - b.q - b.r)) / 2;
+const RADIUS = { klein: 45, mittel: 60, gross: 80 };
+
+/** Ein Dorf aus dem Ortsverzeichnis, möglichst weit von der Mitte, aber sicher im Spielfeld (für den Wunsch-Ort). */
+function wunschDorf(p) {
+  try {
+    const orte = JSON.parse(readFileSync(join(WURZEL, 'welt-daten', p.version, 'orte.json'), 'utf8')).orte;
+    const n = RADIUS[p.size];
+    const drin = orte.filter((o) => o[1] === 1 && hexAbstand({ q: o[5], r: o[6] }, p) <= n - 8)
+      .sort((a, b) => hexAbstand({ q: b[5], r: b[6] }, p) - hexAbstand({ q: a[5], r: a[6] }, p));
+    return drin.length ? { name: drin[0][0], q: drin[0][5], r: drin[0][6] } : null;
+  } catch { return null; }
+}
+
 export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
   mkdirSync(aus, { recursive: true });
   const browser = await chromium.launch({
@@ -79,8 +93,11 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
   try {
     const host = await fenster('Gastgeber'), gast = await fenster('Gast');
     const p = param;
+    // Wunsch-Ort (wie aus der Ortssuche der Kartenwahl): ein Dorf weit weg von der Mitte, aber im Spielfeld
+    const wunsch = wunschDorf(p);
     // 1. Gastgeber eröffnet einen Raum (Name, dann Lobby mit Einladungslink)
-    await host.goto(`${basis}#v=${p.version}&q=${p.q}&r=${p.r}&g=${p.size}&freunde=1&netz=schlecht`);
+    const o = wunsch ? `&o=${wunsch.q},${wunsch.r},${encodeURIComponent(wunsch.name)}` : '';
+    await host.goto(`${basis}#v=${p.version}&q=${p.q}&r=${p.r}&g=${p.size}${o}&freunde=1&netz=schlecht`);
     await host.waitForSelector('.lobby-name input', { timeout: 120000 });
     await host.fill('.lobby-name input', 'Mechthild');
     await host.press('.lobby-name input', 'Enter');
@@ -103,6 +120,12 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
     const start = await Promise.all([host, gast].map((s) => s.evaluate(() => ({ ich: window.eifeler.spiel.ich, lager: window.eifeler.spiel.lagerHex, n: window.eifeler.partie.spielerZahl }))));
     info(`Mehrspieler: gestartet, Lager ${JSON.stringify(start.map((x) => x.lager))}`);
     if (start[0].ich !== 0 || start[1].ich !== 1 || start[1].n !== 2) fail(`Plätze falsch: ${JSON.stringify(start)}`);
+    if (wunsch) {
+      const d = hexAbstand(start[0].lager, wunsch);
+      info(`Mehrspieler Wunsch-Ort: ${wunsch.name} (${wunsch.q}/${wunsch.r}), Lager des Gastgebers ${d} Hex daneben`);
+      if (d > 2) fail(`Lager des Gastgebers nicht im Wunsch-Ort ${wunsch.name}: ${JSON.stringify(start[0].lager)}`);
+      if (hexAbstand(start[1].lager, wunsch) <= 2) fail('Der Gast startet im Wunsch-Ort des Gastgebers');
+    }
     // 4. Tempo 3 (nur der Gastgeber), beide bauen
     await host.evaluate(() => window.eifeler.spiel.setzeTempo(3));
     const b0 = await host.evaluate(baue, 'holzfaeller');

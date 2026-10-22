@@ -47,6 +47,9 @@ nach Gebrauch wieder. Unterbrochen? Einfach neu starten, es setzt fort. Details 
 - **Kartenwahl:** Größe wählen (klein/mittel/groß), das Auswahl-Hex auf der Übersicht verschieben oder einen
   Ort eintippen, „Hier siedeln!“. Die Vorschläge „Monschauer Land & Rursee“ und „Rureifel“ brauchen mindestens
   das Gebiet `nordeifel`.
+- **Wunsch-Ort:** Ein gesuchter Ort (oder ein Ort-Knopf unter „Im Hex“) ist euer Startort: Das Lager steht dort, auch
+  wenn das Hex am Rand der Daten nach innen rückt, solange der Ort im Hex liegt (sonst sagt die Kartenwahl es). Im
+  Mehrspieler startet der Gastgeber dort. In der Adresse steht er als `&o=<q>,<r>,<Name>`.
 - Ein Ausschnitt steht in der Adresse (`#v=<version>&q=..&r=..&g=mittel`) und hat eine **Prüfsumme** über
   die Simulationsdaten (Kopfleiste). Gleiche Adresse = gleiche Prüfsumme, in jedem Browser.
 - Steuerung: <kbd>WASD</kbd> bewegen, <kbd>Q</kbd>/<kbd>E</kbd> drehen, Rad zoomen, rechte Maustaste ziehen;

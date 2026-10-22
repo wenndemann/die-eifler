@@ -41,6 +41,8 @@ donoh widder fott. Ungebroche? Einfach neu starte, et määt do wigger wo et opj
 - **Kaatewahl:** Jrööße wähle (kleen/mittel/jroß), et Uswahl-Hex op d'r Üvversich verschoove oder ene
   Ocht intippe, „He siedele!“. De Vorschläch „Monschauer Land & Rursee“ un „Rureifel“ bruche mindestens
   et Jebiet `nordeifel`.
+- **Wunsch-Ocht:** Dä jesuchte Ocht (oder ene Ocht-Knopp under „Em Hex“) es üüre Startocht: Et Lager steiht do, och wenn
+  dat Hex am Rand vun de Date noh enne röck – solang dä Ocht em Hex litt (söns sät et de Kaatewahl).
 - En Usschnitt steiht in d'r Adress (`#v=<version>&q=..&r=..&g=mittel`) un hät en **Prüfsumm** övver
   de Simulationsdate (Koppleist). Jleiche Adress = jleiche Prüfsumm, in jedem Browser.
 - Steuerung: <kbd>WASD</kbd> bewääge, <kbd>Q</kbd>/<kbd>E</kbd> drihe, Rädche zoome, räächte Musdaste trecke;

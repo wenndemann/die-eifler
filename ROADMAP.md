@@ -326,6 +326,13 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 
 **Abnahme:** In einer Mehrspieler-Partie stellen beide Dörfer in der Mainacht ihren Baum, einer wird geklaut, mit Bier abgewehrt oder ausgelöst – und alle lachen.
 
+## Nachtrag: Wunsch-Ort als Startpunkt ✅
+
+- [x] Kartenwahl merkt sich den gesuchten Ort (Ortssuche oder Ort-Knopf), auch in der Adresse (`&o=`) und im Browser
+- [x] Das Lager steht im Wunsch-Ort, solange er im Spielfeld liegt, auch wenn das Hex am Welt- oder Datenrand nach innen rückt; das Völkchen kommt von dort
+- [x] Fällt der Ort beim Nach-innen-Rücken heraus, sagt die Kartenwahl es klar; Zeile „Startort“ im Infofeld
+- [x] Mehrspieler: der Gastgeber startet im Wunsch-Ort (`tests/wunschort.test.ts`, `tests/mehrspieler.mjs`)
+
 ## Danach (offen)
 
 - **Verbundene Regionen** im Mehrspieler: jeder spielt seinen eigenen Ausschnitt und schickt Händler und Finder hinüber (Drehbuch 2.3)

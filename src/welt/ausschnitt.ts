@@ -2,7 +2,7 @@
 // dazu 2000 m Kulisse. Ein gemeinsames 10-m-Gitter, Ursprung auf dem 10-m-Raster der Welt.
 import {
   GROESSEN, HEX, KACHEL, KULISSE, WELT,
-  type AusschnittParam, type Manifest, type OrtEintrag,
+  type AusschnittParam, type Manifest, type OrtEintrag, type OrtWunsch,
 } from './format';
 import { bigHexBounds, hexDistance, hexTileIndex, hexToWorld, hexesInRadius, hexCount, toOffset } from './hexwelt';
 import { holeBytes, holeJson, sha256, type Welt } from './laden';
@@ -179,6 +179,22 @@ export function klemmeAusschnitt(m: Manifest, p: AusschnittParam): AusschnittPar
   if (!best) throw new Error('Kein passender Ausschnitt in den gebauten Kacheln dieser Datenversion.');
   return { ...p, q: best.q, r: best.r };
 }
+
+/**
+ * Startort zum Wunsch-Ort: der Ortskern auf dem Hex des Orts, sonst der gleichnamige Kern in der Nähe, sonst der nächste Kern.
+ * Liegt der Wunsch-Ort nicht im Spielfeld (Mitte q/r, Radius n), gibt es keinen (undefined).
+ */
+export function wunschKern(kerne: readonly { q: number; r: number; name: string }[], w: OrtWunsch | undefined, q: number, r: number, n: number): string | undefined {
+  if (!w || hexDistance(w, { q, r }) > n) return undefined;
+  const benannt = kerne.filter((k) => k.name);
+  const ab = (k: { q: number; r: number }) => hexDistance(k, w);
+  const naechster = (l: typeof benannt) => l.reduce<(typeof benannt)[number] | undefined>((b, k) => (!b || ab(k) < ab(b) ? k : b), undefined);
+  const gleich = naechster(benannt.filter((k) => k.name === w.name));
+  if (gleich && ab(gleich) <= WUNSCH_NAH) return gleich.name;
+  return naechster(benannt)?.name;
+}
+/** So weit (Hexe) darf ein gleichnamiger Ortskern vom Wunsch-Hex weg sein. */
+const WUNSCH_NAH = 6;
 
 // ---------------------------------------------------------------- Dekodieren
 

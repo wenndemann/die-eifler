@@ -1,6 +1,6 @@
 // Spielkarte im Client: ein Ausschnitt aus den Weltdaten (src/welt/ausschnitt.ts) mit Abfragen
 // auf dem 10-m-Höhenraster und über das globale Hex-Raster.
-import type { Ausschnitt, Bahn, Fluss, See } from '../welt/ausschnitt';
+import { wunschKern, type Ausschnitt, type Bahn, type Fluss, type See } from '../welt/ausschnitt';
 import { FLAG, LAND, TERRAIN, COVER } from '../welt/format';
 
 export interface Place { name: string; kind: 'stadt' | 'dorf' | 'weiler' | 'gewaesser'; x: number; z: number; imSpielfeld: boolean }
@@ -93,10 +93,12 @@ export class MapData {
     const cx = (a.spielfeld.x0 + a.spielfeld.x1) / 2, cz = (a.spielfeld.z0 + a.spielfeld.z1) / 2;
     const d = (p: Place) => Math.hypot(p.x - cx, p.z - cz);
     const kandidaten = places.filter((p) => p.imSpielfeld && p.kind !== 'gewaesser');
-    // Startort: größter Ortskern nahe der Mitte (Stadt vor Dorf vor Weiler im inneren Drittel), sonst nächster Ort
+    // Startort: der Wunsch-Ort aus der Kartenwahl, wenn er im Spielfeld liegt; sonst der größte Ortskern nahe der Mitte
+    // (Stadt vor Dorf vor Weiler im inneren Drittel), sonst der nächste Ort
     const nah = kandidaten.filter((p) => d(p) < (a.spielfeld.x1 - a.spielfeld.x0) / 3)
       .sort((p, q) => rang[p.kind] - rang[q.kind] || d(p) - d(q));
-    const start = (nah[0] ?? kandidaten.sort((p, q) => d(p) - d(q))[0])?.name;
+    const start = wunschKern(a.kerne, a.param.wunsch, a.param.q, a.param.r, a.radius)
+      ?? (nah[0] ?? kandidaten.sort((p, q) => d(p) - d(q))[0])?.name;
     const info: MapInfo = {
       id, name, cell: a.cell, width: a.breite, height: a.hoehe, heightMin: a.heightMin, heightMax: a.heightMax,
       exaggeration: 2, start, cover: COVER.slice(), hex: { size: 60, radius: a.radius, terrain: TERRAIN.slice() }, places, credits,
