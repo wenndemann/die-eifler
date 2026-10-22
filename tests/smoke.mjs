@@ -385,7 +385,8 @@ try {
   const m12 = await page.evaluate(async () => {
     const sp = window.eifeler.spiel;
     sp.wetterVorgabe = { tag: 0.85, regen: 1, nebel: 1, hochwasser: 1, wind: 1 };
-    await new Promise((ok) => setTimeout(ok, 1500));
+    // die Vorgabe greift im nächsten Bild; im Software-Renderer dauert eins mehrere Sekunden, also aufs Ergebnis warten
+    for (let i = 0; i < 60 && !(sp.wetterOptik.lage().regen > 0.9 && sp.wetterOptik.lage().hochwasser > 0.9); i++) await new Promise((ok) => setTimeout(ok, 500));
     const lage = { ...sp.wetterOptik.lage() };
     sp.wetterVorgabe = { tag: 0.5, schnee: 1, regen: 0, nebel: 0, hochwasser: 0, wind: 0 };
     await new Promise((ok) => setTimeout(ok, 800));
