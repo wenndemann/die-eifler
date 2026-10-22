@@ -40,7 +40,7 @@ function rohr(a: [number, number, number], b: [number, number, number], r1: numb
  * Trachtfarbe an), das Hemd färbt weiter die Instanzfarbe.
  */
 export type Hut = 'kappe' | 'pudel' | 'jaeger' | 'leder' | 'zimmermann' | 'stroh' | 'koch' | 'haube' | 'stirnband' | 'imker' | 'ohne';
-export interface Tracht { hut: Hut; hutFarbe?: string; schuerze?: string; bart?: string }
+export interface Tracht { hut: Hut; hutFarbe?: string; schuerze?: string; bart?: string; /** feste Hemdfarbe (sonst Instanzfarbe) */ hemd?: string }
 export const TRAEGER_TRACHT: Tracht = { hut: 'kappe' };
 
 /** Kopfbedeckung um den Kopf (Mitte 0, 0.74, 0; Radius 0.235), leicht in den Nacken geschoben wie die Kappe. */
@@ -107,9 +107,10 @@ function hut(t: Tracht, nacken: (g: THREE.BufferGeometry) => THREE.BufferGeometr
       break;
     case 'imker':
       // Imkerhut mit Schleier
-      add(walze(0.38, 0.38, 0.03, 0.95, '#f4efe0', 16));
-      add(walze(0.18, 0.2, 0.14, 1.03, '#f4efe0'));
-      add(paint(new THREE.CylinderGeometry(0.36, 0.3, 0.32, 14, 1, true).translate(0, 0.79, 0), '#cfd2c8'));
+      // runder Hut, Netz nur seitlich und hinten (Gesicht bleibt frei), Rand des Netzes dunkel wie Gaze
+      add(nacken(walze(0.4, 0.4, 0.03, 0.9, '#f4efe0', 16)));
+      add(nacken(walze(0.17, 0.21, 0.16, 0.99, '#f4efe0')));
+      add(nacken(paint(new THREE.CylinderGeometry(0.37, 0.32, 0.26, 16, 1, true, Math.PI * 0.3, Math.PI * 1.4).translate(0, 0.76, 0), '#5d6258')));
       break;
     case 'ohne':
       // Glatze mit Haarkranz (Wirt)

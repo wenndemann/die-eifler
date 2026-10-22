@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import leben from '../data/leben.json';
 import { lebenAnker } from '../src/render/gebaeude';
 import { LebenDarstellung } from '../src/render/leben';
+import { WILD_ARTEN, wildModelle } from '../src/render/wild';
 import { fachwerk, ohneSchindeln } from '../src/render/mockup';
 import { figur, TRAEGER_TRACHT, type Tracht } from '../src/render/traeger';
 import { GEBAEUDE, GEBAEUDE_IDS } from '../src/sim/daten';
@@ -72,6 +73,19 @@ describe('Lebendige Eifel', () => {
     for (const a of schatten) expect(a.r).toBeGreaterThan(0);
   });
 
+  it('Wildtiere: Reh, Hirsch, Wildschwein mit Frischlingen, Fuchs, Hase, Wildkatze, Wolf – Modelle und Werte vollständig', () => {
+    const mo = wildModelle();
+    for (const a of WILD_ARTEN) {
+      expect(mo[a].attributes.position.count, a).toBeGreaterThan(100);
+      const c = (leben.wild.arten as Record<string, { anteil: number; n: number[]; groesse: number }>)[a];
+      expect(c, a).toBeTruthy();
+      expect(c.groesse, a).toBeGreaterThan(0);
+    }
+    // Wolf und Wildkatze sind selten, Rehe häufig
+    expect(leben.wild.arten.wolf.anteil).toBeLessThan(leben.wild.arten.reh.anteil);
+    expect(leben.wild.arten.wildkatze.anteil).toBeLessThan(leben.wild.arten.reh.anteil);
+  });
+
   it('Nacht aus der Tageszeit: Mittag hell, Mitternacht dunkel, weiche Dämmerung', () => {
     expect(LebenDarstellung.nacht(0.5)).toBe(0);
     expect(LebenDarstellung.nacht(0)).toBe(1);
@@ -81,7 +95,7 @@ describe('Lebendige Eifel', () => {
   });
 
   it('Werte in data/leben.json sind vollständig; die Darstellung ändert die Simulation nicht', () => {
-    for (const k of ['fern_m', 'rauch', 'dampf', 'tiere', 'voegel', 'fenster', 'wind', 'konfetti', 'feuer', 'gras', 'schild', 'berufe', 'meister']) expect(leben).toHaveProperty(k);
+    for (const k of ['fern_m', 'rauch', 'dampf', 'tiere', 'voegel', 'fenster', 'wind', 'konfetti', 'feuer', 'gras', 'schild', 'berufe', 'meister', 'wild']) expect(leben).toHaveProperty(k);
     expect(leben.gras.max).toBeGreaterThan(0);
     // reine Darstellung: Anker abfragen lässt Prüfsumme und Zustand der Simulation unberührt
     const sim = new Simulation(baueTestKarte(), 3, { q: 0, r: 0 });

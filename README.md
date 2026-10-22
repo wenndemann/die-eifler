@@ -16,7 +16,7 @@ Was ins Spiel kommt, steht im [Drehbuch](DREHBUCH.md), was schon drin ist und wa
 - **Nachbarn ohne Krieg:** Gebiet, Orte mit Einstand gewinnen, Handel mit den Flachländern, Finden statt Stehlen,
   Schützenfest, Maibaumklau, Grenzsteine versetzen, Abwerben, Kaffeeschmuggel am Zollhaus und der Große Fund.
 - **Die Eifel lebt:** Rauch aus den Schornsteinen, Wasserräder, Schafe und Hühner, Kinder auf dem Kirmesplatz, Wind in Bäumen
-  und Gras, Herbstlaub, nachts Licht in den Fenstern; Zunftschilder zeigen, was ein Haus macht.
+  und Gras, Herbstlaub, nachts Licht in den Fenstern; Zunftschilder und Meister in Tracht zeigen, was ein Haus macht; Rehe, Wildschweine, Füchse, selten Wolf und Wildkatze am Waldrand.
 - **10 Völkchen** mit eigener Erzählfigur, Spezialität und Sprüchen; Musik und Geräusche aus dem Browser.
 - **Allein, zu mehreren (Link reicht, ohne Konto) oder als Kampagne** „Der Eifelsteig“ von Aachen bis Trier.
 

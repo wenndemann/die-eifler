@@ -1,5 +1,5 @@
 {
-  "hinweis": "Lebendige Eifel (ROADMAP M15, aus M9): Werte nur für die Darstellung, nicht für die Simulation. fern_m: Leben (Rauch, Tiere, Leute, Licht) nur an Gebäuden bis so weit von der Kamera. rauch: Teilchen je Sekunde bei Stärke 1 (rate), Steigen und Wachsen je Sekunde (m), Lebensdauer, Höchstzahl; arbeitet_faktor für arbeitende Gebäude, ruhig_faktor sonst (nur Herdfeuer), winter_faktor und nacht_faktor dazu. tiere: Tempo in m/s (Modell-Meter). voegel: je Feld ein Schwarm (n Vögel) in hoehe_m über dem Feld, Kreis mit radius_m. fenster: Farbe und Helligkeit des Fensterlichts nachts, Schein ums Fenster (glanz) und Lichtfleck auf dem Boden vor den unteren Fenstern (boden). wind: Grundwind und Wind bei Sturm (0..1). konfetti: Teilchen je Ausbruch, Dauer. feuer: Funken je Sekunde beim Martinsfeuer und an der Esse. gras: Grasbüschel um den Blickpunkt im Umkreis radius_m, je Rasterzelle (zelle_m) mit Wahrscheinlichkeit dichte, Höhe in m, höchstens max, neu gelegt ab neu_ab_m Weg, nur bis bis_abstand_m Kameraabstand. schild: Zunftschild mit der erzeugten Ware neben der Tür, Größe relativ zur Ware (WARE_M). berufe: Tracht der Arbeiter (Hut, Hutfarbe, Schürze, Bart), meister: Tracht der Figur, die vor einem arbeitenden Gebäude steht (Berufe erkennbar).",
+  "hinweis": "Lebendige Eifel (ROADMAP M15, aus M9): Werte nur für die Darstellung, nicht für die Simulation. fern_m: Leben (Rauch, Tiere, Leute, Licht) nur an Gebäuden bis so weit von der Kamera. rauch: Teilchen je Sekunde bei Stärke 1 (rate), Steigen und Wachsen je Sekunde (m), Lebensdauer, Höchstzahl; arbeitet_faktor für arbeitende Gebäude, ruhig_faktor sonst (nur Herdfeuer), winter_faktor und nacht_faktor dazu. tiere: Tempo in m/s (Modell-Meter). voegel: je Feld ein Schwarm (n Vögel) in hoehe_m über dem Feld, Kreis mit radius_m. fenster: Farbe und Helligkeit des Fensterlichts nachts, Schein ums Fenster (glanz) und Lichtfleck auf dem Boden vor den unteren Fenstern (boden). wind: Grundwind und Wind bei Sturm (0..1). konfetti: Teilchen je Ausbruch, Dauer. feuer: Funken je Sekunde beim Martinsfeuer und an der Esse. gras: Grasbüschel um den Blickpunkt im Umkreis radius_m, je Rasterzelle (zelle_m) mit Wahrscheinlichkeit dichte, Höhe in m, höchstens max, neu gelegt ab neu_ab_m Weg, nur bis bis_abstand_m Kameraabstand. schild: Zunftschild mit der erzeugten Ware neben der Tür, Größe relativ zur Ware (WARE_M). berufe: Tracht der Arbeiter (Hut, Hutfarbe, Schürze, Bart), meister: Tracht der Figur, die vor einem arbeitenden Gebäude steht (Berufe erkennbar). wild: Wildtiere um den Blickpunkt (radius_m), je Rasterzelle (zelle_m) mit Wahrscheinlichkeit anteil eine Gruppe am Waldrand (Wald im Umkreis rand_m) bzw. im Wald (wald), streifen in streif_m umher; skala Modell-Meter → m; je Art Anteil, Gruppengröße n, Tempo, Größe; Frischlinge folgen der Bache, Hirschkühe dem Hirsch.",
   "fern_m": 2200,
   "rauch": {
     "rate": 1.4,
@@ -186,7 +186,9 @@
       "hutFarbe": "#2b2b2b"
     },
     "bienenstock": {
-      "hut": "imker"
+      "hut": "imker",
+      "hemd": "#f4f1ea",
+      "schuerze": "#e8e2d0"
     },
     "kartoffelfeld": {
       "hut": "stroh"
@@ -222,6 +224,99 @@
       "hut": "pudel",
       "hutFarbe": "#2e5d8a",
       "bart": "#9a9a9a"
+    }
+  },
+  "wild": {
+    "radius_m": 900,
+    "zelle_m": 90,
+    "anteil": 0.2,
+    "rand_m": 70,
+    "streif_m": 40,
+    "max_gruppen": 30,
+    "neu_ab_m": 120,
+    "bis_abstand_m": 1800,
+    "skala": 5,
+    "arten": {
+      "reh": {
+        "anteil": 0.32,
+        "n": [
+          2,
+          4
+        ],
+        "tempo": 0.5,
+        "groesse": 1,
+        "wald": false
+      },
+      "hirsch": {
+        "anteil": 0.1,
+        "n": [
+          1,
+          3
+        ],
+        "tempo": 0.45,
+        "groesse": 1.3,
+        "wald": false
+      },
+      "wildschwein": {
+        "anteil": 0.18,
+        "n": [
+          3,
+          6
+        ],
+        "tempo": 0.5,
+        "groesse": 1,
+        "wald": true
+      },
+      "frischling": {
+        "anteil": 0,
+        "n": [
+          0,
+          0
+        ],
+        "tempo": 0.7,
+        "groesse": 0.6,
+        "wald": true
+      },
+      "fuchs": {
+        "anteil": 0.14,
+        "n": [
+          1,
+          1
+        ],
+        "tempo": 0.9,
+        "groesse": 0.9,
+        "wald": false
+      },
+      "hase": {
+        "anteil": 0.16,
+        "n": [
+          1,
+          2
+        ],
+        "tempo": 1,
+        "groesse": 0.8,
+        "wald": false
+      },
+      "wildkatze": {
+        "anteil": 0.05,
+        "n": [
+          1,
+          1
+        ],
+        "tempo": 0.6,
+        "groesse": 0.85,
+        "wald": true
+      },
+      "wolf": {
+        "anteil": 0.05,
+        "n": [
+          2,
+          4
+        ],
+        "tempo": 0.9,
+        "groesse": 1.1,
+        "wald": true
+      }
     }
   }
 }

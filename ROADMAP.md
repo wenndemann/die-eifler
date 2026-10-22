@@ -354,6 +354,9 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 - [x] **Dorfleben:** Wäsche flattert, Kinder spielen am Kirmesplatz, Leute stehen schwätzend vor der Schänke, Laternen und Fensterlicht in der Nacht
 - [x] **Feste und Ereignisse** sichtbarer: Fahnen und Wimpel, Konfetti beim Tusch, Funken beim Martinsfeuer
 - [x] **Bildstrecke** (`tools/bildstrecke.mjs`) mit kurzen Bildfolgen für Bewegung, Gutachter-Runde wie in M9 (Vergleich mit der vorigen Version)
+- [x] **Berufe erkennbar:** Tracht je Beruf (Holzfäller mit Pudelmütze und Bart, Förster mit Jägerhut, Steinbrecher mit Lederkappe und Schutzbrille, Bauleute mit Zimmermanns- bzw. Strohhut), größere Werkzeuge; vor arbeitenden Gebäuden steht der Meister in Tracht (Schmied, Koch, Käserin, Brauer, Wirt, Köhler, Imker, Bauer, Fischer)
+- [x] **Schindeldächer** (versetzte Schindeln bzw. Schieferplatten) und **Kontaktschatten** unter Kleinkram, Tieren und Figuren
+- [x] **Wildtiere** am Waldrand und im Wald: Rehe, Hirsche, Wildschweine mit Frischlingen, Füchse, Hasen, selten Wildkatze und ein Wolfsrudel (`src/render/wild.ts`)
 - [x] **Gebäude und Figuren deutlicher:** Fensterrahmen mit Kreuz und Bank, Tür mit Sturz und Stufe, Bruchsteinsockel, gedecktes Dach mit First und Ortgang, Schornstein über dem First; Zunftschild mit der Ware des Gebäudes; Figuren größer mit Hosenträgern, Kragen, Ohren und schmalem Randlicht; Baumenü-Icons aufs Motiv zugeschnitten, Symbole für alle Waren
 
 **Umgesetzt (Lebendige Eifel, `src/render/leben.ts`, `src/render/gras.ts`, Werte in `data/leben.json`):** Rauch und Dampf aus den Schornsteinen (Herdfeuer immer ein wenig, Werkstätten nur bei der Arbeit, im Winter und nachts mehr), Wasserräder an Sägewerk, Eisenhütte, Senf- und Papiermühle, Säge mit Sägemehl, Schmiedehammer mit Funken und Glut, Windmühle am Gerstenfeld; Schafe und Kühe grasen, Hühner picken, Hofhund am Lager, Bienen, Vogelschwärme (im Winter Raben); Bäume wiegen im Wind (Böen, stärker bei Sturm), Herbstlaub je Baum, Glitzern auf Seen und Bächen, Grasbüschel im Wind rund um den Blickpunkt, gemalter Boden mit erdigen Hängen; Wäsche flattert, Kinder toben über den Kirmesplatz, Leute schwätzen vor der Schänke, nachts Fensterlicht (auch in den Kulissendörfern) und Laternen; Konfetti beim Tusch, Martinsfeuer mit Funken; dazu Leuchten und Vignette in der Nachbearbeitung (aus auf „Niedrig“). Die Anker (wo Rauch aufsteigt, wo Fenster sind, wo Hühner laufen) kommen aus den Gebäudemodellen selbst. Alles als Instanzen bzw. Punktwolken, nur bis 2,2 km von der Kamera. Reine Darstellung: keine Prüfsumme, kein Spielstand, im Mehrspieler bei beiden gleich gezeichnet. Bilder: `tools/leben-shots.mjs`. Hecken (Gebäude) stehen still. Gutachten (zwei Runden, je 5 Gutachter; lokal in `test-results/gutachten/`, Zusammenfassung im PR) – die neue Version gewinnt jeweils; nach Runde 1 Rauch wieder als Comic-Wölkchen, Randlicht ohne Überstrahlen, warme Nacht mit Lichtfleck vor den Fenstern, satteres Herbstlaub; nach Runde 2 weicheres Gras und Icons aus den Modellen statt Zeichen.
@@ -370,6 +373,14 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 ## Nachtrag: READMEs kurz ✅
 
 - [x] README und README-platt neu: kurz, was das Spiel ist und kann, Schnellstart, Mehrspieler betreiben, Befehle; die Details der Meilensteine stehen nur noch hier in der Roadmap und im Drehbuch
+
+## Vorschlag: Wald und Wild (Jäger)
+
+Wild gibt es schon als Leben (siehe oben); als Spiel könnte daraus werden:
+- **Jäger mit Hochsitz** (Gebäude am Waldrand): erlegt Rehe und Wildschweine im Umkreis → **Wildbret** für Küche und Schänke (Wildgulasch als Festessen); Wild wächst im Wald nach, zu viel Jagd leert den Wald
+- **Wildschaden:** ohne Jäger wühlen Wildschweine Kartoffel- und Gerstenfelder um (weniger Ernte); der Jäger hält sie fern
+- **Wolf und Wildkatze sind geschützt** (wie in echt): nicht jagbar; ein Wolf reißt ab und zu ein Schaf, dagegen helfen Zaun und **Herdenschutzhund** am Schafstall; die Wildkatze bringt Glück (Ansehen), wenn man ihren Wald stehen lässt
+- Zahlen in `data/`, deterministisch in der Simulation, Mehrspieler- und Unit-Tests wie üblich
 
 ## Danach (offen)
 

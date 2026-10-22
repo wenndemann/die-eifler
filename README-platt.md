@@ -14,7 +14,7 @@ Wat noch kütt, steiht em [Drehbuch](DREHBUCH.md), wat ald dren es, en d'r [Road
 - **Nohbere ohne Kreech:** Jebiet, Dörfer met Ensteiht jewenne, Handel met de Flachländer, Finge statt Klaue,
   Schötzefess, Maibaumklau, Jrenzsteen versetze, Lück avwerbe, Kaffeeschmuggel am Zollhuus un dä Jruße Fund.
 - **De Eifel läv:** Rauch us de Schornsteen, Wasserräder, Schof un Hohner, Pänz om Kirmesplatz, Wind en Bäum un Jras,
-  bunt Laub em Hervs, naaks Leech en de Finster; Zunftscheld zeije, wat e Huus mäht.
+  bunt Laub em Hervs, naaks Leech en de Finster; Zunftscheld un Meister en Tracht zeije, wat e Huus mäht; Rehe, Wildsäu, Füss, selde Wolf un Wildkatz am Bösch.
 - **10 Völkcher** met eijene Verzällfijur, Spezialität un Sprüch; Musik un Jeräusche usem Browser.
 - **Allein, met Fründe (ene Link reck, ohne Konto) oder als Kampagne** „Dä Eifelsteig“ vun Oche bes Trier.
 
