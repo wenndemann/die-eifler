@@ -864,6 +864,24 @@ function kleinkram(typ: string, t: Typ): THREE.BufferGeometry[] {
   // etwas größer als echt (aus der Spielhöhe lesbar): um den Grundriss-Mittelpunkt vorn skalieren (Anker genauso, in modellRoh)
   return out.map((g) => g.translate(-vx, 0, -vz).scale(KLEINKRAM, KLEINKRAM, KLEINKRAM).translate(vx, 0, vz));
 }
+/**
+ * Kontaktschatten-Anker (Gutachter: „nichts schwebt“): kleine Teile, die auf dem Boden stehen (Fässer, Kürbisse, Körbe, Holzstapel,
+ * Zäune …), bekommen einen weichen Fleck darunter. Nahe Teile werden zu einem Fleck zusammengefasst.
+ */
+function kontaktAnker(teile: THREE.BufferGeometry[]): Anker[] {
+  const out: Anker[] = [];
+  const b = new THREE.Box3();
+  for (const g of teile) {
+    b.setFromBufferAttribute(g.attributes.position as THREE.BufferAttribute);
+    const dx = b.max.x - b.min.x, dz = b.max.z - b.min.z, h = b.max.y - b.min.y;
+    if (b.min.y > G + 0.8 || Math.max(dx, dz) > 7 || h < 0.3 || h > 6) continue;
+    const x = (b.min.x + b.max.x) / 2, z = (b.min.z + b.max.z) / 2, r = Math.max(dx, dz) * 0.6 + 0.3;
+    const nah = out.find((a) => Math.hypot(a.x - x, a.z - z) < Math.max(a.r ?? 0, r) * 0.8);
+    if (nah) nah.r = Math.max(nah.r ?? 0, r, Math.hypot(nah.x - x, nah.z - z) + r * 0.6);
+    else out.push({ art: 'schatten', x, y: G, z, r });
+  }
+  return out;
+}
 /** Kleinkram-Vergrößerung (STIL.md §6). */
 const KLEINKRAM = 1.6;
 
@@ -922,7 +940,7 @@ function modellRoh(typ: string, phase: number, key: string): THREE.BufferGeometr
       const vx = t.grund[1] - 2.5, vz = t.grund[3] - 1.5;
       for (const a of ak) { a.x = (a.x - vx) * KLEINKRAM + vx; a.y *= KLEINKRAM; a.z = (a.z - vz) * KLEINKRAM + vz; if (a.w !== undefined) a.w *= KLEINKRAM; }
       if (extra.length) g = mergeGeometries([g, ...extra])!;
-      if (!ankerCache.has(modellTyp(typ))) ankerCache.set(modellTyp(typ), [...am, ...ak]);
+      if (!ankerCache.has(modellTyp(typ))) ankerCache.set(modellTyp(typ), [...am, ...ak, ...kontaktAnker([...teile, ...extra])]);
     }
     if (!g.attributes.normal) g.computeVertexNormals();
     modellCache.set(key, g);

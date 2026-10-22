@@ -1,5 +1,5 @@
 {
-  "hinweis": "Lebendige Eifel (ROADMAP M15, aus M9): Werte nur für die Darstellung, nicht für die Simulation. fern_m: Leben (Rauch, Tiere, Leute, Licht) nur an Gebäuden bis so weit von der Kamera. rauch: Teilchen je Sekunde bei Stärke 1 (rate), Steigen und Wachsen je Sekunde (m), Lebensdauer, Höchstzahl; arbeitet_faktor für arbeitende Gebäude, ruhig_faktor sonst (nur Herdfeuer), winter_faktor und nacht_faktor dazu. tiere: Tempo in m/s (Modell-Meter). voegel: je Feld ein Schwarm (n Vögel) in hoehe_m über dem Feld, Kreis mit radius_m. fenster: Farbe und Helligkeit des Fensterlichts nachts, Schein ums Fenster (glanz) und Lichtfleck auf dem Boden vor den unteren Fenstern (boden). wind: Grundwind und Wind bei Sturm (0..1). konfetti: Teilchen je Ausbruch, Dauer. feuer: Funken je Sekunde beim Martinsfeuer und an der Esse. gras: Grasbüschel um den Blickpunkt im Umkreis radius_m, je Rasterzelle (zelle_m) mit Wahrscheinlichkeit dichte, Höhe in m, höchstens max, neu gelegt ab neu_ab_m Weg, nur bis bis_abstand_m Kameraabstand. schild: Zunftschild mit der erzeugten Ware neben der Tür, Größe relativ zur Ware (WARE_M).",
+  "hinweis": "Lebendige Eifel (ROADMAP M15, aus M9): Werte nur für die Darstellung, nicht für die Simulation. fern_m: Leben (Rauch, Tiere, Leute, Licht) nur an Gebäuden bis so weit von der Kamera. rauch: Teilchen je Sekunde bei Stärke 1 (rate), Steigen und Wachsen je Sekunde (m), Lebensdauer, Höchstzahl; arbeitet_faktor für arbeitende Gebäude, ruhig_faktor sonst (nur Herdfeuer), winter_faktor und nacht_faktor dazu. tiere: Tempo in m/s (Modell-Meter). voegel: je Feld ein Schwarm (n Vögel) in hoehe_m über dem Feld, Kreis mit radius_m. fenster: Farbe und Helligkeit des Fensterlichts nachts, Schein ums Fenster (glanz) und Lichtfleck auf dem Boden vor den unteren Fenstern (boden). wind: Grundwind und Wind bei Sturm (0..1). konfetti: Teilchen je Ausbruch, Dauer. feuer: Funken je Sekunde beim Martinsfeuer und an der Esse. gras: Grasbüschel um den Blickpunkt im Umkreis radius_m, je Rasterzelle (zelle_m) mit Wahrscheinlichkeit dichte, Höhe in m, höchstens max, neu gelegt ab neu_ab_m Weg, nur bis bis_abstand_m Kameraabstand. schild: Zunftschild mit der erzeugten Ware neben der Tür, Größe relativ zur Ware (WARE_M). berufe: Tracht der Arbeiter (Hut, Hutfarbe, Schürze, Bart), meister: Tracht der Figur, die vor einem arbeitenden Gebäude steht (Berufe erkennbar).",
   "fern_m": 2200,
   "rauch": {
     "rate": 1.4,
@@ -63,5 +63,165 @@
   },
   "schild": {
     "groesse": 0.7
+  },
+  "berufe": {
+    "holzfaeller": {
+      "hut": "pudel",
+      "bart": "#6a3f22"
+    },
+    "foerster": {
+      "hut": "jaeger"
+    },
+    "steinbruch": {
+      "hut": "leder",
+      "schuerze": "#9a8f80"
+    },
+    "bauarbeiter": {
+      "hut": "zimmermann"
+    },
+    "planierer": {
+      "hut": "stroh"
+    }
+  },
+  "meister": {
+    "schmiede": {
+      "hut": "stirnband",
+      "schuerze": "#4a3426",
+      "bart": "#4a3020"
+    },
+    "eisenhuette": {
+      "hut": "stirnband",
+      "schuerze": "#4a3426",
+      "bart": "#4a3020"
+    },
+    "steinmetz": {
+      "hut": "stirnband",
+      "schuerze": "#4a3426",
+      "bart": "#4a3020"
+    },
+    "muehlsteinhauerei": {
+      "hut": "stirnband",
+      "schuerze": "#4a3426",
+      "bart": "#4a3020"
+    },
+    "kueche": {
+      "hut": "koch",
+      "schuerze": "#f4f1ea"
+    },
+    "kaeserei": {
+      "hut": "haube",
+      "schuerze": "#f4f1ea"
+    },
+    "molkerei": {
+      "hut": "haube",
+      "schuerze": "#f4f1ea"
+    },
+    "spinnerei": {
+      "hut": "haube",
+      "schuerze": "#f4f1ea"
+    },
+    "reifekeller": {
+      "hut": "haube",
+      "schuerze": "#f4f1ea"
+    },
+    "brauerei": {
+      "hut": "kappe",
+      "schuerze": "#7a5232"
+    },
+    "edelbrauerei": {
+      "hut": "kappe",
+      "schuerze": "#7a5232"
+    },
+    "brennerei": {
+      "hut": "kappe",
+      "schuerze": "#7a5232"
+    },
+    "mostkeller": {
+      "hut": "kappe",
+      "schuerze": "#7a5232"
+    },
+    "kelter": {
+      "hut": "kappe",
+      "schuerze": "#7a5232"
+    },
+    "weinkeller": {
+      "hut": "kappe",
+      "schuerze": "#7a5232"
+    },
+    "tuchmacherei": {
+      "hut": "kappe",
+      "schuerze": "#7a5232"
+    },
+    "gerberei": {
+      "hut": "kappe",
+      "schuerze": "#7a5232"
+    },
+    "saegewerk": {
+      "hut": "zimmermann"
+    },
+    "papiermuehle": {
+      "hut": "zimmermann"
+    },
+    "schaenke": {
+      "hut": "ohne",
+      "schuerze": "#f4f1ea",
+      "bart": "#8a6a50"
+    },
+    "junggesellen": {
+      "hut": "ohne",
+      "schuerze": "#f4f1ea"
+    },
+    "koehlerei": {
+      "hut": "pudel",
+      "hutFarbe": "#2b2b2b",
+      "bart": "#3a3a3a"
+    },
+    "grossmeiler": {
+      "hut": "pudel",
+      "hutFarbe": "#2b2b2b",
+      "bart": "#3a3a3a"
+    },
+    "raeucherei": {
+      "hut": "pudel",
+      "hutFarbe": "#2b2b2b"
+    },
+    "bienenstock": {
+      "hut": "imker"
+    },
+    "kartoffelfeld": {
+      "hut": "stroh"
+    },
+    "gerstenfeld": {
+      "hut": "stroh"
+    },
+    "obstwiese": {
+      "hut": "stroh"
+    },
+    "weinberg": {
+      "hut": "stroh"
+    },
+    "hopfengarten": {
+      "hut": "stroh"
+    },
+    "schafstall": {
+      "hut": "stroh"
+    },
+    "schafweide": {
+      "hut": "stroh"
+    },
+    "wacholderheide": {
+      "hut": "stroh"
+    },
+    "lohhecke": {
+      "hut": "stroh"
+    },
+    "senfmuehle": {
+      "hut": "stroh"
+    },
+    "fischerhuette": {
+      "hut": "pudel",
+      "hutFarbe": "#2e5d8a",
+      "bart": "#9a9a9a"
+    }
   }
 }

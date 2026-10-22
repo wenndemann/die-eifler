@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 import leben from '../data/leben.json';
 import { lebenAnker } from '../src/render/gebaeude';
 import { LebenDarstellung } from '../src/render/leben';
+import { fachwerk, ohneSchindeln } from '../src/render/mockup';
+import { figur, TRAEGER_TRACHT, type Tracht } from '../src/render/traeger';
 import { GEBAEUDE, GEBAEUDE_IDS } from '../src/sim/daten';
 import { Simulation } from '../src/sim/sim';
 import { baueTestKarte } from './sim-szenario';
@@ -47,6 +49,29 @@ describe('Lebendige Eifel', () => {
     expect(leben.schild.groesse).toBeGreaterThan(0);
   });
 
+  it('Berufe erkennbar: jeder Beruf und jeder Meister hat eine eigene Tracht, die Figur baut sich damit', () => {
+    const huete = new Set<string>();
+    for (const [b, t] of Object.entries(leben.berufe as Record<string, Tracht>)) { expect(t.hut, b).toBeTruthy(); huete.add(t.hut); }
+    // die fünf Berufe (Holzfäller, Förster, Steinbruch, Bauarbeiter, Planierer) unterscheiden sich schon am Hut
+    expect(huete.size).toBe(Object.keys(leben.berufe).length);
+    expect(huete.has(TRAEGER_TRACHT.hut)).toBe(false);
+    for (const [typ, t] of Object.entries(leben.meister as Record<string, Tracht>)) {
+      expect(GEBAEUDE[typ], typ).toBeTruthy();
+      const g = figur(t);
+      expect(g.attributes.position.count, typ).toBeGreaterThan(1000);
+      expect(g.attributes.aTeil.count, typ).toBe(g.attributes.position.count);
+    }
+    expect(figur(leben.meister.schmiede as Tracht).attributes.position.count).toBeGreaterThan(figur(TRAEGER_TRACHT).attributes.position.count);
+  });
+
+  it('Schindeldach auf den Spielgebäuden, Leisten in der Kulisse; Kontaktschatten unter dem Kleinkram', () => {
+    const zahl = (gs: { attributes: { position: { count: number } } }[]) => gs.reduce((n, g) => n + g.attributes.position.count, 0);
+    expect(zahl(fachwerk(12, 8, 2))).toBeGreaterThan(zahl(ohneSchindeln(() => fachwerk(12, 8, 2))) * 1.5);
+    const schatten = lebenAnker('wohnhaus').filter((a) => a.art === 'schatten');
+    expect(schatten.length).toBeGreaterThanOrEqual(3);
+    for (const a of schatten) expect(a.r).toBeGreaterThan(0);
+  });
+
   it('Nacht aus der Tageszeit: Mittag hell, Mitternacht dunkel, weiche Dämmerung', () => {
     expect(LebenDarstellung.nacht(0.5)).toBe(0);
     expect(LebenDarstellung.nacht(0)).toBe(1);
@@ -56,7 +81,7 @@ describe('Lebendige Eifel', () => {
   });
 
   it('Werte in data/leben.json sind vollständig; die Darstellung ändert die Simulation nicht', () => {
-    for (const k of ['fern_m', 'rauch', 'dampf', 'tiere', 'voegel', 'fenster', 'wind', 'konfetti', 'feuer', 'gras', 'schild']) expect(leben).toHaveProperty(k);
+    for (const k of ['fern_m', 'rauch', 'dampf', 'tiere', 'voegel', 'fenster', 'wind', 'konfetti', 'feuer', 'gras', 'schild', 'berufe', 'meister']) expect(leben).toHaveProperty(k);
     expect(leben.gras.max).toBeGreaterThan(0);
     // reine Darstellung: Anker abfragen lässt Prüfsumme und Zustand der Simulation unberührt
     const sim = new Simulation(baueTestKarte(), 3, { q: 0, r: 0 });

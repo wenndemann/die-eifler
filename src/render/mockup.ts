@@ -54,6 +54,14 @@ export function weicheKiste(w: number, h: number, d: number): THREE.BufferGeomet
 export const box = (w: number, h: number, d: number, x: number, y: number, z: number, color: string, ry = 0, rz = 0) =>
   paint(weicheKiste(w, h, d).rotateZ(rz).rotateY(ry).translate(x, y, z), color);
 
+/** Einzelne Schindeln aufs Dach legen (Spielgebäude); die Kulissenhäuser in der Ferne bleiben bei Leisten (weniger Dreiecke). */
+let schindeln = true;
+export function ohneSchindeln<T>(f: () => T): T {
+  const alt = schindeln;
+  schindeln = false;
+  try { return f(); } finally { schindeln = alt; }
+}
+
 /** Satteldach (Prisma), First entlang x, Traufe auf Höhe y. */
 export function roof(w: number, d: number, h: number, y: number, color = C.dach, giebel = C.wand) {
   // Stil: kräftiger Überstand
@@ -71,10 +79,28 @@ export function roof(w: number, d: number, h: number, y: number, color = C.dach,
   const dunkel = `#${new THREE.Color(color).multiplyScalar(0.72).getHexString()}`;
   const tief = `#${new THREE.Color(color).multiplyScalar(0.55).getHexString()}`;
   const neig = Math.atan2(h, z), lang = Math.hypot(h, z);
-  const n = Math.max(4, Math.round(lang / 1.3));
-  for (const sz of [1, -1]) for (let k = 1; k < n; k++) {
-    const t = k / n;
-    reihen.push(paint(new THREE.BoxGeometry(2 * x + 0.1, 0.14, 0.26).rotateX(sz * neig).translate(0, y + h * (1 - t) + 0.1, sz * z * t), k % 2 ? dunkel : color));
+  if (schindeln) {
+    // Schindeln bzw. Schieferplatten: versetzte Reihen einzelner Platten, jede leicht anders getönt und gekippt, die untere Kante
+    // steht vor (Treppe im Profil) – das Dach wirkt gedeckt statt glatt
+    const n = Math.max(4, Math.round(lang / 1.15)), sb = 1.35, tief = lang / n + 0.25;
+    const nx = Math.ceil((2 * x) / sb);
+    for (const sz of [1, -1]) for (let k = 0; k < n; k++) {
+      const t = (k + 0.55) / n, versatz = k % 2 ? sb / 2 : 0;
+      for (let i = -1; i <= nx; i++) {
+        const x0 = Math.max(-x, -x + i * sb - versatz), x1 = Math.min(x, -x + (i + 1) * sb - versatz);
+        if (x1 - x0 < 0.25) continue;
+        const r = Math.sin(i * 12.9898 + k * 78.233 + sz * 3.7) * 43758.5453, zuf = r - Math.floor(r);
+        const ton = `#${new THREE.Color(color).multiplyScalar(0.82 + 0.26 * zuf).getHexString()}`;
+        reihen.push(paint(new THREE.BoxGeometry(x1 - x0 - 0.07, 0.17, tief).rotateX(sz * (neig + 0.07 + 0.03 * zuf))
+          .translate((x0 + x1) / 2, y + h * (1 - t) + 0.13, sz * z * t), ton));
+      }
+    }
+  } else {
+    const n = Math.max(4, Math.round(lang / 1.3));
+    for (const sz of [1, -1]) for (let k = 1; k < n; k++) {
+      const t = k / n;
+      reihen.push(paint(new THREE.BoxGeometry(2 * x + 0.1, 0.14, 0.26).rotateX(sz * neig).translate(0, y + h * (1 - t) + 0.1, sz * z * t), k % 2 ? dunkel : color));
+    }
   }
   reihen.push(paint(new THREE.BoxGeometry(2 * x + 0.3, 0.45, 0.8).translate(0, y + h + 0.12, 0), tief));
   for (const sx of [1, -1]) for (const sz of [1, -1]) {
@@ -93,7 +119,7 @@ let dachErsatz: string | null = null;
  */
 export interface Anker {
   art: 'kamin' | 'fenster' | 'huhn' | 'waesche' | 'rad' | 'saege' | 'hammer' | 'esse' | 'schafe' | 'kuehe' | 'bienen' | 'muehle'
-    | 'kinder' | 'schwaetzer' | 'feuer' | 'dampf' | 'hund' | 'laterne' | 'schild';
+    | 'kinder' | 'schwaetzer' | 'feuer' | 'dampf' | 'hund' | 'laterne' | 'schild' | 'schatten';
   x: number; y: number; z: number;
   /** je nach Art: Drehung/Blickrichtung (rad), Radius bzw. Breite, Tiefe, Anzahl, Stärke, Farbe. */
   r?: number; w?: number; d?: number; n?: number; staerke?: number; farbe?: string; achse?: 'x' | 'z'; seite?: number;

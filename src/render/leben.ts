@@ -12,9 +12,10 @@ import type { SichtGebaeude, SimSicht } from '../sim/typen';
 import { PROMILLE } from '../sim/typen';
 import { lebenAnker, radGeometrie } from './gebaeude';
 import { Instanzen } from './instanzen';
+import { Kontaktschatten } from './kontakt';
 import { fernFaktor, TRAEGER_H, WARE_M } from './massstab';
 import { paint, weicheKiste, type Anker } from './mockup';
-import { FIGUR_ATTRIBUTE, GESTE, figur, material } from './traeger';
+import { FIGUR_ATTRIBUTE, GESTE, figur, material, type Tracht } from './traeger';
 import { warenGeometrie } from './waren';
 
 /** Lage eines Gebäudemodells (Modell-Nullpunkt und Skala), siehe Gebaeude.modellLage. */
@@ -230,6 +231,10 @@ export class LebenDarstellung {
   private figuren: Instanzen; private fenster: Instanzen; private schein: Instanzen; private konfetti: Instanzen; private holz: Instanzen; private flammen: Instanzen;
   private muehlen: Instanzen; private muehlenFluegel: Instanzen; private hunde: Instanzen; private lampen: Instanzen;
   private schildArme: Instanzen;
+  private kontakt: Kontaktschatten;
+  /** Meister vor arbeitenden Gebäuden, je Tracht ein Satz (erst angelegt, wenn gebraucht). */
+  private meisterSaetze = new Map<string, Instanzen>();
+  private figurMat = material();
   /** Zunftschild-Waren je Warenart (erst angelegt, wenn ein Gebäude sie zeigt). */
   private schildWaren = new Map<number, Instanzen>();
   private mat: THREE.MeshStandardMaterial;
@@ -268,6 +273,7 @@ export class LebenDarstellung {
     this.muehlen = new Instanzen(this.group, muehleGeo(), mat, false, true, [], 8);
     this.muehlenFluegel = new Instanzen(this.group, fluegelMuehleGeo(), doppelt, false, true, [], 8);
     this.hunde = new Instanzen(this.group, hundGeo(), mat, false, true, [], 8);
+    this.kontakt = new Kontaktschatten(this.group, 512);
     this.schildArme = new Instanzen(this.group, schildArmGeo(), mat, false, true, [], 64);
     this.lampen = new Instanzen(this.group, new THREE.SphereGeometry(0.4, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffffff' }), true, false, [], 16);
     // Flammen leuchten (Farbe über 1: bleibt auch nachts hell und speist das Leuchten der Nachbearbeitung)
@@ -295,6 +301,7 @@ export class LebenDarstellung {
       this.rauch.skala(px); this.glut.skala(px);
     }
     for (const x of this.alle()) x.beginne();
+    this.kontakt.beginne();
     // Windrichtung (fest von Westen, leicht pendelnd) in m/s für Rauch und Wäsche
     const wx = (1.5 + 6 * wind) * Math.cos(0.3 + 0.2 * Math.sin(t * 0.05)), wz = (1.5 + 6 * wind) * Math.sin(0.3 + 0.2 * Math.sin(t * 0.05)) * 0.5;
     const fest = s.dorf.fest && s.dorf.fest.laeuft > 0 ? KLEINE_FESTE[s.dorf.fest.nr]?.id ?? '' : '';
@@ -308,6 +315,7 @@ export class LebenDarstellung {
       const arbeitet = g.zustand === 'arbeitet' || g.zustand === 'fest';
       const anker = lebenAnker(g.typ);
       this.schild(g, anker, l, t, wind);
+      if (arbeitet) this.meister(g, anker, l, t, zahl);
       for (let i = 0; i < anker.length; i++) this.anker(g, anker[i], i, l, { t, dt, nacht, wind, winter, arbeitet, fest, kirmesFest, eigen: g.sp === s.ich, zahl, regen: lg.regen });
       // Vogelschwarm über großen Feldern (Felder mit weitem Grundriss), im Winter Raben
       if (/feld|garten|weinberg|wiese/.test(g.typ)) this.schwarm(g.id, l.x, l.y, l.z, l.sk, t, winter, zahl);
@@ -317,6 +325,7 @@ export class LebenDarstellung {
     this.rauch.schritt(dt, wx, wz, -0.02);
     this.glut.schritt(dt, wx * 0.3, wz * 0.3, 2);
     for (const x of this.alle()) x.fertig();
+    this.kontakt.fertig();
     zahl.rauch = this.rauch.anzahl; zahl.funken = this.glut.anzahl; zahl.konfetti = this.konfettiTeile.length;
     this.zahlen = zahl;
   }
@@ -324,7 +333,7 @@ export class LebenDarstellung {
   private alle(): Instanzen[] {
     return [this.schafe, this.kuehe, this.huehner, this.fluegelL, this.fluegelR, this.voegel, this.waesche, this.raeder, this.saegen, this.haemmer, this.figuren,
       this.fenster, this.schein, this.konfetti, this.holz, this.flammen, this.muehlen, this.muehlenFluegel, this.hunde, this.lampen, this.schildArme,
-      ...this.schildWaren.values()];
+      ...this.schildWaren.values(), ...this.meisterSaetze.values()];
   }
 
   /** Zunftschild am ersten Schild-Anker: die Ware, die das Gebäude macht, hängt am Arm und schwingt im Wind (so erkennt man auch
@@ -350,6 +359,27 @@ export class LebenDarstellung {
     p.set(0, -WARE_M * gr, 0).applyQuaternion(q).add(this.s2.set(x, y - 0.3 * sk, z + 2.2 * sk));
     m.compose(p, q, sc.setScalar(gr));
     satz.fuege(m);
+  }
+
+  /** Meister vor dem arbeitenden Gebäude in der Tracht seines Berufs (data/leben.json: meister): Schmied mit Lederschürze, Koch mit
+   *  Kochmütze, Käserin mit Haube, Bauer mit Strohhut … steht neben der Tür, schaut umher, winkt oder kratzt sich ab und zu. */
+  private meister(g: SichtGebaeude, anker: readonly Anker[], l: { x: number; y: number; z: number; sk: number }, t: number, zahl: LebenDarsZahl): void {
+    const tracht = (leben.meister as Record<string, Tracht>)[g.typ];
+    if (!tracht) return;
+    let satz = this.meisterSaetze.get(g.typ);
+    if (!satz) {
+      satz = new Instanzen(this.group, figur(tracht), this.figurMat, true, true, FIGUR_ATTRIBUTE, 8);
+      satz.beginne();
+      this.meisterSaetze.set(g.typ, satz);
+    }
+    const a = anker.find((x) => x.art === 'schild');
+    // an der vorderen linken Hausecke (vor der Tür steht die Fahne, rechts hängt das Zunftschild), Blick nach vorn
+    const mx = a ? -a.x - 2.6 : 4, mz = a ? a.z + 1.6 : 7;
+    const x = l.x + mx * l.sk, z = l.z + mz * l.sk;
+    const takt = (t * 0.12 + h01(g.id, 9)) % 1;
+    const geste = takt < 0.12 ? GESTE.winken : takt > 0.55 && takt < 0.65 ? GESTE.kratzen : GESTE.keine;
+    const yaw = 0.4 * Math.sin(t * 0.3 + g.id);
+    this.figur(x, z, yaw, t * 2 + g.id, SCHWAETZER[g.id % SCHWAETZER.length], 0, geste, 0.7, 0, 1, zahl, satz);
   }
 
   /** Ein Anker eines Gebäudes. */
@@ -411,6 +441,9 @@ export class LebenDarstellung {
         o.zahl.fenster++;
         break;
       }
+      case 'schatten':
+        this.kontakt.setze(x, this.hoehe(x, z), z, (a.r ?? 1) * sk);
+        break;
       case 'huhn': {
         // picken (Kopf nach unten) und ein paar Schritte im Kreis
         const tt = o.t * leben.tiere.huhn + ph;
@@ -420,6 +453,7 @@ export class LebenDarstellung {
         q.setFromAxisAngle(this.Y, (a.r ?? 0) + Math.sin(tt * 0.5) * 1.2).multiply(this.q2.setFromAxisAngle(this.Z, -pick));
         m.compose(p.set(px, this.hoehe(px, pz) + 0.02, pz), q, sc.setScalar(sk * 1.05));
         this.huehner.fuege(m, a.farbe && a.farbe !== '#f4efe4' ? HUHN_BRAUN : WEISS);
+        this.kontakt.setze(px, this.hoehe(px, pz), pz, 0.7 * sk);
         o.zahl.tiere++;
         break;
       }
@@ -501,6 +535,7 @@ export class LebenDarstellung {
           const gr = a.art === 'schafe' ? 1.25 : 1.4;
           m.compose(p.set(px, this.hoehe(px, pz) + Math.abs(Math.sin(o.t * 5 + pj)) * 0.12 * lauf * sk, pz), q, sc.setScalar(sk * gr));
           (a.art === 'schafe' ? this.schafe : this.kuehe).fuege(m);
+          this.kontakt.setze(px, this.hoehe(px, pz), pz, (a.art === 'schafe' ? 1.3 : 1.7) * sk, Math.atan2(-dz, dx) + Math.PI / 2, 1.5);
           o.zahl.tiere++;
         }
         break;
@@ -575,6 +610,7 @@ export class LebenDarstellung {
         q.setFromAxisAngle(this.Y, -w - Math.PI / 2).multiply(this.q2.setFromAxisAngle(this.Z, lauf < 0.3 ? -0.2 : Math.sin(o.t * 9) * 0.04));
         m.compose(p.set(px, this.hoehe(px, pz) + Math.abs(Math.sin(o.t * 8)) * 0.15 * sk * lauf, pz), q, sc.setScalar(sk * 1.5));
         this.hunde.fuege(m);
+        this.kontakt.setze(px, this.hoehe(px, pz), pz, 1.1 * sk);
         o.zahl.tiere++;
         break;
       }
@@ -595,13 +631,14 @@ export class LebenDarstellung {
     }
   }
 
-  private figur(x: number, z: number, yaw: number, phase: number, farbe: THREE.Color, lauf: number, geste: number, laune: number, kipp: number, groesse: number, zahl: LebenDarsZahl): void {
+  private figur(x: number, z: number, yaw: number, phase: number, farbe: THREE.Color, lauf: number, geste: number, laune: number, kipp: number, groesse: number, zahl: LebenDarsZahl, satz = this.figuren): void {
     const y = this.hoehe(x, z);
     const f = this.kamera ? fernFaktor(this.kamera.position.distanceTo(this.p.set(x, y, z))) : 1;
     const sk = TRAEGER_H * f * groesse;
     this.q.setFromAxisAngle(this.Y, yaw).multiply(this.q2.setFromAxisAngle(this.Z, kipp));
     this.m.compose(this.p.set(x, y, z), this.q, this.s.set(sk, sk, sk));
-    this.figuren.fuege(this.m, farbe, [phase, 0, lauf, laune, geste]);
+    satz.fuege(this.m, farbe, [phase, 0, lauf, laune, geste]);
+    this.kontakt.setze(x, y, z, 0.32 * sk);
     zahl.figuren++;
   }
 

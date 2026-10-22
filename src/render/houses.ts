@@ -10,7 +10,7 @@ import type { MapData } from '../map/mapdata';
 import { HexGrid } from '../map/hex';
 import { FLAG } from '../welt/format';
 import { hash } from './terrain';
-import { fachwerk, mitAnkern, C } from './mockup';
+import { fachwerk, mitAnkern, ohneSchindeln, C } from './mockup';
 import { HAUS_SKALE, NEBENBAU_P, NACHBAR_P } from './massstab';
 
 /** Bautypen (echte Maße in m: Breite entlang des Firsts, Tiefe, Stockwerke). */
@@ -153,7 +153,7 @@ export class Houses {
     TYPEN.forEach((ty, n) => {
       const liste = haeuser.filter((h) => h.typ === n);
       if (!liste.length) return;
-      const geo = mergeGeometries(fachwerk(ty.w, ty.d, ty.floors, ty.wall, ty.dach))!;
+      const geo = mergeGeometries(ohneSchindeln(() => fachwerk(ty.w, ty.d, ty.floors, ty.wall, ty.dach)))!;
       // Fenster als Leuchtflächen (gleiche Lage wie die Fenster des Modells, leicht davor)
       const fenster = mitAnkern(() => fachwerk(ty.w, ty.d, ty.floors, ty.wall, ty.dach)).anker.filter((a) => a.art === 'fenster');
       const lichtGeo = fenster.length ? mergeGeometries(fenster.map((a) => new THREE.PlaneGeometry(a.w ?? 1, 1.15)

@@ -13,6 +13,7 @@ import { WARE } from '../sim/daten';
 import { paint } from './mockup';
 import { VOELKCHEN } from '../sim/voelkchen';
 import { Instanzen } from './instanzen';
+import { Kontaktschatten } from './kontakt';
 import { TRAEGER_H, WARE_TRAGEN, fernFaktor } from './massstab';
 import { WAREN_ANZAHL, warenGeometrie } from './waren';
 import { kurvenPunkt, type Pkt } from './wege';
@@ -34,7 +35,100 @@ function rohr(a: [number, number, number], b: [number, number, number], r1: numb
   return paint(g, farbe);
 }
 
-export function figur(): THREE.BufferGeometry {
+/**
+ * Tracht (Berufe erkennbar, Gutachter): Kopfbedeckung, Schürze und Bart. Hut-Farben stehen fest (nur die Kappe der Träger nimmt die
+ * Trachtfarbe an), das Hemd färbt weiter die Instanzfarbe.
+ */
+export type Hut = 'kappe' | 'pudel' | 'jaeger' | 'leder' | 'zimmermann' | 'stroh' | 'koch' | 'haube' | 'stirnband' | 'imker' | 'ohne';
+export interface Tracht { hut: Hut; hutFarbe?: string; schuerze?: string; bart?: string }
+export const TRAEGER_TRACHT: Tracht = { hut: 'kappe' };
+
+/** Kopfbedeckung um den Kopf (Mitte 0, 0.74, 0; Radius 0.235), leicht in den Nacken geschoben wie die Kappe. */
+function hut(t: Tracht, nacken: (g: THREE.BufferGeometry) => THREE.BufferGeometry): void {
+  const f = t.hutFarbe;
+  const halbkugel = (r: number, y: number, farbe: string, sy = 1) => paint(new THREE.SphereGeometry(r, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, sy, 1).translate(0, y, 0), farbe);
+  const walze = (r1: number, r2: number, h: number, y: number, farbe: string, seg = 14) => paint(new THREE.CylinderGeometry(r1, r2, h, seg).translate(0, y, 0), farbe);
+  switch (t.hut) {
+    case 'kappe':
+      add(nacken(paint(new THREE.SphereGeometry(0.245, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, 0.83, 0), '#d8cfc4')), 0, [0, 0, 0], 1);
+      add(nacken(paint(new THREE.BoxGeometry(0.26, 0.03, 0.12).translate(0, 0.84, 0.2), '#9a9088')), 0, [0, 0, 0], 1);
+      add(nacken(paint(new THREE.SphereGeometry(0.06, 5, 4).translate(0, 1.08, 0), '#f3e9d2')));
+      break;
+    case 'pudel': {
+      // Strickmütze mit Umschlag und dickem Bommel (Holzfäller, Köhler)
+      const c = f ?? '#c8372d';
+      add(nacken(halbkugel(0.25, 0.8, c, 1.35)));
+      add(nacken(walze(0.255, 0.255, 0.09, 0.83, `#${new THREE.Color(c).multiplyScalar(0.7).getHexString()}`)));
+      add(nacken(paint(new THREE.SphereGeometry(0.09, 7, 5).translate(0, 1.15, 0), '#f3ead8')));
+      break;
+    }
+    case 'jaeger': {
+      // Försterhut: grüner Filz, breite Krempe, Hutband, Feder
+      const c = f ?? '#3f5f2e';
+      add(nacken(walze(0.4, 0.4, 0.035, 0.88, c, 16)));
+      add(nacken(walze(0.15, 0.21, 0.22, 0.99, c)));
+      add(nacken(walze(0.212, 0.212, 0.05, 0.92, '#6b3a1e')));
+      add(nacken(paint(new THREE.ConeGeometry(0.035, 0.36, 5).rotateZ(-0.5).translate(0.25, 1.06, -0.02), '#e8dcb0')));
+      break;
+    }
+    case 'leder': {
+      // Lederkappe mit Schirm und Schutzbrille (Steinbruch)
+      add(nacken(halbkugel(0.255, 0.82, f ?? '#7a5434')));
+      add(nacken(paint(new THREE.BoxGeometry(0.3, 0.035, 0.16).translate(0, 0.83, 0.22), '#5a3c24')));
+      for (const sx of [-1, 1]) add(nacken(paint(new THREE.TorusGeometry(0.05, 0.018, 4, 10).translate(sx * 0.075, 0.93, 0.2), '#2a2a2a')));
+      for (const sx of [-1, 1]) add(nacken(paint(new THREE.CircleGeometry(0.045, 10).translate(sx * 0.075, 0.93, 0.205), '#8fc0d8')));
+      break;
+    }
+    case 'zimmermann':
+      // schwarzer Zimmermannshut mit breiter Krempe (Bauleute, Sägewerk)
+      add(nacken(walze(0.44, 0.44, 0.035, 0.88, f ?? '#26221f', 18)));
+      add(nacken(walze(0.19, 0.21, 0.2, 0.99, f ?? '#26221f')));
+      break;
+    case 'stroh':
+      // Strohhut mit rotem Band (Felder, Hof)
+      add(nacken(walze(0.46, 0.46, 0.03, 0.88, f ?? '#e6c46a', 18)));
+      add(nacken(walze(0.19, 0.22, 0.16, 0.97, f ?? '#dcb85a')));
+      add(nacken(walze(0.222, 0.222, 0.045, 0.92, '#c0392b')));
+      break;
+    case 'koch':
+      // hohe weiße Kochmütze
+      add(walze(0.2, 0.2, 0.22, 1.0, '#fbfbf8'));
+      add(paint(new THREE.SphereGeometry(0.26, 12, 8).scale(1, 0.7, 1).translate(0, 1.18, 0), '#fbfbf8'));
+      break;
+    case 'haube':
+      // weiße Haube mit Knoten hinten (Käserei, Molkerei, Spinnerei)
+      add(nacken(halbkugel(0.255, 0.8, '#f6f3ec', 1.05)));
+      add(nacken(paint(new THREE.SphereGeometry(0.07, 6, 5).translate(0, 0.86, -0.24), '#f6f3ec')));
+      break;
+    case 'stirnband':
+      // Schmied: Stirnband, kurzes Haar
+      add(halbkugel(0.24, 0.79, '#4a3020', 0.8));
+      add(paint(new THREE.TorusGeometry(0.238, 0.03, 5, 16).rotateX(Math.PI / 2).translate(0, 0.86, 0), f ?? '#b8322a'));
+      break;
+    case 'imker':
+      // Imkerhut mit Schleier
+      add(walze(0.38, 0.38, 0.03, 0.95, '#f4efe0', 16));
+      add(walze(0.18, 0.2, 0.14, 1.03, '#f4efe0'));
+      add(paint(new THREE.CylinderGeometry(0.36, 0.3, 0.32, 14, 1, true).translate(0, 0.79, 0), '#cfd2c8'));
+      break;
+    case 'ohne':
+      // Glatze mit Haarkranz (Wirt)
+      add(paint(new THREE.TorusGeometry(0.2, 0.045, 5, 14).rotateX(Math.PI / 2).translate(0, 0.78, -0.03), '#8a6a50'));
+      break;
+  }
+}
+
+/** Schürze (vorn über dem Bauch) und Vollbart. */
+function zusatz(t: Tracht): void {
+  if (t.schuerze) {
+    add(paint(new THREE.CylinderGeometry(0.248, 0.262, 0.32, 12, 1, true, -1.05, 2.1).translate(0, 0.33, 0), t.schuerze));
+    add(paint(new THREE.BoxGeometry(0.16, 0.12, 0.02).translate(0, 0.53, 0.2), t.schuerze));
+  }
+  // Mitte knapp über 0,6: wächst mit dem Kopf (Stil-Skalierung unten)
+  if (t.bart) add(paint(new THREE.SphereGeometry(0.17, 10, 7).scale(1.05, 0.8, 0.7).translate(0, 0.605, 0.15), t.bart));
+}
+
+export function figur(tracht: Tracht = TRAEGER_TRACHT): THREE.BufferGeometry {
   teile.length = 0;
   const HOSE = '#6b4a2e', STIEFEL = '#2c2118', HAUT = '#f1bf96', NASE = '#e98a73';
   for (const [i, sx] of [[1, -1], [2, 1]] as const) {
@@ -72,10 +166,9 @@ export function figur(): THREE.BufferGeometry {
   // Kappe mit Schirm und Bommel
   // Kappe in den Nacken geschoben, damit man das Gesicht auch von schräg oben sieht (Spielkamera)
   const nacken = (g: THREE.BufferGeometry) => g.translate(0, -0.74, 0).rotateX(-0.42).translate(0, 0.74, -0.02);
-  // Kappe in der Trachtfarbe (Tint), damit das Gewimmel bunt ist und nicht lauter rote Punkte
-  add(nacken(paint(new THREE.SphereGeometry(0.245, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, 0.83, 0), '#d8cfc4')), 0, [0, 0, 0], 1);
-  add(nacken(paint(new THREE.BoxGeometry(0.26, 0.03, 0.12).translate(0, 0.84, 0.2), '#9a9088')), 0, [0, 0, 0], 1);
-  add(nacken(paint(new THREE.SphereGeometry(0.06, 5, 4).translate(0, 1.08, 0), '#f3e9d2')));
+  // Kopfbedeckung je Tracht; die Kappe der Träger in der Trachtfarbe (Tint), damit das Gewimmel bunt ist
+  hut(tracht, nacken);
+  zusatz(tracht);
   // Arme: Gelenk an der Schulter, Hand als Kugel
   for (const [i, sx] of [[3, -1], [4, 1]] as const) {
     const sch: [number, number, number] = [sx * 0.25, 0.54, 0];
@@ -215,6 +308,7 @@ export class Traeger {
   /** Wenn gesetzt: Figuren wachsen mit dem Kameraabstand (Lesbarkeit von weit weg). */
   kamera: THREE.Camera | null = null;
   private figuren: Instanzen;
+  private kontakt: Kontaktschatten;
   private waren: Instanzen[] = [];
   private zustand = new Map<Id, Zustand>();
   private kanten = new Map<string, Kante>();
@@ -233,6 +327,7 @@ export class Traeger {
   constructor(private map: MapData, private grid: HexGrid, private base: number, ex: number) {
     this.ex = ex;
     this.figuren = new Instanzen(this.group, figur(), material(), true, true, FIGUR_ATTRIBUTE, 256);
+    this.kontakt = new Kontaktschatten(this.group, 256);
     const matte = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: false });
     for (let a = 0; a < WAREN_ANZAHL; a++) this.waren.push(new Instanzen(this.group, warenGeometrie(a), matte, false, true, [], 256));
   }
@@ -274,6 +369,7 @@ export class Traeger {
     this.baueKanten(sicht);
     this.runde++;
     this.figuren.beginne();
+    this.kontakt.beginne();
     for (const w of this.waren) w.beginne();
     const { map, base, ex, m, q, p, s, farbe } = this;
     const dl = dorfLaune(sicht);
@@ -312,6 +408,7 @@ export class Traeger {
       const laune = eigen ? (schwer && !dl.fest ? Math.min(dl.laune, -0.3) : dl.laune) : 0.2;
       const geste = t.tut === 'uebergibt' ? GESTE.winken : t.tut === 'wartet' ? (eigen && dl.fest ? GESTE.jubeln : t.id % 3 === 0 ? GESTE.kratzen : GESTE.keine) : GESTE.keine;
       this.figuren.fuege(m, trachtFarbe(farbe, t.id, sicht.spieler[t.sp]?.voelkchen), [st.phase, trage, lauf ? 1 : t.tut === 'uebergibt' ? 0.35 : 0.1, laune, geste]);
+      this.kontakt.setze(x, y, z, 0.32 * sk);
       if (trage && t.ware < WAREN_ANZAHL) {
         // Ware über dem Kopf, wippt mit
         const wip = lauf ? Math.abs(Math.sin(st.phase)) * 0.05 * sk : 0;
@@ -325,6 +422,7 @@ export class Traeger {
       }
     }
     this.figuren.fertig();
+    this.kontakt.fertig();
     for (const w of this.waren) w.fertig();
     if (this.zustand.size > sicht.traeger.length + 16) {
       for (const [id, z] of this.zustand) if (z.benutzt !== this.runde) this.zustand.delete(id);
