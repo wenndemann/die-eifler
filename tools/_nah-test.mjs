@@ -26,6 +26,7 @@ const r = await page.evaluate(async ({ typ, tag, fest, abstand }) => {
   const l = sp.leben, orig = l.update.bind(l);
   l.update = (s, dt, lg) => orig({ ...s, gebaeude: s.gebaeude.map((g) => (g.bau >= 1000 ? { ...g, zustand: 'arbeitet' } : g)), dorf: nr >= 0 ? { ...s.dorf, fest: { nr, liste: [], laeuft: 500, geliefert: [] } } : s.dorf }, dt, lg);
   sp.wetterVorgabe = { tag: Number(tag) };
+  sp.pause(false);
   const g = sp.sicht.gebaeude.find((x) => x.typ === typ);
   const lg = sp.gebaeude.modellLage(g.id, g.typ);
   e.cam.pitchOverride = 32; e.cam.jumpTo(lg.x + 10, lg.z + 20, abstand, 0.5); e.settle();

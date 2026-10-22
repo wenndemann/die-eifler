@@ -50,8 +50,8 @@ void main() {
   } else {
     // Comic-Wölkchen (STIL.md §6b): deckend, oben hell, unten schattig, mit warmbraunem Rand wie die Linie
     float d = sqrt(r);
-    float licht = 0.9 + 0.16 * (-p.y) + 0.06 * (-p.x);
-    vec3 c = mix(vFarbe * licht, vFarbe * vec3(0.62, 0.56, 0.5), smoothstep(0.8, 0.92, d));
+    float licht = 1.0 + 0.14 * (-p.y) + 0.05 * (-p.x);
+    vec3 c = mix(vFarbe * licht, vFarbe * vec3(0.66, 0.58, 0.5), smoothstep(0.86, 0.95, d));
     gl_FragColor = vec4(c, vAlpha * smoothstep(1.0, 0.94, d));
   }
   #include <fog_fragment>
@@ -376,8 +376,9 @@ export class LebenDarstellung {
           this.rauch.neu({
             x: x + (Math.random() - 0.5) * sk * 0.4, y, z: z + (Math.random() - 0.5) * sk * 0.4,
             vx: (Math.random() - 0.5) * 1.2, vy: d.steigen * (0.7 + Math.random() * 0.5) * (0.6 + 0.4 * sk / 4.4), vz: (Math.random() - 0.5) * 1.2,
-            dauer: d.dauer_s * (0.8 + Math.random() * 0.4), g0, g1: g0 + d.wachsen * d.dauer_s * sk * 0.22,
-            a: a.art === 'dampf' ? 0.8 : dunkel ? 0.9 : 0.85, r: f.r, g: f.g, b: f.b,
+            // wächst beim Steigen, aber höchstens auf das 2,4-Fache (keine Nebelblasen, Gutachter)
+            dauer: d.dauer_s * (0.8 + Math.random() * 0.4), g0, g1: Math.min(g0 * 2.4, g0 + d.wachsen * d.dauer_s * sk * 0.22),
+            a: a.art === 'dampf' ? 0.9 : 1, r: f.r, g: f.g, b: f.b,
           });
         }
         this.takt.set(key, acc);

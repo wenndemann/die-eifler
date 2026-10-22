@@ -54,10 +54,10 @@
   },
   "gras": {
     "radius_m": 520,
-    "zelle_m": 8,
-    "dichte": 0.8,
-    "hoehe_m": 6,
-    "max": 9000,
+    "zelle_m": 7,
+    "dichte": 0.9,
+    "hoehe_m": 3.6,
+    "max": 11000,
     "neu_ab_m": 90,
     "bis_abstand_m": 1600
   },

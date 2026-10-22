@@ -15,11 +15,12 @@ const G = leben.gras;
 /** Ein Büschel aus schmalen, leicht gebogenen Halmen (Spitze hell, Fuß dunkel), Höhe 1. */
 function buescheGeo(): THREE.BufferGeometry {
   const pos: number[] = [], col: number[] = [];
-  const n = 7;
+  // dichtes, weiches Büschel (Stil: gemalt, nicht stachelig): viele breite, kurze Halme, außen niedriger und stärker geneigt
+  const n = 11;
   for (let i = 0; i < n; i++) {
-    const a = (i / n) * Math.PI * 2 + i * 0.7, r = 0.12 + (i % 3) * 0.08, h = 0.65 + ((i * 37) % 10) / 28;
-    const bx = Math.cos(a) * r, bz = Math.sin(a) * r, nx = Math.cos(a) * 0.32, nz = Math.sin(a) * 0.32;
-    const w = 0.07, px = -Math.sin(a) * w, pz = Math.cos(a) * w;
+    const a = (i / n) * Math.PI * 2 + i * 0.7, r = 0.08 + (i % 3) * 0.1, h = 0.55 + ((i * 37) % 10) / 22 - r * 0.6;
+    const bx = Math.cos(a) * r, bz = Math.sin(a) * r, nx = Math.cos(a) * (0.25 + r), nz = Math.sin(a) * (0.25 + r);
+    const w = 0.13, px = -Math.sin(a) * w, pz = Math.cos(a) * w;
     // zwei Dreiecke je Halm: breit unten, spitz oben, nach außen geneigt
     const mx = bx + nx * 0.5, mz = bz + nz * 0.5, my = h * 0.55;
     pos.push(bx - px, 0, bz - pz, bx + px, 0, bz + pz, mx + px * 0.6, my, mz + pz * 0.6);
@@ -27,7 +28,7 @@ function buescheGeo(): THREE.BufferGeometry {
     pos.push(mx - px * 0.6, my, mz - pz * 0.6, mx + px * 0.6, my, mz + pz * 0.6, bx + nx, h, bz + nz);
     for (let k = 0; k < 9; k++) {
       const y = [0, 0, my, 0, my, my, my, my, h][k] / h;
-      col.push(0.55 + 0.45 * y, 0.6 + 0.4 * y, 0.5 + 0.3 * y);
+      col.push(0.7 + 0.32 * y, 0.72 + 0.3 * y, 0.62 + 0.2 * y);
     }
   }
   const g = new THREE.BufferGeometry();

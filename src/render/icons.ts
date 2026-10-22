@@ -11,37 +11,35 @@ import { warenGeometrie } from './waren';
 export interface Icons { ware: (string | undefined)[]; gebaeude: Record<string, string | undefined> }
 
 const GROESSE = 96;
-/** Gerendert wird größer und dann auf das Motiv zugeschnitten: Kleinkram am Rand macht das Gebäude sonst winzig (Gutachter). */
-const ROH = 256;
+/** Rand um das Motiv (Anteil der Bildbreite) beim Zuschneiden. */
+const RAND = 0.04;
+const _v = new THREE.Vector3();
 
-/** Auf die sichtbaren Pixel zuschneiden (mit etwas Rand) und quadratisch auf GROESSE bringen. */
-function zuschneiden(quelle: HTMLCanvasElement): string {
-  const roh = document.createElement('canvas');
-  roh.width = roh.height = ROH;
-  const r = roh.getContext('2d')!;
-  r.drawImage(quelle, 0, 0);
-  const px = r.getImageData(0, 0, ROH, ROH).data;
-  let x0 = ROH, y0 = ROH, x1 = -1, y1 = -1;
-  for (let y = 0; y < ROH; y++) for (let x = 0; x < ROH; x++) {
-    if (px[(y * ROH + x) * 4 + 3] < 24) continue;
-    if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+/**
+ * Bildausschnitt aufs Motiv: die Modellpunkte projizieren (ohne Pixel zurückzulesen) und die Kamera per View-Offset quadratisch
+ * auf ihr Rechteck setzen. Kleinkram am Rand macht das Gebäude so nicht mehr winzig (Gutachter).
+ */
+function aufsMotiv(kamera: THREE.PerspectiveCamera, geo: THREE.BufferGeometry): void {
+  kamera.clearViewOffset();
+  kamera.updateMatrixWorld();
+  const pos = geo.attributes.position;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const schritt = Math.max(1, Math.floor(pos.count / 4000));
+  for (let i = 0; i < pos.count; i += schritt) {
+    _v.fromBufferAttribute(pos, i).project(kamera);
+    if (_v.x < x0) x0 = _v.x; if (_v.x > x1) x1 = _v.x; if (_v.y < y0) y0 = _v.y; if (_v.y > y1) y1 = _v.y;
   }
-  const aus = document.createElement('canvas');
-  aus.width = aus.height = GROESSE;
-  if (x1 >= 0) {
-    const seite = Math.max(x1 - x0, y1 - y0) + 1, rand = 3;
-    const sx = (x0 + x1 + 1) / 2 - seite / 2, sy = (y0 + y1 + 1) / 2 - seite / 2;
-    const a = aus.getContext('2d')!;
-    a.imageSmoothingQuality = 'high';
-    a.drawImage(roh, sx, sy, seite, seite, rand, rand, GROESSE - 2 * rand, GROESSE - 2 * rand);
-  }
-  return aus.toDataURL('image/png');
+  if (!(x1 > x0 && y1 > y0)) return;
+  // Normgeräte-Koordinaten (−1..1, y nach oben) in Pixel eines gedachten Vollbilds der Größe GROESSE
+  const seite = (Math.max(x1 - x0, y1 - y0) / 2 + 2 * RAND) * GROESSE;
+  const mx = ((x0 + x1) / 4 + 0.5) * GROESSE, my = (0.5 - (y0 + y1) / 4) * GROESSE;
+  kamera.setViewOffset(GROESSE, GROESSE, mx - seite / 2, my - seite / 2, seite, seite);
 }
 const SPEICHER = 'eifeler.icons';
 /** Schlüssel: ändert sich mit Waren (Form, Farbe), Gebäuden und Größe. */
 const SCHLUESSEL = (() => {
   const f = new Fnv2();
-  f.text(`${GROESSE}|${ROH}|zu|${WAREN.join(',')}|${WAREN_FORM.join(',')}|${WAREN_FARBE.join(',')}|${GEBAEUDE_IDS.join(',')}`);
+  f.text(`${GROESSE}|motiv|${WAREN.join(',')}|${WAREN_FORM.join(',')}|${WAREN_FARBE.join(',')}|${GEBAEUDE_IDS.join(',')}`);
   return f.hex();
 })();
 
@@ -86,10 +84,10 @@ async function rendere(): Promise<void> {
   const pause = () => new Promise<void>((ok) => setTimeout(ok, 0));
   try {
     const canvas = document.createElement('canvas');
-    canvas.width = canvas.height = ROH;
+    canvas.width = canvas.height = GROESSE;
     renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
     renderer.setPixelRatio(1);
-    renderer.setSize(ROH, ROH, false);
+    renderer.setSize(GROESSE, GROESSE, false);
     renderer.setClearColor(0x000000, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     const szene = new THREE.Scene();
@@ -107,9 +105,10 @@ async function rendere(): Promise<void> {
       // Blick wie die Spielkamera: von Süden schräg oben, leicht gedreht
       kamera.position.copy(k.center).addScaledVector(richt, (k.radius / Math.sin(THREE.MathUtils.degToRad(14))) * 1.02);
       kamera.lookAt(k.center);
+      aufsMotiv(kamera, geo);
       renderer!.render(szene, kamera);
       szene.remove(m);
-      return zuschneiden(renderer!.domElement);
+      return renderer!.domElement.toDataURL('image/png');
     };
     const neu: Icons = { ware: [], gebaeude: {} };
     for (let a = 0; a < WAREN.length; a++) { neu.ware[a] = bild(warenGeometrie(a)); await pause(); }
