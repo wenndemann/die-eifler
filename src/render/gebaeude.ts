@@ -931,8 +931,12 @@ function modellRoh(typ: string, phase: number, key: string): THREE.BufferGeometr
 }
 
 /** Fertiges Modell eines Gebäudetyps (Vertexfarben, Meter wie im Modell), z. B. für die Icons (src/render/icons.ts). */
-export function gebaeudeGeometrie(typ: string): THREE.BufferGeometry {
-  return modell(typ, 3);
+export function gebaeudeGeometrie(typ: string, ohneKleinkram = false): THREE.BufferGeometry {
+  if (!ohneKleinkram) return modell(typ, 3);
+  // fürs Icon nur das Gebäude selbst (Kleinkram am Rand macht es im Bild sonst winzig); Anker werden gesammelt und verworfen
+  const g = mergeGeometries(mitAnkern(() => TYPEN[modellTyp(typ)].fertig()).wert)!;
+  if (!g.attributes.normal) g.computeVertexNormals();
+  return g;
 }
 
 /** Bauphase 1..3 aus bau (Formel wie in src/sim/typen.ts). */

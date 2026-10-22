@@ -39,7 +39,7 @@ const SPEICHER = 'eifeler.icons';
 /** Schlüssel: ändert sich mit Waren (Form, Farbe), Gebäuden und Größe. */
 const SCHLUESSEL = (() => {
   const f = new Fnv2();
-  f.text(`${GROESSE}|motiv|${WAREN.join(',')}|${WAREN_FORM.join(',')}|${WAREN_FARBE.join(',')}|${GEBAEUDE_IDS.join(',')}`);
+  f.text(`${GROESSE}|motiv2|${WAREN.join(',')}|${WAREN_FORM.join(',')}|${WAREN_FARBE.join(',')}|${GEBAEUDE_IDS.join(',')}`);
   return f.hex();
 })();
 
@@ -113,7 +113,7 @@ async function rendere(): Promise<void> {
     const neu: Icons = { ware: [], gebaeude: {} };
     // in Paketen zu je 8 (dazwischen läuft das Spiel weiter): sonst wartet jedes Icon auf ein ganzes Spielbild
     for (let a = 0; a < WAREN.length; a++) { neu.ware[a] = bild(warenGeometrie(a)); if (a % 8 === 7) await pause(); }
-    for (let i = 0; i < GEBAEUDE_IDS.length; i++) { const id = GEBAEUDE_IDS[i]; neu.gebaeude[id] = bild(gebaeudeGeometrie(id)); if (i % 8 === 7) await pause(); }
+    for (let i = 0; i < GEBAEUDE_IDS.length; i++) { const id = GEBAEUDE_IDS[i]; neu.gebaeude[id] = bild(gebaeudeGeometrie(id, true)); if (i % 8 === 7) await pause(); }
     mat.dispose();
     aktuell.ware = neu.ware; aktuell.gebaeude = neu.gebaeude;
     try { localStorage.setItem(SPEICHER, JSON.stringify({ schluessel: SCHLUESSEL, icons: neu })); } catch { /* Speicher voll: nächstes Mal neu */ }
