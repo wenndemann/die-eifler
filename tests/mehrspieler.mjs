@@ -5,7 +5,7 @@
 // Statistik und Autosave im Mehrspieler. M8: Lagerregel und Bauleute-Wunsch über das Lagerfenster, Jahreszeit und Wetter bei beiden gleich.
 // M10: Regeln (Gebiet, Ziel), Gebiet und Eifel-Punkte bei beiden gleich, Ortsfenster. M11: Völkchen beider Dörfer bei beiden gleich. M12: Uhrzeit
 // und Wetter-Optik (Talnebel/Aue) bei beiden gleich. M14: Mainacht und Maibäume bei beiden gleich. M15: Nacht, Zollhäuser, Grenzsteine,
-// Teile des Großen Funds und Reiz bei beiden gleich, Grenzstein-Befehl des Gasts im Protokoll beider.
+// Teile des Großen Funds und Reiz bei beiden gleich, Grenzstein-Befehl des Gasts im Protokoll beider; Lebendige Eifel läuft in beiden.
 //
 // Läuft in npm run test:smoke mit; allein:  node tests/mehrspieler.mjs   (Server und Vite startet es selbst)
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
@@ -250,6 +250,7 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
         reiz: [0, 1].map((i) => sim.sicht(i).dorf.grenz.reiz).join(','),
         befehl: sim.protokoll({ version: '', q: 0, r: 0, size: '', pruefsumme: '' }).befehle.some((e) => e.befehl.art === 'grenzstein' && e.spieler === 1),
         kaffee: s.dorf.verteilung.length === s.dorf.erzeugt.length,
+        leben: !!sp.leben?.zahlen && sp.gras?.anzahl >= 0 && sp.leben.group.children.length > 0,
       };
     })));
     info(`Mehrspieler M15: Nacht ${m15.map((x) => x.nacht).join('/')}, Zollhäuser ${m15[0].zoll}, Grenzsteine ${m15[0].steine}, Teile ${m15.map((x) => x.teile).join(' / ')}, Reiz ${m15.map((x) => x.reiz).join(' / ')}`);
@@ -258,6 +259,7 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
     if (m15[0].tick === m15[1].tick && (m15[0].reiz !== m15[1].reiz || m15[0].nacht !== m15[1].nacht)) fail(`Mehrspieler M15: Reiz/Nacht verschieden: ${JSON.stringify(m15)}`);
     if (m15.some((x) => !x.befehl)) fail(`Mehrspieler M15: Grenzstein-Befehl des Gasts fehlt im Protokoll: ${m15.map((x) => x.befehl).join('/')}`);
     if (m15.some((x) => !x.kaffee)) fail('Mehrspieler M15: Kaffee fehlt in Verteilung oder Statistik');
+    if (m15.some((x) => !x.leben)) fail('Mehrspieler M15: Lebendige Eifel (Rauch, Tiere, Gras) läuft nicht in beiden Fenstern');
     if (Math.abs(m12[0].tick - m12[1].tick) < 40 && Math.abs(Number(m12[0].uhr) - Number(m12[1].uhr)) > 1) fail(`Mehrspieler M12: Uhrzeit verschieden: ${m12.map((x) => x.uhr).join(' / ')}`);
     info(`Mehrspieler M7: Verteilung gleich ${m7b[0].vert === m7b[1].vert}, Holzfäller ruht ${m7b.map((x) => x.ruht).join('/')}, Statistik-Punkte ${m7b.map((x) => x.stat).join('/')}`);
     if (m7b[0].vert !== m7b[1].vert) fail('Mehrspieler M7: Warenverteilung unterschiedlich');

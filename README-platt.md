@@ -13,6 +13,8 @@ Wat noch kütt, steiht em [Drehbuch](DREHBUCH.md), wat ald dren es, en d'r [Road
 - **Et Dorf wähße looße:** Lück, Hüüser, Kirmes als Döör noh d'r nächste Dorfstuf, Johreszigge, Wedder un Winter.
 - **Nohbere ohne Kreech:** Jebiet, Dörfer met Ensteiht jewenne, Handel met de Flachländer, Finge statt Klaue,
   Schötzefess, Maibaumklau, Jrenzsteen versetze, Lück avwerbe, Kaffeeschmuggel am Zollhuus un dä Jruße Fund.
+- **De Eifel läv:** Rauch us de Schornsteen, Wasserräder, Schof un Hohner, Pänz om Kirmesplatz, Wind en Bäum un Jras,
+  bunt Laub em Hervs, naaks Leech en de Finster.
 - **10 Völkcher** met eijene Verzällfijur, Spezialität un Sprüch; Musik un Jeräusche usem Browser.
 - **Allein, met Fründe (ene Link reck, ohne Konto) oder als Kampagne** „Dä Eifelsteig“ vun Oche bes Trier.
 

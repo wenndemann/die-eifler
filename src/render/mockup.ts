@@ -87,7 +87,7 @@ let dachErsatz: string | null = null;
  */
 export interface Anker {
   art: 'kamin' | 'fenster' | 'huhn' | 'waesche' | 'rad' | 'saege' | 'hammer' | 'esse' | 'schafe' | 'kuehe' | 'bienen' | 'muehle'
-    | 'kinder' | 'schwaetzer' | 'feuer' | 'dampf';
+    | 'kinder' | 'schwaetzer' | 'feuer' | 'dampf' | 'hund' | 'laterne';
   x: number; y: number; z: number;
   /** je nach Art: Drehung/Blickrichtung (rad), Radius bzw. Breite, Tiefe, Anzahl, Stärke, Farbe. */
   r?: number; w?: number; d?: number; n?: number; staerke?: number; farbe?: string; achse?: 'x' | 'z'; seite?: number;

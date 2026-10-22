@@ -1,6 +1,7 @@
 // Bildstrecke (ROADMAP M9, STIL.md §8): feste Szene auf der echten Karte (feste Saat), ein Dorf mit allen Gebäuden, Wegen, Trägern,
 // Boten und Waren, dann feste Kamerapositionen: Übersicht, Dorf, Gebäude nah, Figuren nah, Fenster, Fest, Winter und eine Bildfolge
-// eines laufenden Trägers. Grundlage für die Gutachter-Agenten. Aufruf: node tools/bildstrecke.mjs [Ausgabeordner]
+// eines laufenden Trägers; seit der Lebendigen Eifel (M15) läuft das Spiel dabei weiter (Rauch, Tiere, Leute bewegen sich) und es kommen
+// Herbst, Nacht und Tiere nah dazu. Grundlage für die Gutachter-Agenten. Aufruf: node tools/bildstrecke.mjs [Ausgabeordner]
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,7 +12,7 @@ import { createServer } from 'vite';
 const WURZEL = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const AUS = resolve(process.argv[2] ?? join(WURZEL, 'test-results', 'bildstrecke'));
 mkdirSync(AUS, { recursive: true });
-const vite = await createServer({ root: WURZEL, logLevel: 'warn', server: { port: 5193, strictPort: true, host: '127.0.0.1' } });
+const vite = await createServer({ root: WURZEL, logLevel: 'warn', server: { port: 5193, strictPort: true, host: '127.0.0.1', hmr: false, watch: null } });
 await vite.listen();
 const exe = existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined;
 const browser = await chromium.launch({ headless: false, executablePath: exe, args: ['--headless=new', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
@@ -85,6 +86,8 @@ try {
     return { L, gebaut, kp: kp && { q: kp.q, r: kp.r }, wh: wh && { q: wh.q, r: wh.r }, lagerId: 1, traeger: tr.length };
   });
   console.log('gebaut', info.gebaut.length, info.gebaut.join(', '), 'Träger mit Ware', info.traeger);
+  // weiterlaufen lassen: in der Pause steht auch das Leben still
+  await page.evaluate(() => window.eifeler.spiel.pause(false));
   await page.addStyleTag({ content: '.meldeleiste { display: none !important; }' });
   const zu = async (h, abstand, pitch, dz = 0) => {
     await page.evaluate(({ h, abstand, pitch, dz }) => { const e = window.eifeler; const w = e.grid.toWorld(h); e.cam.pitchOverride = pitch; e.cam.jumpTo(w.x, w.z + dz, abstand, 0.3); e.settle(); }, { h, abstand, pitch, dz });
@@ -134,6 +137,14 @@ try {
   // Winter
   await page.evaluate(() => { const sp = window.eifeler.spiel; sp.sim._tick = 3 * 18000 + 3000; sp.schritte(2); });
   await zu(info.L, 650, 40, 60); await bild('09-winter.png');
+  // Herbst (Laub), Nacht (Fensterlicht), Tiere nah
+  await page.evaluate(() => { const sp = window.eifeler.spiel; sp.sim._tick = 2 * 18000 + 13000; sp.schritte(2); });
+  await zu(info.L, 650, 40, 60); await bild('10-herbst.png');
+  await page.evaluate(() => { const sp = window.eifeler.spiel; sp.sim._tick = 1 * 18000 + 6000; sp.schritte(2); sp.wetterVorgabe = { tag: 0.93 }; });
+  await zu(info.L, 420, 35, 40); await bild('11-nacht.png');
+  await page.evaluate(() => { window.eifeler.spiel.wetterVorgabe = { tag: 0.45, wind: 0.6 }; });
+  const stall = await page.evaluate(() => { const g = window.eifeler.spiel.sicht.gebaeude.find((x) => x.typ === 'schafstall'); return g && { q: g.q, r: g.r }; });
+  if (stall) { await zu(stall, 210, 38, -40); await bild('12-tiere-nah.png'); }
   console.log('Bildstrecke in', AUS);
 } finally {
   await browser.close();

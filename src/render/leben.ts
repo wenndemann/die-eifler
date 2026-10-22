@@ -146,6 +146,36 @@ const flammeGeo = () => mergeGeometries([
   paint(new THREE.ConeGeometry(1.4, 4.5, 8).translate(0, 2.25, 0), '#ff8a20'), paint(new THREE.ConeGeometry(0.8, 3.2, 7).translate(0.2, 1.9, 0.2), '#ffd040'),
 ])!;
 
+/** Bockwindmühle: Bock, Mühlenhaus mit Satteldach (Flügel eigens, sie drehen sich um die z-Achse vorn am Haus). */
+function muehleGeo(): THREE.BufferGeometry {
+  return mergeGeometries([
+    k(0.6, 4, 0.6, 0, 2, 0, '#6a4426'), k(3.2, 0.4, 0.4, 0, 0.3, 0, '#6a4426', 0, 0, 0.6), k(3.2, 0.4, 0.4, 0, 0.3, 0, '#6a4426', 0, 0, -0.6),
+    k(4.2, 4.4, 3.6, 0, 6.2, 0, '#c9a46a'), k(4.6, 0.3, 4.0, 0, 4.0, 0, '#6a4426'),
+    paint(new THREE.ConeGeometry(3.4, 2.6, 4).rotateY(Math.PI / 4).scale(1, 1, 0.85).translate(0, 9.7, 0), '#8f3b2b'),
+    k(1.0, 1.6, 0.2, 0, 5.4, 1.85, '#5a3b26'), k(0.5, 0.5, 1.2, 0, 7.6, 2.2, '#4a3220'),
+  ])!;
+}
+/** Vier Flügel mit Gitter (Mitte im Ursprung, drehen um z). */
+function fluegelMuehleGeo(): THREE.BufferGeometry {
+  const teile: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < 4; i++) {
+    const a = (i * Math.PI) / 2;
+    const arm = [k(0.25, 7.5, 0.18, 0, 3.75, 0, '#6a4426'), k(1.5, 6, 0.08, 0.85, 4.4, 0, '#efe6d0')];
+    for (let j = 0; j < 5; j++) arm.push(k(1.7, 0.1, 0.12, 0.8, 1.8 + j * 1.25, 0.06, '#6a4426'));
+    for (const g of arm) teile.push(g.rotateZ(a));
+  }
+  teile.push(kugel(0.45, 0, 0, 0, '#4a3220'));
+  return mergeGeometries(teile)!;
+}
+/** Hofhund (Blick +x): braun, Schlappohren, Schwanz. */
+function hundGeo(): THREE.BufferGeometry {
+  const out = [kugel(0.55, 0, 0.95, 0, '#8a5a30', 1.5, 0.85, 0.8), kugel(0.42, 0.95, 1.35, 0, '#8a5a30'), kugel(0.2, 1.35, 1.25, 0, '#6a4020', 1.2, 0.8, 0.8),
+    kugel(0.09, 1.55, 1.3, 0, '#1a1410'), kugel(0.2, 0.9, 1.3, 0.38, '#6a4020', 0.6, 1.4, 0.5), kugel(0.2, 0.9, 1.3, -0.38, '#6a4020', 0.6, 1.4, 0.5),
+    k(0.12, 0.8, 0.12, -0.85, 1.25, 0, '#8a5a30', 0, 0, 0.9)];
+  for (const [lx, lz] of [[0.45, 0.25], [-0.45, 0.25], [0.45, -0.25], [-0.45, -0.25]]) out.push(k(0.16, 0.65, 0.16, lx, 0.32, lz, '#7a4a28'));
+  return mergeGeometries(out)!;
+}
+
 const FARBE_RAUCH = new THREE.Color('#e9e4da'), FARBE_RAUCH_DUNKEL = new THREE.Color('#8c8478'), FARBE_DAMPF = new THREE.Color('#f8f8f6');
 const FARBE_FUNKE = new THREE.Color('#ffb040'), FARBE_GLUT = new THREE.Color('#ff7a1a'), FARBE_BIENE = new THREE.Color('#f2c230');
 const KONFETTI = ['#c8402e', '#f2c230', '#2f6db5', '#3c9a46', '#f4ead8', '#d860a8'].map((c) => new THREE.Color(c));
@@ -184,6 +214,7 @@ export class LebenDarstellung {
   private fluegelL: Instanzen; private fluegelR: Instanzen; private voegel: Instanzen;
   private waesche: Instanzen; private raeder: Instanzen; private saegen: Instanzen; private haemmer: Instanzen;
   private figuren: Instanzen; private fenster: Instanzen; private schein: Instanzen; private konfetti: Instanzen; private holz: Instanzen; private flammen: Instanzen;
+  private muehlen: Instanzen; private muehlenFluegel: Instanzen; private hunde: Instanzen; private lampen: Instanzen;
   private zeit = 0;
   /** Teilchen-Takt je Anker (Schlüssel Gebäude-Id und Anker-Index). */
   private takt = new Map<string, number>();
@@ -216,6 +247,10 @@ export class LebenDarstellung {
     this.schein.mesh.renderOrder = 6;
     this.konfetti = new Instanzen(this.group, new THREE.PlaneGeometry(0.7, 0.45), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, toneMapped: false }), true, false, [], 256);
     this.holz = new Instanzen(this.group, holzstossGeo(), mat, false, true, [], 2);
+    this.muehlen = new Instanzen(this.group, muehleGeo(), mat, false, true, [], 8);
+    this.muehlenFluegel = new Instanzen(this.group, fluegelMuehleGeo(), doppelt, false, true, [], 8);
+    this.hunde = new Instanzen(this.group, hundGeo(), mat, false, true, [], 8);
+    this.lampen = new Instanzen(this.group, new THREE.SphereGeometry(0.4, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffffff' }), true, false, [], 16);
     // Flammen leuchten (Farbe über 1: bleibt auch nachts hell und speist das Leuchten der Nachbearbeitung)
     this.flammen = new Instanzen(this.group, flammeGeo(), new THREE.MeshBasicMaterial({ vertexColors: true, color: new THREE.Color(4, 1.9, 0.9), transparent: true, opacity: 0.92 }), false, false, [], 4);
   }
@@ -268,7 +303,7 @@ export class LebenDarstellung {
 
   private alle(): Instanzen[] {
     return [this.schafe, this.kuehe, this.huehner, this.fluegelL, this.fluegelR, this.voegel, this.waesche, this.raeder, this.saegen, this.haemmer, this.figuren,
-      this.fenster, this.schein, this.konfetti, this.holz, this.flammen];
+      this.fenster, this.schein, this.konfetti, this.holz, this.flammen, this.muehlen, this.muehlenFluegel, this.hunde, this.lampen];
   }
 
   /** Ein Anker eines Gebäudes. */
@@ -465,6 +500,41 @@ export class LebenDarstellung {
           this.glut.neu({ x, y: this.hoehe(x, z) + 5 * sk, z, vx: (Math.random() - 0.5) * 4, vy: 8 + Math.random() * 8, vz: (Math.random() - 0.5) * 4, dauer: 2, g0: sk * 0.5, g1: sk * 0.2, a: 1, r: FARBE_FUNKE.r, g: FARBE_FUNKE.g, b: FARBE_FUNKE.b });
         }
         if (Math.random() < o.dt * 6) this.glut.neu({ x, y: this.hoehe(x, z) + 3 * sk, z, vx: 0, vy: 0, vz: 0, dauer: 0.4, g0: 14 * sk, g1: 16 * sk, a: 0.25, r: 1, g: 0.5, b: 0.15 });
+        break;
+      }
+      case 'muehle': {
+        // Bockwindmühle: Flügel drehen mit dem Wind (bei der Arbeit kräftiger)
+        m.compose(p.set(x, this.hoehe(x, z) - 0.2 * sk, z), q.identity(), sc.setScalar(sk));
+        this.muehlen.fuege(m);
+        const w = o.t * (0.25 + o.wind * 0.9) * (o.arbeitet ? 1.4 : 0.8) + ph;
+        q.setFromAxisAngle(this.Z, -w);
+        m.compose(p.set(x, this.hoehe(x, z) + 7.6 * sk, z + 2.85 * sk), q, sc.setScalar(sk));
+        this.muehlenFluegel.fuege(m);
+        break;
+      }
+      case 'hund': {
+        // Hofhund trabt um den Hof, schnuppert, bleibt stehen
+        const r = (a.r ?? 3) * sk, tt = o.t * 0.18 + ph;
+        const lauf = 0.5 + 0.5 * Math.sin(o.t * 0.3 + ph);
+        const w = tt + Math.sin(o.t * 0.07) * 2;
+        const px = x + Math.cos(w) * r, pz = z + Math.sin(w) * r * 0.6;
+        q.setFromAxisAngle(this.Y, -w - Math.PI / 2).multiply(this.q2.setFromAxisAngle(this.Z, lauf < 0.3 ? -0.2 : Math.sin(o.t * 9) * 0.04));
+        m.compose(p.set(px, this.hoehe(px, pz) + Math.abs(Math.sin(o.t * 8)) * 0.15 * sk * lauf, pz), q, sc.setScalar(sk * 1.5));
+        this.hunde.fuege(m);
+        o.zahl.tiere++;
+        break;
+      }
+      case 'laterne': {
+        // Laterne am Haus: nachts warmes Licht mit Schein
+        if (o.nacht < 0.05) break;
+        const hell = o.nacht * (0.9 + 0.1 * Math.sin(o.t * 6 + ph));
+        this.c.set(leben.fenster.farbe).multiplyScalar(hell * leben.fenster.hell * 1.4);
+        m.compose(p.set(x, y, z), q.identity(), sc.setScalar(sk));
+        this.lampen.fuege(m, this.c);
+        this.c.set(leben.fenster.farbe).multiplyScalar(hell * leben.fenster.glanz * 1.2);
+        if (this.kamera) q.copy(this.kamera.quaternion);
+        m.compose(p.set(x, y, z), q, sc.set(7 * sk, 7 * sk, sk));
+        this.schein.fuege(m, this.c);
         break;
       }
       default: break;

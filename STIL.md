@@ -63,6 +63,15 @@ feinen braunen Linie. Siedler 2 liefert die Lesbarkeit und den Maßstab, der Com
   der Gutachter.
 - Kleinkram ist Schmuck, nie Spielzustand, und darf Wege und Fahnen nicht verdecken.
 
+## 6b. Leben (M15, Lebendige Eifel)
+
+- **Was ein Gebäude tut, bewegt sich** – und nur dann: Rauch, Räder, Säge, Hammer laufen bei der Arbeit (Zustand aus der Sicht),
+  Herdfeuer in Häusern brennt immer ein wenig. Tiere und Leute sind Wimmel-Kleinkram, der lebt (`src/render/leben.ts`).
+- **Nacht ist gemütlich, nicht schwarz:** warme Fenster (`#ff9a30`), Laternen, Glut; Licht leuchtet über die Nachbearbeitung
+  (Leuchten) leicht in die Umgebung.
+- **Wind ist sichtbar:** Bäume, Gras, Wäsche und Rauch folgen derselben Windrichtung, bei Sturm stärker.
+- **Leistung:** Instanzen und Punktwolken, Leben nur nah an der Kamera (`data/leben.json`: fern_m), Gras nur um den Blickpunkt.
+
 ## 7. Oberfläche
 
 - Fenster und Leisten in warmem Dunkelbraun mit Pergament-Schrift (bestehend seit M7), Icons aus den 3D-Modellen; sie folgen dem

@@ -227,7 +227,7 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 - [x] **Stilprobe** (Wohnhaus, Träger, Ware) in drei Varianten, der Nutzer wählt eine aus (`tools/stilprobe/`): **gewählt: Wimmelbuch kräftig mit Linie** (`?v=m`: Kleinkram aus C1, Farben und Licht aus C2, feine Linie aus C3, ohne Unschärfe)
 - [x] **Stil-Leitfaden** (`STIL.md`): Proportionen der Figuren, Farbpalette je Region, Dachneigung und „Schiefe“, Konturen/Schattierung, Licht und Farb-Grading, Oberfläche
 - [x] **Alle Gebäude** im gewählten Stil: gemalte Verläufe, weiche Kanten, Schiefe, Ziegelreihen, Rauch, Kleinkram je Hof (Hühner, Beete, Fässer, Bienenkörbe, Wäsche); drei Bauphasen wie bisher
-- [ ] Weitere kleine Animationen (Mühlrad, Bienen, Schafe) – in M15 (Lebendige Eifel)
+- [x] Weitere kleine Animationen (Mühlrad, Bienen, Schafe) – in M15 (Lebendige Eifel)
 - [x] **Figuren** (Träger, Arbeiter, Bauleute, Boten) im gewählten Stil: großer Kopf, Bauch, Gesicht unter der Kappe sichtbar, Kappe in Trachtfarbe
 - [x] **Waren** an den Stil angepasst (getragen größer) (lesbar bleibt Pflicht, Drehbuch 7.6)
 - [x] Gelände, Wald und Wasser farblich zum Stil passend, Wiesen-Deko, Schnee auf Dächern und Felsen; Oberfläche im selben Ton, Lagerzeile einklappbar
@@ -348,12 +348,14 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 
 **Lebendige Eifel (aus M9):** Das ganze Spiel soll grafisch interessanter werden – überall bewegt sich etwas, man sieht, was ein Gebäude tut. Stil nach `STIL.md`, Leistung im Rahmen (Instanzen, wenige Draw-Calls, aus der Ferne ausblenden).
 
-- [ ] **Arbeitende Gebäude:** Mühlrad und Windmühlenflügel drehen sich, Säge und Amboss bewegen sich, Rauch aus Schornsteinen, Brennerei und Köhlerei dampft, Brauerei mit Fässern, nur wenn das Gebäude wirklich arbeitet (Sicht)
-- [ ] **Tiere:** Schafe auf den Weiden am Schafstall, Kühe, Hühner im Hof, Bienen um die Bienenkörbe, Hund am Hof; ein paar Vögel und Raben über Feldern
-- [ ] **Natur:** Bäume und Hecken wiegen im Wind (stärker bei Sturm), Wasser mit Glitzern und Strömung an Bächen, Blätter im Herbst, Rauchschwaden im Winter
-- [ ] **Dorfleben:** Wäsche flattert, Kinder spielen am Kirmesplatz, Leute stehen schwätzend vor der Schänke, Laternen und Fensterlicht in der Nacht
-- [ ] **Feste und Ereignisse** sichtbarer: Fahnen und Wimpel, Konfetti beim Tusch, Funken beim Martinsfeuer
+- [x] **Arbeitende Gebäude:** Mühlrad und Windmühlenflügel drehen sich, Säge und Amboss bewegen sich, Rauch aus Schornsteinen, Brennerei und Köhlerei dampft, Brauerei mit Fässern, nur wenn das Gebäude wirklich arbeitet (Sicht)
+- [x] **Tiere:** Schafe auf den Weiden am Schafstall, Kühe, Hühner im Hof, Bienen um die Bienenkörbe, Hund am Hof; ein paar Vögel und Raben über Feldern
+- [x] **Natur:** Bäume und Hecken wiegen im Wind (stärker bei Sturm), Wasser mit Glitzern und Strömung an Bächen, Blätter im Herbst, Rauchschwaden im Winter
+- [x] **Dorfleben:** Wäsche flattert, Kinder spielen am Kirmesplatz, Leute stehen schwätzend vor der Schänke, Laternen und Fensterlicht in der Nacht
+- [x] **Feste und Ereignisse** sichtbarer: Fahnen und Wimpel, Konfetti beim Tusch, Funken beim Martinsfeuer
 - [ ] **Bildstrecke** (`tools/bildstrecke.mjs`) mit kurzen Bildfolgen für Bewegung, Gutachter-Runde wie in M9 (Vergleich mit der vorigen Version)
+
+**Umgesetzt (Lebendige Eifel, `src/render/leben.ts`, `src/render/gras.ts`, Werte in `data/leben.json`):** Rauch und Dampf aus den Schornsteinen (Herdfeuer immer ein wenig, Werkstätten nur bei der Arbeit, im Winter und nachts mehr), Wasserräder an Sägewerk, Eisenhütte, Senf- und Papiermühle, Säge mit Sägemehl, Schmiedehammer mit Funken und Glut, Windmühle am Gerstenfeld; Schafe und Kühe grasen, Hühner picken, Hofhund am Lager, Bienen, Vogelschwärme (im Winter Raben); Bäume wiegen im Wind (Böen, stärker bei Sturm), Herbstlaub je Baum, Glitzern auf Seen und Bächen, Grasbüschel im Wind rund um den Blickpunkt, gemalter Boden mit erdigen Hängen; Wäsche flattert, Kinder toben über den Kirmesplatz, Leute schwätzen vor der Schänke, nachts Fensterlicht (auch in den Kulissendörfern) und Laternen; Konfetti beim Tusch, Martinsfeuer mit Funken; dazu Leuchten und Vignette in der Nachbearbeitung (aus auf „Niedrig“). Die Anker (wo Rauch aufsteigt, wo Fenster sind, wo Hühner laufen) kommen aus den Gebäudemodellen selbst. Alles als Instanzen bzw. Punktwolken, nur bis 2,2 km von der Kamera. Reine Darstellung: keine Prüfsumme, kein Spielstand, im Mehrspieler bei beiden gleich gezeichnet. Bilder: `tools/leben-shots.mjs`. Hecken (Gebäude) stehen still.
 
 **Abnahme:** In einer Mehrspieler-Partie an der belgischen Grenze (z. B. Monschau/Mützenich) verschiebt einer nachts die Grenze, der andere schmuggelt Kaffee am Zöllner vorbei, und einer setzt im Fundbüro den Großen Fund zusammen. Die Gutachter finden das Dorf deutlich lebendiger als vorher, die Bildrate bleibt im Rahmen.
 

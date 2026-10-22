@@ -890,6 +890,9 @@ const TYP_ANKER: Record<string, Anker[]> = {
   senfmuehle: [{ art: 'rad', x: -4.6, y: G + 2.4, z: 0, r: 2.0, w: 0.9, achse: 'x' }],
   papiermuehle: [{ art: 'rad', x: -6.4, y: G + 2.4, z: -1, r: 2.4, w: 1.0, achse: 'x' }],
   molkerei: [{ art: 'kuehe', x: -4, y: G, z: 6, w: 4, d: 2.5, n: 3 }],
+  gerstenfeld: [{ art: 'muehle', x: 20, y: G, z: -3 }],
+  lager: [{ art: 'hund', x: -6, y: G, z: 11, r: 3 }, { art: 'laterne', x: 3.6, y: G + 4.6, z: 5.7 }],
+  schaenke: [{ art: 'laterne', x: 3.4, y: G + 3.6, z: 4.3 }],
 };
 function modell(typ: string, phase: number, dach: string | null = null): THREE.BufferGeometry {
   if (dach) {
