@@ -29,7 +29,9 @@ const kegel = (r: number, h: number, x: number, y: number, z: number, f: string,
 /** Runde, kräftige Beine (oben dicker, unten Huf bzw. Pfote) wie bei den Figuren: keine Brettbeine. */
 const beine = (out: THREE.BufferGeometry[], dx: number, dz: number, h: number, dicke: number, f: string, huf = '#2e2218') => {
   for (const [lx, lz] of [[dx, dz], [-dx, dz], [dx, -dz], [-dx, -dz]]) {
-    out.push(paint(new THREE.CylinderGeometry(dicke * 0.45, dicke * 0.75, h, 8).translate(lx, h / 2 + 0.08, lz), f));
+    // Oberschenkel als weiche Kapsel, darunter der schlanke Lauf (rund, kein Pfosten)
+    out.push(paint(new THREE.CapsuleGeometry(dicke * 0.62, h * 0.32, 4, 10).translate(lx, h * 0.72, lz), f));
+    out.push(paint(new THREE.CapsuleGeometry(dicke * 0.36, h * 0.5, 4, 8).translate(lx + 0.03, h * 0.36, lz), f));
     out.push(kugel(dicke * 0.55, lx + 0.03, 0.1, lz, huf, 1.3, 0.7, 1));
   }
 };
@@ -48,9 +50,16 @@ function reh(f = '#b0733c', geweih = false): THREE.BufferGeometry {
   augen(out, 1.22, 2.52, 0.24, 0.1);
   beine(out, 0.55, 0.22, 1.0, 0.26, '#7a4e2a');
   if (geweih) for (const s of [1, -1]) {
-    // Geweih: Stange mit drei Enden je Seite
-    out.push(k(0.12, 0.95, 0.12, 0.95, 3.05, s * 0.2, '#e2d4b0', -0.25, 0), k(0.1, 0.5, 0.1, 1.1, 3.2, s * 0.32, '#e2d4b0', -0.9),
-      k(0.1, 0.45, 0.1, 0.82, 3.42, s * 0.28, '#e2d4b0', 0.5), k(0.1, 0.4, 0.1, 1.02, 3.55, s * 0.24, '#e2d4b0', -0.6));
+    // Geweih aus runden, gebogenen Stangen mit drei Enden je Seite
+    const stange = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, r: number) => {
+      const a = new THREE.Vector3(x0, y0, z0), b = new THREE.Vector3(x1, y1, z1), d = b.clone().sub(a);
+      out.push(paint(new THREE.CylinderGeometry(r * 0.7, r, d.length(), 7).applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize())).translate((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2), '#e2d4b0'));
+      out.push(kugel(r * 0.75, x1, y1, z1, '#efe4c4'));
+    };
+    stange(0.95, 2.7, s * 0.18, 0.8, 3.5, s * 0.42, 0.07);
+    stange(0.86, 3.05, s * 0.3, 1.2, 3.3, s * 0.45, 0.05);
+    stange(0.8, 3.5, s * 0.42, 0.55, 3.85, s * 0.5, 0.05);
+    stange(0.8, 3.5, s * 0.42, 1.0, 3.95, s * 0.36, 0.05);
   }
   return mergeGeometries(out)!;
 }

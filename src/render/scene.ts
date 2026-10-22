@@ -32,6 +32,8 @@ export class Stage {
   private gegen: THREE.DirectionalLight;
   private grundDunst = new THREE.Color('#d3dccf');
   private tmp = new THREE.Color();
+  /** Bodenfarbe des Halbkugellichts am Tag (nachts violett gemischt). */
+  private hemiBoden = new THREE.Color();
   private ton1 = new THREE.Color();
   private stimmungSig = '';
   private breite = 0;
@@ -69,6 +71,7 @@ export class Stage {
     this.scene.add(this.sun, this.sun.target);
     // Himmel kühl, Boden warm: weiche, farbige Schatten wie gemalt; Gegenlicht für runde Formen
     this.hemi = new THREE.HemisphereLight('#d6e6f0', '#9a8058', 1.3);
+    this.hemiBoden.copy(this.hemi.groundColor);
     this.scene.add(this.hemi);
     const gegen = new THREE.DirectionalLight('#ffd2a0', 0.55);
     gegen.position.set(-this.sunDir.x, 0.35, -this.sunDir.z).multiplyScalar(1000);
@@ -126,7 +129,9 @@ export class Stage {
     this.sun.intensity = 2.75 * (0.12 + 0.88 * tag) * licht * wolke;
     this.sun.color.set('#ffe4bc').lerp(this.tmp.set('#ffa560'), flach * tag * 0.75).lerp(this.tmp.set('#9fb6e8'), 1 - tag);
     this.hemi.intensity = 1.3 * licht * (1 + 0.15 * st.wolken);
-    this.hemi.color.set('#d6e6f0').lerp(this.tmp.set('#8f84bf'), (1 - tag) * 0.7);
+    this.hemi.color.set('#d6e6f0').lerp(this.tmp.set('#8f84bf'), (1 - tag) * 0.85);
+    // nachts auch das Licht von unten violett (sonst bleibt der Boden grau-oliv)
+    this.hemi.groundColor.copy(this.hemiBoden).lerp(this.tmp.set('#4a3a66'), (1 - tag) * 0.8);
     this.gegen.intensity = 0.55 * licht * wolke;
     this.gegen.position.set(-this.sunDir.x, 0.35, -this.sunDir.z).multiplyScalar(1000);
     // Dunst: grau bei Wolken, rosig in der Dämmerung, blau in der Nacht

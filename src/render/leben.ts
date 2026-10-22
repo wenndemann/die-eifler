@@ -388,7 +388,7 @@ export class LebenDarstellung {
     const takt = (t * 0.12 + h01(g.id, 9)) % 1;
     const geste = takt < 0.12 ? GESTE.winken : takt > 0.55 && takt < 0.65 ? GESTE.kratzen : GESTE.keine;
     const yaw = 0.4 * Math.sin(t * 0.3 + g.id);
-    meisterPlaetze.push({ x, z, r: TRAEGER_H * 0.35, fest: true });
+    meisterPlaetze.push({ x, z, r: TRAEGER_H * 0.45, fest: true });
     this.figur(x, z, yaw, t * 2 + g.id, tracht.hemd ? this.c.set(tracht.hemd) : SCHWAETZER[g.id % SCHWAETZER.length], 0, geste, 0.7, 0, 0.9, zahl, satz, 0.45);
   }
 
@@ -445,7 +445,7 @@ export class LebenDarstellung {
         if (a.y < 4) {
           const bz = z + seite * 2.2 * sk;
           this.c.set(leben.fenster.farbe).multiplyScalar(o.nacht * leben.fenster.boden * flacker);
-          m.compose(p.set(x, this.hoehe(x, bz) + 0.4, bz), this.q2.setFromAxisAngle(this.X, -Math.PI / 2), sc.set(6.5 * sk, 5 * sk, sk));
+          m.compose(p.set(x, this.hoehe(x, bz) + 0.4, bz), this.q2.setFromAxisAngle(this.X, -Math.PI / 2), sc.set(8 * sk, 6.5 * sk, sk));
           this.schein.fuege(m, this.c);
         }
         o.zahl.fenster++;

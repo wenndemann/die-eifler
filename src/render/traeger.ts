@@ -423,7 +423,7 @@ export class Traeger {
     for (const t of sicht.traeger) {
       const f = Math.min(1, Math.max(0, (t.fortschritt + (t.tut === 'laeuft' ? alpha * t.schritt : 0)) / PROMILLE));
       const a = this.ort(t.von, t.nach, f, this.tmpA);
-      plaetze.push({ x: a.x, z: a.z, r: TRAEGER_H * 0.32, fest: false });
+      plaetze.push({ x: a.x, z: a.z, r: TRAEGER_H * 0.42, fest: false });
       laeuft.push(t.tut === 'laeuft');
     }
     entzerren(plaetze, meisterPlaetze, laeuft);

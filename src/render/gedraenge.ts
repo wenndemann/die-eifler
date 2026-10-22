@@ -9,7 +9,7 @@ export const meisterPlaetze: Platz[] = [];
 export const traegerPlaetze: Platz[] = [];
 
 /**
- * Schiebt die beweglichen Plätze so lange auseinander, bis sich keine zwei näher als die Summe ihrer Radien kommen (zwei Durchgänge
+ * Schiebt die beweglichen Plätze so lange auseinander, bis sich keine zwei näher als die Summe ihrer Radien kommen (vier Durchgänge
  * reichen fürs Bild). Feste Plätze (Meister, Figuren anderer Darsteller) bewegen sich nicht; laufende Figuren weichen nur halb aus.
  * Rasterzelle = größter Durchmesser, damit nur Nachbarn verglichen werden.
  */
@@ -19,7 +19,7 @@ export function entzerren(beweglich: Platz[], fest: readonly Platz[], lauf: read
   for (const p of fest) rmax = Math.max(rmax, p.r);
   const zelle = 2 * rmax;
   const key = (x: number, z: number) => `${Math.floor(x / zelle)},${Math.floor(z / zelle)}`;
-  for (let runde = 0; runde < 2; runde++) {
+  for (let runde = 0; runde < 4; runde++) {
     const raster = new Map<string, number[]>();
     const alle = [...beweglich, ...fest];
     alle.forEach((p, i) => { const k = key(p.x, p.z); (raster.get(k) ?? raster.set(k, []).get(k)!).push(i); });

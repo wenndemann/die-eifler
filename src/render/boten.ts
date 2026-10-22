@@ -92,7 +92,7 @@ export class Boten {
       const dx = vb.x - va.x, dz = vb.z - va.z, len = Math.hypot(dx, dz) || 1;
       // Zickzack quer zur Laufrichtung, stärker mit dem Pegel
       const quer = Math.sin(f * Math.PI * 2 + b.id) * 4 * b.pegel;
-      plaetze.push({ x: va.x + dx * f + (-dz / len) * quer, z: va.z + dz * f + (dx / len) * quer, r: TRAEGER_H * 0.38, fest: false });
+      plaetze.push({ x: va.x + dx * f + (-dz / len) * quer, z: va.z + dz * f + (dx / len) * quer, r: TRAEGER_H * 0.5, fest: false });
       laeuft.push(geht);
     }
     entzerren(plaetze, [...traegerPlaetze, ...meisterPlaetze], laeuft);
