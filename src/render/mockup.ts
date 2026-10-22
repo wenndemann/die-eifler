@@ -162,9 +162,11 @@ export function fachwerk(w: number, d: number, floors: number, wall = C.wand, da
     paint(new THREE.SphereGeometry(0.1, 6, 4).translate(0.48, y0 + 1.1, d / 2 + 0.27), '#e8c14a'),
     box(2.4, 0.4, 1.0, 0, y0 - 0.2, d / 2 + 0.6, C.sockel));
   parts.push(...roof(w, d, d * 0.75, y0 + H, dach, wall));
-  parts.push(box(1.2, 3, 1.2, w * 0.28, y0 + H + d * 0.45, 0, '#8a5a48'), box(1.6, 0.3, 1.6, w * 0.28, y0 + H + d * 0.45 + 1.5, 0, '#6e463a'));
+  // Schornstein ragt deutlich über den First (sonst sieht man von oben nur den Kopf), Ziegel mit Kopfplatte
+  const ky = y0 + H + d * 0.75 + 1.2;
+  parts.push(box(1.3, 4, 1.3, w * 0.28, ky - 1.2, 0, '#8a5a48'), box(1.4, 0.18, 1.4, w * 0.28, ky - 0.2, 0, '#6e463a'), box(1.7, 0.32, 1.7, w * 0.28, ky + 0.85, 0, '#5e3c32'));
   // Rauchwölkchen über dem Schornstein (Stil: Wimmelbuch); im Spiel steigt echter Rauch auf (Lebendige Eifel)
-  if (!anker({ art: 'kamin', x: w * 0.28, y: y0 + H + d * 0.45 + 1.6, z: 0, staerke: 0.6 })) for (let k = 0; k < 3; k++) parts.push(paint(new THREE.SphereGeometry(0.75 + k * 0.32, 8, 6).translate(w * 0.28 + k * 0.6, y0 + H + d * 0.45 + 2.6 + k * 1.2, -k * 0.3), '#eeeae2'));
+  if (!anker({ art: 'kamin', x: w * 0.28, y: ky + 1.1, z: 0, staerke: 0.6 })) for (let k = 0; k < 3; k++) parts.push(paint(new THREE.SphereGeometry(0.75 + k * 0.32, 8, 6).translate(w * 0.28 + k * 0.6, ky + 2 + k * 1.2, -k * 0.3), '#eeeae2'));
   return parts;
 }
 

@@ -1,20 +1,20 @@
 {
-  "hinweis": "Lebendige Eifel (ROADMAP M15, aus M9): Werte nur für die Darstellung, nicht für die Simulation. fern_m: Leben (Rauch, Tiere, Leute, Licht) nur an Gebäuden bis so weit von der Kamera. rauch: Teilchen je Sekunde bei Stärke 1 (rate), Steigen und Wachsen je Sekunde (m), Lebensdauer, Höchstzahl; arbeitet_faktor für arbeitende Gebäude, ruhig_faktor sonst (nur Herdfeuer), winter_faktor und nacht_faktor dazu. tiere: Tempo in m/s (Modell-Meter). voegel: je Feld ein Schwarm (n Vögel) in hoehe_m über dem Feld, Kreis mit radius_m. fenster: Farbe und Helligkeit des Fensterlichts nachts. wind: Grundwind und Wind bei Sturm (0..1). konfetti: Teilchen je Ausbruch, Dauer. feuer: Funken je Sekunde beim Martinsfeuer und an der Esse. gras: Grasbüschel um den Blickpunkt im Umkreis radius_m, je Rasterzelle (zelle_m) mit Wahrscheinlichkeit dichte, Höhe in m, höchstens max, neu gelegt ab neu_ab_m Weg, nur bis bis_abstand_m Kameraabstand. schild: Zunftschild mit der erzeugten Ware neben der Tür, Größe relativ zur Ware (WARE_M).",
+  "hinweis": "Lebendige Eifel (ROADMAP M15, aus M9): Werte nur für die Darstellung, nicht für die Simulation. fern_m: Leben (Rauch, Tiere, Leute, Licht) nur an Gebäuden bis so weit von der Kamera. rauch: Teilchen je Sekunde bei Stärke 1 (rate), Steigen und Wachsen je Sekunde (m), Lebensdauer, Höchstzahl; arbeitet_faktor für arbeitende Gebäude, ruhig_faktor sonst (nur Herdfeuer), winter_faktor und nacht_faktor dazu. tiere: Tempo in m/s (Modell-Meter). voegel: je Feld ein Schwarm (n Vögel) in hoehe_m über dem Feld, Kreis mit radius_m. fenster: Farbe und Helligkeit des Fensterlichts nachts, Schein ums Fenster (glanz) und Lichtfleck auf dem Boden vor den unteren Fenstern (boden). wind: Grundwind und Wind bei Sturm (0..1). konfetti: Teilchen je Ausbruch, Dauer. feuer: Funken je Sekunde beim Martinsfeuer und an der Esse. gras: Grasbüschel um den Blickpunkt im Umkreis radius_m, je Rasterzelle (zelle_m) mit Wahrscheinlichkeit dichte, Höhe in m, höchstens max, neu gelegt ab neu_ab_m Weg, nur bis bis_abstand_m Kameraabstand. schild: Zunftschild mit der erzeugten Ware neben der Tür, Größe relativ zur Ware (WARE_M).",
   "fern_m": 2200,
   "rauch": {
-    "rate": 3,
+    "rate": 1.4,
     "steigen": 6,
     "wachsen": 2.6,
-    "dauer_s": 7,
+    "dauer_s": 6,
     "max": 1400,
     "arbeitet_faktor": 1,
     "ruhig_faktor": 0.3,
     "winter_faktor": 1.7,
     "nacht_faktor": 1.2,
-    "groesse": 5
+    "groesse": 6.5
   },
   "dampf": {
-    "rate": 3,
+    "rate": 1.8,
     "steigen": 8,
     "wachsen": 3,
     "dauer_s": 3.5
@@ -34,10 +34,11 @@
     "tempo": 2.4
   },
   "fenster": {
-    "farbe": "#ff9a30",
-    "hell": 3.2,
-    "glanz": 1.3,
-    "abstand": 0.15
+    "farbe": "#ff7a18",
+    "hell": 2.4,
+    "glanz": 1.6,
+    "abstand": 0.15,
+    "boden": 0.9
   },
   "wind": {
     "grund": 0.25,

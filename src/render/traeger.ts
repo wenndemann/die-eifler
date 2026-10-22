@@ -137,9 +137,9 @@ export function dorfLaune(s: SimSicht): { laune: number; fest: boolean } {
 export function material(): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75, flatShading: false });
   mat.onBeforeCompile = (shader) => {
-    // Randlicht: ein heller Saum an der Silhouette hebt die Figuren vom Boden und von den Häusern ab
+    // Randlicht: ein schmaler, warmer Saum an der Silhouette hebt die Figuren ab (begrenzt auf 1: kein Überstrahlen im Leuchten)
     shader.fragmentShader = shader.fragmentShader.replace('#include <opaque_fragment>', `#include <opaque_fragment>
-gl_FragColor.rgb += vec3(1.0, 0.93, 0.8) * pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.0) * 0.35;`);
+gl_FragColor.rgb = min(gl_FragColor.rgb + vec3(1.0, 0.9, 0.72) * smoothstep(0.82, 0.97, 1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0)) * 0.14, vec3(1.0));`);
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', `#include <common>
 attribute float aTeil; attribute vec3 aGelenk; attribute float aTint; attribute vec3 aAnim; attribute vec2 aMimik;`)

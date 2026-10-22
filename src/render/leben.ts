@@ -45,8 +45,15 @@ void main() {
   vec2 p = gl_PointCoord * 2.0 - 1.0;
   float r = dot(p, p);
   if (r > 1.0) discard;
-  float a = vAlpha * mix(1.0 - r, 1.0 - r * r, uWeich);
-  gl_FragColor = vec4(vFarbe, a);
+  if (uWeich < 0.5) {
+    gl_FragColor = vec4(vFarbe, vAlpha * (1.0 - r));
+  } else {
+    // Comic-Wölkchen (STIL.md §6b): deckend, oben hell, unten schattig, mit warmbraunem Rand wie die Linie
+    float d = sqrt(r);
+    float licht = 0.9 + 0.16 * (-p.y) + 0.06 * (-p.x);
+    vec3 c = mix(vFarbe * licht, vFarbe * vec3(0.62, 0.56, 0.5), smoothstep(0.8, 0.92, d));
+    gl_FragColor = vec4(c, vAlpha * smoothstep(1.0, 0.94, d));
+  }
   #include <fog_fragment>
 }`;
 
@@ -90,7 +97,7 @@ class Teilchen {
       const u = p.t / p.dauer;
       this.pos[n * 3] = p.x; this.pos[n * 3 + 1] = p.y; this.pos[n * 3 + 2] = p.z;
       this.gr[n] = p.g0 + (p.g1 - p.g0) * u;
-      this.al[n] = p.a * Math.min(1, u * 6) * (1 - u) * (1 - u * 0.3);
+      this.al[n] = p.a * Math.min(1, u * 6) * (1 - u * u * u);
       this.fa[n * 3] = p.r; this.fa[n * 3 + 1] = p.g; this.fa[n * 3 + 2] = p.b;
       this.teile[n++] = p;
     }
@@ -183,7 +190,7 @@ function hundGeo(): THREE.BufferGeometry {
   return mergeGeometries(out)!;
 }
 
-const FARBE_RAUCH = new THREE.Color('#e9e4da'), FARBE_RAUCH_DUNKEL = new THREE.Color('#8c8478'), FARBE_DAMPF = new THREE.Color('#f8f8f6');
+const FARBE_RAUCH = new THREE.Color('#f4f1ea'), FARBE_RAUCH_DUNKEL = new THREE.Color('#8c8478'), FARBE_DAMPF = new THREE.Color('#f8f8f6');
 const FARBE_FUNKE = new THREE.Color('#ffb040'), FARBE_GLUT = new THREE.Color('#ff7a1a'), FARBE_BIENE = new THREE.Color('#f2c230');
 const KONFETTI = ['#c8402e', '#f2c230', '#2f6db5', '#3c9a46', '#f4ead8', '#d860a8'].map((c) => new THREE.Color(c));
 const WAESCHE = ['#e05a5a', '#f4f1e8', '#5a8ad0', '#f0c040', '#7ab06a'].map((c) => new THREE.Color(c));
@@ -370,7 +377,7 @@ export class LebenDarstellung {
             x: x + (Math.random() - 0.5) * sk * 0.4, y, z: z + (Math.random() - 0.5) * sk * 0.4,
             vx: (Math.random() - 0.5) * 1.2, vy: d.steigen * (0.7 + Math.random() * 0.5) * (0.6 + 0.4 * sk / 4.4), vz: (Math.random() - 0.5) * 1.2,
             dauer: d.dauer_s * (0.8 + Math.random() * 0.4), g0, g1: g0 + d.wachsen * d.dauer_s * sk * 0.22,
-            a: a.art === 'dampf' ? 0.4 : dunkel ? 0.45 : 0.32, r: f.r, g: f.g, b: f.b,
+            a: a.art === 'dampf' ? 0.8 : dunkel ? 0.9 : 0.85, r: f.r, g: f.g, b: f.b,
           });
         }
         this.takt.set(key, acc);
@@ -393,6 +400,13 @@ export class LebenDarstellung {
         this.c.set(leben.fenster.farbe).multiplyScalar(o.nacht * leben.fenster.glanz * flacker);
         m.compose(p.set(x, y, fz + seite * 0.3 * sk), q, sc.set(4.2 * sk, 4.2 * sk, sk));
         this.schein.fuege(m, this.c);
+        // Lichtfleck auf dem Boden vor den unteren Fenstern: das Haus wärmt den Weg
+        if (a.y < 4) {
+          const bz = z + seite * 2.2 * sk;
+          this.c.set(leben.fenster.farbe).multiplyScalar(o.nacht * leben.fenster.boden * flacker);
+          m.compose(p.set(x, this.hoehe(x, bz) + 0.4, bz), this.q2.setFromAxisAngle(this.X, -Math.PI / 2), sc.set(5 * sk, 4 * sk, sk));
+          this.schein.fuege(m, this.c);
+        }
         o.zahl.fenster++;
         break;
       }

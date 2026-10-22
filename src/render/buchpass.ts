@@ -108,7 +108,7 @@ void main() {
 export class Buchpass {
   private hellA = new THREE.WebGLRenderTarget(2, 2, { type: THREE.HalfFloatType });
   private hellB = new THREE.WebGLRenderTarget(2, 2, { type: THREE.HalfFloatType });
-  private hellMat = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: HELL_FRAG, depthTest: false, depthWrite: false, uniforms: { tFarbe: { value: null }, uSchwelle: { value: 1.05 } } });
+  private hellMat = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: HELL_FRAG, depthTest: false, depthWrite: false, uniforms: { tFarbe: { value: null }, uSchwelle: { value: 1.35 } } });
   private weichMat = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: WEICH_FRAG, depthTest: false, depthWrite: false, uniforms: { tBild: { value: null }, uRichtung: { value: new THREE.Vector2() } } });
   private hilfsSzene = new THREE.Scene();
   private hilfsQuad: THREE.Mesh;

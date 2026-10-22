@@ -114,7 +114,7 @@ export class Stage {
     if (sig === this.stimmungSig) return;
     this.stimmungSig = sig;
     const e = Math.sin(2 * Math.PI * (st.tag - 0.25));           // −1 Mitternacht … 1 Mittag
-    const tag = THREE.MathUtils.smoothstep(e, -0.12, 0.3);       // 0 Nacht … 1 Tag
+    const tag = THREE.MathUtils.smoothstep(e, -0.2, 0.2);       // 0 Nacht … 1 Tag
     const flach = 1 - THREE.MathUtils.smoothstep(e, 0.05, 0.55); // Morgen- und Abendlicht
     // Sonne (nachts der Mond auf der Gegenseite): Höhe 14° bis 48°, Richtung Ost (Morgen) über Süd nach West (Abend)
     const elev = THREE.MathUtils.degToRad(14 + 34 * Math.max(0, Math.abs(e)));
@@ -126,20 +126,19 @@ export class Stage {
     this.sun.intensity = 2.75 * (0.25 + 0.75 * tag) * licht * wolke;
     this.sun.color.set('#ffe4bc').lerp(this.tmp.set('#ffa560'), flach * tag * 0.75).lerp(this.tmp.set('#9fb6e8'), 1 - tag);
     this.hemi.intensity = 1.3 * licht * (1 + 0.15 * st.wolken);
-    this.hemi.color.set('#d6e6f0').lerp(this.tmp.set('#7d8fbf'), (1 - tag) * 0.7);
+    this.hemi.color.set('#d6e6f0').lerp(this.tmp.set('#8f84bf'), (1 - tag) * 0.7);
     this.gegen.intensity = 0.55 * licht * wolke;
     this.gegen.position.set(-this.sunDir.x, 0.35, -this.sunDir.z).multiplyScalar(1000);
     // Dunst: grau bei Wolken, rosig in der Dämmerung, blau in der Nacht
     const dunst = this.fogColor;
     dunst.copy(this.grundDunst).lerp(this.tmp.set('#b8bfc4'), st.wolken * 0.8).lerp(this.tmp.set('#f0c8a8'), flach * tag * 0.35)
-      .lerp(this.tmp.set('#3a4766'), (1 - tag) * 0.75).lerp(this.tmp.set('#e2d2a6'), st.duerre * 0.4);
-    // Farbton im Bilderbuch-Pass
-    // Farbton im Bilderbuch-Pass: goldenes Morgen- und Abendlicht, blaue Nacht (gedämpft, aber spielbar), graue Regentage
+      .lerp(this.tmp.set('#483f6a'), (1 - tag) * 0.75).lerp(this.tmp.set('#e2d2a6'), st.duerre * 0.4);
+        // Farbton im Bilderbuch-Pass: goldenes Morgen- und Abendlicht, violettblaue Nacht (gedämpft, aber gemütlich und spielbar), graue Regentage
     const gold = flach * tag, nacht = 1 - tag;
     this.buch.stimmung(
-      this.tmp.setRGB(1, 1, 1).lerp(this.ton1.setRGB(1.26, 0.9, 0.64), gold).lerp(this.ton1.setRGB(0.42, 0.52, 0.95), nacht * 0.92)
+      this.tmp.setRGB(1, 1, 1).lerp(this.ton1.setRGB(1.26, 0.9, 0.64), gold).lerp(this.ton1.setRGB(0.6, 0.52, 0.92), nacht * 0.9)
         .multiplyScalar(1 - 0.12 * st.wolken),
-      (1 - 0.3 * st.wolken - 0.15 * st.duerre) * (1 - 0.6 * nacht) * (1 + 0.15 * gold), st.duerre * 0.06 + gold * 0.05);
+      (1 - 0.3 * st.wolken - 0.15 * st.duerre) * (1 - 0.4 * nacht) * (1 + 0.2 * gold), st.duerre * 0.06 + gold * 0.05);
   }
 
   setShadows(on: boolean) {

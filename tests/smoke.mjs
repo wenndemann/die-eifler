@@ -218,7 +218,8 @@ try {
 
   // ---- M3 b) Spiel auf der echten Karte: Aufbau mit Holz und Stein per Befehle, 5 Spielminuten, Screenshot, Replay in zweitem Kontext
   const url = `${basis}#v=${a1.param.version}&q=${a1.param.q}&r=${a1.param.r}&g=${a1.param.size}`;
-  await page.goto('about:blank');
+  // die vorige Seite kann gerade selbst navigieren (Hash der Karte); dann einmal kurz warten und neu ansetzen
+  await page.goto('about:blank').catch(async () => { await page.waitForTimeout(1500); await page.goto('about:blank'); });
   await page.goto(url);
   await page.waitForFunction(() => window.eifeler?.spiel, null, { timeout: 600000, polling: 500 });
   await page.evaluate(() => window.eifeler.skipIntro());

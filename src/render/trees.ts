@@ -156,7 +156,7 @@ ${KULISSE_GLSL}`)
   float laub = step(diffuseColor.r * 1.05, diffuseColor.g) * smoothstep(0.16, 0.26, hell);
   vec3 bunt = vLaub < 0.33 ? vec3(0.95, 0.72, 0.18) : vLaub < 0.66 ? vec3(0.92, 0.45, 0.12) : vec3(0.78, 0.22, 0.12);
   float wann = smoothstep(vLaub * 0.6, vLaub * 0.6 + 0.4, uHerbst);
-  diffuseColor.rgb = mix(diffuseColor.rgb, bunt * (0.6 + hell), laub * wann * 0.85);
+  diffuseColor.rgb = mix(diffuseColor.rgb, bunt * (0.8 + hell), laub * wann * 0.95);
 }
 diffuseColor.rgb = kSchnee(diffuseColor.rgb, 0.45);
 diffuseColor.rgb = kGrau(diffuseColor.rgb, vKOut * 0.85);`)
