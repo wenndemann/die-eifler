@@ -106,7 +106,8 @@ try {
   // 1. Finder mit dem Grenzstein auf dem Weg zur Grenze (nachts)
   const mitStein = await warte(() => { const f = window.eifeler.spiel.sicht.grenzland.finder.find((x) => x.traegt === 'stein'); return f && f.fortschritt >= 0 ? f : null; });
   if (mitStein) {
-    await schritte(60);
+    // ein Stück unterwegs, nicht mehr an der Hütte
+    await warte(() => { const f = window.eifeler.spiel.sicht.grenzland.finder.find((x) => x.traegt === 'stein'); const L = window.eifeler.spiel.lagerHex; return !f || (Math.abs(f.von.q - L.q) + Math.abs(f.von.r - L.r) >= 6); }, 200, 10);
     const f = await page.evaluate(() => window.eifeler.spiel.sicht.grenzland.finder.find((x) => x.traegt === 'stein'));
     if (f) { await zu(f.von.q, f.von.r, 230, 40, 10); await bild('grenz-1-finder-mit-grenzstein.png'); }
   }
@@ -125,6 +126,7 @@ try {
   const stein = await page.evaluate(() => window.eifeler.spiel.sicht.grenzland.steine[0]);
   if (stein) { await zu(stein.q, stein.r, 260, 35, 30, 10); await bild('grenz-2-grenzstein-spuk-nacht.png'); }
   // 3. Am Tag: Grenze mit dem versetzten Stein von oben, Zollhaus mit Zöllner, Finder mit Kaffeesack
+  await warte(() => !window.eifeler.spiel.sicht.grenzland.nacht, 100, 200);
   await page.evaluate(() => { const sp = window.eifeler.spiel; sp.wetterVorgabe = { tag: 0.5 }; });
   if (stein) { await zu(stein.q, stein.r, 900, 60, 120); await bild('grenz-3-grenze-uebersicht.png'); }
   if (info.zoll.length) {

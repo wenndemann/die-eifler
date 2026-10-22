@@ -96,7 +96,7 @@ export const JFEST_DAUER = Math.max(1, s(G.jahresfest.dauer_s));
 export const SPUK_GERAEUSCH_S = G.spuk.geraeusch_s;
 
 /**
- * Zollhäuser: Hexe mit Staatsgrenze im Spielfeld, begehbar, kein Ortskern, keine Bahn, kein Fluss; zuerst der zur Spielfeldmitte nächste
+ * Zollhäuser: Hexe mit Staatsgrenze im Spielfeld, begehbar, kein Ortskern, keine Bahn, kein Fluss; offenes Land vor Wald, zuerst der zur Spielfeldmitte nächste
  * (bei Gleichstand kleinerer Index), weitere mit Mindestabstand ZOLL_ABSTAND.
  */
 export function zollAusKarte(karte: SimKarte): number[] {
@@ -106,7 +106,9 @@ export function zollAusKarte(karte: SimKarte): number[] {
     if (!(karte.flags[i] & FLAG.grenze) || !karte.begehbar[i] || (karte.flags[i] & (FLAG.ortskern | FLAG.bahn | FLAG.fluss))) continue;
     kand.push(i);
   }
-  kand.sort((a, b) => karte.abstand(a, mitte) - karte.abstand(b, mitte) || a - b);
+  // lieber auf offenem Land als im Wald (terrain 2), dann zur Mitte
+  const wald = (i: number) => (karte.terrain[i] === 2 ? 1 : 0);
+  kand.sort((a, b) => wald(a) - wald(b) || karte.abstand(a, mitte) - karte.abstand(b, mitte) || a - b);
   const aus: number[] = [];
   for (const i of kand) {
     if (aus.length >= ZOLL_MAX) break;
