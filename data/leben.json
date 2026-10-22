@@ -1,5 +1,5 @@
 {
-  "hinweis": "Lebendige Eifel (ROADMAP M15, aus M9): Werte nur für die Darstellung, nicht für die Simulation. fern_m: Leben (Rauch, Tiere, Leute, Licht) nur an Gebäuden bis so weit von der Kamera. rauch: Teilchen je Sekunde bei Stärke 1 (rate), Steigen und Wachsen je Sekunde (m), Lebensdauer, Höchstzahl; arbeitet_faktor für arbeitende Gebäude, ruhig_faktor sonst (nur Herdfeuer), winter_faktor und nacht_faktor dazu. tiere: Tempo in m/s (Modell-Meter). voegel: je Feld ein Schwarm (n Vögel) in hoehe_m über dem Feld, Kreis mit radius_m. fenster: Farbe und Helligkeit des Fensterlichts nachts. wind: Grundwind und Wind bei Sturm (0..1). konfetti: Teilchen je Ausbruch, Dauer. feuer: Funken je Sekunde beim Martinsfeuer und an der Esse. gras: Grasbüschel um den Blickpunkt im Umkreis radius_m, je Rasterzelle (zelle_m) mit Wahrscheinlichkeit dichte, Höhe in m, höchstens max, neu gelegt ab neu_ab_m Weg, nur bis bis_abstand_m Kameraabstand.",
+  "hinweis": "Lebendige Eifel (ROADMAP M15, aus M9): Werte nur für die Darstellung, nicht für die Simulation. fern_m: Leben (Rauch, Tiere, Leute, Licht) nur an Gebäuden bis so weit von der Kamera. rauch: Teilchen je Sekunde bei Stärke 1 (rate), Steigen und Wachsen je Sekunde (m), Lebensdauer, Höchstzahl; arbeitet_faktor für arbeitende Gebäude, ruhig_faktor sonst (nur Herdfeuer), winter_faktor und nacht_faktor dazu. tiere: Tempo in m/s (Modell-Meter). voegel: je Feld ein Schwarm (n Vögel) in hoehe_m über dem Feld, Kreis mit radius_m. fenster: Farbe und Helligkeit des Fensterlichts nachts. wind: Grundwind und Wind bei Sturm (0..1). konfetti: Teilchen je Ausbruch, Dauer. feuer: Funken je Sekunde beim Martinsfeuer und an der Esse. gras: Grasbüschel um den Blickpunkt im Umkreis radius_m, je Rasterzelle (zelle_m) mit Wahrscheinlichkeit dichte, Höhe in m, höchstens max, neu gelegt ab neu_ab_m Weg, nur bis bis_abstand_m Kameraabstand. schild: Zunftschild mit der erzeugten Ware neben der Tür, Größe relativ zur Ware (WARE_M).",
   "fern_m": 2200,
   "rauch": {
     "rate": 3,
@@ -59,5 +59,8 @@
     "max": 6000,
     "neu_ab_m": 90,
     "bis_abstand_m": 1600
+  },
+  "schild": {
+    "groesse": 0.7
   }
 }

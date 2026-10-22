@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import leben from '../data/leben.json';
 import { lebenAnker } from '../src/render/gebaeude';
 import { LebenDarstellung } from '../src/render/leben';
-import { GEBAEUDE_IDS } from '../src/sim/daten';
+import { GEBAEUDE, GEBAEUDE_IDS } from '../src/sim/daten';
 import { Simulation } from '../src/sim/sim';
 import { baueTestKarte } from './sim-szenario';
 
@@ -39,6 +39,14 @@ describe('Lebendige Eifel', () => {
     for (const k of w.filter((a) => a.art === 'kamin')) expect(k.y).toBeGreaterThan(8);
   });
 
+  it('Zunftschild: Gebäude mit Fachwerk haben einen Schild-Anker, gleiche Modelle zeigen verschiedene Waren', () => {
+    for (const typ of ['kaeserei', 'spinnerei', 'brauerei', 'schmiede']) expect(arten(typ).has('schild'), typ).toBe(true);
+    // Spinnerei nutzt das Käserei-Modell; am Schild hängt aber Garn statt Käse
+    expect(GEBAEUDE.spinnerei.ausgangWare).toBeGreaterThanOrEqual(0);
+    expect(GEBAEUDE.spinnerei.ausgangWare).not.toBe(GEBAEUDE.kaeserei.ausgangWare);
+    expect(leben.schild.groesse).toBeGreaterThan(0);
+  });
+
   it('Nacht aus der Tageszeit: Mittag hell, Mitternacht dunkel, weiche Dämmerung', () => {
     expect(LebenDarstellung.nacht(0.5)).toBe(0);
     expect(LebenDarstellung.nacht(0)).toBe(1);
@@ -48,7 +56,7 @@ describe('Lebendige Eifel', () => {
   });
 
   it('Werte in data/leben.json sind vollständig; die Darstellung ändert die Simulation nicht', () => {
-    for (const k of ['fern_m', 'rauch', 'dampf', 'tiere', 'voegel', 'fenster', 'wind', 'konfetti', 'feuer', 'gras']) expect(leben).toHaveProperty(k);
+    for (const k of ['fern_m', 'rauch', 'dampf', 'tiere', 'voegel', 'fenster', 'wind', 'konfetti', 'feuer', 'gras', 'schild']) expect(leben).toHaveProperty(k);
     expect(leben.gras.max).toBeGreaterThan(0);
     // reine Darstellung: Anker abfragen lässt Prüfsumme und Zustand der Simulation unberührt
     const sim = new Simulation(baueTestKarte(), 3, { q: 0, r: 0 });

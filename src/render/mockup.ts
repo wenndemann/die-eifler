@@ -93,7 +93,7 @@ let dachErsatz: string | null = null;
  */
 export interface Anker {
   art: 'kamin' | 'fenster' | 'huhn' | 'waesche' | 'rad' | 'saege' | 'hammer' | 'esse' | 'schafe' | 'kuehe' | 'bienen' | 'muehle'
-    | 'kinder' | 'schwaetzer' | 'feuer' | 'dampf' | 'hund' | 'laterne';
+    | 'kinder' | 'schwaetzer' | 'feuer' | 'dampf' | 'hund' | 'laterne' | 'schild';
   x: number; y: number; z: number;
   /** je nach Art: Drehung/Blickrichtung (rad), Radius bzw. Breite, Tiefe, Anzahl, Stärke, Farbe. */
   r?: number; w?: number; d?: number; n?: number; staerke?: number; farbe?: string; achse?: 'x' | 'z'; seite?: number;
@@ -154,6 +154,8 @@ export function fachwerk(w: number, d: number, floors: number, wall = C.wand, da
     for (let i = 0; i <= n; i++) parts.push(box(0.14, H, 0.28, x, y0 + H / 2, -d / 2 + (d * i) / n, C.balken));
     for (let f = 0; f <= floors; f++) parts.push(box(0.14, 0.28, d, x, y0 + f * fh, 0, C.balken));
   }
+  // Zunftschild neben der Tür: dort hängt im Spiel die Ware, die das Gebäude macht (leben.ts)
+  anker({ art: 'schild', x: Math.min(2.2, w / 2 - 0.6), y: y0 + 2.9, z: d / 2 + 0.15 });
   // Tür mit Sturz, Brettern, Klinke und Treppenstein
   parts.push(box(1.4, 2.3, 0.2, 0, y0 + 1.15, d / 2 + 0.12, C.tuer), box(2.0, 0.34, 0.26, 0, y0 + 2.45, d / 2 + 0.16, C.balken),
     box(0.06, 2.1, 0.06, -0.35, y0 + 1.1, d / 2 + 0.23, C.balken), box(0.06, 2.1, 0.06, 0.35, y0 + 1.1, d / 2 + 0.23, C.balken),

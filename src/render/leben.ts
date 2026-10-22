@@ -7,14 +7,15 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import leben from '../../data/leben.json';
-import { KLEINE_FESTE } from '../sim/daten';
+import { GEBAEUDE, KLEINE_FESTE } from '../sim/daten';
 import type { SichtGebaeude, SimSicht } from '../sim/typen';
 import { PROMILLE } from '../sim/typen';
 import { lebenAnker, radGeometrie } from './gebaeude';
 import { Instanzen } from './instanzen';
-import { fernFaktor, TRAEGER_H } from './massstab';
+import { fernFaktor, TRAEGER_H, WARE_M } from './massstab';
 import { paint, weicheKiste, type Anker } from './mockup';
 import { FIGUR_ATTRIBUTE, GESTE, figur, material } from './traeger';
+import { warenGeometrie } from './waren';
 
 /** Lage eines Gebäudemodells (Modell-Nullpunkt und Skala), siehe Gebaeude.modellLage. */
 export type ModellLage = (id: number, typ: string) => { x: number; y: number; z: number; sk: number } | null;
@@ -140,6 +141,12 @@ const waescheGeo = () => paint(new THREE.PlaneGeometry(1, 1.25).translate(0, -0.
 /** Sägeblatt, Schmiedehammer (Drehpunkt am Griffende, Kopf bei −x), Funkenglut. */
 const saegeGeo = () => mergeGeometries([k(0.12, 2.6, 2.2, 0, 0, 0, '#cfd3d6'), k(0.16, 2.8, 0.2, 0, 0, 1.15, '#8a6340')])!;
 const hammerGeo = () => mergeGeometries([k(1.8, 0.16, 0.16, -0.9, 0, 0, '#8a6340'), k(0.45, 0.7, 0.5, -1.8, 0, 0, '#3a3a3a')])!;
+/** Zunftschild: geschmiedeter Arm aus der Wand (nach +z) mit Schnörkel, Drehpunkt der Ware an der Armspitze (0, 0, 2.2). */
+const schildArmGeo = () => mergeGeometries([
+  k(0.5, 0.9, 0.2, 0, 0, 0.05, '#2b2826'), k(0.12, 0.12, 2.4, 0, 0, 1.15, '#2b2826'), k(0.1, 0.1, 1.6, 0, -0.5, 0.75, '#2b2826', 0.65, 0, 0),
+  paint(new THREE.TorusGeometry(0.3, 0.05, 4, 10, 4.5).rotateY(Math.PI / 2).translate(0, 0.3, 1.5), '#2b2826'),
+  k(0.06, 0.3, 0.06, 0, -0.15, 2.2, '#2b2826'),
+])!;
 /** Feuerstoß fürs Martinsfeuer: Holzstoß und Flammen (Flammen als eigene Instanzen, sie flackern). */
 const holzstossGeo = () => mergeGeometries(Array.from({ length: 8 }, (_, i) => k(0.4, 4.2, 0.4, Math.cos(i * 0.8) * 0.8, 1.6, Math.sin(i * 0.8) * 0.8, '#6a4426', Math.sin(i * 0.8) * 0.45, 0, -Math.cos(i * 0.8) * 0.45)))!;
 const flammeGeo = () => mergeGeometries([
@@ -215,17 +222,21 @@ export class LebenDarstellung {
   private waesche: Instanzen; private raeder: Instanzen; private saegen: Instanzen; private haemmer: Instanzen;
   private figuren: Instanzen; private fenster: Instanzen; private schein: Instanzen; private konfetti: Instanzen; private holz: Instanzen; private flammen: Instanzen;
   private muehlen: Instanzen; private muehlenFluegel: Instanzen; private hunde: Instanzen; private lampen: Instanzen;
+  private schildArme: Instanzen;
+  /** Zunftschild-Waren je Warenart (erst angelegt, wenn ein Gebäude sie zeigt). */
+  private schildWaren = new Map<number, Instanzen>();
+  private mat: THREE.MeshStandardMaterial;
   private zeit = 0;
   /** Teilchen-Takt je Anker (Schlüssel Gebäude-Id und Anker-Index). */
   private takt = new Map<string, number>();
   private konfettiTeile: { x: number; y: number; z: number; vx: number; vy: number; vz: number; t: number; dauer: number; rot: number; c: number }[] = [];
   private gemeldet = 0;
   private m = new THREE.Matrix4(); private q = new THREE.Quaternion(); private q2 = new THREE.Quaternion();
-  private p = new THREE.Vector3(); private s = new THREE.Vector3(); private c = new THREE.Color();
+  private p = new THREE.Vector3(); private s = new THREE.Vector3(); private s2 = new THREE.Vector3(); private c = new THREE.Color();
   private X = new THREE.Vector3(1, 0, 0); private Y = new THREE.Vector3(0, 1, 0); private Z = new THREE.Vector3(0, 0, 1);
 
   constructor(private map: { heightAt(x: number, z: number): number }, private base: number, private ex: number, private lage: ModellLage) {
-    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 });
+    const mat = this.mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 });
     const doppelt = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, side: THREE.DoubleSide });
     this.rauch = new Teilchen(this.group, leben.rauch.max, false);
     this.glut = new Teilchen(this.group, 900, true);
@@ -250,6 +261,7 @@ export class LebenDarstellung {
     this.muehlen = new Instanzen(this.group, muehleGeo(), mat, false, true, [], 8);
     this.muehlenFluegel = new Instanzen(this.group, fluegelMuehleGeo(), doppelt, false, true, [], 8);
     this.hunde = new Instanzen(this.group, hundGeo(), mat, false, true, [], 8);
+    this.schildArme = new Instanzen(this.group, schildArmGeo(), mat, false, true, [], 64);
     this.lampen = new Instanzen(this.group, new THREE.SphereGeometry(0.4, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffffff' }), true, false, [], 16);
     // Flammen leuchten (Farbe über 1: bleibt auch nachts hell und speist das Leuchten der Nachbearbeitung)
     this.flammen = new Instanzen(this.group, flammeGeo(), new THREE.MeshBasicMaterial({ vertexColors: true, color: new THREE.Color(4, 1.9, 0.9), transparent: true, opacity: 0.92 }), false, false, [], 4);
@@ -288,6 +300,7 @@ export class LebenDarstellung {
       if (kam && kam.distanceTo(this.p.set(l.x, l.y, l.z)) > leben.fern_m) continue;
       const arbeitet = g.zustand === 'arbeitet' || g.zustand === 'fest';
       const anker = lebenAnker(g.typ);
+      this.schild(g, anker, l, t, wind);
       for (let i = 0; i < anker.length; i++) this.anker(g, anker[i], i, l, { t, dt, nacht, wind, winter, arbeitet, fest, kirmesFest, eigen: g.sp === s.ich, zahl, regen: lg.regen });
       // Vogelschwarm über großen Feldern (Felder mit weitem Grundriss), im Winter Raben
       if (/feld|garten|weinberg|wiese/.test(g.typ)) this.schwarm(g.id, l.x, l.y, l.z, l.sk, t, winter, zahl);
@@ -303,7 +316,33 @@ export class LebenDarstellung {
 
   private alle(): Instanzen[] {
     return [this.schafe, this.kuehe, this.huehner, this.fluegelL, this.fluegelR, this.voegel, this.waesche, this.raeder, this.saegen, this.haemmer, this.figuren,
-      this.fenster, this.schein, this.konfetti, this.holz, this.flammen, this.muehlen, this.muehlenFluegel, this.hunde, this.lampen];
+      this.fenster, this.schein, this.konfetti, this.holz, this.flammen, this.muehlen, this.muehlenFluegel, this.hunde, this.lampen, this.schildArme,
+      ...this.schildWaren.values()];
+  }
+
+  /** Zunftschild am ersten Schild-Anker: die Ware, die das Gebäude macht, hängt am Arm und schwingt im Wind (so erkennt man auch
+   *  Gebäude, die sich ein Modell teilen, z. B. Spinnerei und Käserei). */
+  private schild(g: SichtGebaeude, anker: readonly Anker[], l: { x: number; y: number; z: number; sk: number }, t: number, wind: number): void {
+    const ware = GEBAEUDE[g.typ]?.ausgangWare ?? -1;
+    const a = ware >= 0 ? anker.find((x) => x.art === 'schild') : undefined;
+    if (!a) return;
+    const { m, q, p, s: sc } = this, sk = l.sk;
+    const x = l.x + a.x * sk, y = l.y + a.y * sk, z = l.z + a.z * sk;
+    m.compose(p.set(x, y, z), q.identity(), sc.setScalar(sk));
+    this.schildArme.fuege(m);
+    let satz = this.schildWaren.get(ware);
+    if (!satz) {
+      satz = new Instanzen(this.group, warenGeometrie(ware), this.mat, false, true, [], 16);
+      satz.beginne();
+      this.schildWaren.set(ware, satz);
+    }
+    // hängt unter der Armspitze, pendelt um die Aufhängung
+    const sw = Math.sin(t * (1.3 + wind) + g.id) * (0.06 + 0.22 * wind);
+    const gr = leben.schild.groesse * sk / 4.4;
+    q.setFromAxisAngle(this.X, sw).multiply(this.q2.setFromAxisAngle(this.Y, 0.5));
+    p.set(0, -WARE_M * gr, 0).applyQuaternion(q).add(this.s2.set(x, y - 0.3 * sk, z + 2.2 * sk));
+    m.compose(p, q, sc.setScalar(gr));
+    satz.fuege(m);
   }
 
   /** Ein Anker eines Gebäudes. */
