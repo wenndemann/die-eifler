@@ -355,6 +355,10 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 - [x] Fällt der Ort beim Nach-innen-Rücken heraus, sagt die Kartenwahl es klar; Zeile „Startort“ im Infofeld
 - [x] Mehrspieler: der Gastgeber startet im Wunsch-Ort (`tests/wunschort.test.ts`, `tests/mehrspieler.mjs`)
 
+## Nachtrag: READMEs kurz ✅
+
+- [x] README und README-platt neu: kurz, was das Spiel ist und kann, Schnellstart, Mehrspieler betreiben, Befehle; die Details der Meilensteine stehen nur noch hier in der Roadmap und im Drehbuch
+
 ## Danach (offen)
 
 - **Verbundene Regionen** im Mehrspieler: jeder spielt seinen eigenen Ausschnitt und schickt Händler und Finder hinüber (Drehbuch 2.3)
