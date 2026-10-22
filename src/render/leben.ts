@@ -216,7 +216,8 @@ export class LebenDarstellung {
     this.schein.mesh.renderOrder = 6;
     this.konfetti = new Instanzen(this.group, new THREE.PlaneGeometry(0.7, 0.45), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, toneMapped: false }), true, false, [], 256);
     this.holz = new Instanzen(this.group, holzstossGeo(), mat, false, true, [], 2);
-    this.flammen = new Instanzen(this.group, flammeGeo(), new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false, transparent: true, opacity: 0.9 }), false, false, [], 4);
+    // Flammen leuchten (Farbe über 1: bleibt auch nachts hell und speist das Leuchten der Nachbearbeitung)
+    this.flammen = new Instanzen(this.group, flammeGeo(), new THREE.MeshBasicMaterial({ vertexColors: true, color: new THREE.Color(4, 1.9, 0.9), transparent: true, opacity: 0.92 }), false, false, [], 4);
   }
 
   setExaggeration(ex: number) { this.ex = ex; }
@@ -373,9 +374,9 @@ export class LebenDarstellung {
         // Schmiedehammer: hoch, zuschlagen (Funken), hoch …
         const zyk = o.arbeitet ? (o.t * 1.4 + h01(id, 3)) % 1 : 0.5;
         const hoch = zyk < 0.75 ? Math.sin((zyk / 0.75) * Math.PI * 0.5) : 1 - (zyk - 0.75) / 0.25;
-        q.setFromAxisAngle(this.Z, -0.05 + hoch * 1.1);
-        // Drehpunkt hinter dem Amboss, der Kopf trifft auf (x, y, z)
-        m.compose(p.set(x + 1.8 * sk, y + 0.2 * sk, z), q, sc.setScalar(sk));
+        // Stiel zeigt nach vorn (Drehpunkt hinter dem Amboss), der Kopf hebt sich und trifft auf (x, y, z)
+        q.setFromAxisAngle(this.Y, Math.PI / 2).multiply(this.q2.setFromAxisAngle(this.Z, -0.05 + hoch * 1.1));
+        m.compose(p.set(x, y + 0.25 * sk, z - 2.3 * sk), q, sc.setScalar(sk * 1.3));
         this.haemmer.fuege(m);
         const key = `${id}:h`;
         const vorher = this.takt.get(key) ?? 0;
@@ -513,7 +514,7 @@ export class LebenDarstellung {
       if (!anlass.has(e.art) || s.tick - e.tick > 60) continue;
       const g = s.gebaeude.find((x) => x.id === e.gebaeude) ?? s.gebaeude.find((x) => x.sp === s.ich && x.typ === 'kirmesplatz') ?? s.gebaeude.find((x) => x.sp === s.ich && x.typ === 'lager');
       const l = g ? this.lage(g.id, g.typ) : null;
-      if (l) this.konfettiAus(l.x, l.y + 18 * l.sk, l.z, l.sk);
+      if (l) this.konfettiAus(l.x, l.y + 9 * l.sk, l.z, l.sk);
     }
   }
 
@@ -532,7 +533,7 @@ export class LebenDarstellung {
       f.t += dt;
       if (f.t >= f.dauer) continue;
       // fällt langsam und flattert
-      f.vy = Math.max(f.vy - 14 * dt, -3.5);
+      f.vy = Math.max(f.vy - 14 * dt, -2.5);
       f.vx *= 1 - dt * 0.8; f.vz *= 1 - dt * 0.8;
       f.x += (f.vx + Math.sin(f.t * 3 + f.rot) * 1.2) * dt; f.y += f.vy * dt; f.z += (f.vz + Math.cos(f.t * 2.7 + f.rot) * 1.2) * dt;
       const boden = this.hoehe(f.x, f.z) + 0.3;

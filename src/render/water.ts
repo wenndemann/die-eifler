@@ -56,6 +56,14 @@ export class Water {
         .replace('#include <common>', `#include <common>
 varying vec3 vWPos; uniform float uTime; uniform sampler2D uDepth; uniform vec2 uSize;
 float vKFade;
+float glitzer(vec2 p, float t) {
+  vec2 c = floor(p);
+  float h = fract(sin(dot(c, vec2(127.1, 311.7))) * 43758.5453);
+  float z = fract(t * (0.35 + 0.4 * h) + h * 7.0);
+  float an = smoothstep(0.0, 0.06, z) * (1.0 - smoothstep(0.06, 0.18, z));
+  vec2 f = fract(p) - 0.5 + (vec2(h, fract(h * 13.0)) - 0.5) * 0.5;
+  return an * (1.0 - smoothstep(0.0, 0.1, length(f))) * step(0.55, h);
+}
 ${KULISSE_GLSL}`)
         .replace('#include <color_fragment>', `#include <color_fragment>
 {
@@ -67,6 +75,8 @@ ${KULISSE_GLSL}`)
   float ripple = 0.5 + 0.5 * sin(vWPos.x * 0.21 + vWPos.z * 0.17 + uTime * 1.6);
   diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.85, 0.9, 0.88), foam * (0.35 + 0.4 * ripple));
   diffuseColor.a = mix(0.6, 0.92, smoothstep(0.0, 6.0, dpt));
+  // Lebendige Eifel: Sonnenglitzern auf dem Wasser (in der Nähe)
+  diffuseColor.rgb += vec3(1.0, 0.96, 0.85) * glitzer(vWPos.xz * 0.12, uTime) * 1.6 * (1.0 - smoothstep(400.0, 2200.0, fdist));
   diffuseColor.rgb = kGrau(diffuseColor.rgb, kOut(vWPos.xz));
   vKFade = kFade(vWPos.xz);
 }`)

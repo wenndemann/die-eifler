@@ -405,6 +405,14 @@ float inPlay(vec2 a){ return 1.0 - step(uKPlay.z + 0.5, kDist(a)); }`)
   // Feinstruktur (Gras/Boden), zwei Oktaven
   float n = vnoise(vWPos.xz * 0.11) * 0.6 + vnoise(vWPos.xz * 0.5) * 0.4;
   diffuseColor.rgb *= 0.92 + n * 0.16;
+  // Lebendige Eifel: gemalter Boden – große warme und kühle Flecken, Pinselstriche, erdige Hänge (aus der Neigung, dFdx/dFdy)
+  float makro = vnoise(vWPos.xz * 0.0035) * 0.65 + vnoise(vWPos.xz * 0.011 + 7.3) * 0.35;
+  diffuseColor.rgb *= mix(vec3(0.93, 1.0, 0.92), vec3(1.07, 1.03, 0.86), makro);
+  float strich = vnoise(vec2(vWPos.x * 0.045 + vWPos.z * 0.018, vWPos.z * 0.16 - vWPos.x * 0.01));
+  diffuseColor.rgb *= 0.965 + 0.07 * strich;
+  vec3 gn = normalize(cross(dFdx(vWPos), dFdy(vWPos)));
+  float steil = smoothstep(0.82, 0.5, abs(gn.y));
+  diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.95, 0.82, 0.68), steil * 0.4);
   // Hex-Raster, Spielfeld-Rand, Hover
   vec2 p = vWPos.xz - uHexOrigin;
   vec2 ax = hexRound(vec2((0.57735027 * p.x - p.y / 3.0) / uHexSize, (0.6666667 * p.y) / uHexSize));

@@ -35,7 +35,7 @@ const RAND = 2.5;
 /** Haken in die übrige Darstellung (alle optional): Gelände neu aufbauen, Kulissenhäuser ausblenden. */
 export interface GebaeudeHaken {
   terrain?: { erneuere(x0: number, z0: number, x1: number, z1: number): void; setzeErde(i: number, j: number, anteil: number): void };
-  houses?: { verstecke(x: number, z: number, radius: number): number };
+  houses?: { verstecke(x: number, z: number, radius: number): number; nachtLicht?(n: number, farbe?: string, hell?: number): void };
   trees?: Trees;
 }
 

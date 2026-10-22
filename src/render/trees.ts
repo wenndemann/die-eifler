@@ -99,7 +99,8 @@ function buildGeometries() {
 
 export class Trees {
   readonly group = new THREE.Group();
-  readonly uniforms = { uTime: { value: 0 } };
+  /** uWind 0..1 (Lebendige Eifel: Bäume wiegen stärker bei Sturm), uHerbst 0..1 (Laub färbt sich). */
+  readonly uniforms = { uTime: { value: 0 }, uWind: { value: 0.2 }, uHerbst: { value: 0 } };
   private chunks: TreeChunk[] = [];
   private verbuende: Verbund[] = [];
   private qualitaet: Qualitaet = 'mittel';
@@ -128,23 +129,35 @@ export class Trees {
       Object.assign(shader.uniforms, this.uniforms, kulisseUniforms);
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>', `#include <common>
-uniform float uTime; varying float vKFade; varying float vKOut;
+uniform float uTime; uniform float uWind; varying float vKFade; varying float vKOut; varying float vLaub;
 ${KULISSE_GLSL}`)
         .replace('#include <begin_vertex>', `#include <begin_vertex>
 #ifdef USE_INSTANCING
 {
   vec3 ip = instanceMatrix[3].xyz;
-  float sway = sin(uTime * 1.6 + ip.x * 0.043 + ip.z * 0.061) * 0.018 * max(position.y - 6.0, 0.0);
-  transformed.x += sway; transformed.z += sway * 0.6;
+  // Wind: Grundwiegen plus Böen, die über den Wald laufen (stärker bei Sturm)
+  float boe = 0.5 + 0.5 * sin(uTime * 0.7 - ip.x * 0.004 - ip.z * 0.003);
+  float amp = 0.012 + uWind * (0.03 + 0.05 * boe);
+  float sway = (sin(uTime * (1.4 + uWind) + ip.x * 0.043 + ip.z * 0.061) + 0.35 * sin(uTime * 3.7 + ip.z * 0.09)) * amp * max(position.y - 6.0, 0.0);
+  transformed.x += sway + uWind * boe * 0.02 * max(position.y - 6.0, 0.0); transformed.z += sway * 0.6;
+  vLaub = fract(sin(dot(ip.xz, vec2(12.9898, 78.233))) * 43758.5453);
   vec2 wxz = (modelMatrix * vec4(ip, 1.0)).xz;
   vKFade = kFade(wxz); vKOut = kOut(wxz);
 }
 #endif`);
       shader.fragmentShader = shader.fragmentShader
         .replace('#include <common>', `#include <common>
-varying float vKFade; varying float vKOut;
+varying float vKFade; varying float vKOut; varying float vLaub; uniform float uHerbst;
 ${KULISSE_GLSL}`)
         .replace('#include <color_fragment>', `#include <color_fragment>
+{
+  // Herbst: Laub der Laubbäume (helles Grün) färbt sich gelb, orange und rot, je Baum anders; Nadelbäume (dunkel) bleiben grün
+  float hell = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+  float laub = step(diffuseColor.r * 1.05, diffuseColor.g) * smoothstep(0.16, 0.26, hell);
+  vec3 bunt = vLaub < 0.33 ? vec3(0.95, 0.72, 0.18) : vLaub < 0.66 ? vec3(0.92, 0.45, 0.12) : vec3(0.78, 0.22, 0.12);
+  float wann = smoothstep(vLaub * 0.6, vLaub * 0.6 + 0.4, uHerbst);
+  diffuseColor.rgb = mix(diffuseColor.rgb, bunt * (0.6 + hell), laub * wann * 0.85);
+}
 diffuseColor.rgb = kSchnee(diffuseColor.rgb, 0.45);
 diffuseColor.rgb = kGrau(diffuseColor.rgb, vKOut * 0.85);`)
         .replace('#include <fog_fragment>', KULISSE_FOG);

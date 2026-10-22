@@ -32,7 +32,7 @@ try {
   const ort = orte.orte.find((o) => o[0] === ORT && o[5] !== undefined);
   if (!ort) throw new Error(`Ort ${ORT} nicht in den Weltdaten`);
   const p = L.klemmeAusschnitt(manifest, { version, q: ort[5], r: ort[6], size: 'klein' });
-  await page.goto(`${basis}#v=${p.version}&q=${p.q}&r=${p.r}&g=${p.size}&o=${encodeURIComponent(ORT)}`);
+  await page.goto(`${basis}#v=${p.version}&q=${p.q}&r=${p.r}&g=${p.size}&o=${ort[5]},${ort[6]},${encodeURIComponent(ORT)}`);
   await page.waitForFunction(() => window.eifeler?.spiel, null, { timeout: 600000, polling: 500 });
   await page.evaluate(() => window.eifeler.skipIntro());
   await page.addStyleTag({ content: '.meldeleiste { display: none !important; }' });

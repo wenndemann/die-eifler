@@ -10,7 +10,7 @@ import type { MapData } from '../map/mapdata';
 import { HexGrid } from '../map/hex';
 import { FLAG } from '../welt/format';
 import { hash } from './terrain';
-import { fachwerk, C } from './mockup';
+import { fachwerk, mitAnkern, C } from './mockup';
 import { HAUS_SKALE, NEBENBAU_P, NACHBAR_P } from './massstab';
 
 /** Bautypen (echte Maße in m: Breite entlang des Firsts, Tiefe, Stockwerke). */
@@ -32,7 +32,9 @@ interface Haus { x: number; z: number; rot: number; typ: number; s: number; a: n
 
 export class Houses {
   readonly group = new THREE.Group();
-  private items: { mesh: THREE.InstancedMesh; data: Float32Array; weg: Uint8Array }[] = [];
+  private items: { mesh: THREE.InstancedMesh; data: Float32Array; weg: Uint8Array; licht?: THREE.InstancedMesh }[] = [];
+  /** Lebendige Eifel: Fensterlicht der Kulissenhäuser in der Nacht (Farbe über 1, speist das Leuchten). */
+  private lichtMat = new THREE.MeshBasicMaterial({ color: '#000000', polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
   private ex = 1;
   count = 0;
   /** Rasterzellen unter und neben den Häusern (für Wald: dort keine Bäume). */
@@ -152,6 +154,10 @@ export class Houses {
       const liste = haeuser.filter((h) => h.typ === n);
       if (!liste.length) return;
       const geo = mergeGeometries(fachwerk(ty.w, ty.d, ty.floors, ty.wall, ty.dach))!;
+      // Fenster als Leuchtflächen (gleiche Lage wie die Fenster des Modells, leicht davor)
+      const fenster = mitAnkern(() => fachwerk(ty.w, ty.d, ty.floors, ty.wall, ty.dach)).anker.filter((a) => a.art === 'fenster');
+      const lichtGeo = fenster.length ? mergeGeometries(fenster.map((a) => new THREE.PlaneGeometry(a.w ?? 1, 1.15)
+        .rotateY((a.seite ?? 1) > 0 ? 0 : Math.PI).translate(a.x, a.y, a.z + (a.seite ?? 1) * 0.15)))! : null;
       const data = new Float32Array(liste.length * 5);
       liste.forEach((h, t) => data.set([h.x, h.h0 - base, h.z, h.rot, h.s], t * 5));
       const mesh = new THREE.InstancedMesh(geo, mat, liste.length);
@@ -162,7 +168,15 @@ export class Houses {
       });
       mesh.castShadow = true;
       mesh.receiveShadow = true;
-      this.items.push({ mesh, data, weg: new Uint8Array(liste.length) });
+      let licht: THREE.InstancedMesh | undefined;
+      if (lichtGeo) {
+        // nicht in jedem Haus brennt Licht
+        licht = new THREE.InstancedMesh(lichtGeo, this.lichtMat, liste.length);
+        liste.forEach((h, t) => licht!.setColorAt(t, col.setScalar(hash(Math.floor(h.x) + 3, Math.floor(h.z) - 5) < 0.7 ? 0.7 + hash(Math.floor(h.z), Math.floor(h.x)) * 0.5 : 0)));
+        licht.visible = false;
+        this.group.add(licht);
+      }
+      this.items.push({ mesh, data, weg: new Uint8Array(liste.length), licht });
       this.group.add(mesh);
       this.count += liste.length;
     });
@@ -192,6 +206,12 @@ export class Houses {
     }
   }
 
+  /** Nacht 0..1 (Lebendige Eifel): Fensterlicht an, warm und hell genug zum Leuchten. */
+  nachtLicht(n: number, farbe: THREE.ColorRepresentation = '#ff9a30', hell = 3): void {
+    this.lichtMat.color.set(farbe).multiplyScalar(n * hell);
+    for (const it of this.items) if (it.licht) it.licht.visible = n > 0.03;
+  }
+
   /** Kulissenhäuser im Umkreis (Ausschnitt-Meter) ausblenden, z. B. wenn dort ein Spielgebäude entsteht. Liefert die Zahl. */
   verstecke(x: number, z: number, radius: number): number {
     let n = 0;
@@ -208,7 +228,8 @@ export class Houses {
     this.ex = ex;
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3();
     const up = new THREE.Vector3(0, 1, 0);
-    for (const { mesh, data, weg } of this.items) {
+    for (const it of this.items) {
+      const { mesh, data, weg } = it;
       for (let t = 0; t < data.length / 5; t++) {
         // Oberkante des Bruchsteinsockels liegt 1 m (echt) über der Hausmitte-Null: Haus sitzt 0,5 m im planierten Boden
         p.set(data[t * 5], data[t * 5 + 1] * ex - 0.5 * data[t * 5 + 4], data[t * 5 + 2]);
@@ -216,9 +237,11 @@ export class Houses {
         const sc = weg[t] ? 0 : data[t * 5 + 4];
         s.set(sc, sc, sc);
         mesh.setMatrixAt(t, m.compose(p, q, s));
+        it.licht?.setMatrixAt(t, m);
       }
       mesh.instanceMatrix.needsUpdate = true;
       mesh.computeBoundingSphere();
+      if (it.licht) { it.licht.instanceMatrix.needsUpdate = true; it.licht.computeBoundingSphere(); }
     }
   }
 }

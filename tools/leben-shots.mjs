@@ -33,7 +33,7 @@ try {
   const L = await import(`data:text/javascript;base64,${Buffer.from(b.outputFiles[0].text).toString('base64')}`);
   const ort = orte.orte.find((o) => o[0] === ORT && o[5] !== undefined);
   const p = L.klemmeAusschnitt(manifest, { version, q: ort[5], r: ort[6], size: 'klein' });
-  await page.goto(`${basis}#v=${p.version}&q=${p.q}&r=${p.r}&g=${p.size}&o=${encodeURIComponent(ORT)}`);
+  await page.goto(`${basis}#v=${p.version}&q=${p.q}&r=${p.r}&g=${p.size}&o=${ort[5]},${ort[6]},${encodeURIComponent(ORT)}`);
   await page.waitForFunction(() => window.eifeler?.spiel, null, { timeout: 600000, polling: 500 });
   await page.evaluate(() => window.eifeler.skipIntro());
   await page.addStyleTag({ content: '.meldeleiste, .einfuehrung { display: none !important; }' });
@@ -87,7 +87,7 @@ try {
   const bild = async (name) => {
     if (NUR && !NUR.has(name.split('-')[1])) return;
     await page.screenshot({ path: join(AUS, name), timeout: 180000 });
-    console.log(name, JSON.stringify(await page.evaluate(() => window.eifeler.spiel.leben.zahlen)));
+    console.log(name, JSON.stringify(await page.evaluate(() => ({ ...window.eifeler.spiel.leben.zahlen, gras: window.eifeler.spiel.gras.anzahl, grasSichtbar: window.eifeler.spiel.gras.group.visible }))));
   };
   const I = info.ids;
   await wetter({ tag: 0.45, wind: 0.6 });
@@ -100,7 +100,7 @@ try {
   if (I.schaenke) { await zu(I.schaenke.q, I.schaenke.r, 150, 28, 30); await bild('leben-7-schaenke.png'); }
   if (I.kartoffelfeld) { await zu(I.kartoffelfeld.q, I.kartoffelfeld.r, 330, 22, 40); await bild('leben-8-voegel-feld.png'); }
   if (I.kirmesplatz) {
-    await page.evaluate(() => { const sp = window.eifeler.spiel; const g = sp.sicht.gebaeude.find((x) => x.typ === 'kirmesplatz'); const l = sp.gebaeude.modellLage(g.id, g.typ); sp.leben.konfettiAus(l.x, l.y + 70, l.z); });
+    await page.evaluate(() => { const sp = window.eifeler.spiel; const g = sp.sicht.gebaeude.find((x) => x.typ === 'kirmesplatz'); const l = sp.gebaeude.modellLage(g.id, g.typ); sp.leben.konfettiAus(l.x, l.y + 40, l.z); });
     await zu(I.kirmesplatz.q, I.kirmesplatz.r, 300, 30, 0, 0, 1200); await bild('leben-9-konfetti.png');
   }
   // Martinsfeuer in der Dämmerung

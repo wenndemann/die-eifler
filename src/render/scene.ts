@@ -49,7 +49,7 @@ export class Stage {
     container.appendChild(this.renderer.domElement);
     this.buch = new Buchpass(this.renderer);
     this.buch.an = q !== 'niedrig';
-    this.buch.qualitaet(this.quali.ao, this.quali.glanz);
+    this.buch.qualitaet(this.quali.ao, this.quali.glanz, this.quali.leuchten);
 
     this.scene.background = this.fogColor;
     this.scene.fog = new THREE.Fog(this.fogColor, 4000, 30000);
@@ -159,7 +159,7 @@ export class Stage {
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, p.pixel));
     if (this.breite) { this.renderer.setSize(this.breite, this.hoehe); this.buch.groesse(this.breite, this.hoehe); }
     this.buch.an = q !== 'niedrig';
-    this.buch.qualitaet(p.ao, p.glanz);
+    this.buch.qualitaet(p.ao, p.glanz, p.leuchten);
   }
 
   /** Ein Bild: mit Bilderbuch-Pass (Linie, Farbkraft) oder direkt. */

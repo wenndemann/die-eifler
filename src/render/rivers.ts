@@ -112,6 +112,14 @@ float flowN(float s, float t, float w, float sp){
   // Strömungsmuster: längs gestreckt, wandert mit der Fließgeschwindigkeit
   vec2 q = vec2(t * w * 0.35, (s - uTime * sp) * 0.09);
   return rn(q) * 0.6 + rn(q * 2.7 + 13.1) * 0.4;
+}
+float glitzer(vec2 p, float t) {
+  vec2 c = floor(p);
+  float h = fract(sin(dot(c, vec2(127.1, 311.7))) * 43758.5453);
+  float z = fract(t * (0.35 + 0.4 * h) + h * 7.0);
+  float an = smoothstep(0.0, 0.06, z) * (1.0 - smoothstep(0.06, 0.18, z));
+  vec2 f = fract(p) - 0.5 + (vec2(h, fract(h * 13.0)) - 0.5) * 0.5;
+  return an * (1.0 - smoothstep(0.0, 0.1, length(f))) * step(0.55, h);
 }`)
         .replace('#include <color_fragment>', `#include <color_fragment>
 {
@@ -127,6 +135,8 @@ float flowN(float s, float t, float w, float sp){
   float rapid = smoothstep(0.004, 0.03, drop) * smoothstep(0.55, 0.85, n);
   float edgeFoam = smoothstep(0.62, 0.8, at) * (1.0 - smoothstep(0.8, 0.95, at)) * (0.35 + 0.5 * n);
   diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.86, 0.91, 0.9), clamp(rapid * 0.7 + edgeFoam * 0.5, 0.0, 1.0));
+  // Lebendige Eifel: Sonnenglitzern, treibt mit der Strömung
+  diffuseColor.rgb += vec3(1.0, 0.96, 0.85) * glitzer(vec2(vSide * hw * 0.25, (vFlow - uTime * sp * 0.6) * 0.25), uTime) * 1.4 * (1.0 - smoothstep(400.0, 2000.0, vDist));
   // Weicher Rand + Bäche in der Ferne ausblenden (sonst Flimmern)
   float fade = kind > 0.5 ? 1.0 - smoothstep(2500.0, 6000.0, vDist) : 1.0 - smoothstep(14000.0, 22000.0, vDist);
   diffuseColor.a = (1.0 - smoothstep(0.82, 1.0, at)) * mix(0.75, 0.93, core) * fade * vTaper;
