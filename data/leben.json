@@ -235,7 +235,7 @@
     "max_gruppen": 30,
     "neu_ab_m": 120,
     "bis_abstand_m": 1800,
-    "skala": 7.5,
+    "skala": 9,
     "arten": {
       "reh": {
         "anteil": 0.32,

@@ -159,8 +159,15 @@ try {
     await page.waitForTimeout(3500);
     await bild('13-wild-nah.png');
   }
-  const schmiede = await page.evaluate(() => { const g = window.eifeler.spiel.sicht.gebaeude.find((x) => x.typ === 'schmiede'); return g && { q: g.q, r: g.r }; });
-  if (schmiede) { await zu(schmiede, 170, 30, 30); await bild('14-meister-nah.png'); }
+  const meister = await page.evaluate(async () => {
+    // ein besetztes Gebäude mit Meister (Schmied, Koch, Käserin …), bevorzugt die Schmiede
+    const m = (await (await fetch('/data/leben.json')).json()).meister;
+    const ohne = new Set(['baustelle', 'wartet_material', 'kein_arbeiter', 'getrennt']);
+    const l = window.eifeler.spiel.sicht.gebaeude.filter((x) => m[x.typ] && x.bau >= 1000 && !ohne.has(x.zustand));
+    const g = l.find((x) => x.typ === 'schmiede') ?? l.find((x) => x.typ === 'kueche') ?? l[0];
+    return g && { q: g.q, r: g.r, typ: g.typ };
+  });
+  if (meister) { console.log('Meister an', meister.typ); await zu(meister, 170, 30, 30); await bild('14-meister-nah.png'); }
   console.log('Bildstrecke in', AUS);
 } finally {
   await browser.close();
