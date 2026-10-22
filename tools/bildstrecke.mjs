@@ -145,6 +145,22 @@ try {
   await page.evaluate(() => { window.eifeler.spiel.wetterVorgabe = { tag: 0.45, wind: 0.6 }; });
   const stall = await page.evaluate(() => { const g = window.eifeler.spiel.sicht.gebaeude.find((x) => x.typ === 'schafstall'); return g && { q: g.q, r: g.r }; });
   if (stall) { await zu(stall, 210, 38, -40); await bild('12-tiere-nah.png'); }
+  // Wild am Waldrand (Rotte bzw. Rudel nah) und ein Meister in Tracht vor seiner Werkstatt
+  const wild = await page.evaluate(async () => {
+    const e = window.eifeler, sp = e.spiel, w = e.grid.toWorld(sp.lagerHex);
+    e.cam.jumpTo(w.x, w.z, 900, 0.5); e.settle();
+    for (let i = 0; i < 40 && !sp.wild.gruppenListe.length; i++) await new Promise((ok) => setTimeout(ok, 500));
+    const l = sp.wild.gruppenListe;
+    const g = l.find((x) => x.art === 'wildschwein') ?? l.find((x) => x.art === 'reh') ?? l[0];
+    return g ? { x: g.x, z: g.z, art: g.art } : null;
+  });
+  if (wild) {
+    await page.evaluate((g) => { const e = window.eifeler; e.cam.pitchOverride = 32; e.cam.jumpTo(g.x, g.z + 30, 200, 0.5); e.settle(); }, wild);
+    await page.waitForTimeout(3500);
+    await bild('13-wild-nah.png');
+  }
+  const schmiede = await page.evaluate(() => { const g = window.eifeler.spiel.sicht.gebaeude.find((x) => x.typ === 'schmiede'); return g && { q: g.q, r: g.r }; });
+  if (schmiede) { await zu(schmiede, 170, 30, 30); await bild('14-meister-nah.png'); }
   console.log('Bildstrecke in', AUS);
 } finally {
   await browser.close();
