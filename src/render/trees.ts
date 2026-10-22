@@ -154,9 +154,9 @@ ${KULISSE_GLSL}`)
   // Herbst: Laub der Laubbäume (helles Grün) färbt sich gelb, orange und rot, je Baum anders; Nadelbäume (dunkel) bleiben grün
   float hell = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
   float laub = step(diffuseColor.r * 1.05, diffuseColor.g) * smoothstep(0.16, 0.26, hell);
-  vec3 bunt = vLaub < 0.33 ? vec3(0.95, 0.72, 0.18) : vLaub < 0.66 ? vec3(0.92, 0.45, 0.12) : vec3(0.78, 0.22, 0.12);
+  vec3 bunt = vLaub < 0.33 ? vec3(0.95, 0.66, 0.08) : vLaub < 0.66 ? vec3(0.93, 0.38, 0.05) : vec3(0.8, 0.16, 0.06);
   float wann = smoothstep(vLaub * 0.6, vLaub * 0.6 + 0.4, uHerbst);
-  diffuseColor.rgb = mix(diffuseColor.rgb, bunt * (0.8 + hell), laub * wann * 0.95);
+  diffuseColor.rgb = mix(diffuseColor.rgb, bunt * (0.5 + hell * 0.7), laub * wann * 0.95);
 }
 diffuseColor.rgb = kSchnee(diffuseColor.rgb, 0.45);
 diffuseColor.rgb = kGrau(diffuseColor.rgb, vKOut * 0.85);`)
