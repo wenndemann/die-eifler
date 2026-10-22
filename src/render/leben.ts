@@ -216,6 +216,8 @@ function scheinTextur(): THREE.Texture {
 /** Kleiner Hash 0..1 aus zwei Zahlen (fest je Gebäude und Anker). */
 const h01 = (a: number, b: number) => { const x = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return x - Math.floor(x); };
 /** Werkstätten, deren Rauch nur bei der Arbeit steigt (Herdfeuer in Häusern brennt immer ein wenig). */
+/** Zustände ohne Meister vor der Tür (nicht besetzt, im Bau, abgeschnitten). */
+const OHNE_MEISTER = new Set(['baustelle', 'wartet_material', 'kein_arbeiter', 'getrennt', 'kein_planierer', 'planieren', 'kein_bauarbeiter']);
 const HERD = new Set(['wohnhaus', 'lager', 'schaenke', 'huette', 'kueche', 'junggesellen', 'eifelfonds', 'abtei', 'polizeiwache']);
 
 export class LebenDarstellung {
@@ -315,7 +317,8 @@ export class LebenDarstellung {
       const arbeitet = g.zustand === 'arbeitet' || g.zustand === 'fest';
       const anker = lebenAnker(g.typ);
       this.schild(g, anker, l, t, wind);
-      if (arbeitet) this.meister(g, anker, l, t, zahl);
+      // der Meister ist da, solange das Gebäude besetzt ist (nicht nur im Augenblick der Arbeit)
+      if (!OHNE_MEISTER.has(g.zustand)) this.meister(g, anker, l, t, zahl);
       for (let i = 0; i < anker.length; i++) this.anker(g, anker[i], i, l, { t, dt, nacht, wind, winter, arbeitet, fest, kirmesFest, eigen: g.sp === s.ich, zahl, regen: lg.regen });
       // Vogelschwarm über großen Feldern (Felder mit weitem Grundriss), im Winter Raben
       if (/feld|garten|weinberg|wiese/.test(g.typ)) this.schwarm(g.id, l.x, l.y, l.z, l.sk, t, winter, zahl);

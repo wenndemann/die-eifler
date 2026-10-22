@@ -235,7 +235,7 @@
     "max_gruppen": 30,
     "neu_ab_m": 120,
     "bis_abstand_m": 1800,
-    "skala": 5,
+    "skala": 7.5,
     "arten": {
       "reh": {
         "anteil": 0.32,
@@ -274,7 +274,7 @@
           0
         ],
         "tempo": 0.7,
-        "groesse": 0.6,
+        "groesse": 0.7,
         "wald": true
       },
       "fuchs": {
