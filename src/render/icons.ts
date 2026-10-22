@@ -11,11 +11,37 @@ import { warenGeometrie } from './waren';
 export interface Icons { ware: (string | undefined)[]; gebaeude: Record<string, string | undefined> }
 
 const GROESSE = 96;
+/** Gerendert wird größer und dann auf das Motiv zugeschnitten: Kleinkram am Rand macht das Gebäude sonst winzig (Gutachter). */
+const ROH = 256;
+
+/** Auf die sichtbaren Pixel zuschneiden (mit etwas Rand) und quadratisch auf GROESSE bringen. */
+function zuschneiden(quelle: HTMLCanvasElement): string {
+  const roh = document.createElement('canvas');
+  roh.width = roh.height = ROH;
+  const r = roh.getContext('2d')!;
+  r.drawImage(quelle, 0, 0);
+  const px = r.getImageData(0, 0, ROH, ROH).data;
+  let x0 = ROH, y0 = ROH, x1 = -1, y1 = -1;
+  for (let y = 0; y < ROH; y++) for (let x = 0; x < ROH; x++) {
+    if (px[(y * ROH + x) * 4 + 3] < 24) continue;
+    if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+  }
+  const aus = document.createElement('canvas');
+  aus.width = aus.height = GROESSE;
+  if (x1 >= 0) {
+    const seite = Math.max(x1 - x0, y1 - y0) + 1, rand = 3;
+    const sx = (x0 + x1 + 1) / 2 - seite / 2, sy = (y0 + y1 + 1) / 2 - seite / 2;
+    const a = aus.getContext('2d')!;
+    a.imageSmoothingQuality = 'high';
+    a.drawImage(roh, sx, sy, seite, seite, rand, rand, GROESSE - 2 * rand, GROESSE - 2 * rand);
+  }
+  return aus.toDataURL('image/png');
+}
 const SPEICHER = 'eifeler.icons';
 /** Schlüssel: ändert sich mit Waren (Form, Farbe), Gebäuden und Größe. */
 const SCHLUESSEL = (() => {
   const f = new Fnv2();
-  f.text(`${GROESSE}|${WAREN.join(',')}|${WAREN_FORM.join(',')}|${WAREN_FARBE.join(',')}|${GEBAEUDE_IDS.join(',')}`);
+  f.text(`${GROESSE}|${ROH}|zu|${WAREN.join(',')}|${WAREN_FORM.join(',')}|${WAREN_FARBE.join(',')}|${GEBAEUDE_IDS.join(',')}`);
   return f.hex();
 })();
 
@@ -60,10 +86,10 @@ async function rendere(): Promise<void> {
   const pause = () => new Promise<void>((ok) => setTimeout(ok, 0));
   try {
     const canvas = document.createElement('canvas');
-    canvas.width = canvas.height = GROESSE;
+    canvas.width = canvas.height = ROH;
     renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
     renderer.setPixelRatio(1);
-    renderer.setSize(GROESSE, GROESSE, false);
+    renderer.setSize(ROH, ROH, false);
     renderer.setClearColor(0x000000, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     const szene = new THREE.Scene();
@@ -83,7 +109,7 @@ async function rendere(): Promise<void> {
       kamera.lookAt(k.center);
       renderer!.render(szene, kamera);
       szene.remove(m);
-      return renderer!.domElement.toDataURL('image/png');
+      return zuschneiden(renderer!.domElement);
     };
     const neu: Icons = { ware: [], gebaeude: {} };
     for (let a = 0; a < WAREN.length; a++) { neu.ware[a] = bild(warenGeometrie(a)); await pause(); }

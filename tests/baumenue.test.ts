@@ -38,6 +38,8 @@ describe('Kostentexte', () => {
   });
   it('unbekannte Ware nimmt das letzte Wort des Namens', () => {
     expect(wareTexte(['x'], ['Eifeler Zeug'])[0]).toEqual({ icon: '', eins: 'Zeug', mehr: 'Zeug' });
+    // jede Ware hat ein Symbol (sonst steht im Lagerfenster nur „· 30“)
+    for (let a = 0; a < WAREN.length; a++) expect(W[a].icon, WAREN[a]).not.toBe('');
   });
 });
 

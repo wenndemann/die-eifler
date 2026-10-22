@@ -6,6 +6,7 @@ import leben from '../../data/leben.json';
 import type { MapData } from '../map/mapdata';
 import type { HexGrid } from '../map/hex';
 import type { SimSicht } from '../sim/typen';
+import { GEBAEUDE } from '../sim/daten';
 import { Instanzen } from './instanzen';
 import { kulisseUniforms } from './kulisse';
 
@@ -99,8 +100,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.93, 0.94, 0.95), clamp(uSchnee *
       this.sig = sig;
       const b = this.belegt; b.clear();
       const idx = (h: { q: number; r: number }) => this.grid.feld.index(h.q, h.r);
+      // nur das eigene Hex (große Gebäude samt Nachbarn): ums Haus herum wächst Gras, das macht die Nahansicht lebendig
       const nb = [[0, 0], [1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
-      for (const g of sicht.gebaeude) for (const [dq, dr] of nb) b.add(idx({ q: g.q + dq, r: g.r + dr }));
+      for (const g of sicht.gebaeude) for (const [dq, dr] of (GEBAEUDE[g.typ]?.groesse ?? 1) > 1 ? nb : nb.slice(0, 1)) b.add(idx({ q: g.q + dq, r: g.r + dr }));
       for (const f of sicht.fahnen) b.add(idx(f));
       for (const s of sicht.segmente) for (const h of s.pfad) b.add(idx(h));
       for (const o of sicht.orte) b.add(idx(o));
