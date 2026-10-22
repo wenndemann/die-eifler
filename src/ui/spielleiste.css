@@ -111,7 +111,7 @@
 .bm-reiter-knopf.an { background: linear-gradient(180deg, #f0cf8c, #c39447); color: #2a1f14; border-color: #ffe9b8; }
 .bm-gruppe[hidden] { display: none; }
 .bm-eintrag { position: relative; }
-.bm-sym img { width: 60px; height: 60px; object-fit: contain; display: block; margin: 0 auto; background: rgba(255, 238, 205, 0.16); border-radius: 9px; }
+.bm-sym img { width: 60px; height: 60px; object-fit: contain; display: block; margin: 0 auto; background: rgba(255, 238, 205, 0.22); border-radius: 9px; filter: drop-shadow(0 0 1px rgba(255, 244, 220, 0.8)); }
 .bm-taste { position: absolute; top: 3px; right: 5px; font-size: 10px; color: var(--gold-dim); background: none; border: none; }
 .bm-tipp {
   position: absolute; z-index: 5; width: 250px; padding: 8px 10px; border-radius: 8px; pointer-events: none; font-size: 12.5px; line-height: 1.35;

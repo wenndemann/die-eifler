@@ -10,7 +10,7 @@ import leben from '../../data/leben.json';
 import { GEBAEUDE, KLEINE_FESTE } from '../sim/daten';
 import type { SichtGebaeude, SimSicht } from '../sim/typen';
 import { PROMILLE } from '../sim/typen';
-import { lebenAnker, radGeometrie } from './gebaeude';
+import { lebenAnker, modellGrund, radGeometrie } from './gebaeude';
 import { Instanzen } from './instanzen';
 import { Kontaktschatten } from './kontakt';
 import { fernFaktor, TRAEGER_H, WARE_M } from './massstab';
@@ -379,12 +379,14 @@ export class LebenDarstellung {
     }
     const a = anker.find((x) => x.art === 'schild');
     // an der vorderen linken Hausecke (vor der Tür steht die Fahne, rechts hängt das Zunftschild), Blick nach vorn
-    const mx = a ? -a.x - 2.6 : 4, mz = a ? a.z + 1.6 : 7;
+    // ohne Fachwerk (Felder, Ställe): vor die linke vordere Ecke des Grundstücks, nicht in die Wand
+    const gr = modellGrund(g.typ);
+    const mx = a ? -a.x - 2.6 : gr[0] + 1.5, mz = a ? a.z + 1.6 : gr[3] + 1.5;
     const x = l.x + mx * l.sk, z = l.z + mz * l.sk;
     const takt = (t * 0.12 + h01(g.id, 9)) % 1;
     const geste = takt < 0.12 ? GESTE.winken : takt > 0.55 && takt < 0.65 ? GESTE.kratzen : GESTE.keine;
     const yaw = 0.4 * Math.sin(t * 0.3 + g.id);
-    this.figur(x, z, yaw, t * 2 + g.id, tracht.hemd ? this.c.set(tracht.hemd) : SCHWAETZER[g.id % SCHWAETZER.length], 0, geste, 0.7, 0, 0.9, zahl, satz);
+    this.figur(x, z, yaw, t * 2 + g.id, tracht.hemd ? this.c.set(tracht.hemd) : SCHWAETZER[g.id % SCHWAETZER.length], 0, geste, 0.7, 0, 0.9, zahl, satz, 0.45);
   }
 
   /** Ein Anker eines Gebäudes. */
@@ -636,9 +638,10 @@ export class LebenDarstellung {
     }
   }
 
-  private figur(x: number, z: number, yaw: number, phase: number, farbe: THREE.Color, lauf: number, geste: number, laune: number, kipp: number, groesse: number, zahl: LebenDarsZahl, satz = this.figuren): void {
+  /** fern: wie stark die Figur aus der Ferne wächst (1 wie die Träger; Meister weniger, sonst sind sie in der Übersicht so groß wie Häuser). */
+  private figur(x: number, z: number, yaw: number, phase: number, farbe: THREE.Color, lauf: number, geste: number, laune: number, kipp: number, groesse: number, zahl: LebenDarsZahl, satz = this.figuren, fern = 1): void {
     const y = this.hoehe(x, z);
-    const f = this.kamera ? fernFaktor(this.kamera.position.distanceTo(this.p.set(x, y, z))) : 1;
+    const f = 1 + ((this.kamera ? fernFaktor(this.kamera.position.distanceTo(this.p.set(x, y, z))) : 1) - 1) * fern;
     const sk = TRAEGER_H * f * groesse;
     this.q.setFromAxisAngle(this.Y, yaw).multiply(this.q2.setFromAxisAngle(this.Z, kipp));
     this.m.compose(this.p.set(x, y, z), this.q, this.s.set(sk, sk, sk));

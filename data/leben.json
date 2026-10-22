@@ -353,7 +353,7 @@
           4
         ],
         "tempo": 0.9,
-        "groesse": 0.9,
+        "groesse": 0.75,
         "wald": true
       }
     }

@@ -128,8 +128,10 @@ function hut(t: Tracht, nacken: (g: THREE.BufferGeometry) => THREE.BufferGeometr
 /** Großes Werkzeug je Beruf: in der rechten Hand (Teil 4, schwingt mit dem Arm), der Käselaib vor dem Bauch. Aufrecht, Kopf oben. */
 function werkzeug(w: Werkzeug): void {
   const sch: [number, number, number] = [0.25, 0.54, 0], hx = 0.34, hz = 0.07;
-  const stiel = (unten: number, oben: number, f = '#8a6340', r = 0.022) => add(paint(new THREE.CylinderGeometry(r, r, oben - unten, 6).translate(hx, (oben + unten) / 2, hz), f), 4, sch);
-  const teil = (g: THREE.BufferGeometry, f: string) => add(paint(g, f), 4, sch);
+  // gut 1,5-mal so groß wie echt (um die Hand): aus der Spielkamera als Werkzeug erkennbar
+  const gross = (g: THREE.BufferGeometry) => g.translate(-hx, -0.27, -hz).scale(1.5, 1.5, 1.5).translate(hx, 0.27, hz + 0.04);
+  const stiel = (unten: number, oben: number, f = '#8a6340', r = 0.026) => add(gross(paint(new THREE.CylinderGeometry(r, r, oben - unten, 6).translate(hx, (oben + unten) / 2, hz), f)), 4, sch);
+  const teil = (g: THREE.BufferGeometry, f: string) => add(gross(paint(g, f)), 4, sch);
   switch (w) {
     case 'hammer': stiel(0.18, 0.62); teil(new THREE.BoxGeometry(0.1, 0.11, 0.24).translate(hx, 0.64, hz), '#4a4d52'); break;
     case 'kelle': stiel(0.2, 0.75); teil(new THREE.SphereGeometry(0.09, 8, 5, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2).translate(hx, 0.78, hz), '#a87a4a'); break;
@@ -141,7 +143,7 @@ function werkzeug(w: Werkzeug): void {
       teil(new THREE.BoxGeometry(0.13, 0.02, 0.02).translate(hx, 0.95, hz), '#9aa0a6');
       break;
     case 'schaufel': stiel(0.05, 0.85); teil(new THREE.BoxGeometry(0.16, 0.2, 0.025).translate(hx, 0.95, hz), '#5a5d63'); break;
-    case 'angel': add(paint(new THREE.CylinderGeometry(0.012, 0.022, 1.1, 5).rotateZ(-0.6).translate(hx + 0.3, 0.7, hz), '#8a6340'), 4, sch); break;
+    case 'angel': teil(new THREE.CylinderGeometry(0.016, 0.03, 0.8, 6).rotateZ(-0.6).translate(hx + 0.22, 0.6, hz), '#8a6340'); teil(new THREE.SphereGeometry(0.04, 6, 4).translate(hx + 0.45, 0.42, hz), '#e8482a'); break;
     case 'smoker':
       teil(new THREE.CylinderGeometry(0.06, 0.06, 0.15, 10).translate(hx, 0.3, hz + 0.02), '#b8bcc0');
       teil(new THREE.ConeGeometry(0.06, 0.09, 8).translate(hx, 0.42, hz + 0.02), '#9aa0a6');

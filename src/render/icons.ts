@@ -3,14 +3,32 @@
 // kurz nach dem Start Stück für Stück und landet im Browser-Speicher (Schlüssel aus den Daten), beim nächsten Laden – auch beim
 // Wiederbeitritt im Mehrspieler – sind die Icons sofort da. Bis dahin und ohne WebGL zeigen die Fenster die Zeichen aus den Daten.
 import * as THREE from 'three';
-import { GEBAEUDE_IDS, WAREN, WAREN_FARBE, WAREN_FORM } from '../sim/daten';
+import { GEBAEUDE, GEBAEUDE_IDS, WAREN, WAREN_FARBE, WAREN_FORM } from '../sim/daten';
 import { Fnv2 } from '../welt/pruefsumme';
-import { gebaeudeGeometrie } from './gebaeude';
+import { gebaeudeGeometrie, lebenAnker, modellGrund } from './gebaeude';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { warenGeometrie } from './waren';
 
 export interface Icons { ware: (string | undefined)[]; gebaeude: Record<string, string | undefined> }
 
 const GROESSE = 96;
+/**
+ * Gebäude fürs Icon samt seiner Ware groß davor (Gutachter: viele Gebäude teilen ein Modell und sähen sonst gleich aus): der Käse vor
+ * der Käserei, das Garn vor der Spinnerei, das Brett vor dem Sägewerk.
+ */
+function mitWare(id: string): THREE.BufferGeometry {
+  const haus = gebaeudeGeometrie(id, true);
+  const ware = GEBAEUDE[id]?.ausgangWare ?? -1;
+  if (ware < 0) return haus;
+  const schild = lebenAnker(id).find((a) => a.art === 'schild');
+  const g = modellGrund(id);
+  const x = schild ? schild.x + 2.2 : g[1] - 2, z = schild ? schild.z + 2.6 : g[3] - 1;
+  const w = warenGeometrie(ware).clone().scale(0.62, 0.62, 0.62).translate(x, 0.5, z);
+  // gleiche Attribute wie das Haus (Position, Normale, Farbe), sonst lässt sich nicht zusammenfügen
+  for (const k of Object.keys(w.attributes)) if (!haus.attributes[k]) w.deleteAttribute(k);
+  return mergeGeometries([haus, w]) ?? haus;
+}
+
 /** Rand um das Motiv (Anteil der Bildbreite) beim Zuschneiden. */
 const RAND = 0.04;
 const _v = new THREE.Vector3();
@@ -39,7 +57,7 @@ const SPEICHER = 'eifeler.icons';
 /** Schlüssel: ändert sich mit Waren (Form, Farbe), Gebäuden und Größe. */
 const SCHLUESSEL = (() => {
   const f = new Fnv2();
-  f.text(`${GROESSE}|motiv3|${WAREN.join(',')}|${WAREN_FORM.join(',')}|${WAREN_FARBE.join(',')}|${GEBAEUDE_IDS.join(',')}`);
+  f.text(`${GROESSE}|motiv4|${WAREN.join(',')}|${WAREN_FORM.join(',')}|${WAREN_FARBE.join(',')}|${GEBAEUDE_IDS.join(',')}`);
   return f.hex();
 })();
 
@@ -113,7 +131,7 @@ async function rendere(): Promise<void> {
     const neu: Icons = { ware: [], gebaeude: {} };
     // in Paketen zu je 8 (dazwischen läuft das Spiel weiter): sonst wartet jedes Icon auf ein ganzes Spielbild
     for (let a = 0; a < WAREN.length; a++) { neu.ware[a] = bild(warenGeometrie(a)); if (a % 8 === 7) await pause(); }
-    for (let i = 0; i < GEBAEUDE_IDS.length; i++) { const id = GEBAEUDE_IDS[i]; neu.gebaeude[id] = bild(gebaeudeGeometrie(id, true)); if (i % 8 === 7) await pause(); }
+    for (let i = 0; i < GEBAEUDE_IDS.length; i++) { const id = GEBAEUDE_IDS[i]; neu.gebaeude[id] = bild(mitWare(id)); if (i % 8 === 7) await pause(); }
     mat.dispose();
     aktuell.ware = neu.ware; aktuell.gebaeude = neu.gebaeude;
     try { localStorage.setItem(SPEICHER, JSON.stringify({ schluessel: SCHLUESSEL, icons: neu })); } catch { /* Speicher voll: nächstes Mal neu */ }

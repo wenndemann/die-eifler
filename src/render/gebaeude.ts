@@ -903,6 +903,10 @@ export function lebenAnker(typ: string): readonly Anker[] {
   if (!ankerCache.has(mt)) modell(mt, 3);
   return [...(ankerCache.get(mt) ?? []), ...(TYP_ANKER[typ] ?? [])];
 }
+/** Platzbedarf des Modells (echte m relativ zur Modellmitte: x0, x1, z0, z1), z. B. für den Meister vor Feldern und Ställen. */
+export function modellGrund(typ: string): readonly [number, number, number, number] {
+  return TYPEN[modellTyp(typ)].grund;
+}
 /** Anker nur für einzelne Typen, die ein fremdes Modell nutzen (z. B. die Senfmühle mit Mühlrad). */
 const TYP_ANKER: Record<string, Anker[]> = {
   senfmuehle: [{ art: 'rad', x: -4.6, y: G + 2.4, z: 0, r: 2.0, w: 0.9, achse: 'x' }],
