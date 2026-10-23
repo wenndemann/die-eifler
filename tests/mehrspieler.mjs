@@ -34,20 +34,27 @@ export async function starteVermittlung() {
   return { port, schliessen: () => s.schliessen() };
 }
 
-/** Im Spiel eines Fensters: ein Gebäude nahe dem eigenen Lager mit Weg zur Lagerfahne bauen. */
-function baue(typ) {
+/**
+ * Im Spiel eines Fensters: ein Gebäude nahe dem eigenen Lager mit Weg zur Lagerfahne bauen. `arg`: Typ oder { typ, meiden } – Hexe, auf
+ * die gerade erst ein Bauauftrag ging (der Befehl wirkt erst ein paar Ticks später), samt Weg und Nachbar-Hexen meiden.
+ */
+function baue(arg) {
+  const typ = typeof arg === 'string' ? arg : arg.typ, meiden = typeof arg === 'string' ? [] : arg.meiden;
   const s = window.eifeler.spiel, sim = s.sim, ich = s.ich, L = s.lagerHex;
   const ab = (a, b) => (Math.abs(a.q - b.q) + Math.abs(a.r - b.r) + Math.abs(a.q - b.q + a.r - b.r)) / 2;
-  for (let d = 2; d <= 7; d++) {
+  for (let d = 2; d <= 9; d++) {
     for (let dr = -d; dr <= d; dr++) {
       for (let dq = -d; dq <= d; dq++) {
         const h = { q: L.q + dq, r: L.r + dr };
-        if (ab(h, L) !== d || !sim.kannBauen(typ, h.q, h.r, ich)) continue;
-        const weg = sim.wegAbschnitt(h, L, [], 12, ich);
+        if (ab(h, L) !== d || !sim.kannBauen(typ, h.q, h.r, ich) || meiden.some((m) => ab(m, h) <= 1)) continue;
+        // Weg zur Lagerfahne, sonst zur nächsten eigenen Fahne (an der Lagerfahne ist nicht in jeder Richtung Platz)
+        const ziele = [L, ...sim.sicht(ich).fahnen.filter((f) => f.sp === ich && ab(f, h) <= 6).sort((a, b) => ab(a, h) - ab(b, h)).slice(0, 4)];
+        let weg = null;
+        for (const z of ziele) if (!weg) weg = sim.wegAbschnitt(h, z, meiden.filter((m) => m.q !== z.q || m.r !== z.r), 12, ich);
         if (!weg) continue;
         s.befehl({ art: 'gebaeude', typ, q: h.q, r: h.r });
         s.befehl({ art: 'weg', pfad: weg });
-        return { ...h, ich };
+        return { ...h, ich, weg };
       }
     }
   }
@@ -134,8 +141,8 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
     const b0 = await host.evaluate(baue, 'holzfaeller');
     const b1 = await gast.evaluate(baue, 'holzfaeller');
     if (!b0 || !b1) fail(`Kein Bauplatz gefunden: ${JSON.stringify([b0, b1])}`);
-    const h0 = await host.evaluate(baue, 'kartoffelfeld');
-    const h1 = await gast.evaluate(baue, 'kartoffelfeld');
+    const h0 = await host.evaluate(baue, { typ: 'kartoffelfeld', meiden: b0 ? [b0, ...b0.weg] : [] });
+    const h1 = await gast.evaluate(baue, { typ: 'kartoffelfeld', meiden: b1 ? [b1, ...b1.weg] : [] });
     if (!h0 || !h1) fail(`Kein Bauplatz für den Kartoffelhof: ${JSON.stringify([h0, h1])}`);
     const fps = await Promise.all([host, gast].map((x) => x.evaluate(() => new Promise((ok) => { let n = 0; const t = performance.now(); const f = () => { n++; if (performance.now() - t < 3000) requestAnimationFrame(f); else ok(Math.round((n / (performance.now() - t)) * 10000) / 10); }; requestAnimationFrame(f); }))));
     info(`Mehrspieler: Bilder je Sekunde ${fps.join(' / ')}`);
