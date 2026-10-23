@@ -236,6 +236,8 @@ Eisen ist echt Eifel: Im Schleidener Tal und um Gemünd standen jahrhundertelang
 
 **Höfe und Felder (wie Siedler 2):** Kartoffelfeld, Obstwiese, Gerstenfeld, Wacholderheide und die Felder der Völkchen (Weinberg, Hopfengarten, Lohhecke) sind keine großen Gebäude, sondern **Höfe**: ein Bauernhaus in seinem Hex, der Bauer sät im Umkreis auf freiem Land und erntet, was reif ist. Felder wachsen als Natur je Hex mit denselben Regeln wie der Wald: ein neuer Weg zertrampelt ein Feld, Bauen räumt es, wer dicht baut, hat wenig Felder. Im Winter ruht alles, im Frühjahr wird zuerst gesät (Zahlen in `data/buildings.json`: acker).
 
+**Wald und Wild:** Rehe und Wildschweine leben im Wald und wachsen nach, wo noch Wild ist; der Jäger auf dem Hochsitz bringt Wildbret (Wildküche: Wildgulasch) und hält die Wildschweine von den Feldern fern, sonst wühlen sie Kartoffel- und Gerstenäcker um. Wolf und Wildkatze sind geschützt wie in echt: der Wolf holt ab und zu ein Schaf, dagegen hilft der Herdenschutzhund; die Wildkatze bringt Ansehen, solange ihr Wald steht (`data/wild.json`).
+
 ### 5.2 Dorfstufen über die Kirmes
 
 Weiler (Start) → Dorf (Stufe 1) → Kirchdorf (Stufe 2) → Marktflecken (Stufe 3). „Ab Stufe 2“ heißt also ab Kirchdorf.

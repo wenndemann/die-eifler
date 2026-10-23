@@ -14,6 +14,7 @@ Was ins Spiel kommt, steht im [Drehbuch](DREHBUCH.md), was schon drin ist und wa
 - **Wege, Träger, Waren:** Wegenetz selbst bauen (über Bäche nur mit Holzbrücke aus der Zimmerei), über 40 Waren in Ketten vom Baumstamm bis zum Schnaps.
 - **Dorf wachsen lassen:** Bewohner, Wohnhäuser, Kirmes als Tor zur nächsten Dorfstufe, Jahreszeiten, Wetter und Winter.
 - **Höfe und Felder wie in Siedler 2:** Der Bauer sät rund um seinen Hof Kartoffeln, Gerste, Obst, Wacholder, Wein, Hopfen oder Lohe und erntet, was reif ist; Felder brauchen freies Land, ein Weg zertrampelt sie.
+- **Wald und Wild:** Rehe und Wildschweine leben im Wald und wachsen nach, der Jäger auf dem Hochsitz bringt Wildbret für Wildgulasch und hält die Sauen von den Feldern fern; Wolf und Wildkatze sind geschützt – gegen den Wolf hilft der Herdenschutzhund, die Wildkatze bringt Ansehen.
 - **Nachbarn ohne Krieg:** Gebiet, Orte mit Einstand gewinnen, Handel mit den Flachländern, Finden statt Stehlen,
   Schützenfest, Maibaumklau, Grenzsteine versetzen, Abwerben, Kaffeeschmuggel am Zollhaus und der Große Fund.
 - **Die Eifel lebt:** Rauch aus den Schornsteinen, Wasserräder, Schafe und Hühner, Kinder auf dem Kirmesplatz, Wind in Bäumen
