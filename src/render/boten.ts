@@ -20,11 +20,12 @@ function rumpfTeil(g: THREE.BufferGeometry): THREE.BufferGeometry {
   g.setAttribute('aTeil', new THREE.BufferAttribute(new Float32Array(n), 1));
   g.setAttribute('aGelenk', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
   g.setAttribute('aTint', new THREE.BufferAttribute(new Float32Array(n), 1));
+  g.setAttribute('aVariante', new THREE.BufferAttribute(new Float32Array(n), 1));
   return g;
 }
 
 /** Trägerfigur mit roter Säufernase, glühenden Wangen, schief sitzender grüner Mütze und Schnapsflasche unterm Arm. */
-function botenFigur(): THREE.BufferGeometry {
+export function botenFigur(): THREE.BufferGeometry {
   const extra = [
     paint(new THREE.SphereGeometry(0.11, 6, 5).scale(1, 0.95, 1.1).translate(0, 0.71, 0.25), '#d6262a'),
     paint(new THREE.SphereGeometry(0.065, 5, 4).translate(-0.165, 0.69, 0.15), '#e8483a'),

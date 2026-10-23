@@ -9,6 +9,7 @@ import { entzerren, type Platz } from '../src/render/gedraenge';
 import { fachwerk, ohneSchindeln } from '../src/render/mockup';
 import { FIGUR_ATTRIBUTE, figur, TRAEGER_TRACHT, variante, VARIANTE, type Tracht } from '../src/render/traeger';
 import { Instanzen } from '../src/render/instanzen';
+import { botenFigur } from '../src/render/boten';
 import * as THREE from 'three';
 import { GEBAEUDE, GEBAEUDE_IDS } from '../src/sim/daten';
 import { Simulation } from '../src/sim/sim';
@@ -113,6 +114,14 @@ describe('Lebendige Eifel', () => {
     // ohne Variante: 0 (Schnauzer)
     satz.fuege(new THREE.Matrix4(), new THREE.Color(), [1, 2, 3, 4, 5]);
     expect((satz.geo.attributes.aVar.array as Float32Array)[1]).toBe(0);
+  });
+
+  it('Bote und Frau mit Zöpfen: die Figur-Geometrien lassen sich zusammenfügen (alle Teile tragen die Figur-Attribute)', () => {
+    const b = botenFigur();
+    expect(b).toBeTruthy();
+    for (const a of ['aTeil', 'aGelenk', 'aTint', 'aVariante']) expect(b.getAttribute(a)).toBeTruthy();
+    const frau = figur({ ...TRAEGER_TRACHT, frau: true });
+    expect(frau.getAttribute('aVariante').count).toBe(frau.getAttribute('position').count);
   });
 
   it('Gesichtsvarianten: fest je Id, alle fünf kommen vor, Schnauzer am häufigsten', () => {
