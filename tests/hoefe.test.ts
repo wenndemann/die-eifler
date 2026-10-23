@@ -63,6 +63,17 @@ describe('Höfe und Felder', () => {
     expect(sim.pruefeInnenzustand()).toEqual([]);
   });
 
+  it('wachsen nur noch Felder und ist kein Platz frei, wartet der Hof (kein „kein Platz“)', () => {
+    const { sim, hof } = mitHof();
+    lauf(sim, 20 * 40);
+    const nat = sim as unknown as { baum: Uint8Array; feld: Uint8Array; natRev: number };
+    for (const h of sim.arbeitsHexe('kartoffelfeld', -3, 0).hexe) { const i = sim.karte.index(h.q, h.r); if (!nat.feld[i]) nat.baum[i] = 3; }
+    nat.natRev++;
+    lauf(sim, 20 * 10);
+    expect(felder(sim).size).toBeGreaterThan(0);
+    expect(geb(sim, hof).zustand).toBe('arbeitet');
+  });
+
   it('ein neuer Weg über ein Feld zertrampelt es, Bauen räumt es; der Förster pflanzt nicht auf Felder', () => {
     const { sim } = mitHof();
     lauf(sim, 20 * 60);

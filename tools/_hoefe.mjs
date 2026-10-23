@@ -38,7 +38,7 @@ const r = await page.evaluate(async () => {
   // sofort fertig bauen
   for (const g of sim.gebaeude.values()) if (!g.fertig) { g.fertig = 1; g.verbaut = sim.kosten(g.typ); g.planIst = g.planSoll; g.stapel.fill(0); g.incoming.fill(0); g.getrennt = false; }
   dorf.frei += 10; dorf.bewohner += 10;
-  sp.schritte(20 * 200);
+  sp.schritte(20 * 260);
   window.__gebaut = gebaut;
   return gebaut;
 });

@@ -2947,6 +2947,12 @@ export class Simulation {
     return wege.length ? wege[this.zufall(wege.length)] : null;
   }
 
+  /** Wachsen im Arbeitsbereich des Hofs Felder seiner Art? */
+  private felderWachsenBei(g: Gebaeude, t: GebaeudeTyp): boolean {
+    const fa = FELD_ARTEN.indexOf(t.id) + 1;
+    return this.arbeitsHexeVon(g, t).some((x) => this.feld[x] === fa && this.feldReif[x] > 0);
+  }
+
   private laeuferTick(g: Gebaeude, t: GebaeudeTyp): void {
     const k = this.karte;
     switch (g.ph) {
@@ -2955,7 +2961,8 @@ export class Simulation {
         if (g.ruht) return; // angehalten: der Arbeiter bleibt an der Hütte
         if (g.pt > 0) { g.pt--; return; }
         const weg = t.funktion === 'foerster' ? this.suchePflanzplatz(g, t) : t.funktion === 'hof' ? this.sucheFeld(g, t) : this.sucheRessource(g, t);
-        if (!weg) { g.leer = 1; g.pt = SUCHE_WARTE; return; }
+        // ein Hof, dessen Felder noch wachsen, hat Platz: er wartet nur auf die Ernte
+        if (!weg) { g.leer = t.funktion === 'hof' && this.felderWachsenBei(g, t) ? 0 : 1; g.pt = SUCHE_WARTE; return; }
         g.leer = 0;
         g.weg = weg; g.zh = weg[weg.length - 1];
         if (t.funktion === 'holzfaeller') this.baumRes[g.zh]++;

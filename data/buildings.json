@@ -191,7 +191,7 @@
    "acker": {
     "name": "Kartoffelacker",
     "wachsen_s": 90,
-    "ernte": 2
+    "ernte": 1
    },
    "saison": "feld"
   },
@@ -273,7 +273,7 @@
    "acker": {
     "name": "Obstwiese",
     "wachsen_s": 110,
-    "ernte": 2
+    "ernte": 1
    },
    "saison": "feld"
   },
@@ -433,7 +433,7 @@
    "acker": {
     "name": "Gerstenfeld",
     "wachsen_s": 100,
-    "ernte": 2
+    "ernte": 1
    },
    "ab_stufe": 1,
    "saison": "feld"
@@ -491,7 +491,7 @@
    "acker": {
     "name": "Wacholderheide",
     "wachsen_s": 120,
-    "ernte": 2
+    "ernte": 1
    },
    "ab_stufe": 1,
    "saison": "feld"
@@ -1115,7 +1115,7 @@
    "acker": {
     "name": "Weinberg",
     "wachsen_s": 100,
-    "ernte": 2
+    "ernte": 1
    },
    "ab_stufe": 2,
    "voelkchen": [
@@ -1248,7 +1248,7 @@
    "acker": {
     "name": "Hopfengarten",
     "wachsen_s": 90,
-    "ernte": 2
+    "ernte": 1
    },
    "ab_stufe": 2,
    "voelkchen": [
@@ -1436,7 +1436,7 @@
    "acker": {
     "name": "Lohhecke",
     "wachsen_s": 100,
-    "ernte": 2
+    "ernte": 1
    },
    "ab_stufe": 2,
    "voelkchen": [
