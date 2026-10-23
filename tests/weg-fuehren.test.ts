@@ -139,7 +139,7 @@ describe('wegAbschnitt (Simulation)', () => {
     const sim = new Simulation(karte, 1, { q: 0, r: 0, bewohner: 40 });
     const bach = (h: Hx) => h.q === -5 && h.r >= -12 && h.r <= 12;
     const pruefe = (p: Hx[]) => {
-      for (let j = 1; j < p.length; j++) {
+      for (let j = 1; j < p.length - 1; j++) { // der letzte Schritt ans Ziel ist frei
         expect(bach(p[j - 1]) && bach(p[j])).toBe(false);                          // nie von Bach-Hex zu Bach-Hex
         if (bach(p[j])) expect(bach({ q: 2 * p[j].q - p[j - 1].q, r: 2 * p[j].r - p[j - 1].r })).toBe(false); // geradeaus dahinter kein Bach
       }
@@ -151,8 +151,14 @@ describe('wegAbschnitt (Simulation)', () => {
     // entlang: von einem Bach-Hex zum anderen geht es nur neben dem Bach her
     const lang = sim.wegAbschnitt({ q: -5, r: -6 }, { q: -5, r: 6 }, [], 60)!;
     expect(lang).not.toBeNull();
-    expect(lang.filter(bach).length).toBe(2);
+    expect(lang.filter(bach).length).toBeLessThanOrEqual(3);
     pruefe(lang);
+    // Ziel im Bach (Lager am Wasser): von überall erreichbar, auch längs des Bachs
+    const karte2 = baueTestKarte();
+    let k2 = 0;
+    for (let r = -karte2.n; r <= karte2.n; r++) for (let q = Math.max(-karte2.n, -r - karte2.n); q <= Math.min(karte2.n, -r + karte2.n); q++, k2++) if (q === 0 && r >= -12 && r <= 12) karte2.flags[k2] |= FLAG.fluss;
+    const sim2 = new Simulation(karte2, 1, { q: 0, r: 0, bewohner: 40 });
+    for (const von of [{ q: 3, r: 0 }, { q: -3, r: 0 }, { q: 2, r: 3 }, { q: -1, r: -3 }]) expect(sim2.wegAbschnitt(von, { q: 0, r: 0 }, [], 12)).not.toBeNull();
   });
 
   it('Teilstücke zusammen ergeben einen baubaren Weg; ein Weg-Hex ist ein gültiges Ende', () => {

@@ -971,7 +971,7 @@ export class Simulation {
     if (!fa || fa.sp !== sp || fa.segmente.length >= FAHNE_MAX_SEGMENTE) return null;
     if (!this.zielFahneOk(z, sp)) return null;
     const p = sucheWeg(k, a, z, (h, istZiel, vorher) => {
-      if (this.durchsHaus(vorher, h) || this.amBach(vorher, h)) return false;
+      if (this.durchsHaus(vorher, h) || (!istZiel && this.amBach(vorher, h))) return false;
       if (istZiel) return true;
       return !this.hexFahne[h] && !this.hexGeb[h] && !this.hexWeg[h] && !this.fremdesLand(h, sp) && !this.hinterGebaeude(h);
     }, WEG_MAX_SCHRITTE);
@@ -996,7 +996,7 @@ export class Simulation {
     if (fa && (fa.sp !== sp || fa.segmente.length >= FAHNE_MAX_SEGMENTE)) return null;
     if (!this.zielFahneOk(z, sp)) return null;
     const p = sucheWeg(k, a, z, (h, istZiel, vorher) => {
-      if (this.durchsHaus(vorher, h) || this.amBach(vorher, h) || (neuesHaus && vorher === a && this.hinten(a, h))) return false;
+      if (this.durchsHaus(vorher, h) || (!istZiel && this.amBach(vorher, h)) || (neuesHaus && vorher === a && this.hinten(a, h))) return false;
       if (istZiel) return true;
       return !this.hexFahne[h] && !this.hexGeb[h] && !this.hexWeg[h] && !gesperrt.has(h) && !this.fremdesLand(h, sp) && !this.hinterGebaeude(h);
     }, Math.min(maxSchritte, WEG_MAX_SCHRITTE));
@@ -1033,7 +1033,7 @@ export class Simulation {
   /**
    * Läuft der Schritt von a nach b am Bach oder Fluss entlang statt quer hinüber? Ein Weg geht nie von einem Fluss-Hex ins nächste
    * und betritt eins nur so, dass geradeaus dahinter kein Fluss-Hex liegt: er kreuzt den Wasserlauf ungefähr im rechten Winkel
-   * (dort steht dann die Brücke).
+   * (dort steht dann die Brücke). Der letzte Schritt ans Ziel ist frei: die Zielfahne (z. B. das Lager) darf selbst am oder im Bach stehen.
    */
   private amBach(a: number, b: number): boolean {
     const k = this.karte;
