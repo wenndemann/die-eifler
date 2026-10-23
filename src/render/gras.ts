@@ -53,6 +53,8 @@ export class Gras {
   private satz: Instanzen;
   private mitte = { x: NaN, z: NaN };
   private sig = '';
+  private natRev = -1;
+  private feldSig = '';
   private belegt = new Set<number>();
   private m = new THREE.Matrix4(); private q = new THREE.Quaternion(); private p = new THREE.Vector3(); private s = new THREE.Vector3();
   private Y = new THREE.Vector3(0, 1, 0); private c = new THREE.Color();
@@ -94,7 +96,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.93, 0.94, 0.95), clamp(uSchnee *
     // aus großer Höhe sieht man kein einzelnes Gras
     this.group.visible = abstand < G.bis_abstand_m && kulisseUniforms.uSchnee.value < 0.9;
     if (!this.group.visible) return;
-    const sig = `${sicht.gebaeude.length}:${sicht.fahnen.length}:${sicht.segmente.length}:${this.map.groundRev}:${this.ex}`;
+    // Felder (Höfe und Felder) zählen wie Belegung: auf dem Acker wächst kein Wiesengras
+    if (sicht.natur.rev !== this.natRev) {
+      this.natRev = sicht.natur.rev;
+      let z = 0, h = 0;
+      sicht.natur.feld?.forEach((v, i) => { if (v) { z++; h = (h * 31 + i) % 1000003; } });
+      this.feldSig = `${z}/${h}`;
+    }
+    const sig = `${sicht.gebaeude.length}:${sicht.fahnen.length}:${sicht.segmente.length}:${this.map.groundRev}:${this.ex}:${this.feldSig}`;
     const weg = Math.hypot(ziel.x - this.mitte.x, ziel.z - this.mitte.z);
     if (sig === this.sig && !(weg > G.neu_ab_m)) return;
     if (sig !== this.sig) {
@@ -107,6 +116,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.93, 0.94, 0.95), clamp(uSchnee *
       for (const f of sicht.fahnen) b.add(idx(f));
       for (const s of sicht.segmente) for (const h of s.pfad) b.add(idx(h));
       for (const o of sicht.orte) b.add(idx(o));
+      sicht.natur.feld?.forEach((v, i) => { if (v) b.add(i); });
     }
     this.mitte = { x: ziel.x, z: ziel.z };
     this.legen();
