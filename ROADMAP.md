@@ -378,6 +378,14 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 
 - [x] README und README-platt neu: kurz, was das Spiel ist und kann, Schnellstart, Mehrspieler betreiben, Befehle; die Details der Meilensteine stehen nur noch hier in der Roadmap und im Drehbuch
 
+## Vorschlag: Höfe und Felder (wie Siedler 2)
+
+Felder sind keine großen Gebäude mehr, sondern wachsen wie der Wald – ohne Sonderregeln, mit denselben Regeln wie Bäume:
+- **Hof** (Kartoffel-, Gersten-, Hopfenhof, Obstwiese, Weinberg …): ein normales Gebäude in seinem Hex; der Bauer sät auf freien Hexen im Umkreis (wie der Förster pflanzt) und erntet reife Felder (wie der Holzfäller fällt)
+- **Feld als Natur je Hex** (gesät, wächst, reif, abgeerntet), im Winter Ruhe, im Frühjahr Saat (wie bisher die Feld-Saison)
+- **Platz zählt:** wer dicht baut, hat weniger Felder; ein neuer Weg über ein Feld zertrampelt es (wie Wege Bäume roden), Bauen auf einem Feld räumt es
+- Zahlen in `data/`, deterministisch (Natur je Hex in Spielstand und Prüfsumme wie die Bäume), alte Spielstände laden (bestehende Feld-Gebäude werden zu Höfen), Mehrspieler- und Unit-Tests wie üblich
+
 ## Vorschlag: Wald und Wild (Jäger)
 
 Wild gibt es schon als Leben (siehe oben); als Spiel könnte daraus werden:
