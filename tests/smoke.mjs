@@ -271,11 +271,12 @@ try {
     kandidaten.sort((a, b) => a.dd - b.dd || a.r - b.r || a.q - b.q);
     const nutzen = (typ, c) => {
       const fs = sp.sicht.fahnen.slice().sort((a, b) => dist(a, c) - dist(b, c) || a.id - b.id).slice(0, 6);
-      const von = fs.find((f) => sp.sim.wegVorschau(f, c));
-      if (!von) return false;
+      // Weg vom neuen Haus zur Fahne (wie im Spiel: nicht hinten aus dem Haus hinaus), erst prüfen, dann bauen
+      let p = null;
+      for (const f of fs) { p = sp.sim.wegAbschnitt(c, f, [], 30, 0, true); if (p) break; }
+      if (!p) return false;
       sp.befehl({ art: 'gebaeude', typ, q: c.q, r: c.r });
-      const p = sp.sim.wegVorschau(von, c);
-      if (p) sp.befehl({ art: 'weg', pfad: p });
+      sp.befehl({ art: 'weg', pfad: p });
       gebaut.push({ typ, q: c.q, r: c.r });
       return true;
     };
