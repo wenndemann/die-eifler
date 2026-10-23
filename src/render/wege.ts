@@ -43,6 +43,35 @@ export function mittellinie(pts: Pkt[], je = 9): { x: number; z: number; flow: n
   return out;
 }
 
+/**
+ * Teilt eine Weglinie an Lücken (Mitte, Radius): Unter Brücken und an Brücken-Baustellen liegt kein Wegband über dem Wasser. Die
+ * Teilstücke enden genau am Rand der Lücke (dort sitzt das Widerlager).
+ */
+export function mitLuecken<T extends { x: number; z: number; flow: number }>(linie: T[], luecken: { x: number; z: number; r: number }[]): { x: number; z: number; flow: number }[][] {
+  if (!luecken.length) return [linie];
+  const drin = (p: { x: number; z: number }) => luecken.find((l) => Math.hypot(p.x - l.x, p.z - l.z) < l.r);
+  const rand = (a: T, b: T, l: { x: number; z: number; r: number }) => {
+    // Punkt zwischen a (außen) und b (innen) auf dem Kreis um l (Halbierung)
+    let lo = 0, hi = 1;
+    for (let i = 0; i < 20; i++) { const m = (lo + hi) / 2; if (Math.hypot(a.x + (b.x - a.x) * m - l.x, a.z + (b.z - a.z) * m - l.z) < l.r) hi = m; else lo = m; }
+    return { x: a.x + (b.x - a.x) * lo, z: a.z + (b.z - a.z) * lo, flow: a.flow + (b.flow - a.flow) * lo };
+  };
+  const teile: { x: number; z: number; flow: number }[][] = [];
+  let cur: { x: number; z: number; flow: number }[] = [];
+  for (let i = 0; i < linie.length; i++) {
+    const p = linie[i], l = drin(p);
+    if (!l) {
+      if (!cur.length && i > 0) { const v = drin(linie[i - 1]); if (v) cur.push(rand(p, linie[i - 1], v)); }
+      cur.push(p);
+    } else if (cur.length) {
+      cur.push(rand(linie[i - 1], p, l));
+      teile.push(cur); cur = [];
+    }
+  }
+  if (cur.length) teile.push(cur);
+  return teile.filter((t) => t.length >= 2);
+}
+
 interface Puffer { pos: number[]; side: number[]; flow: number[]; nrm: number[]; idx: number[] }
 const neuerPuffer = (): Puffer => ({ pos: [], side: [], flow: [], nrm: [], idx: [] });
 
@@ -323,9 +352,11 @@ export class Wege {
       if (s.pfad.length < 2) continue;
       const halb = (WEG_BREITE[0] + (WEG_BREITE[1] - WEG_BREITE[0]) * Math.min(1, s.verkehr / 255)) / 2;
       const linie = mittellinie(this.punkte(s.pfad));
-      band(b, linie, halb, this.yOf);
+      const kr = this.kreuzungen(linie);
+      // unter der Brücke und an der Baustelle kein Wegband übers Wasser: es endet am Widerlager
+      for (const teil of mitLuecken(linie, kr.map((k) => ({ x: k.x, z: k.z, r: (k.breite + 16) / 2 + 0.5 })))) band(b, teil, halb, this.yOf);
       // Brücke, wo der Weg einen Fluss oder Bach kreuzt: Deck über dem höheren Ufer; fehlt sie noch (Simulation), nur die Baustelle
-      for (const k of this.kreuzungen(linie)) {
+      for (const k of kr) {
         const laenge = k.breite + 16, cx = Math.cos(k.yaw), cz = -Math.sin(k.yaw);
         const ufer = Math.max(this.map.heightAt(k.x + cx * laenge / 2, k.z + cz * laenge / 2), this.map.heightAt(k.x - cx * laenge / 2, k.z - cz * laenge / 2));
         const g = brueckeGeometrie(laenge, halb * 2 + 1.5, !s.bruecken).rotateY(k.yaw).translate(k.x, (ufer - this.base) * this.ex + 0.8, k.z);

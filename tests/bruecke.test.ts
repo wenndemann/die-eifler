@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { Simulation } from '../src/sim/sim';
 import { GEBAEUDE, WARE } from '../src/sim/daten';
 import { baueTestKarte, mitBach } from './sim-szenario';
+import { mitLuecken } from '../src/render/wege';
 
 type Intern = { karte: { index(q: number, r: number): number }; gebaeudeErzeugen(t: string, h: number, sofort: boolean, sp: number): { id: number; vorrat: number[] } };
 const intern = (sim: Simulation) => sim as unknown as Intern;
@@ -91,5 +92,15 @@ describe('Holzbrücken', () => {
     const geladen = Simulation.ausStand(karte, alt);
     expect(geladen.sicht().segmente.find((x) => x.id === s2.id)!.bruecken).toBe(0);
     void s;
+  });
+
+  it('Darstellung: unter der Brücke und an der Baustelle kein Wegband – die Linie endet am Rand der Lücke', () => {
+    const linie = Array.from({ length: 41 }, (_, i) => ({ x: i, z: 0, flow: i }));
+    const teile = mitLuecken(linie, [{ x: 20, z: 0, r: 5 }]);
+    expect(teile.length).toBe(2);
+    expect(teile[0].at(-1)!.x).toBeCloseTo(15, 3);
+    expect(teile[1][0].x).toBeCloseTo(25, 3);
+    for (const t of teile) for (const p of t) expect(Math.abs(p.x - 20)).toBeGreaterThanOrEqual(5 - 1e-3);
+    expect(mitLuecken(linie, [])).toEqual([linie]);
   });
 });
