@@ -25,6 +25,7 @@ const WARE_KURZ: Record<string, [string, string, string]> = {
   gerste: ['🌾', 'Gerste', 'Gerste'], landbier: ['🍺', 'Landbier', 'Landbier'], wacholder: ['🫐', 'Wacholder', 'Wacholder'],
   schnaps: ['🍶', 'Schnaps', 'Schnaps'], erz: ['🪨', 'Erz', 'Erz'], holzkohle: ['⚫', 'Holzkohle', 'Holzkohle'], eisen: ['🔩', 'Eisen', 'Eisen'],
   werkzeug: ['🔨', 'Werkzeug', 'Werkzeug'], kaffee: ['☕', 'Kaffee', 'Kaffee'], bruecke: ['🌉', 'Brücke', 'Brücken'],
+  wildbret: ['🍖', 'Wildbret', 'Wildbret'], wildgulasch: ['🍲', 'Wildgulasch', 'Wildgulasch'],
   // Völkchen (M11)
   wolle: ['🐑', 'Wolle', 'Wolle'], tuch: ['🧣', 'Tuch', 'Tuch'], senf: ['🟡', 'Senf', 'Senf'], fisch: ['🐟', 'Fisch', 'Fische'],
   raeucherfisch: ['🐠', 'Räucherfisch', 'Räucherfische'], papier: ['📜', 'Papier', 'Papier'], werkstein: ['🧱', 'Werkstein', 'Werksteine'],
@@ -93,6 +94,7 @@ const OHNE_ARBEIT: Record<string, string> = {
   fels: 'Kein Fels in Reichweite – der Steinbruch hätte nichts zu tun.',
   platz: 'Kein Pflanzplatz in Reichweite – die Försterei hätte nichts zu tun.',
   feld: 'Kein Platz für Felder in Reichweite – der Hof hätte nichts zu tun.',
+  wild: 'Kein Wild in Reichweite – der Jäger hätte nichts zu tun. Wild lebt im Wald.',
 };
 
 /** Was im Arbeitsradius liegt, als Text (arbeitsHexe der Simulation); `warn` bei nichts. null bei Gebäuden ohne Arbeitsradius.
@@ -103,6 +105,7 @@ export function reichweiteText(art: string, summe: number, nah?: number): { text
   const rest = nah === undefined ? '' : nah <= 0 ? ', keiner davon nah' : nah >= summe && summe > 1 ? ', alle nah' : `, ${nah} davon nah`;
   if (art === 'baum') return { text: `${summe} ${summe === 1 ? 'Baum' : 'Bäume'} in Reichweite${rest}`, warn: false };
   if (art === 'fels') return { text: `Fels für ${summe} ${summe === 1 ? 'Stein' : 'Steine'} in Reichweite${rest}`, warn: false };
+  if (art === 'wild') return { text: `${summe} Stück Wild in Reichweite${rest}`, warn: false };
   if (art === 'feld') return { text: `Platz für ${summe} ${summe === 1 ? 'Feld' : 'Felder'} in Reichweite${rest}`, warn: false };
   return { text: `Platz für ${summe} ${summe === 1 ? 'Baum' : 'Bäume'} in Reichweite${rest}`, warn: false };
 }
@@ -127,6 +130,7 @@ export function zustandsText(zustand: string, baustelle: boolean, bedarf: string
     case 'kein_baum': return { titel: 'Kein Baum mehr in Reichweite', spruch: 'Ein Förster könnte helfen. Oder Geduld.', warn: true };
     case 'kein_fels': return { titel: 'Kein Fels mehr in Reichweite', spruch: 'Der Berg ist leer. Das gibt es.', warn: true };
     case 'kein_platz': return { titel: 'Kein Pflanzplatz frei', spruch: 'Hier wächst schon alles zu.', warn: true };
+    case 'kein_wild': return { titel: 'Kein Wild in Reichweite', spruch: 'Leergejagt. Der Wald braucht Ruhe – oder Wild von nebenan.', warn: true };
     case 'kein_feld': return { titel: 'Kein Platz für Felder', spruch: 'Wo Wege und Häuser stehen, wächst keine Kartoffel.', warn: true };
     case 'voll': return { titel: 'Lager voll – keiner holt ab', spruch: 'Wer nicht abholt, stapelt.', warn: true };
     case 'wartet_material': return { titel: bedarf ? `Wartet auf ${bedarf}` : 'Wartet auf Nachschub', spruch: 'Ohne Rohstoff kein Feierabend.', warn: false };

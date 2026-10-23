@@ -244,6 +244,43 @@ const TYPEN: Record<string, Typ> = {
         ...logPile(-2, 8, 6).map((g) => g.translate(0, G, 0)), ...stapelBretter(sx - 1.5, 6.8, 4.5, 1.6, 2.4), ...stapelBretter(sx + 3.5, 6.8, 3.4, 1.6, 1.4)];
     },
   },
+  jagdhuette: {
+    // Jagdhütte aus Rundholz mit Geweih über der Tür, daneben der Hochsitz auf vier Stelzen mit Leiter; Wildbret hängt am Balken
+    w: 6.5, d: 5.5, floors: 1, wand: '#9a7048', dach: '#5a4a32', laden: '#3f5f2e', skala: 1, hoehe: 12,
+    grund: [-6.5, 12.5, -5, 8],
+    fertig() {
+      const t = TYPEN.jagdhuette;
+      const out: THREE.BufferGeometry[] = [box(t.w + 0.4, 1.2, t.d + 0.4, 0, G - 0.2, 0, '#8f877a')];
+      // Blockhaus: gestapelte Rundhölzer, an den Ecken überstehend
+      for (let i = 0; i < 7; i++) {
+        const y = G + 0.4 + i * 0.5;
+        out.push(walze(0.27, t.w + 0.8, 0, y, t.d / 2, i % 2 ? '#8a6038' : '#9a7048', 0, Math.PI / 2, 7), walze(0.27, t.w + 0.8, 0, y, -t.d / 2, i % 2 ? '#9a7048' : '#8a6038', 0, Math.PI / 2, 7));
+        out.push(walze(0.27, t.d + 0.8, t.w / 2, y + 0.25, 0, '#8a6038', Math.PI / 2, 0, 7), walze(0.27, t.d + 0.8, -t.w / 2, y + 0.25, 0, '#9a7048', Math.PI / 2, 0, 7));
+      }
+      out.push(boxR(t.w - 0.3, 3.6, t.d - 0.3, 0, G + 2.0, 0, '#7a5636'));
+      out.push(...roof(t.w, t.d, 2.6, G + 3.9, t.dach, '#8a6038'));
+      // Tür, Fenster mit Läden, Geweih über der Tür
+      out.push(box(1.4, 2.4, 0.2, -1, G + 1.5, t.d / 2 + 0.3, '#4a3220'), box(1.2, 1.0, 0.2, 1.6, G + 2.2, t.d / 2 + 0.3, '#3b5a78'));
+      for (const sx of [-1, 1]) out.push(box(0.5, 1.1, 0.12, 1.6 + sx * 0.9, G + 2.2, t.d / 2 + 0.36, t.laden));
+      out.push(box(1.0, 0.7, 0.3, -1, G + 3.4, t.d / 2 + 0.4, '#6b4a2e'));
+      for (const sx of [-1, 1]) {
+        out.push(boxR(0.16, 1.4, 0.16, -1 + sx * 0.4, G + 4.1, t.d / 2 + 0.5, '#e8d8b0', 0, 0, sx * 0.5), boxR(0.12, 0.7, 0.12, -1 + sx * 0.85, G + 4.4, t.d / 2 + 0.5, '#e8d8b0', 0, 0, sx * 1.1));
+      }
+      // Hochsitz: vier Stelzen, Plattform, Kanzel mit Dach, Leiter
+      const hx = 9, hz = -0.5, hh = 7;
+      for (const [px, pz] of [[-1.3, -1.3], [1.3, -1.3], [-1.3, 1.3], [1.3, 1.3]]) out.push(boxR(0.35, hh + 0.4, 0.35, hx + px * 1.15, G + hh / 2, hz + pz * 1.15, HOLZ, pz * 0.04, 0, -px * 0.04));
+      out.push(boxR(3.4, 0.25, 3.4, hx, G + hh, hz, DUNKEL));
+      out.push(boxR(3.0, 1.4, 0.15, hx, G + hh + 0.8, hz - 1.45, '#8a6038'), boxR(0.15, 1.4, 3.0, hx - 1.45, G + hh + 0.8, hz, '#8a6038'), boxR(0.15, 1.4, 3.0, hx + 1.45, G + hh + 0.8, hz, '#8a6038'));
+      out.push(boxR(3.0, 0.8, 0.15, hx, G + hh + 0.5, hz + 1.45, '#8a6038'));
+      out.push(...roof(2.6, 2.6, 1.3, G + hh + 2.1, t.dach, '#8a6038').map((g) => g.translate(hx, 0, hz)));
+      for (const sx of [-0.55, 0.55]) out.push(boxR(0.18, hh + 1.6, 0.18, hx + sx, G + hh / 2 - 0.1, hz + 3.0, HOLZ, -0.32));
+      for (let i = 0; i < 8; i++) out.push(boxR(1.2, 0.12, 0.16, hx, G + 0.6 + i * 0.95, hz + 3.5 - i * 0.3, HOLZ));
+      // Wildbret am Balken neben der Tür, Holzklotz
+      out.push(boxR(0.2, 3.0, 0.2, -4.6, G + 1.5, 4.2, HOLZ), boxR(2.4, 0.2, 0.2, -3.6, G + 2.9, 4.2, HOLZ));
+      out.push(paint(new THREE.SphereGeometry(0.5, 8, 6).scale(0.8, 1.4, 0.8).translate(-3.0, G + 2.0, 4.2), '#9a3a2a'), walze(0.9, 1.0, -5.6, G + 0.5, 6.4, '#8a6a48', 0, 0, 9));
+      return out;
+    },
+  },
   foerster: {
     w: 7, d: 6, floors: 1, wand: '#e6ecd2', dach: '#55793c', laden: '#2f7a55', skala: 1, hoehe: 9,
     grund: [-6, 15, -4.5, 9],
@@ -1042,10 +1079,10 @@ function warnTextur(): THREE.CanvasTexture {
 }
 
 /** Symbole für Stillstand: Abzeichen mit gezeichnetem Bild (ohne Schriftzeichen, damit es überall gleich aussieht). */
-type Symbol = 'kein_baum' | 'kein_fels' | 'kein_platz' | 'kein_feld' | 'kein_arbeiter' | 'voll' | 'hunger' | 'kein_bauarbeiter' | 'kein_planierer'
+type Symbol = 'kein_baum' | 'kein_fels' | 'kein_platz' | 'kein_feld' | 'kein_wild' | 'kein_arbeiter' | 'voll' | 'hunger' | 'kein_bauarbeiter' | 'kein_planierer'
   | 'kein_werkzeug' | 'hochwasser' | 'winter';
 const SYMBOL_ZUSTAENDE: Partial<Record<GebaeudeZustand, Symbol>> = {
-  kein_baum: 'kein_baum', kein_fels: 'kein_fels', kein_platz: 'kein_platz', kein_feld: 'kein_feld', kein_arbeiter: 'kein_arbeiter', voll: 'voll',
+  kein_baum: 'kein_baum', kein_fels: 'kein_fels', kein_platz: 'kein_platz', kein_feld: 'kein_feld', kein_wild: 'kein_wild', kein_arbeiter: 'kein_arbeiter', voll: 'voll',
   hunger: 'hunger', kein_bauarbeiter: 'kein_bauarbeiter', kein_planierer: 'kein_planierer',
   kein_werkzeug: 'kein_werkzeug', hochwasser: 'hochwasser', winter: 'winter',
 };
@@ -1063,6 +1100,12 @@ function symbolTextur(art: Symbol): THREE.CanvasTexture {
     g.beginPath(); g.moveTo(64, 20); g.lineTo(90, 62); g.lineTo(38, 62); g.closePath(); g.fill();
     g.beginPath(); g.moveTo(64, 42); g.lineTo(96, 88); g.lineTo(32, 88); g.closePath(); g.fill();
     g.fillStyle = '#6b4a2e'; g.fillRect(58, 88, 12, 16);
+  } else if (art === 'kein_wild') {
+    // Rehkopf mit Geweih
+    g.fillStyle = '#b0733c'; g.beginPath(); g.ellipse(64, 78, 20, 24, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#3a2a20'; g.beginPath(); g.arc(64, 96, 6, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#d4bc8a'; g.lineWidth = 7;
+    for (const s of [-1, 1]) { g.beginPath(); g.moveTo(64 + s * 10, 58); g.lineTo(64 + s * 24, 26); g.moveTo(64 + s * 18, 42); g.lineTo(64 + s * 34, 38); g.stroke(); }
   } else if (art === 'kein_feld') {
     // Acker mit Furchen und Ähren
     g.fillStyle = '#8a5a34'; g.beginPath(); g.moveTo(22, 96); g.lineTo(40, 58); g.lineTo(88, 58); g.lineTo(106, 96); g.closePath(); g.fill();

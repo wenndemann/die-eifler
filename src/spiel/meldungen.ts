@@ -4,6 +4,7 @@
 import regionenJson from '../../data/regions.json';
 import meldungenJson from '../../data/meldungen.json';
 import { FUNDE, SCHATZ_NAME, SCHATZ_TEILE } from '../sim/grenzland';
+import { FELD_ARTEN, GEBAEUDE } from '../sim/daten';
 import type { SichtDorf, SichtEreignis } from '../sim/typen';
 
 interface Spruch { platt: string; hoch: string }
@@ -122,6 +123,9 @@ export class MeldungsFilter {
   private fondsTick = -1_000_000;
   private schmuggelTick = -1_000_000;
   private kaffeeTick = -1_000_000;
+  /** Wald und Wild: Wildschaden und Wolf höchstens alle 2 Spielminuten melden. */
+  private wildschadenTick = -1_000_000;
+  private wolfTick = -1_000_000;
 
   constructor(private e: Erzaehler, private ort: string) {}
 
@@ -214,6 +218,9 @@ export class MeldungsFilter {
         case 'schmuggel': if (ev.tick - this.schmuggelTick >= 3 * 60 * 20) { this.schmuggelTick = ev.tick; add('schmuggel', k({}), false, true, ev.gebaeude); } break;
         case 'kaffee': if (ev.tick - this.kaffeeTick >= 5 * 60 * 20) { this.kaffeeTick = ev.tick; add('kaffee', k({ n: ev.wert }), false, false, ev.gebaeude); } break;
         case 'bruecke': add('bruecke', k({}), false, false); break;
+        case 'wildschaden': if (ev.tick - this.wildschadenTick >= 2 * 60 * 20) { this.wildschadenTick = ev.tick; add('wildschaden', k({ feld: GEBAEUDE[FELD_ARTEN[ev.wert]]?.acker?.name ?? 'Feld' }), false, true); } break;
+        case 'wolf': if (ev.tick - this.wolfTick >= 2 * 60 * 20) { this.wolfTick = ev.tick; add('wolf', k({}), false, true, ev.gebaeude); } break;
+        case 'wildkatze': add('wildkatze', k({ n: ev.wert }), true, false); break;
         case 'bruecke_fehlt': add('bruecke_fehlt', k({ n: ev.wert }), false, true); break;
         case 'grossfund': add('grossfund', k({ text: FUNDE[ev.wert] ? `${FUNDE[ev.wert].symbol} ${FUNDE[ev.wert].name}` : 'etwas Großes', n: FUNDE[ev.wert]?.punkte ?? 0 }), true, true, ev.gebaeude); break;
         case 'schatzteil': add(ev.wert >= SCHATZ_TEILE ? 'schatz_komplett' : 'schatzteil', k({ n: ev.wert, text: SCHATZ_NAME }), true, true, ev.gebaeude); break;

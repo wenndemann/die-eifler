@@ -17,13 +17,13 @@ import leben from '../../data/leben.json';
 import { GEBAEUDE } from '../sim/daten';
 import { dorfLaune, FIGUR_ATTRIBUTE, figur, GESTE, material, variante, type Tracht } from './traeger';
 
-type Beruf = 'holzfaeller' | 'foerster' | 'steinbruch' | 'bauer' | 'bauarbeiter' | 'planierer';
+type Beruf = 'holzfaeller' | 'foerster' | 'steinbruch' | 'bauer' | 'jaeger' | 'bauarbeiter' | 'planierer';
 /** Beruf des Arbeiters nach der Funktion des Gebäudes (auch Spezialgebäude wie der Basaltbruch). */
-const BERUF_VON: Partial<Record<string, Beruf>> = { holzfaeller: 'holzfaeller', foerster: 'foerster', steinbruch: 'steinbruch', hof: 'bauer' };
+const BERUF_VON: Partial<Record<string, Beruf>> = { holzfaeller: 'holzfaeller', foerster: 'foerster', steinbruch: 'steinbruch', hof: 'bauer', jaeger: 'jaeger' };
 
 /** Hemdfarbe je Beruf (färbt Rumpf und Ärmel der Trägerfigur ein). */
 const HEMD: Record<Beruf, THREE.Color> = {
-  holzfaeller: new THREE.Color('#c0443a'), foerster: new THREE.Color('#3f8f4c'), steinbruch: new THREE.Color('#8f949c'), bauer: new THREE.Color('#5a7fb0'),
+  holzfaeller: new THREE.Color('#c0443a'), foerster: new THREE.Color('#3f8f4c'), steinbruch: new THREE.Color('#8f949c'), bauer: new THREE.Color('#5a7fb0'), jaeger: new THREE.Color('#4f6a3a'),
   bauarbeiter: new THREE.Color('#e0a830'), planierer: new THREE.Color('#8a6a48'),
 };
 
@@ -68,7 +68,14 @@ function hacke(): THREE.BufferGeometry {
     paint(new THREE.BoxGeometry(0.16, 0.03, 0.13).translate(0, -0.63, 0.13), STAHL),            // breites Blatt quer zum Stiel
   ])!;
 }
-const WERKZEUG: Record<Beruf, () => THREE.BufferGeometry> = { holzfaeller: axt, foerster: spaten, steinbruch: spitzhacke, bauer: hacke, bauarbeiter: hammer, planierer: spaten };
+function flinte(): THREE.BufferGeometry {
+  return mergeGeometries([
+    paint(new THREE.BoxGeometry(0.05, 0.3, 0.07).translate(0, -0.05, 0), STIEL),                // Schaft
+    paint(new THREE.CylinderGeometry(0.018, 0.018, 0.62, 6).translate(0, -0.5, 0.01), STAHL_DUNKEL), // Lauf
+    paint(new THREE.BoxGeometry(0.06, 0.08, 0.05).translate(0, -0.2, 0.0), STAHL),
+  ])!;
+}
+const WERKZEUG: Record<Beruf, () => THREE.BufferGeometry> = { holzfaeller: axt, foerster: spaten, steinbruch: spitzhacke, bauer: hacke, jaeger: flinte, bauarbeiter: hammer, planierer: spaten };
 
 /** Werkzeuge etwas größer als echt (um die Griffstelle): aus der Spielkamera als Axt, Spaten, Hacke erkennbar. */
 const WERKZEUG_GROSS = new THREE.Matrix4().makeScale(1.7, 1.7, 1.7);
@@ -87,6 +94,8 @@ const ARBEIT: Record<Beruf, { dauer: number; tief: number; hoch: number; aus: nu
   steinbruch: { dauer: 1.35, tief: 0.5, hoch: 1.0, aus: 0.72 },
   foerster: { dauer: 1.5, tief: 0.27, hoch: 0.52, aus: 0.55 },
   bauer: { dauer: 1.0, tief: 0.3, hoch: 0.62, aus: 0.6 },
+  // Jäger: legt langsam an, hält still (Ansitz), setzt ab
+  jaeger: { dauer: 4.0, tief: 0.35, hoch: 0.7, aus: 0.85 },
   bauarbeiter: { dauer: 0.55, tief: 0.45, hoch: 0.85, aus: 0.6 },
   planierer: { dauer: 1.2, tief: 0.27, hoch: 0.55, aus: 0.55 },
 };
@@ -120,13 +129,14 @@ export class Arbeiter {
     this.kontakt = new Kontaktschatten(this.group, 64);
     const mat = material(), tracht = leben.berufe as Record<Beruf, Tracht>;
     const satz = (b: Beruf, kap: number) => new Instanzen(this.group, figur(tracht[b]), mat, true, true, FIGUR_ATTRIBUTE, kap);
-    this.figuren = { holzfaeller: satz('holzfaeller', 32), foerster: satz('foerster', 32), steinbruch: satz('steinbruch', 32), bauer: satz('bauer', 32), bauarbeiter: satz('bauarbeiter', 8), planierer: satz('planierer', 8) };
+    this.figuren = { holzfaeller: satz('holzfaeller', 32), foerster: satz('foerster', 32), steinbruch: satz('steinbruch', 32), bauer: satz('bauer', 32), jaeger: satz('jaeger', 16), bauarbeiter: satz('bauarbeiter', 8), planierer: satz('planierer', 8) };
     const matte = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7, flatShading: false });
     this.werkzeuge = {
       holzfaeller: new Instanzen(this.group, WERKZEUG.holzfaeller(), matte, false, true, [], 32),
       foerster: new Instanzen(this.group, WERKZEUG.foerster(), matte, false, true, [], 32),
       steinbruch: new Instanzen(this.group, WERKZEUG.steinbruch(), matte, false, true, [], 32),
       bauer: new Instanzen(this.group, WERKZEUG.bauer(), matte, false, true, [], 32),
+      jaeger: new Instanzen(this.group, WERKZEUG.jaeger(), matte, false, true, [], 16),
       bauarbeiter: new Instanzen(this.group, WERKZEUG.bauarbeiter(), matte, false, true, [], 8),
       planierer: new Instanzen(this.group, WERKZEUG.planierer(), matte, false, true, [], 8),
     };

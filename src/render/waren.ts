@@ -152,6 +152,17 @@ const FORMEN: Record<string, Form> = {
     pos.forEach(([x, z], i) => out.push(paint(new THREE.BoxGeometry(W * 0.17, W * 0.13, W * 0.17).rotateY(i * 0.7).translate(x * W, W * 0.2, z * W), i % 2 ? f : ton(f, 0.78))));
     return { hoehe: W * 0.3, teile: out };
   },
+  // Wildbret: dicke Keule mit hellem Knochen, quer gelegt
+  keule: (f) => ({
+    hoehe: W * 0.5,
+    teile: [
+      paint(new THREE.SphereGeometry(W * 0.3, 9, 7).scale(1.45, 0.85, 0.95).translate(-W * 0.08, W * 0.26, 0), f),
+      paint(new THREE.SphereGeometry(W * 0.2, 8, 6).scale(1.2, 0.7, 0.8).translate(-W * 0.12, W * 0.42, 0), ton(f, 1.15)),
+      paint(new THREE.CylinderGeometry(W * 0.07, W * 0.07, W * 0.42, 7).rotateZ(Math.PI / 2).translate(W * 0.42, W * 0.22, 0), '#efe6d2'),
+      paint(new THREE.SphereGeometry(W * 0.1, 7, 5).translate(W * 0.64, W * 0.22, W * 0.04), '#f6f0e2'),
+      paint(new THREE.SphereGeometry(W * 0.1, 7, 5).translate(W * 0.64, W * 0.22, -W * 0.04), '#f6f0e2'),
+    ],
+  }),
   // Honigtopf: goldener Topf, Stoffdeckel mit Schnur, Holzlöffel
   topf: (f) => ({
     hoehe: W * 0.8,
