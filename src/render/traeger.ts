@@ -423,7 +423,7 @@ export class Traeger {
     for (const t of sicht.traeger) {
       const f = Math.min(1, Math.max(0, (t.fortschritt + (t.tut === 'laeuft' ? alpha * t.schritt : 0)) / PROMILLE));
       const a = this.ort(t.von, t.nach, f, this.tmpA);
-      plaetze.push({ x: a.x, z: a.z, r: TRAEGER_H * 0.42, fest: false });
+      plaetze.push({ x: a.x, z: a.z, r: TRAEGER_H * 0.55, fest: false });
       laeuft.push(t.tut === 'laeuft');
     }
     entzerren(plaetze, meisterPlaetze, laeuft);
@@ -473,7 +473,7 @@ export class Traeger {
         // M12: die Ware wackelt beim Tragen (schwere mehr) – kippelt seitlich und nach vorn im Schritt
         const wack = lauf ? (schwer ? 0.16 : 0.1) : 0.02;
         this.wq.setFromEuler(this.we.set(Math.sin(st.phase * 2) * wack * 0.5, 0, Math.sin(st.phase) * wack));
-        m.compose(p.set(x, y + 1.24 * sk + wip, z), this.wq.premultiply(q), s);
+        m.compose(p.set(x, y + 1.12 * sk + wip, z), this.wq.premultiply(q), s);
         this.waren[t.ware].fuege(m);
       }
     }

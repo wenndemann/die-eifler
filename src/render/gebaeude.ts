@@ -910,6 +910,8 @@ export function modellGrund(typ: string): readonly [number, number, number, numb
 /** Anker nur für einzelne Typen, die ein fremdes Modell nutzen (z. B. die Senfmühle mit Mühlrad). */
 const TYP_ANKER: Record<string, Anker[]> = {
   senfmuehle: [{ art: 'rad', x: -4.6, y: G + 2.4, z: 0, r: 2.0, w: 0.9, achse: 'x' }],
+  // Spinnrad vor der Spinnstube (dreht sich bei der Arbeit; ohne Wasser, siehe leben.ts)
+  spinnerei: [{ art: 'rad', x: -4.2, y: G + 1.9, z: 6.5, r: 1.5, w: 0.3, achse: 'z', farbe: 'spinnrad' }],
   papiermuehle: [{ art: 'rad', x: -6.4, y: G + 2.4, z: -1, r: 2.4, w: 1.0, achse: 'x' }],
   molkerei: [{ art: 'kuehe', x: -4, y: G, z: 6, w: 4, d: 2.5, n: 3 }],
   gerstenfeld: [{ art: 'muehle', x: 20, y: G, z: -3 }],

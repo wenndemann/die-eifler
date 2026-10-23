@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { GEBAEUDE, GEBAEUDE_IDS, WAREN, WAREN_FARBE, WAREN_FORM } from '../sim/daten';
 import { Fnv2 } from '../welt/pruefsumme';
-import { gebaeudeGeometrie, lebenAnker, modellGrund } from './gebaeude';
+import { gebaeudeGeometrie, lebenAnker, modellGrund, radGeometrie } from './gebaeude';
 import { C, mitDach } from './mockup';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { warenGeometrie } from './waren';
@@ -19,7 +19,14 @@ const GROESSE = 96;
  */
 function mitWare(id: string): THREE.BufferGeometry {
   // Dach in Schiefer wie im Spiel (die Völkchen-Dächer sind fast überall Schiefer), nicht in der Grundfarbe des Typs
-  const haus = mitDach(C.dach, () => gebaeudeGeometrie(id, true));
+  let haus = mitDach(C.dach, () => gebaeudeGeometrie(id, true));
+  // Spinnrad der Spinnstube (im Spiel ein bewegtes Teil, leben.ts) auch ins Icon
+  const rad = lebenAnker(id).find((a) => a.art === 'rad' && a.farbe === 'spinnrad');
+  if (rad) {
+    const r = mergeGeometries(radGeometrie(rad.r ?? 1.5, rad.w ?? 0.3))!.rotateY(Math.PI / 2).translate(rad.x, rad.y, rad.z);
+    for (const k of Object.keys(r.attributes)) if (!haus.attributes[k]) r.deleteAttribute(k);
+    haus = mergeGeometries([haus, r]) ?? haus;
+  }
   const ware = GEBAEUDE[id]?.ausgangWare ?? -1;
   if (ware < 0) return haus;
   const schild = lebenAnker(id).find((a) => a.art === 'schild');
@@ -59,7 +66,7 @@ const SPEICHER = 'eifeler.icons';
 /** Schlüssel: ändert sich mit Waren (Form, Farbe), Gebäuden und Größe. */
 const SCHLUESSEL = (() => {
   const f = new Fnv2();
-  f.text(`${GROESSE}|motiv5|${WAREN.join(',')}|${WAREN_FORM.join(',')}|${WAREN_FARBE.join(',')}|${GEBAEUDE_IDS.join(',')}`);
+  f.text(`${GROESSE}|motiv6|${WAREN.join(',')}|${WAREN_FORM.join(',')}|${WAREN_FARBE.join(',')}|${GEBAEUDE_IDS.join(',')}`);
   return f.hex();
 })();
 

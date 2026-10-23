@@ -29,9 +29,9 @@ const kegel = (r: number, h: number, x: number, y: number, z: number, f: string,
 /** Runde, kräftige Beine (oben dicker, unten Huf bzw. Pfote) wie bei den Figuren: keine Brettbeine. */
 const beine = (out: THREE.BufferGeometry[], dx: number, dz: number, h: number, dicke: number, f: string, huf = '#2e2218') => {
   for (const [lx, lz] of [[dx, dz], [-dx, dz], [dx, -dz], [-dx, -dz]]) {
-    // Oberschenkel als weiche Kapsel, darunter der schlanke Lauf (rund, kein Pfosten)
-    out.push(paint(new THREE.CapsuleGeometry(dicke * 0.62, h * 0.32, 4, 10).translate(lx, h * 0.72, lz), f));
-    out.push(paint(new THREE.CapsuleGeometry(dicke * 0.36, h * 0.5, 4, 8).translate(lx + 0.03, h * 0.36, lz), f));
+    // ein durchgehendes Bein, oben breit aus dem Rumpf heraus (Keule bzw. Schulter), unten schlank: keine Gliederpuppe
+    out.push(paint(new THREE.CylinderGeometry(dicke * 0.75, dicke * 0.32, h * 1.25, 10).translate(lx, h * 0.62 + 0.08, lz), f));
+    out.push(kugel(dicke * 0.8, lx, h * 1.2, lz, f, 1.2, 1.1, 1));
     out.push(kugel(dicke * 0.55, lx + 0.03, 0.1, lz, huf, 1.3, 0.7, 1));
   }
 };
@@ -53,24 +53,24 @@ function reh(f = '#b0733c', geweih = false): THREE.BufferGeometry {
     // Geweih aus runden, gebogenen Stangen mit drei Enden je Seite
     const stange = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, r: number) => {
       const a = new THREE.Vector3(x0, y0, z0), b = new THREE.Vector3(x1, y1, z1), d = b.clone().sub(a);
-      out.push(paint(new THREE.CylinderGeometry(r * 0.7, r, d.length(), 7).applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize())).translate((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2), '#e2d4b0'));
-      out.push(kugel(r * 0.75, x1, y1, z1, '#efe4c4'));
+      out.push(paint(new THREE.CylinderGeometry(r * 0.7, r, d.length(), 7).applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize())).translate((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2), '#d4bc8a'));
+      out.push(kugel(r * 0.8, x1, y1, z1, '#ead8b0'));
     };
-    stange(0.95, 2.7, s * 0.18, 0.8, 3.5, s * 0.42, 0.07);
-    stange(0.86, 3.05, s * 0.3, 1.2, 3.3, s * 0.45, 0.05);
-    stange(0.8, 3.5, s * 0.42, 0.55, 3.85, s * 0.5, 0.05);
-    stange(0.8, 3.5, s * 0.42, 1.0, 3.95, s * 0.36, 0.05);
+    stange(0.95, 2.7, s * 0.18, 0.8, 3.5, s * 0.42, 0.11);
+    stange(0.86, 3.05, s * 0.3, 1.2, 3.35, s * 0.48, 0.08);
+    stange(0.8, 3.5, s * 0.42, 0.55, 3.9, s * 0.55, 0.08);
+    stange(0.8, 3.5, s * 0.42, 1.05, 4.0, s * 0.38, 0.08);
   }
   return mergeGeometries(out)!;
 }
 /** Wildschwein: dunkel, keilförmig, Rüssel, Hauer, Borstenkamm. */
 function wildschwein(): THREE.BufferGeometry {
-  const f = '#5a4636';
+  const f = '#7a5640';
   const out = [kugel(0.75, 0, 1.0, 0, f, 1.5, 0.95, 0.85), kugel(0.5, 1.05, 0.98, 0, '#5e4a3a', 1.3, 0.85, 0.85), paint(new THREE.CylinderGeometry(0.2, 0.26, 0.4, 12).rotateZ(Math.PI / 2).translate(1.68, 0.9, 0), '#6a5444'), kugel(0.2, 1.9, 0.9, 0, '#c89a8a', 0.4, 1, 1),
-    kugel(0.2, -0.05, 1.62, 0, '#2e2620', 4.2, 0.6, 0.6), kegel(0.04, 0.22, 1.55, 0.8, 0.14, '#f2ead8', -1.2), kegel(0.04, 0.22, 1.55, 0.8, -0.14, '#f2ead8', -1.2),
+    kugel(0.2, -0.05, 1.62, 0, '#2e2620', 4.2, 0.6, 0.6), kegel(0.07, 0.36, 1.6, 0.86, 0.2, '#fbf6e8', -1.0), kegel(0.07, 0.36, 1.6, 0.86, -0.2, '#fbf6e8', -1.0),
     kegel(0.12, 0.3, 0.95, 1.55, 0.22, f, 0.3), kegel(0.12, 0.3, 0.95, 1.55, -0.22, f, 0.3), 
     k(0.05, 0.35, 0.05, -1.15, 1.0, 0, '#2a201a', 0.6)];
-  augen(out, 1.22, 1.22, 0.2, 0.08);
+  augen(out, 1.22, 1.24, 0.22, 0.11);
   beine(out, 0.55, 0.28, 0.5, 0.28, '#3a2e26');
   return mergeGeometries(out)!;
 }

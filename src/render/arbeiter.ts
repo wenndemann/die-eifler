@@ -221,7 +221,7 @@ export class Arbeiter {
     if (traegt && a.ware >= 0 && a.ware < WAREN_ANZAHL) {
       const wip = Math.abs(Math.sin(st.phase)) * 0.05 * sk;
       s.set(k * WARE_TRAGEN, k * WARE_TRAGEN, k * WARE_TRAGEN);
-      mw.compose(p.set(x, y + 1.24 * sk + wip, z), q, s);
+      mw.compose(p.set(x, y + 1.12 * sk + wip, z), q, s);
       this.waren[a.ware].fuege(mw);
     }
   }

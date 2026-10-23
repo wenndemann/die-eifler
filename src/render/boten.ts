@@ -92,7 +92,7 @@ export class Boten {
       const dx = vb.x - va.x, dz = vb.z - va.z, len = Math.hypot(dx, dz) || 1;
       // Zickzack quer zur Laufrichtung, stärker mit dem Pegel
       const quer = Math.sin(f * Math.PI * 2 + b.id) * 4 * b.pegel;
-      plaetze.push({ x: va.x + dx * f + (-dz / len) * quer, z: va.z + dz * f + (dx / len) * quer, r: TRAEGER_H * 0.5, fest: false });
+      plaetze.push({ x: va.x + dx * f + (-dz / len) * quer, z: va.z + dz * f + (dx / len) * quer, r: TRAEGER_H * 0.6, fest: false });
       laeuft.push(geht);
     }
     entzerren(plaetze, [...traegerPlaetze, ...meisterPlaetze], laeuft);
@@ -126,7 +126,7 @@ export class Boten {
       this.figuren.fuege(m, this.farbe, [st.phase, b.ware >= 0 ? 1 : 0, geht ? 1.2 : 0.2, 1, !geht && b.pegel >= 3 ? GESTE.jubeln : GESTE.keine]);
       if (b.ware >= 0 && b.ware < WAREN_ANZAHL) {
         s.set(k * WARE_TRAGEN, k * WARE_TRAGEN, k * WARE_TRAGEN);
-        m.compose(p.set(x, y + 1.24 * sk, z), q, s);
+        m.compose(p.set(x, y + 1.12 * sk, z), q, s);
         this.waren[b.ware].fuege(m);
       }
       // Hicks-Bläschen steigen über dem Kopf auf

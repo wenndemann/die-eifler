@@ -202,6 +202,7 @@ const KIND = ['#e05a5a', '#5a8ad0', '#f0c040', '#7ab06a'].map((c) => new THREE.C
 const SCHWAETZER = ['#3f6fb5', '#8a4a32', '#4f8a4a'].map((c) => new THREE.Color(c));
 const HUHN_BRAUN = new THREE.Color('#d0905a');
 const WEISS = new THREE.Color(1, 1, 1);
+const GELB = new THREE.Color('#ffd27a');
 
 /** Weicher runder Lichtschein (Mitte hell, außen durchsichtig) für Fenster in der Nacht. */
 function scheinTextur(): THREE.Texture {
@@ -444,8 +445,8 @@ export class LebenDarstellung {
         // Lichtfleck auf dem Boden vor den unteren Fenstern: das Haus wärmt den Weg
         if (a.y < 4) {
           const bz = z + seite * 2.2 * sk;
-          this.c.set(leben.fenster.farbe).multiplyScalar(o.nacht * leben.fenster.boden * flacker);
-          m.compose(p.set(x, this.hoehe(x, bz) + 0.4, bz), this.q2.setFromAxisAngle(this.X, -Math.PI / 2), sc.set(8 * sk, 6.5 * sk, sk));
+          this.c.set(leben.fenster.farbe).lerp(GELB, 0.35).multiplyScalar(o.nacht * leben.fenster.boden * flacker);
+          m.compose(p.set(x, this.hoehe(x, bz) + 0.4, bz), this.q2.setFromAxisAngle(this.X, -Math.PI / 2), sc.set(13 * sk, 10 * sk, sk));
           this.schein.fuege(m, this.c);
         }
         o.zahl.fenster++;
@@ -487,7 +488,7 @@ export class LebenDarstellung {
         const r = (a.r ?? 2) * sk;
         m.compose(p.set(x, y, z), q, sc.set((a.w ?? 0.6) / 0.6 * sk, r, r));
         this.raeder.fuege(m);
-        if (o.arbeitet && Math.random() < o.dt * 3) {
+        if (o.arbeitet && a.farbe !== 'spinnrad' && Math.random() < o.dt * 3) {
           // spritzendes Wasser unten am Rad
           this.rauch.neu({ x: x + (Math.random() - 0.5) * sk, y: y - r * 0.8, z: z + (Math.random() - 0.5) * r, vx: 0, vy: 2, vz: 3, dauer: 0.9, g0: sk * 0.6, g1: sk * 1.4, a: 0.5, r: 0.85, g: 0.93, b: 1 });
         }
