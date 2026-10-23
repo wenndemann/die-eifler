@@ -10,6 +10,7 @@ import { PROMILLE, type Id, type SimSicht } from '../sim/typen';
 import { paint } from './mockup';
 import { Instanzen } from './instanzen';
 import { TRAEGER_H, WARE_TRAGEN, fernFaktor } from './massstab';
+import { entzerren, meisterPlaetze, traegerPlaetze, type Platz } from './gedraenge';
 import { FIGUR_ATTRIBUTE, figur, GESTE, material } from './traeger';
 import { WAREN_ANZAHL, warenGeometrie } from './waren';
 
@@ -19,11 +20,12 @@ function rumpfTeil(g: THREE.BufferGeometry): THREE.BufferGeometry {
   g.setAttribute('aTeil', new THREE.BufferAttribute(new Float32Array(n), 1));
   g.setAttribute('aGelenk', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
   g.setAttribute('aTint', new THREE.BufferAttribute(new Float32Array(n), 1));
+  g.setAttribute('aVariante', new THREE.BufferAttribute(new Float32Array(n), 1));
   return g;
 }
 
 /** Trägerfigur mit roter Säufernase, glühenden Wangen, schief sitzender grüner Mütze und Schnapsflasche unterm Arm. */
-function botenFigur(): THREE.BufferGeometry {
+export function botenFigur(): THREE.BufferGeometry {
   const extra = [
     paint(new THREE.SphereGeometry(0.11, 6, 5).scale(1, 0.95, 1.1).translate(0, 0.71, 0.25), '#d6262a'),
     paint(new THREE.SphereGeometry(0.065, 5, 4).translate(-0.165, 0.69, 0.15), '#e8483a'),
@@ -82,6 +84,8 @@ export class Boten {
     for (const w of this.waren) w.beginne();
     for (const w of this.liegend) w.beginne();
     const { m, q, q2, p, s } = this;
+    // Plätze zuerst, dann auseinanderrücken: Boten stehen nicht in Trägern oder Meistern (gedraenge.ts)
+    const plaetze: Platz[] = [], laeuft: boolean[] = [];
     for (const b of sicht.boten) {
       const geht = b.tut === 'geht';
       const f = Math.min(1, Math.max(0, (b.fortschritt + (geht ? alpha * b.schritt : 0)) / PROMILLE));
@@ -89,7 +93,16 @@ export class Boten {
       const dx = vb.x - va.x, dz = vb.z - va.z, len = Math.hypot(dx, dz) || 1;
       // Zickzack quer zur Laufrichtung, stärker mit dem Pegel
       const quer = Math.sin(f * Math.PI * 2 + b.id) * 4 * b.pegel;
-      const x = va.x + dx * f + (-dz / len) * quer, z = va.z + dz * f + (dx / len) * quer;
+      plaetze.push({ x: va.x + dx * f + (-dz / len) * quer, z: va.z + dz * f + (dx / len) * quer, r: TRAEGER_H * 0.6, fest: false });
+      laeuft.push(geht);
+    }
+    entzerren(plaetze, [...traegerPlaetze, ...meisterPlaetze], laeuft);
+    for (let bi = 0; bi < sicht.boten.length; bi++) {
+      const b = sicht.boten[bi];
+      const geht = b.tut === 'geht';
+      const va = this.grid.toWorld(b.von), vb = this.grid.toWorld(b.nach);
+      const dx = vb.x - va.x, dz = vb.z - va.z, len = Math.hypot(dx, dz) || 1;
+      const x = plaetze[bi].x, z = plaetze[bi].z;
       let st = this.zustand.get(b.id);
       if (!st) { st = { phase: b.id * 1.3, yaw: Math.atan2(dx, dz), x, z, benutzt: 0 }; this.zustand.set(b.id, st); }
       st.benutzt = this.runde;
@@ -114,7 +127,7 @@ export class Boten {
       this.figuren.fuege(m, this.farbe, [st.phase, b.ware >= 0 ? 1 : 0, geht ? 1.2 : 0.2, 1, !geht && b.pegel >= 3 ? GESTE.jubeln : GESTE.keine]);
       if (b.ware >= 0 && b.ware < WAREN_ANZAHL) {
         s.set(k * WARE_TRAGEN, k * WARE_TRAGEN, k * WARE_TRAGEN);
-        m.compose(p.set(x, y + 1.24 * sk, z), q, s);
+        m.compose(p.set(x, y + 1.12 * sk, z), q, s);
         this.waren[b.ware].fuege(m);
       }
       // Hicks-Bläschen steigen über dem Kopf auf

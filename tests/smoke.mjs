@@ -218,7 +218,8 @@ try {
 
   // ---- M3 b) Spiel auf der echten Karte: Aufbau mit Holz und Stein per Befehle, 5 Spielminuten, Screenshot, Replay in zweitem Kontext
   const url = `${basis}#v=${a1.param.version}&q=${a1.param.q}&r=${a1.param.r}&g=${a1.param.size}`;
-  await page.goto('about:blank');
+  // die vorige Seite kann gerade selbst navigieren (Hash der Karte); dann einmal kurz warten und neu ansetzen
+  await page.goto('about:blank').catch(async () => { await page.waitForTimeout(1500); await page.goto('about:blank'); });
   await page.goto(url);
   await page.waitForFunction(() => window.eifeler?.spiel, null, { timeout: 600000, polling: 500 });
   await page.evaluate(() => window.eifeler.skipIntro());
@@ -245,12 +246,14 @@ try {
         if (nat.felsArt[i] === 3 && nat.fels[i] === 8) natur.haufen++; else natur.umkreisVor += nat.fels[i];
       }
     }
+    // Wege über einen Bach brauchen eine Holzbrücke (2 im Startlager): der Aufbau nimmt lieber Wege ohne Bach
+    const ohneBach = (p) => p.slice(1, -1).every((h) => !(sp.sim.karte.flags[sp.sim.karte.index(h.q, h.r)] & 2));
     // 1) Wege vom Lager in verschiedene Richtungen, jeweils zu einem freien Hex (dort entsteht eine Fahne)
     for (let d = 0; d < 6 && wege < 4; d++) {
       for (const k of [4, 3, 5, 2]) {
         const T = { q: L.q + RICHT[d][0] * k, r: L.r + RICHT[d][1] * k };
         const p = sp.sim.wegVorschau(L, T);
-        if (p && p.length <= 8) { sp.befehl({ art: 'weg', pfad: p }); wege++; break; }
+        if (p && p.length <= 8 && ohneBach(p)) { sp.befehl({ art: 'weg', pfad: p }); wege++; break; }
       }
     }
     // 2) eine Fahne mitten auf den ersten Weg (teilt das Segment)
@@ -270,11 +273,14 @@ try {
     kandidaten.sort((a, b) => a.dd - b.dd || a.r - b.r || a.q - b.q);
     const nutzen = (typ, c) => {
       const fs = sp.sicht.fahnen.slice().sort((a, b) => dist(a, c) - dist(b, c) || a.id - b.id).slice(0, 6);
-      const von = fs.find((f) => sp.sim.wegVorschau(f, c));
-      if (!von) return false;
+      // Weg vom neuen Haus zur Fahne (wie im Spiel: nicht hinten aus dem Haus hinaus), erst prüfen, dann bauen
+      let p = null;
+      // lieber ohne Bach; sonst über eine Holzbrücke
+      const moeglich = fs.map((f) => sp.sim.wegAbschnitt(c, f, [], 30, 0, true)).filter(Boolean);
+      p = moeglich.find(ohneBach) ?? moeglich[0] ?? null;
+      if (!p) return false;
       sp.befehl({ art: 'gebaeude', typ, q: c.q, r: c.r });
-      const p = sp.sim.wegVorschau(von, c);
-      if (p) sp.befehl({ art: 'weg', pfad: p });
+      sp.befehl({ art: 'weg', pfad: p });
       gebaut.push({ typ, q: c.q, r: c.r });
       return true;
     };
@@ -336,6 +342,9 @@ try {
       maxUnterwegs, maxMitWare, statistik: sp.sim.statistik(), innen: sp.sim.pruefeInnenzustand(), pruefsumme: sp.pruefsumme(),
       protokoll: JSON.parse(JSON.stringify(sp.protokoll())), eigenReplay: sp.nachspielen(sp.protokoll()),
       getrennt: sp.sicht.gebaeude.filter((g) => g.getrennt).length,
+      // Wege, die auf eine Holzbrücke warten, obwohl keine mehr im Lager ist (dann ist „getrennt“ richtig: erst die Zimmerei hilft)
+      brueckeFehlt: sp.sicht.segmente.filter((x) => x.bruecken > 0).length,
+      brueckenImLager: sp.sicht.gebaeude.filter((g) => g.typ === 'lager').reduce((n, g) => n + (g.vorrat?.at(-1) ?? 0), 0), // die Holzbrücke ist die letzte Ware
       zustaende: sp.sicht.gebaeude.map((g) => `${g.typ} ${g.zustand}`),
     };
   });
@@ -360,7 +369,8 @@ try {
   }
   if (!(aufbau.statistik.angekommen > 0)) fail(`Spiel: keine Ware angekommen (${JSON.stringify(aufbau.statistik)})`);
   if (aufbau.innen.length) fail(`Spiel: Innenzustand widersprüchlich: ${aufbau.innen.join('; ')}`);
-  if (aufbau.getrennt) fail(`Spiel: ${aufbau.getrennt} Gebäude ohne Verbindung zum Lager`);
+  if (aufbau.getrennt && aufbau.brueckeFehlt && !aufbau.brueckenImLager) info(`Spiel: ${aufbau.getrennt} Gebäude warten auf eine Holzbrücke (${aufbau.brueckeFehlt} Wege, keine Brücke mehr im Lager)`);
+  else if (aufbau.getrennt) fail(`Spiel: ${aufbau.getrennt} Gebäude ohne Verbindung zum Lager`);
   if (aufbau.eigenReplay !== aufbau.pruefsumme) fail(`Spiel: Replay im selben Browser ${aufbau.eigenReplay} ungleich live ${aufbau.pruefsumme}`);
   if (aufbau.protokoll.karte.pruefsumme !== a1.pruefsumme) fail('Spiel: Karten-Prüfsumme im Protokoll passt nicht zum Ausschnitt');
 
@@ -384,7 +394,8 @@ try {
   const m12 = await page.evaluate(async () => {
     const sp = window.eifeler.spiel;
     sp.wetterVorgabe = { tag: 0.85, regen: 1, nebel: 1, hochwasser: 1, wind: 1 };
-    await new Promise((ok) => setTimeout(ok, 1500));
+    // die Vorgabe greift im nächsten Bild; im Software-Renderer dauert eins mehrere Sekunden, also aufs Ergebnis warten
+    for (let i = 0; i < 60 && !(sp.wetterOptik.lage().regen > 0.9 && sp.wetterOptik.lage().hochwasser > 0.9); i++) await new Promise((ok) => setTimeout(ok, 500));
     const lage = { ...sp.wetterOptik.lage() };
     sp.wetterVorgabe = { tag: 0.5, schnee: 1, regen: 0, nebel: 0, hochwasser: 0, wind: 0 };
     await new Promise((ok) => setTimeout(ok, 800));

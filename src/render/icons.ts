@@ -3,19 +3,70 @@
 // kurz nach dem Start Stück für Stück und landet im Browser-Speicher (Schlüssel aus den Daten), beim nächsten Laden – auch beim
 // Wiederbeitritt im Mehrspieler – sind die Icons sofort da. Bis dahin und ohne WebGL zeigen die Fenster die Zeichen aus den Daten.
 import * as THREE from 'three';
-import { GEBAEUDE_IDS, WAREN, WAREN_FARBE, WAREN_FORM } from '../sim/daten';
+import { GEBAEUDE, GEBAEUDE_IDS, WAREN, WAREN_FARBE, WAREN_FORM } from '../sim/daten';
 import { Fnv2 } from '../welt/pruefsumme';
-import { gebaeudeGeometrie } from './gebaeude';
+import { dachFarbe, gebaeudeGeometrie, lebenAnker, modellGrund, radGeometrie } from './gebaeude';
+import { C, mitDach } from './mockup';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { warenGeometrie } from './waren';
 
 export interface Icons { ware: (string | undefined)[]; gebaeude: Record<string, string | undefined> }
 
 const GROESSE = 96;
+/**
+ * Gebäude fürs Icon samt seiner Ware groß davor (Gutachter: viele Gebäude teilen ein Modell und sähen sonst gleich aus): der Käse vor
+ * der Käserei, das Garn vor der Spinnerei, das Brett vor dem Sägewerk.
+ */
+function mitWare(id: string): THREE.BufferGeometry {
+  // Dach wie im Spiel: Wohnhäuser in Schiefer, Werkstätten in ihrer eigenen, leicht getönten Farbe
+  let haus = mitDach(dachFarbe(id, C.dach), () => gebaeudeGeometrie(id, true));
+  // Spinnrad der Spinnstube (im Spiel ein bewegtes Teil, leben.ts) auch ins Icon
+  const rad = lebenAnker(id).find((a) => a.art === 'rad' && a.farbe === 'spinnrad');
+  if (rad) {
+    const r = mergeGeometries(radGeometrie(rad.r ?? 1.5, rad.w ?? 0.3))!.rotateY(Math.PI / 2).translate(rad.x, rad.y, rad.z);
+    for (const k of Object.keys(r.attributes)) if (!haus.attributes[k]) r.deleteAttribute(k);
+    haus = mergeGeometries([haus, r]) ?? haus;
+  }
+  const ware = GEBAEUDE[id]?.ausgangWare ?? -1;
+  if (ware < 0) return haus;
+  const schild = lebenAnker(id).find((a) => a.art === 'schild');
+  const g = modellGrund(id);
+  const x = schild ? schild.x + 2.2 : g[1] - 2, z = schild ? schild.z + 2.6 : g[3] - 1;
+  const w = warenGeometrie(ware).clone().scale(0.62, 0.62, 0.62).translate(x, 0.5, z);
+  // gleiche Attribute wie das Haus (Position, Normale, Farbe), sonst lässt sich nicht zusammenfügen
+  for (const k of Object.keys(w.attributes)) if (!haus.attributes[k]) w.deleteAttribute(k);
+  return mergeGeometries([haus, w]) ?? haus;
+}
+
+/** Rand um das Motiv (Anteil der Bildbreite) beim Zuschneiden. */
+const RAND = 0.04;
+const _v = new THREE.Vector3();
+
+/**
+ * Bildausschnitt aufs Motiv: die Modellpunkte projizieren (ohne Pixel zurückzulesen) und die Kamera per View-Offset quadratisch
+ * auf ihr Rechteck setzen. Kleinkram am Rand macht das Gebäude so nicht mehr winzig (Gutachter).
+ */
+function aufsMotiv(kamera: THREE.PerspectiveCamera, geo: THREE.BufferGeometry): void {
+  kamera.clearViewOffset();
+  kamera.updateMatrixWorld();
+  const pos = geo.attributes.position;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const schritt = Math.max(1, Math.floor(pos.count / 4000));
+  for (let i = 0; i < pos.count; i += schritt) {
+    _v.fromBufferAttribute(pos, i).project(kamera);
+    if (_v.x < x0) x0 = _v.x; if (_v.x > x1) x1 = _v.x; if (_v.y < y0) y0 = _v.y; if (_v.y > y1) y1 = _v.y;
+  }
+  if (!(x1 > x0 && y1 > y0)) return;
+  // Normgeräte-Koordinaten (−1..1, y nach oben) in Pixel eines gedachten Vollbilds der Größe GROESSE
+  const seite = (Math.max(x1 - x0, y1 - y0) / 2 + 2 * RAND) * GROESSE;
+  const mx = ((x0 + x1) / 4 + 0.5) * GROESSE, my = (0.5 - (y0 + y1) / 4) * GROESSE;
+  kamera.setViewOffset(GROESSE, GROESSE, mx - seite / 2, my - seite / 2, seite, seite);
+}
 const SPEICHER = 'eifeler.icons';
 /** Schlüssel: ändert sich mit Waren (Form, Farbe), Gebäuden und Größe. */
 const SCHLUESSEL = (() => {
   const f = new Fnv2();
-  f.text(`${GROESSE}|${WAREN.join(',')}|${WAREN_FORM.join(',')}|${WAREN_FARBE.join(',')}|${GEBAEUDE_IDS.join(',')}`);
+  f.text(`${GROESSE}|motiv7|${WAREN.join(',')}|${WAREN_FORM.join(',')}|${WAREN_FARBE.join(',')}|${GEBAEUDE_IDS.join(',')}`);
   return f.hex();
 })();
 
@@ -67,9 +118,9 @@ async function rendere(): Promise<void> {
     renderer.setClearColor(0x000000, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     const szene = new THREE.Scene();
-    const sonne = new THREE.DirectionalLight('#ffeccc', 3.2);
+    const sonne = new THREE.DirectionalLight('#ffeccc', 3.6);
     sonne.position.set(-0.6, 1, 0.8);
-    szene.add(sonne, new THREE.HemisphereLight('#c4d8ea', '#3e4a2a', 0.9));
+    szene.add(sonne, new THREE.HemisphereLight('#c4d8ea', '#6a7050', 1.4));
     const kamera = new THREE.PerspectiveCamera(28, 1, 0.1, 1000);
     const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, side: THREE.DoubleSide });
     const richt = new THREE.Vector3(0.45, 0.62, 1).normalize();
@@ -81,13 +132,15 @@ async function rendere(): Promise<void> {
       // Blick wie die Spielkamera: von Süden schräg oben, leicht gedreht
       kamera.position.copy(k.center).addScaledVector(richt, (k.radius / Math.sin(THREE.MathUtils.degToRad(14))) * 1.02);
       kamera.lookAt(k.center);
+      aufsMotiv(kamera, geo);
       renderer!.render(szene, kamera);
       szene.remove(m);
       return renderer!.domElement.toDataURL('image/png');
     };
     const neu: Icons = { ware: [], gebaeude: {} };
-    for (let a = 0; a < WAREN.length; a++) { neu.ware[a] = bild(warenGeometrie(a)); await pause(); }
-    for (const id of GEBAEUDE_IDS) { neu.gebaeude[id] = bild(gebaeudeGeometrie(id)); await pause(); }
+    // in Paketen zu je 8 (dazwischen läuft das Spiel weiter): sonst wartet jedes Icon auf ein ganzes Spielbild
+    for (let a = 0; a < WAREN.length; a++) { neu.ware[a] = bild(warenGeometrie(a)); if (a % 8 === 7) await pause(); }
+    for (let i = 0; i < GEBAEUDE_IDS.length; i++) { const id = GEBAEUDE_IDS[i]; neu.gebaeude[id] = bild(mitWare(id)); if (i % 8 === 7) await pause(); }
     mat.dispose();
     aktuell.ware = neu.ware; aktuell.gebaeude = neu.gebaeude;
     try { localStorage.setItem(SPEICHER, JSON.stringify({ schluessel: SCHLUESSEL, icons: neu })); } catch { /* Speicher voll: nächstes Mal neu */ }

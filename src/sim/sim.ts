@@ -340,6 +340,8 @@ export class Simulation {
   /** Hexe mit Jungbäumen (Einfüge-Reihenfolge). */
   private jungListe: number[] = [];
   private natRev = 0;
+  /** Gebaute Holzbrücken: Fluss-Hexe, über die ein Weg führen darf (im Spielstand und in der Prüfsumme, sortiert). */
+  private bruecken = new Set<number>();
   private log: ProtokollEintrag[] = [];
   private ausstehend: ProtokollEintrag[] = [];
   private stat = { angekommen: 0, verbraucht: 0, erzeugt: 0, maxWarte: 0, verbaut: 0 };
@@ -351,6 +353,8 @@ export class Simulation {
   private netzStand = 0;
   private verbundenLesend: { stand: number; fahnen: Set<Id> } | null = null;
   private verbundenNeu = true;
+  /** Fehlende Brücken je Segment (abgeleitet, je Netzstand). */
+  private sperre: { stand: number; m: Map<Id, number> } | null = null;
   private inb = new Map<Id, number>();
   private natCache: SichtNatur | null = null;
   private natHash: { rev: number; hex: string } | null = null;
@@ -656,6 +660,7 @@ export class Simulation {
     this.inbNeu();
     for (let sp = 0; sp < this.doerfer.length; sp++) this.doerfer[sp].wohnFrei = this.wohnraumFrei(sp);
     for (const g of this.gebaeude.values()) this.gebaeudeTick(g);
+    this.brueckenEinbauen();
     for (let sp = 0; sp < this.doerfer.length; sp++) this.dorfTick(sp);
     if (t % 10 === 0) { this.baeumeWachsen(); this.zielePruefen(); }
     if (t % 4 === 0) { this.lagerPull(); for (let sp = 0; sp < this.doerfer.length; sp++) this.bauleuteSchicken(sp); }
@@ -718,6 +723,7 @@ export class Simulation {
       },
       mai: { trupps: [...this.trupps.values()] as unknown as Record<string, unknown>[] },
       grenzland: { steine: this.steine as unknown as Record<string, unknown>[], ortFest: this.ortFest },
+      bruecken: [...this.bruecken].sort((a, b) => a - b),
     });
   }
 
@@ -792,6 +798,11 @@ export class Simulation {
     for (const f of this.fahnen.values()) this.hexFahne[f.h] = f.id;
     for (const g of this.gebaeude.values()) this.hexGeb[g.h] = g.id;
     for (const s of this.segmente.values()) for (let i = 1; i < s.pfad.length - 1; i++) this.hexWeg[s.pfad[i]] = s.id;
+    // Holzbrücken; Spielstände von vorher: jeder Weg, der schon über einen Bach führt, hat seine Brücke
+    this.bruecken = new Set(Array.isArray(st.bruecken) ? st.bruecken : []);
+    if (!Array.isArray(st.bruecken)) {
+      for (const s of this.segmente.values()) for (let i = 1; i < s.pfad.length - 1; i++) if (this.karte.flags[s.pfad[i]] & FLAG.fluss) this.bruecken.add(s.pfad[i]);
+    }
     this.natCache = null; this.natHash = null;
     this.netzGeaendert();
     this.jahrTick();
@@ -959,7 +970,8 @@ export class Simulation {
     const fa = this.fahnen.get(this.hexFahne[a]);
     if (!fa || fa.sp !== sp || fa.segmente.length >= FAHNE_MAX_SEGMENTE) return null;
     if (!this.zielFahneOk(z, sp)) return null;
-    const p = sucheWeg(k, a, z, (h, istZiel) => {
+    const p = sucheWeg(k, a, z, (h, istZiel, vorher) => {
+      if (this.durchsHaus(vorher, h) || (!istZiel && this.amBach(vorher, h))) return false;
       if (istZiel) return true;
       return !this.hexFahne[h] && !this.hexGeb[h] && !this.hexWeg[h] && !this.fremdesLand(h, sp);
     }, WEG_MAX_SCHRITTE);
@@ -969,9 +981,10 @@ export class Simulation {
   /**
    * Teilstück eines selbst geführten Wegs: Pfad von `von` (muss keine Fahne tragen) nach `nach` (Fahne, Weg-Hex oder freier Hex,
    * der eine Fahne tragen kann). Zwischen den Enden nur freie Hexe, Hexe aus `belegt` (schon benutzte Hexe des offenen Wegs)
-   * sind gesperrt, das Ziel darf nicht darunter sein. Höchstens `maxSchritte` Schritte; null, wenn es keinen gibt.
+   * sind gesperrt, das Ziel darf nicht darunter sein. Höchstens `maxSchritte` Schritte; null, wenn es keinen gibt. `neuesHaus`: am
+   * Start entsteht gerade ein Gebäude (der Weg darf dort nicht nach hinten abgehen).
    */
-  wegAbschnitt(von: { q: number; r: number }, nach: { q: number; r: number }, belegt: { q: number; r: number }[], maxSchritte: number, sp = 0): { q: number; r: number }[] | null {
+  wegAbschnitt(von: { q: number; r: number }, nach: { q: number; r: number }, belegt: { q: number; r: number }[], maxSchritte: number, sp = 0, neuesHaus = false): { q: number; r: number }[] | null {
     const k = this.karte;
     const a = k.index(von.q, von.r), z = k.index(nach.q, nach.r);
     if (a < 0 || z < 0 || a === z || !k.begehbar[a] || !k.begehbar[z] || maxSchritte < 1) return null;
@@ -982,11 +995,37 @@ export class Simulation {
     const fa = this.fahnen.get(this.hexFahne[a]);
     if (fa && (fa.sp !== sp || fa.segmente.length >= FAHNE_MAX_SEGMENTE)) return null;
     if (!this.zielFahneOk(z, sp)) return null;
-    const p = sucheWeg(k, a, z, (h, istZiel) => {
+    const p = sucheWeg(k, a, z, (h, istZiel, vorher) => {
+      if (this.durchsHaus(vorher, h) || (!istZiel && this.amBach(vorher, h)) || (neuesHaus && vorher === a && this.hinten(a, h))) return false;
       if (istZiel) return true;
       return !this.hexFahne[h] && !this.hexGeb[h] && !this.hexWeg[h] && !gesperrt.has(h) && !this.fremdesLand(h, sp);
     }, Math.min(maxSchritte, WEG_MAX_SCHRITTE));
     return p ? p.map((h) => ({ q: k.qs[h], r: k.rs[h] })) : null;
+  }
+
+  /** Liegt n hinter dem Hex h (einer der beiden Nachbarn Richtung −r, dort steht das Haus)? */
+  private hinten(h: number, n: number): boolean {
+    const k = this.karte;
+    return k.rs[n] === k.rs[h] - 1 && (k.qs[n] === k.qs[h] || k.qs[n] === k.qs[h] + 1);
+  }
+
+  /** Schritt von a nach b durchs Haus: von der Fahne eines Gebäudes nach hinten hinaus bzw. von hinten an sie heran. */
+  private durchsHaus(a: number, b: number): boolean {
+    if (a < 0 || b < 0) return false;
+    return (this.hexGeb[a] !== 0 && this.hinten(a, b)) || (this.hexGeb[b] !== 0 && this.hinten(b, a));
+  }
+
+  /**
+   * Läuft der Schritt von a nach b am Bach oder Fluss entlang statt quer hinüber? Ein Weg geht nie von einem Fluss-Hex ins nächste
+   * und betritt eins nur so, dass geradeaus dahinter kein Fluss-Hex liegt: er kreuzt den Wasserlauf ungefähr im rechten Winkel
+   * (dort steht dann die Brücke). Der letzte Schritt ans Ziel ist frei: die Zielfahne (z. B. das Lager) darf selbst am oder im Bach stehen.
+   */
+  private amBach(a: number, b: number): boolean {
+    const k = this.karte;
+    if (a < 0 || !(k.flags[b] & FLAG.fluss)) return false;
+    if (k.flags[a] & FLAG.fluss) return true;
+    const weiter = k.index(2 * k.qs[b] - k.qs[a], 2 * k.rs[b] - k.rs[a]);
+    return weiter >= 0 && (k.flags[weiter] & FLAG.fluss) !== 0;
   }
 
   /** Sicht für Spieler `ich`: die ganze Welt, dazu Dorf, freie Bewohner und Ereignisse dieses Spielers. */
@@ -1019,7 +1058,7 @@ export class Simulation {
         voelkchen: this.vkVon(sp).id, maibaum: d.maiBaum, maiDieb: d.maiDieb, teile: d.teile.length,
       })),
       fahnen: [...this.fahnen.values()].map((f) => ({ id: f.id, sp: f.sp, ...hx(f.h), waren: f.waren.map((w) => w.art), ziele: f.waren.map((w) => w.ziel), gebaeude: f.gebaeude })),
-      segmente: [...this.segmente.values()].map((s) => ({ id: s.id, sp: s.sp, a: s.a, b: s.b, pfad: s.pfad.map(hx), traeger: s.traeger, verkehr: s.verkehr })),
+      segmente: [...this.segmente.values()].map((s) => ({ id: s.id, sp: s.sp, a: s.a, b: s.b, pfad: s.pfad.map(hx), traeger: s.traeger, verkehr: s.verkehr, bruecken: this.brueckenFehlen(s) })),
       traeger: tr,
       gebaeude: [...this.gebaeude.values()].map((g) => {
         const t = GEBAEUDE[g.typ];
@@ -1290,7 +1329,7 @@ export class Simulation {
   pruefeInnenzustand(): string[] {
     const fehler: string[] = [];
     const inc = new Map<string, number>();
-    const zaehle = (w: Ware) => { if (w.ziel) { const key = `${w.ziel}:${w.art}`; inc.set(key, (inc.get(key) ?? 0) + 1); } };
+    const zaehle = (w: Ware) => { if (w.ziel > 0) { const key = `${w.ziel}:${w.art}`; inc.set(key, (inc.get(key) ?? 0) + 1); } };
     for (const f of this.fahnen.values()) {
       for (const w of f.waren) zaehle(w);
       if (f.waren.length > FLAG_CAP + NOTPLAETZE) fehler.push(`Fahne ${f.id} überfüllt`);
@@ -1460,6 +1499,7 @@ export class Simulation {
     for (const x of this.steine) { w(x.id); w(x.sp); w(x.opfer); w(x.h); w(x.art); }
     liste(this.ortFest);
     for (const g of this.gebaeude.values()) if (g.gz !== undefined) { w(g.id); w(g.gz); }
+    liste([...this.bruecken].sort((a, b) => a - b));
     return f.hex();
   }
 
@@ -1589,6 +1629,7 @@ export class Simulation {
       const f = this.fahnen.get(stapel.pop()!)!;
       for (const sid of f.segmente) {
         const sg = this.segmente.get(sid)!;
+        if (this.brueckenFehlen(sg)) continue;
         const o = sg.a === f.id ? sg.b : sg.a;
         if (!fahnen.has(o)) { fahnen.add(o); stapel.push(o); }
       }
@@ -1944,6 +1985,8 @@ export class Simulation {
     if (!this.karte.begehbar[h] || this.hexFahne[h] || this.hexGeb[h]) return false;
     if (this.regeln.gebiet && this.besitz[h] !== sp && !(this.besitz[h] < 0 && this.amAnschluss(h))) return false;
     if (this.hexWeg[h]) {
+      // auf einem Weg mitten im Bach keine Fahne (dort gehört die Brücke hin)
+      if (this.karte.flags[h] & FLAG.fluss) return false;
       const s = this.segmente.get(this.hexWeg[h]);
       return !!s && s.sp === sp && s.pfad.indexOf(h) > 0;
     }
@@ -2228,6 +2271,8 @@ export class Simulation {
     fa.segmente.push(s.id); fa.segmente.sort((x, y) => x - y);
     fz.segmente.push(s.id); fz.segmente.sort((x, y) => x - y);
     this.netzGeaendert();
+    const fehlt = this.brueckenFehlen(s);
+    if (fehlt) this.ereignis(sp, 'bruecke_fehlt', 0, fehlt);
   }
 
   // ------------------------------------------------------------------ Abriss (DESIGN §4.7)
@@ -2341,6 +2386,7 @@ export class Simulation {
       const f = this.fahnen.get(stapel.pop()!)!;
       for (const sid of f.segmente) {
         const s = this.segmente.get(sid)!;
+        if (this.brueckenFehlen(s)) continue;
         const o = s.a === f.id ? s.b : s.a;
         if (!this.verbunden.has(o)) { this.verbunden.add(o); stapel.push(o); }
       }
@@ -2365,6 +2411,7 @@ export class Simulation {
       if (d > m.get(u)!) continue;
       for (const sid of this.fahnen.get(u)!.segmente) {
         const s = this.segmente.get(sid)!;
+        if (this.brueckenFehlen(s)) continue;
         const v = s.a === u ? s.b : s.a;
         // Kosten für den Weg v → u
         const nd = d + (s.a === v ? s.kab : s.kba);
@@ -2378,16 +2425,21 @@ export class Simulation {
   private segmentKostenVon(s: Segment, von: Id): number { return s.a === von ? s.kab : s.kba; }
 
   private zielOk(w: Ware, z: Fahne): boolean {
+    if (w.ziel < 0) {
+      const s = this.segmente.get(-w.ziel);
+      return !!s && s.sp === z.sp && this.brueckenFehlen(s) > 0 && this.distZu(this.brueckenEnde(s)).has(z.id);
+    }
     const g = this.gebaeude.get(w.ziel);
     return !!g && (istLager(g) || !g.getrennt) && this.distZu(g.fahne).has(z.id);
   }
 
   private wareZielSetzen(w: Ware, z: Fahne): void {
     w.ziel = this.zielWaehlen(w.art, z);
-    if (w.ziel) this.gebaeude.get(w.ziel)!.incoming[w.art]++;
+    if (w.ziel > 0) this.gebaeude.get(w.ziel)!.incoming[w.art]++;
   }
 
   private wareZielLoesen(w: Ware): void {
+    if (w.ziel < 0) w.ziel = 0;
     if (w.ziel) {
       const g = this.gebaeude.get(w.ziel);
       if (g && g.incoming[w.art] > 0) g.incoming[w.art]--;
@@ -2498,6 +2550,11 @@ export class Simulation {
    * nächste Lager; 0 = kein Ziel erreichbar. Getrennte Baustellen und Gebäude bekommen nichts, fremde auch nicht.
    */
   private zielWaehlen(art: number, z: Fahne): Id {
+    // Holzbrücken gehen zuerst an den nächsten Weg, der noch eine braucht (Ziel: −Segment)
+    if (art === WARE.bruecke) {
+      const s = this.brueckeBraucht(z.sp, z.id);
+      if (s) return -s.id;
+    }
     let best = 0, bd = Infinity;
     const vert = this.doerfer[z.sp].vert;
     for (let i = 0; i < ABNEHMER_ZAHL; i++) {
@@ -2530,7 +2587,7 @@ export class Simulation {
   private wareHop(z: Fahne, w: Ware): Id {
     if (w.ziel && !this.zielOk(w, z)) { this.wareZielLoesen(w); this.wareZielSetzen(w, z); }
     if (!w.ziel) return 0;
-    const t = this.gebaeude.get(w.ziel)!.fahne;
+    const t = this.zielFahne(w);
     if (t === z.id) return 0;
     const dm = this.distZu(t);
     const cur = dm.get(z.id)!;
@@ -2826,6 +2883,71 @@ export class Simulation {
    * nächste verbundene Lager mit Vorrat gibt je Durchlauf eine Ware an seine Fahne.
    */
   /** Waren an der Lagerfahne, die das Lager verlassen (Ziel nicht das Lager selbst). */
+  // ------------------------------------------------------------------ Holzbrücken (Wege über Bäche)
+
+  /** Fehlende Brücken eines Wegs: Fluss-Hexe zwischen seinen Fahnen ohne Brücke. Solange eine fehlt, ist der Weg zu. */
+  private brueckenFehlen(s: Segment): number {
+    if (!this.sperre || this.sperre.stand !== this.netzStand) this.sperre = { stand: this.netzStand, m: new Map() };
+    let n = this.sperre.m.get(s.id);
+    if (n === undefined) {
+      n = 0;
+      for (let i = 1; i < s.pfad.length - 1; i++) if ((this.karte.flags[s.pfad[i]] & FLAG.fluss) && !this.bruecken.has(s.pfad[i])) n++;
+      this.sperre.m.set(s.id, n);
+    }
+    return n;
+  }
+
+  /** Fahne, an die die Brücken eines Wegs geliefert werden: das Ende, das am Netz hängt (sonst a). */
+  private brueckenEnde(s: Segment): Id {
+    const v = this.verbundeneFahnen();
+    return v.has(s.a) || !v.has(s.b) ? s.a : s.b;
+  }
+
+  /** Fahne des Ziels einer Ware: Gebäude-Fahne oder (Ziel −Segment) die Fahne, an die die Brücke geht. */
+  private zielFahne(w: Ware): Id {
+    if (w.ziel < 0) { const s = this.segmente.get(-w.ziel); return s ? this.brueckenEnde(s) : 0; }
+    return this.gebaeude.get(w.ziel)?.fahne ?? 0;
+  }
+
+  /** Brücken, die ein Weg noch braucht, abzüglich der unterwegs (auf Fahnen und in Trägerhand). */
+  private brueckenOffen(s: Segment): number {
+    let n = this.brueckenFehlen(s);
+    for (const f of this.fahnen.values()) for (const w of f.waren) if (w.ziel === -s.id) n--;
+    for (const t of this.traeger.values()) if (t.art >= 0 && t.ziel === -s.id) n--;
+    return n;
+  }
+
+  /** Nächster eigener Weg (von Fahne `von` aus erreichbar), der noch eine Brücke braucht, oder null. */
+  private brueckeBraucht(sp: number, von: Id): Segment | null {
+    let best: Segment | null = null, bd = Infinity;
+    for (const s of this.segmente.values()) {
+      if (s.sp !== sp || !this.brueckenFehlen(s) || this.brueckenOffen(s) <= 0) continue;
+      const d = this.distZu(this.brueckenEnde(s)).get(von);
+      if (d !== undefined && d < bd) { bd = d; best = s; }
+    }
+    return best;
+  }
+
+  /** Liegt an einem Ende eines gesperrten Wegs seine Brücke, baut der Weg sie ein (die vom Ende aus erste fehlende); dann ist er offen. */
+  private brueckenEinbauen(): void {
+    for (const s of this.segmente.values()) {
+      if (!this.brueckenFehlen(s)) continue;
+      for (const fid of [s.a, s.b]) {
+        const f = this.fahnen.get(fid)!;
+        const i = f.waren.findIndex((w) => w.ziel === -s.id);
+        if (i < 0) continue;
+        f.waren.splice(i, 1);
+        this.stat.angekommen++;
+        const pfad = fid === s.a ? s.pfad : s.pfad.slice().reverse();
+        const h = pfad.find((x, j) => j > 0 && j < pfad.length - 1 && (this.karte.flags[x] & FLAG.fluss) !== 0 && !this.bruecken.has(x))!;
+        this.bruecken.add(h);
+        this.ereignis(s.sp, 'bruecke', 0, h);
+        this.netzGeaendert();
+        break;
+      }
+    }
+  }
+
   private ausgehend(l: Gebaeude): number {
     let n = 0;
     for (const w of this.fahnen.get(l.fahne)!.waren) if (w.ziel !== l.id) n++;
@@ -2834,6 +2956,21 @@ export class Simulation {
 
   private lagerPull(): void {
     const gezogen = new Set<Id>();
+    // Holzbrücken für Wege, die noch eine brauchen: aus dem nächsten Lager mit Brücke, das an den Weg angeschlossen ist
+    for (const s of this.segmente.values()) {
+      if (!this.brueckenFehlen(s) || this.brueckenOffen(s) <= 0) continue;
+      const dm = this.distZu(this.brueckenEnde(s));
+      let best: Gebaeude | null = null, bd = Infinity;
+      for (const l of this.gebaeude.values()) {
+        if (l.sp !== s.sp || !istLager(l) || gezogen.has(l.id) || l.vorrat[WARE.bruecke] <= 0 || this.ausgehend(l) >= FLAG_CAP / 2) continue;
+        const d = dm.get(l.fahne);
+        if (d !== undefined && d < bd) { bd = d; best = l; }
+      }
+      if (!best) continue;
+      best.vorrat[WARE.bruecke]--;
+      this.fahnen.get(best.fahne)!.waren.push({ art: WARE.bruecke, ziel: -s.id });
+      gezogen.add(best.id);
+    }
     // Wünsche (Gebäude, Ware) in der Reihenfolge der Warenverteilung des Dorfs: Rang der Abnehmer-Art für diese Ware, Baustellen nach
     // Priorität, dann Id; Wohnhäuser wollen das beste Essen zuerst. Mit der Standard-Verteilung genau die feste Reihenfolge aus M5.
     const wunsch: { g: Gebaeude; a: number; rang: number; prio: number; i: number }[] = [];
@@ -3985,7 +4122,7 @@ export class Simulation {
     for (const d of this.doerfer) frei += d.frei;
     if (frei > 0) {
       for (const s of this.segmente.values()) {
-        if (s.traeger === 0 && this.doerfer[s.sp].frei > 0 && this.verbunden.has(s.a)) this.traegerAnfordern(s);
+        if (s.traeger === 0 && this.doerfer[s.sp].frei > 0 && this.verbunden.has(s.a) && !this.brueckenFehlen(s)) this.traegerAnfordern(s);
       }
     }
     for (const t of this.traeger.values()) this.traegerSchritt(t);
@@ -4088,8 +4225,7 @@ export class Simulation {
 
   /** Ware ist an ihrer Zielfahne (das Gebäude dort nimmt sie gleich ab). */
   private amZiel(w: Ware, z: Fahne): boolean {
-    const g = w.ziel ? this.gebaeude.get(w.ziel) : undefined;
-    return !!g && g.fahne === z.id;
+    return w.ziel !== 0 && this.zielFahne(w) === z.id;
   }
 
   /** Index der ersten Ware in z, die über s zu ihrer Zielfahne am anderen Ende o läuft (Direktlieferung), oder -1. */

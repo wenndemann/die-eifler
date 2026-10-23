@@ -143,6 +143,8 @@ export interface SichtSegment {
   traeger: Id;
   /** Verkehr der letzten Zeit (0..255), für breitere Pfade. */
   verkehr: number;
+  /** Holzbrücken, die dem Weg noch fehlen (über Bäche); solange > 0 ist er zu. */
+  bruecken: number;
 }
 
 export interface SichtTraeger {
@@ -308,7 +310,7 @@ export interface SichtEreignis {
     | 'jahreszeit' | 'wetter' | 'friert' | 'satt' | 'kleines_fest' | 'bauleute' | 'verloren'
     | 'einstand' | 'zu_spaet' | 'handel' | 'fund' | 'erwischt' | 'ertappt' | 'schuetzenfest' | 'koenig' | 'ende' | 'altstein' | 'fonds'
     | 'mainacht' | 'maibaum' | 'maiklau' | 'maibesuch' | 'mailoese' | 'mailehen'
-    | 'grenzstein' | 'grenzstein_weg' | 'abwerben' | 'abgeworben' | 'schmuggel' | 'grossfund' | 'schatzteil' | 'jahresfest' | 'spuk' | 'kaffee';
+    | 'grenzstein' | 'grenzstein_weg' | 'abwerben' | 'abgeworben' | 'schmuggel' | 'grossfund' | 'schatzteil' | 'jahresfest' | 'spuk' | 'kaffee' | 'bruecke' | 'bruecke_fehlt';
   /** Gebäude (bewohner, fertig, kirmes, kleines_fest) oder 0. */
   gebaeude: Id;
   /**

@@ -11,10 +11,12 @@ Was ins Spiel kommt, steht im [Drehbuch](DREHBUCH.md), was schon drin ist und wa
 ## Was es gibt
 
 - **Die echte Eifel als Karte:** Ausschnitt frei wählen (oder einen Ort eintippen), Gelände, Flüsse, Wald und Orte von heute.
-- **Wege, Träger, Waren:** Wegenetz selbst bauen, über 40 Waren in Ketten vom Baumstamm bis zum Schnaps.
+- **Wege, Träger, Waren:** Wegenetz selbst bauen (über Bäche nur mit Holzbrücke aus der Zimmerei), über 40 Waren in Ketten vom Baumstamm bis zum Schnaps.
 - **Dorf wachsen lassen:** Bewohner, Wohnhäuser, Kirmes als Tor zur nächsten Dorfstufe, Jahreszeiten, Wetter und Winter.
 - **Nachbarn ohne Krieg:** Gebiet, Orte mit Einstand gewinnen, Handel mit den Flachländern, Finden statt Stehlen,
   Schützenfest, Maibaumklau, Grenzsteine versetzen, Abwerben, Kaffeeschmuggel am Zollhaus und der Große Fund.
+- **Die Eifel lebt:** Rauch aus den Schornsteinen, Wasserräder, Schafe und Hühner, Kinder auf dem Kirmesplatz, Wind in Bäumen
+  und Gras, Herbstlaub, nachts Licht in den Fenstern; Zunftschilder und Meister in Tracht zeigen, was ein Haus macht; Rehe, Wildschweine, Füchse, selten Wolf und Wildkatze am Waldrand.
 - **10 Völkchen** mit eigener Erzählfigur, Spezialität und Sprüchen; Musik und Geräusche aus dem Browser.
 - **Allein, zu mehreren (Link reicht, ohne Konto) oder als Kampagne** „Der Eifelsteig“ von Aachen bis Trier.
 

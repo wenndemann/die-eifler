@@ -227,7 +227,7 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 - [x] **Stilprobe** (Wohnhaus, Träger, Ware) in drei Varianten, der Nutzer wählt eine aus (`tools/stilprobe/`): **gewählt: Wimmelbuch kräftig mit Linie** (`?v=m`: Kleinkram aus C1, Farben und Licht aus C2, feine Linie aus C3, ohne Unschärfe)
 - [x] **Stil-Leitfaden** (`STIL.md`): Proportionen der Figuren, Farbpalette je Region, Dachneigung und „Schiefe“, Konturen/Schattierung, Licht und Farb-Grading, Oberfläche
 - [x] **Alle Gebäude** im gewählten Stil: gemalte Verläufe, weiche Kanten, Schiefe, Ziegelreihen, Rauch, Kleinkram je Hof (Hühner, Beete, Fässer, Bienenkörbe, Wäsche); drei Bauphasen wie bisher
-- [ ] Weitere kleine Animationen (Mühlrad, Bienen, Schafe) – in M15 (Lebendige Eifel)
+- [x] Weitere kleine Animationen (Mühlrad, Bienen, Schafe) – in M15 (Lebendige Eifel)
 - [x] **Figuren** (Träger, Arbeiter, Bauleute, Boten) im gewählten Stil: großer Kopf, Bauch, Gesicht unter der Kappe sichtbar, Kappe in Trachtfarbe
 - [x] **Waren** an den Stil angepasst (getragen größer) (lesbar bleibt Pflicht, Drehbuch 7.6)
 - [x] Gelände, Wald und Wasser farblich zum Stil passend, Wiesen-Deko, Schnee auf Dächern und Felsen; Oberfläche im selben Ton, Lagerzeile einklappbar
@@ -348,12 +348,22 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 
 **Lebendige Eifel (aus M9):** Das ganze Spiel soll grafisch interessanter werden – überall bewegt sich etwas, man sieht, was ein Gebäude tut. Stil nach `STIL.md`, Leistung im Rahmen (Instanzen, wenige Draw-Calls, aus der Ferne ausblenden).
 
-- [ ] **Arbeitende Gebäude:** Mühlrad und Windmühlenflügel drehen sich, Säge und Amboss bewegen sich, Rauch aus Schornsteinen, Brennerei und Köhlerei dampft, Brauerei mit Fässern, nur wenn das Gebäude wirklich arbeitet (Sicht)
-- [ ] **Tiere:** Schafe auf den Weiden am Schafstall, Kühe, Hühner im Hof, Bienen um die Bienenkörbe, Hund am Hof; ein paar Vögel und Raben über Feldern
-- [ ] **Natur:** Bäume und Hecken wiegen im Wind (stärker bei Sturm), Wasser mit Glitzern und Strömung an Bächen, Blätter im Herbst, Rauchschwaden im Winter
-- [ ] **Dorfleben:** Wäsche flattert, Kinder spielen am Kirmesplatz, Leute stehen schwätzend vor der Schänke, Laternen und Fensterlicht in der Nacht
-- [ ] **Feste und Ereignisse** sichtbarer: Fahnen und Wimpel, Konfetti beim Tusch, Funken beim Martinsfeuer
-- [ ] **Bildstrecke** (`tools/bildstrecke.mjs`) mit kurzen Bildfolgen für Bewegung, Gutachter-Runde wie in M9 (Vergleich mit der vorigen Version)
+- [x] **Arbeitende Gebäude:** Mühlrad und Windmühlenflügel drehen sich, Säge und Amboss bewegen sich, Rauch aus Schornsteinen, Brennerei und Köhlerei dampft, Brauerei mit Fässern, nur wenn das Gebäude wirklich arbeitet (Sicht)
+- [x] **Tiere:** Schafe auf den Weiden am Schafstall, Kühe, Hühner im Hof, Bienen um die Bienenkörbe, Hund am Hof; ein paar Vögel und Raben über Feldern
+- [x] **Natur:** Bäume und Hecken wiegen im Wind (stärker bei Sturm), Wasser mit Glitzern und Strömung an Bächen, Blätter im Herbst, Rauchschwaden im Winter
+- [x] **Dorfleben:** Wäsche flattert, Kinder spielen am Kirmesplatz, Leute stehen schwätzend vor der Schänke, Laternen und Fensterlicht in der Nacht
+- [x] **Feste und Ereignisse** sichtbarer: Fahnen und Wimpel, Konfetti beim Tusch, Funken beim Martinsfeuer
+- [x] **Bildstrecke** (`tools/bildstrecke.mjs`) mit kurzen Bildfolgen für Bewegung, Gutachter-Runde wie in M9 (Vergleich mit der vorigen Version)
+- [x] **Berufe erkennbar:** Tracht je Beruf (Holzfäller mit Pudelmütze und Bart, Förster mit Jägerhut, Steinbrecher mit Lederkappe und Schutzbrille, Bauleute mit Zimmermanns- bzw. Strohhut), größere Werkzeuge; vor arbeitenden Gebäuden steht der Meister in Tracht (Schmied, Koch, Käserin, Brauer, Wirt, Köhler, Imker, Bauer, Fischer)
+- [x] **Schindeldächer** (versetzte Schindeln bzw. Schieferplatten) und **Kontaktschatten** unter Kleinkram, Tieren und Figuren
+- [x] **Gesichter und Zöpfe:** Gesichtsvarianten (Schnauzer, Vollbart, Brille, Frau mit geflochtenen Zöpfen und Schleife, Alter mit weißem Bart); Laternen an belebten Fahnen; Träger stellen sich am Lager in die Schlange
+- [x] **Frauen, Fest und Feinschliff (Gutachter-Runden 9–10):** Frauen mit Kopftuch, Rock, Stupsnase und roten Lippen statt Bart; Festbesucher im Ring um das Karussell (nur beim Fest); Figuren etwas kleiner, Meister seitlich der Tür; Bach breiter mit Ufer; Laterne mit Glaskopf; Winterwege als festgetretene Spur; violettblauere Nacht; Wege leicht geglättet (Zickzack übers Hex-Gitter)
+- [x] **Wege sauber geführt:** Wege gehen von der Fahne nicht nach hinten durchs Haus, hinter Plätzen mit Hof (Kirmesplatz, Schützenhaus, Abtei) führt kein Weg; Bäche und Flüsse kreuzen sie quer statt am Wasser entlang (`tests/weg-fuehren.test.ts`)
+- [x] **Holzbrücken als Ware:** Ein Weg über einen Bach oder Fluss bleibt zu (kein Träger, keine Waren), bis ein Träger je Fluss-Hex eine Holzbrücke an das angeschlossene Ende bringt; dann steht dort eine kleine Brücke. 2 Brücken im Startlager, mehr baut die **Zimmerei** aus 3 Brettern (wie die Boote in Siedler 1). Keine Fahne mitten im Bach auf dem Weg. Gebaute Brücken im Spielstand und in der Prüfsumme; ältere Spielstände bekommen die Brücken unter bestehenden Wegen geschenkt (`tests/bruecke.test.ts`, Gleichschritt in `tests/partie.test.ts`, `tests/mehrspieler.mjs`)
+- [x] **Wildtiere** am Waldrand und im Wald: Rehe, Hirsche, Wildschweine mit Frischlingen, Füchse, Hasen, selten Wildkatze und ein Wolfsrudel (`src/render/wild.ts`)
+- [x] **Gebäude und Figuren deutlicher:** Fensterrahmen mit Kreuz und Bank, Tür mit Sturz und Stufe, Bruchsteinsockel, gedecktes Dach mit First und Ortgang, Schornstein über dem First; Zunftschild mit der Ware des Gebäudes; Figuren größer mit Hosenträgern, Kragen, Ohren und schmalem Randlicht; Baumenü-Icons aufs Motiv zugeschnitten, Symbole für alle Waren
+
+**Umgesetzt (Lebendige Eifel, `src/render/leben.ts`, `src/render/gras.ts`, Werte in `data/leben.json`):** Rauch und Dampf aus den Schornsteinen (Herdfeuer immer ein wenig, Werkstätten nur bei der Arbeit, im Winter und nachts mehr), Wasserräder an Sägewerk, Eisenhütte, Senf- und Papiermühle, Säge mit Sägemehl, Schmiedehammer mit Funken und Glut, Windmühle am Gerstenfeld; Schafe und Kühe grasen, Hühner picken, Hofhund am Lager, Bienen, Vogelschwärme (im Winter Raben); Bäume wiegen im Wind (Böen, stärker bei Sturm), Herbstlaub je Baum, Glitzern auf Seen und Bächen, Grasbüschel im Wind rund um den Blickpunkt, gemalter Boden mit erdigen Hängen; Wäsche flattert, Kinder toben über den Kirmesplatz, Leute schwätzen vor der Schänke, nachts Fensterlicht (auch in den Kulissendörfern) und Laternen; Konfetti beim Tusch, Martinsfeuer mit Funken; dazu Leuchten und Vignette in der Nachbearbeitung (aus auf „Niedrig“). Die Anker (wo Rauch aufsteigt, wo Fenster sind, wo Hühner laufen) kommen aus den Gebäudemodellen selbst. Alles als Instanzen bzw. Punktwolken, nur bis 2,2 km von der Kamera. Reine Darstellung: keine Prüfsumme, kein Spielstand, im Mehrspieler bei beiden gleich gezeichnet. Bilder: `tools/leben-shots.mjs`. Hecken (Gebäude) stehen still. Gutachten (zwei Runden, je 5 Gutachter; lokal in `test-results/gutachten/`, Zusammenfassung im PR) – die neue Version gewinnt jeweils; nach Runde 1 Rauch wieder als Comic-Wölkchen, Randlicht ohne Überstrahlen, warme Nacht mit Lichtfleck vor den Fenstern, satteres Herbstlaub; nach Runde 2 weicheres Gras und Icons aus den Modellen statt Zeichen. Später zehn Runden insgesamt: in Runde 10 sagen 4 von 5 Gutachtern „Stilziel erreicht“ (STIL §8, kein Punkt unter 7); offen bleibt die AAA-Nähe (6–7: Materialtiefe, Übergänge Weg/Wiese, Berufe aus der Spielkamera).
 
 **Abnahme:** In einer Mehrspieler-Partie an der belgischen Grenze (z. B. Monschau/Mützenich) verschiebt einer nachts die Grenze, der andere schmuggelt Kaffee am Zöllner vorbei, und einer setzt im Fundbüro den Großen Fund zusammen. Die Gutachter finden das Dorf deutlich lebendiger als vorher, die Bildrate bleibt im Rahmen.
 
@@ -367,6 +377,22 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 ## Nachtrag: READMEs kurz ✅
 
 - [x] README und README-platt neu: kurz, was das Spiel ist und kann, Schnellstart, Mehrspieler betreiben, Befehle; die Details der Meilensteine stehen nur noch hier in der Roadmap und im Drehbuch
+
+## Vorschlag: Höfe und Felder (wie Siedler 2)
+
+Felder sind keine großen Gebäude mehr, sondern wachsen wie der Wald – ohne Sonderregeln, mit denselben Regeln wie Bäume:
+- **Hof** (Kartoffel-, Gersten-, Hopfenhof, Obstwiese, Weinberg …): ein normales Gebäude in seinem Hex; der Bauer sät auf freien Hexen im Umkreis (wie der Förster pflanzt) und erntet reife Felder (wie der Holzfäller fällt)
+- **Feld als Natur je Hex** (gesät, wächst, reif, abgeerntet), im Winter Ruhe, im Frühjahr Saat (wie bisher die Feld-Saison)
+- **Platz zählt:** wer dicht baut, hat weniger Felder; ein neuer Weg über ein Feld zertrampelt es (wie Wege Bäume roden), Bauen auf einem Feld räumt es
+- Zahlen in `data/`, deterministisch (Natur je Hex in Spielstand und Prüfsumme wie die Bäume), alte Spielstände laden (bestehende Feld-Gebäude werden zu Höfen), Mehrspieler- und Unit-Tests wie üblich
+
+## Vorschlag: Wald und Wild (Jäger)
+
+Wild gibt es schon als Leben (siehe oben); als Spiel könnte daraus werden:
+- **Jäger mit Hochsitz** (Gebäude am Waldrand): erlegt Rehe und Wildschweine im Umkreis → **Wildbret** für Küche und Schänke (Wildgulasch als Festessen); Wild wächst im Wald nach, zu viel Jagd leert den Wald
+- **Wildschaden:** ohne Jäger wühlen Wildschweine Kartoffel- und Gerstenfelder um (weniger Ernte); der Jäger hält sie fern
+- **Wolf und Wildkatze sind geschützt** (wie in echt): nicht jagbar; ein Wolf reißt ab und zu ein Schaf, dagegen helfen Zaun und **Herdenschutzhund** am Schafstall; die Wildkatze bringt Glück (Ansehen), wenn man ihren Wald stehen lässt
+- Zahlen in `data/`, deterministisch in der Simulation, Mehrspieler- und Unit-Tests wie üblich
 
 ## Danach (offen)
 

@@ -63,6 +63,20 @@ feinen braunen Linie. Siedler 2 liefert die Lesbarkeit und den Maßstab, der Com
   der Gutachter.
 - Kleinkram ist Schmuck, nie Spielzustand, und darf Wege und Fahnen nicht verdecken.
 
+## 6b. Leben (M15, Lebendige Eifel)
+
+- **Was ein Gebäude tut, bewegt sich** – und nur dann: Rauch, Räder, Säge, Hammer laufen bei der Arbeit (Zustand aus der Sicht),
+  Herdfeuer in Häusern brennt immer ein wenig. Tiere und Leute sind Wimmel-Kleinkram, der lebt (`src/render/leben.ts`).
+- **Nacht ist gemütlich, nicht schwarz:** violettblau statt grau, warme Fenster (`data/leben.json`: fenster) mit Lichtfleck auf dem Boden, Laternen, Glut; Licht leuchtet über die Nachbearbeitung
+  (Leuchten) leicht in die Umgebung.
+- **Rauch ist ein Comic-Wölkchen:** deckend, oben hell, mit warmbraunem Rand wie die Linie; wächst beim Steigen höchstens aufs 2,4-Fache.
+- **Berufe erkennbar:** jeder Beruf hat eine Tracht (Hut, Schürze, Bart) und ein großes Werkzeug; vor arbeitenden Gebäuden steht der Meister (`data/leben.json`: berufe, meister).
+- **Nichts schwebt:** weiche Kontaktschatten unter Kleinkram, Tieren und Figuren; Dächer aus einzelnen Schindeln.
+- **Wild** am Waldrand (Rehe, Hirsche, Wildschweine, Füchse, Hasen, selten Wildkatze und Wolf), nah an der Kamera.
+- **Zunftschild:** am Eisenarm neben der Tür hängt die Ware, die das Gebäude macht (so unterscheiden sich Gebäude mit gleichem Modell).
+- **Wind ist sichtbar:** Bäume, Gras, Wäsche und Rauch folgen derselben Windrichtung, bei Sturm stärker.
+- **Leistung:** Instanzen und Punktwolken, Leben nur nah an der Kamera (`data/leben.json`: fern_m), Gras nur um den Blickpunkt.
+
 ## 7. Oberfläche
 
 - Fenster und Leisten in warmem Dunkelbraun mit Pergament-Schrift (bestehend seit M7), Icons aus den 3D-Modellen; sie folgen dem

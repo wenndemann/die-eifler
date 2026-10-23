@@ -405,6 +405,27 @@ float inPlay(vec2 a){ return 1.0 - step(uKPlay.z + 0.5, kDist(a)); }`)
   // Feinstruktur (Gras/Boden), zwei Oktaven
   float n = vnoise(vWPos.xz * 0.11) * 0.6 + vnoise(vWPos.xz * 0.5) * 0.4;
   diffuseColor.rgb *= 0.92 + n * 0.16;
+  // Lebendige Eifel: gemalter Boden – große warme und kühle Flecken, Pinselstriche, erdige Hänge (aus der Neigung, dFdx/dFdy)
+  float makro = vnoise(vWPos.xz * 0.0035) * 0.65 + vnoise(vWPos.xz * 0.011 + 7.3) * 0.35;
+  diffuseColor.rgb *= mix(vec3(0.93, 1.0, 0.92), vec3(1.07, 1.03, 0.86), makro);
+  float strich = vnoise(vec2(vWPos.x * 0.045 + vWPos.z * 0.018, vWPos.z * 0.16 - vWPos.x * 0.01));
+  diffuseColor.rgb *= 0.965 + 0.07 * strich;
+  // Wiese mit Abwechslung (Gutachter: „flache grüne Fläche“): sattere und trockenere Inseln, nah an der Kamera Blumen- und Kleetupfer
+  float gruen = smoothstep(0.02, 0.1, diffuseColor.g - diffuseColor.r);
+  float insel = vnoise(vWPos.xz * 0.028 + 3.1);
+  diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * mix(vec3(0.86, 0.97, 0.84), vec3(1.1, 1.04, 0.8), insel), gruen * 0.55);
+  float fw = fwidth(vWPos.x);
+  if (gruen > 0.3 && fw < 0.45) {
+    vec2 zelle = floor(vWPos.xz / 2.6);
+    float z1 = h21(zelle), z2 = h21(zelle + 17.3);
+    vec2 mitte = (zelle + 0.2 + 0.6 * vec2(z1, z2)) * 2.6;
+    float blume = (1.0 - smoothstep(0.32, 0.5, distance(vWPos.xz, mitte))) * step(0.78, h21(zelle + 4.7)) * (1.0 - smoothstep(0.2, 0.45, fw));
+    vec3 bf = z1 < 0.4 ? vec3(1.0, 0.98, 0.92) : z1 < 0.7 ? vec3(1.0, 0.85, 0.3) : vec3(0.95, 0.6, 0.8);
+    diffuseColor.rgb = mix(diffuseColor.rgb, bf, blume * gruen * 0.85);
+  }
+  vec3 gn = normalize(cross(dFdx(vWPos), dFdy(vWPos)));
+  float steil = smoothstep(0.82, 0.5, abs(gn.y));
+  diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.95, 0.82, 0.68), steil * 0.4);
   // Hex-Raster, Spielfeld-Rand, Hover
   vec2 p = vWPos.xz - uHexOrigin;
   vec2 ax = hexRound(vec2((0.57735027 * p.x - p.y / 3.0) / uHexSize, (0.6666667 * p.y) / uHexSize));

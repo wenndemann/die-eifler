@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { PAUSE_MAX_MS, PAUSEN_JE_SPIELER, VERWALTER_NACH_MS, type Partie } from '../src/netz/partie';
 import type { Befehl } from '../src/sim/typen';
 import { wetterPlan } from '../src/sim/jahr';
-import { baueTestKarte, gerade } from './sim-szenario';
+import { baueTestKarte, gerade, mitBach } from './sim-szenario';
 import { Simulation } from '../src/sim/sim';
 import { SimKarte } from '../src/sim/karte';
 import { NAHRUNG, WARE } from '../src/sim/daten';
@@ -464,6 +464,32 @@ describe('Gleichschritt', () => {
     expect(sim(r, 0).sicht(0).ereignisse.some((e) => e.art === 'mailoese')).toBe(true);
     expect(sim(r, 1).pruefsumme()).toBe(sim(r, 0).pruefsumme());
     for (const i of [0, 1]) expect(sim(r, i).pruefeInnenzustand()).toEqual([]);
+  });
+
+  it('Holzbrücken im Gleichschritt: Weg über den Bach wartet auf die Brücke, bei allen gleich, auch nach dem Neuladen', () => {
+    const karte = mitBach(baueTestKarte(), 3);
+    const starts = [{ q: 0, r: 0 }, { q: -14, r: 0 }];
+    const r = new Runde(karte, starts, SCHLECHT);
+    r.starte(0); r.starte(1);
+    r.verbindeAlle();
+    r.lauf(3000);
+    const pfad = sim(r, 0).wegAbschnitt({ q: 0, r: 0 }, { q: 6, r: 0 }, [], 30)!;
+    p(r, 0).befehl({ art: 'weg', pfad });
+    r.trenne(1);
+    r.lauf(1000);
+    const neu = r.starte(1);
+    r.verbindeAlle();
+    while (!neu.sim || neu.angehalten) r.lauf(16);
+    r.lauf(8000);
+    p(r, 0).pause(true);
+    r.lauf(3000);
+    r.gleichziehen();
+    for (const i of [0, 1]) {
+      const sg = sim(r, i).sicht(0).segmente.find((x) => x.sp === 0 && x.pfad.some((h) => h.q === 3))!;
+      expect(sg.bruecken).toBe(0);
+      expect(sim(r, i).stand().bruecken!.length).toBe(1);
+    }
+    expect(sim(r, 1).pruefsumme()).toBe(sim(r, 0).pruefsumme());
   });
 
   it('kaputte und fremde Nachrichten ändern nichts', () => {

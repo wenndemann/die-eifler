@@ -14,7 +14,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import type { MapData } from '../map/mapdata';
 import type { HexGrid } from '../map/hex';
 import { PROMILLE, type GebaeudeZustand, type Id, type SimSicht } from '../sim/typen';
-import { box, roof, fachwerk, logPile, mitDach, paint, weicheKiste, C } from './mockup';
+import { anker, box, roof, fachwerk, logPile, mitAnkern, mitDach, paint, weicheKiste, C, type Anker } from './mockup';
 import { Instanzen } from './instanzen';
 import { WAREN_ANZAHL, WARE_HOEHE, warenGeometrie } from './waren';
 import { WARE_M } from './massstab';
@@ -22,6 +22,18 @@ import { GEBAEUDE } from '../sim/daten';
 import { VOELKCHEN } from '../sim/voelkchen';
 
 const VOLK_DACH = new Map(VOELKCHEN.map((v) => [v.id, v.dach] as [string, string]));
+/** Häuser, die ganz in der regionalen Dachfarbe gedeckt sind; Werkstätten behalten ihre eigene Farbe (nur leicht regional getönt),
+ *  damit man sie aus der Übersicht unterscheidet (Gutachter: „alles das gleiche blaue Haus“). */
+const WOHNHAEUSER = new Set(['wohnhaus', 'lager', 'lagerhaus']);
+const dachCache = new Map<string, string>();
+export function dachFarbe(typId: string, regional: string | null): string | null {
+  const typ = modellTyp(typId);
+  if (!regional || WOHNHAEUSER.has(typ)) return regional;
+  const k = `${typ}|${regional}`;
+  let f = dachCache.get(k);
+  if (!f) { f = `#${new THREE.Color(TYPEN[typ]?.dach ?? regional).lerp(new THREE.Color(regional), 0.25).getHexString()}`; dachCache.set(k, f); }
+  return f;
+}
 import { HAUS_SKALE } from './massstab';
 import { hash } from './terrain';
 import type { Trees } from './trees';
@@ -35,7 +47,7 @@ const RAND = 2.5;
 /** Haken in die übrige Darstellung (alle optional): Gelände neu aufbauen, Kulissenhäuser ausblenden. */
 export interface GebaeudeHaken {
   terrain?: { erneuere(x0: number, z0: number, x1: number, z1: number): void; setzeErde(i: number, j: number, anteil: number): void };
-  houses?: { verstecke(x: number, z: number, radius: number): number };
+  houses?: { verstecke(x: number, z: number, radius: number): number; nachtLicht?(n: number, farbe?: string, hell?: number): void };
   trees?: Trees;
 }
 
@@ -88,12 +100,37 @@ function blumenkasten(w: number, d: number, floors: number): THREE.BufferGeometr
   for (let f = 0; f < floors; f++) for (let i = 1; i < n - 1; i += 2) {
     const cx = -w / 2 + (w * (i + 0.5)) / n, y = 1 + f * 3 + 0.95;
     out.push(box(1.3, 0.35, 0.5, cx, y, d / 2 + 0.38, '#6b4a2e'));
-    for (let k = -1; k <= 1; k++) out.push(paint(new THREE.SphereGeometry(0.22, 4, 3).translate(cx + k * 0.4, y + 0.32, d / 2 + 0.38), (k + f) % 2 ? '#e0392b' : '#f0b429'));
+    for (let k = -1; k <= 1; k++) out.push(paint(new THREE.SphereGeometry(0.22, 7, 5).translate(cx + k * 0.4, y + 0.32, d / 2 + 0.38), (k + f) % 2 ? '#e0392b' : '#f0b429'));
   }
   return out;
 }
 function baum(x: number, z: number, s: number): THREE.BufferGeometry[] {
   return [walze(0.25 * s, 2 * s, x, G + s, z, HOLZ, 0, 0, 5), paint(new THREE.ConeGeometry(1.6 * s, 4.5 * s, 6).translate(x, G + 3.6 * s, z), '#3f7a3a')];
+}
+
+// ---------------------------------------------------------------- Lebendige Eifel: Anker statt Statik
+
+/** Nur Anker ablegen (keine Geometrie). */
+function nurAnker(...a: Anker[]): THREE.BufferGeometry[] { for (const x of a) anker(x); return []; }
+/** Rauch- oder Dampfanker; ohne Sammler (Icons, Geist) ein stehendes Wölkchen wie bisher. */
+function rauchOderWolke(a: Anker, wx: number, wy: number, wz: number): THREE.BufferGeometry[] {
+  return anker(a) ? [] : [paint(new THREE.SphereGeometry(0.9, 6, 5).translate(wx, wy, wz), '#eeeeee')];
+}
+/** Wasserrad: im Spiel dreht es sich (leben.ts), sonst steht es hier. */
+function radOderStatisch(a: Anker): THREE.BufferGeometry[] {
+  return anker(a) ? [] : [mergeGeometries(radGeometrie(a.r ?? 2, a.w ?? 0.6))!.translate(a.x, a.y, a.z)];
+}
+/** Wasserrad mit Speichen und Schaufeln, Achse x, Mitte im Ursprung. */
+export function radGeometrie(r: number, breite: number): THREE.BufferGeometry[] {
+  const out: THREE.BufferGeometry[] = [];
+  for (const s of [-1, 1]) out.push(paint(new THREE.TorusGeometry(r, 0.14, 5, 18).rotateY(Math.PI / 2).translate(s * breite / 2, 0, 0), HOLZ));
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    out.push(paint(weicheKiste(0.14, r * 2, 0.14).rotateX(a).translate(0, 0, 0), DUNKEL));
+    out.push(paint(weicheKiste(breite + 0.1, 0.12, 0.7).translate(0, r, 0).rotateX(a), HOLZ));
+  }
+  out.push(paint(new THREE.CylinderGeometry(0.3, 0.3, breite + 0.6, 8).rotateZ(Math.PI / 2), DUNKEL));
+  return out;
 }
 
 // ---------------------------------------------------------------- Typen
@@ -129,7 +166,7 @@ const TYPEN: Record<string, Typ> = {
     },
   },
   holzfaeller: {
-    w: 9, d: 7, floors: 1, wand: '#d8b88a', dach: '#9b4a35', laden: '#b53a2c', skala: 1, hoehe: 9,
+    w: 9, d: 7, floors: 1, wand: '#d8b88a', dach: '#6f5a3a', laden: '#b53a2c', skala: 1, hoehe: 9,
     grund: [-6.5, 12, -4.5, 7],
     fertig() {
       const t = TYPEN.holzfaeller;
@@ -138,7 +175,9 @@ const TYPEN: Record<string, Typ> = {
         ...logPile(8, -1.5, 6).map((g) => g.translate(0, G, 0)), ...logPile(8, 3.2, 6).map((g) => g.translate(0, G, 0)),
         ...[0, 1, 2].map((i) => walze(0.45, 5, 8, G + 3 * 0.7 + 0.1 + i * 0, -0.3 + i * 0.9, HOLZ, 0, Math.PI / 2, 6)),
         // Hackklotz mit Axt
-        walze(0.9, 1, -6, G + 0.5, 5.2, '#8a6a48', 0, 0, 7), boxR(0.14, 1.9, 0.14, -6.2, G + 1.8, 5.2, HOLZ, 0, 0, 0.5), boxR(0.8, 0.5, 0.1, -5.7, G + 2.5, 5.2, '#c0c4c8', 0, 0, 0.5),
+        // groß und deutlich (Erkennungszeichen aus der Spielhöhe): dicker Klotz, langer Stiel, blankes Axtblatt
+        walze(1.4, 1.5, -6, G + 0.75, 5.2, '#8a6a48', 0, 0, 9), walze(1.42, 0.12, -6, G + 1.5, 5.2, '#d8b88a', 0, 0, 9),
+        boxR(0.3, 3.6, 0.3, -6.6, G + 3.0, 5.2, HOLZ, 0, 0, 0.45), boxR(1.7, 1.1, 0.22, -5.9, G + 4.2, 5.2, '#d8dce0', 0, 0, 0.45), boxR(0.5, 1.15, 0.3, -6.5, G + 4.5, 5.2, '#5a5d63', 0, 0, 0.45),
         // gefällte Stämme im Hof
         walze(0.45, 5.5, -1, G + 0.45, 7.5, '#8a6340', 0, Math.PI / 2, 6), walze(0.4, 4.8, 2.5, G + 0.4, 8.2, '#7a5636', 0, Math.PI / 2 + 0.2, 6)];
     },
@@ -175,7 +214,13 @@ const TYPEN: Record<string, Typ> = {
         boxR(0.4, 3.2, 0.4, sx - 2, G + 1.5, 0.2, HOLZ, 0, 0, 0.35), boxR(0.4, 3.2, 0.4, sx - 2, G + 1.5, 0.2, HOLZ, 0, 0, -0.35),
         boxR(0.4, 3.2, 0.4, sx + 2, G + 1.5, 0.2, HOLZ, 0, 0, 0.35), boxR(0.4, 3.2, 0.4, sx + 2, G + 1.5, 0.2, HOLZ, 0, 0, -0.35),
         walze(0.75, 6.4, sx, G + 2.5, 0.2, '#8a6340', 0, Math.PI / 2, 7), walze(0.7, 0.1, sx + 3.2, G + 2.5, 0.2, '#e0bf86', 0, Math.PI / 2, 7),
-        boxR(0.12, 2.6, 2.2, sx - 0.3, G + 3.9, 0.2, '#cfd3d6'), boxR(0.3, 0.3, 2.4, sx - 0.3, G + 5.3, 0.2, HOLZ),
+        ...(anker({ art: 'saege', x: sx - 0.3, y: G + 3.9, z: 0.2 }) ? [] : [boxR(0.12, 2.6, 2.2, sx - 0.3, G + 3.9, 0.2, '#cfd3d6')]), boxR(0.3, 0.3, 2.4, sx - 0.3, G + 5.3, 0.2, HOLZ),
+        // großes Kreissägeblatt am Giebel des Schuppens (Erkennungszeichen aus der Spielhöhe)
+        paint(new THREE.CylinderGeometry(1.7, 1.7, 0.18, 20).rotateX(Math.PI / 2).translate(sx, G + 6.2, 4.9), '#d8dce0'),
+        paint(new THREE.CylinderGeometry(0.5, 0.5, 0.26, 10).rotateX(Math.PI / 2).translate(sx, G + 6.2, 4.95), '#5a5d63'),
+        ...Array.from({ length: 12 }, (_, i) => paint(new THREE.ConeGeometry(0.22, 0.45, 4).rotateZ((i / 12) * Math.PI * 2).translate(sx + Math.sin((i / 12) * Math.PI * 2) * -1.85, G + 6.2 + Math.cos((i / 12) * Math.PI * 2) * 1.85, 4.9), '#b8bcc0')),
+        // Wasserrad an der Giebelseite (dreht sich, wenn gesägt wird)
+        ...radOderStatisch({ art: 'rad', x: -t.w / 2 - 0.8, y: G + 2.4, z: 0, r: 2.3, w: 0.8, achse: 'x' }),
         // Stämme und Bretter davor
         ...logPile(-2, 8, 6).map((g) => g.translate(0, G, 0)), ...stapelBretter(sx - 1.5, 6.8, 4.5, 1.6, 2.4), ...stapelBretter(sx + 3.5, 6.8, 3.4, 1.6, 1.4)];
     },
@@ -237,19 +282,19 @@ const TYPEN: Record<string, Typ> = {
   },
   kartoffelfeld: {
     w: 5.5, d: 4.5, floors: 1, wand: '#efe2c6', dach: '#7a5a3a', laden: '#4f8a3a', skala: 1, hoehe: 7,
-    grund: [-5, 23, -4, 14],
+    grund: [-5, 18.5, -4, 13.5],
     fertig() {
       const t = TYPEN.kartoffelfeld;
       const out: THREE.BufferGeometry[] = [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach), ...laeden(t.w, t.d, t.floors, t.laden)];
-      // großer Acker rechts: braune Furchen, grüne Stauden in Reihen, Zaun
-      const ax = 13, az = 4.5;
-      out.push(boxR(17, 0.4, 16, ax, G + 0.15, az, '#6a4a2c'));
+      // Acker rechts (so schmal, dass das Haus in voller Größe ins Hex passt): braune Furchen, grüne Stauden in Reihen, Zaun
+      const ax = 11, az = 4.5;
+      out.push(boxR(13, 0.4, 16, ax, G + 0.15, az, '#6a4a2c'));
       for (let r = 0; r < 6; r++) {
-        out.push(boxR(16, 0.5, 1.0, ax, G + 0.45, az - 6.5 + r * 2.6, '#7d5634'));
-        for (let k = 0; k < 7; k++) out.push(paint(new THREE.SphereGeometry(0.85, 5, 4).scale(1, 0.7, 1).translate(ax - 7 + k * 2.3, G + 1.1, az - 6.5 + r * 2.6), (k + r) % 3 ? '#4f9a3a' : '#5eaa44'));
+        out.push(boxR(12.2, 0.5, 1.0, ax, G + 0.45, az - 6.5 + r * 2.6, '#7d5634'));
+        for (let k = 0; k < 6; k++) out.push(paint(new THREE.SphereGeometry(0.85, 5, 4).scale(1, 0.7, 1).translate(ax - 5.5 + k * 2.2, G + 1.1, az - 6.5 + r * 2.6), (k + r) % 3 ? '#4f9a3a' : '#5eaa44'));
       }
-      for (const [fx, fz] of [[-8.8, -8.3], [8.8, -8.3], [8.8, 8.3], [-8.8, 8.3], [0, -8.3], [0, 8.3], [8.8, 0], [-8.8, 0]]) out.push(boxR(0.3, 1.6, 0.3, ax + fx, G + 0.8, az + fz, HOLZ));
-      out.push(boxR(17.6, 0.2, 0.18, ax, G + 1.3, az + 8.3, HOLZ), boxR(17.6, 0.2, 0.18, ax, G + 1.3, az - 8.3, HOLZ));
+      for (const [fx, fz] of [[-6.8, -8.3], [6.8, -8.3], [6.8, 8.3], [-6.8, 8.3], [0, -8.3], [0, 8.3], [6.8, 0], [-6.8, 0]]) out.push(boxR(0.3, 1.6, 0.3, ax + fx, G + 0.8, az + fz, HOLZ));
+      out.push(boxR(13.6, 0.2, 0.18, ax, G + 1.3, az + 8.3, HOLZ), boxR(13.6, 0.2, 0.18, ax, G + 1.3, az - 8.3, HOLZ));
       // Hacke und Kartoffelsäcke vor der Hütte
       out.push(boxR(0.14, 2.6, 0.14, -2.5, G + 1.3, 3.6, HOLZ, 0, 0, 0.3), boxR(0.9, 0.25, 0.1, -2.1, G + 0.3, 3.6, '#9aa0a6'));
       out.push(paint(new THREE.SphereGeometry(0.8, 6, 5).scale(1, 0.9, 1).translate(1.6, G + 0.7, 3.6), '#d8c08a'), paint(new THREE.SphereGeometry(0.7, 6, 5).translate(2.8, G + 0.6, 4.2), '#cfb57c'));
@@ -263,7 +308,7 @@ const TYPEN: Record<string, Typ> = {
       const t = TYPEN.kueche;
       return [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach), ...laeden(t.w, t.d, t.floors, t.laden), ...blumenkasten(t.w, t.d, t.floors),
         // Schornstein mit Rauchwölkchen
-        boxR(1.1, 4.5, 1.1, 2, G + 6.5, -0.8, '#8a6a5a'), paint(new THREE.SphereGeometry(0.8, 5, 4).translate(2.2, G + 9.4, -0.8), '#d9d9d9'), paint(new THREE.SphereGeometry(0.6, 5, 4).translate(2.7, G + 10.4, -1.1), '#e6e6e6'),
+        boxR(1.1, 4.5, 1.1, 2, G + 6.5, -0.8, '#8a6a5a'), ...rauchOderWolke({ art: 'kamin', x: 2, y: G + 8.9, z: -0.8, staerke: 1 }, 2.2, G + 9.4, -0.8),
         // Aushängeschild mit Pfanne, Tisch mit Bank, Feuerholz
         boxR(0.2, 3, 0.2, -4.2, G + 1.5, 4.4, HOLZ), boxR(2, 0.18, 0.18, -3.3, G + 2.9, 4.4, HOLZ),
         walze(0.75, 0.15, -2.6, G + 2.2, 4.4, '#2a2a2a', Math.PI / 2, 0, 10), boxR(0.9, 0.1, 0.1, -1.6, G + 2.2, 4.4, '#2a2a2a'),
@@ -273,19 +318,19 @@ const TYPEN: Record<string, Typ> = {
   },
   obstwiese: {
     w: 4.5, d: 4, floors: 1, wand: '#e9dcbc', dach: '#6d4a2f', laden: '#b53a2c', skala: 1, hoehe: 7,
-    grund: [-5, 22, -6, 14],
+    grund: [-5, 19, -6, 10],
     fertig() {
       const t = TYPEN.obstwiese;
       const out: THREE.BufferGeometry[] = [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach)];
       // sechs Apfelbäume mit roten Äpfeln, Leiter, Körbe
-      const baeume = [[7, -3], [13, -3.5], [19, -2.5], [8, 5], [14, 5.5], [19.5, 6]];
+      const baeume = [[6.5, -3], [11.5, -3.5], [16.3, -2.5], [7, 5], [12, 5.5], [16.3, 6]];
       baeume.forEach(([bx, bz], i) => {
         out.push(walze(0.45, 3.2, bx, G + 1.6, bz, HOLZ, 0, 0, 6), paint(new THREE.SphereGeometry(2.6, 7, 5).scale(1, 0.85, 1).translate(bx, G + 4.6, bz), i % 2 ? '#4f8f3a' : '#5a9a42'));
-        for (let k = 0; k < 5; k++) out.push(paint(new THREE.SphereGeometry(0.38, 4, 3).translate(bx + Math.cos(k * 1.3 + i) * 2.2, G + 4.2 + (k % 2) * 1.1, bz + Math.sin(k * 1.3 + i) * 2.2), '#d0312d'));
+        for (let k = 0; k < 5; k++) out.push(paint(new THREE.SphereGeometry(0.45, 8, 6).translate(bx + Math.cos(k * 1.3 + i) * 2.2, G + 4.2 + (k % 2) * 1.1, bz + Math.sin(k * 1.3 + i) * 2.2), '#d0312d'));
       });
       out.push(boxR(0.2, 5, 0.2, 10.6, G + 2.4, 1.1, HOLZ, 0, 0, 0.3), boxR(0.2, 5, 0.2, 11.4, G + 2.4, 1.1, HOLZ, 0, 0, 0.3));
       out.push(walze(0.9, 0.8, -2.5, G + 0.4, 4.4, '#b0844e', 0, 0, 9), walze(0.9, 0.8, -0.3, G + 0.4, 4.6, '#b0844e', 0, 0, 9));
-      for (let k = 0; k < 4; k++) out.push(paint(new THREE.SphereGeometry(0.35, 4, 3).translate(-2.5 + (k % 2) * 0.4, G + 1.0, 4.2 + Math.floor(k / 2) * 0.4), '#d0312d'));
+      for (let k = 0; k < 4; k++) out.push(paint(new THREE.SphereGeometry(0.35, 8, 6).translate(-2.5 + (k % 2) * 0.4, G + 1.0, 4.2 + Math.floor(k / 2) * 0.4), '#d0312d'));
       return out;
     },
   },
@@ -307,19 +352,19 @@ const TYPEN: Record<string, Typ> = {
   },
   schafstall: {
     w: 12, d: 6, floors: 1, wand: '#e6d6b4', dach: '#6b5d52', laden: '#8a6340', skala: 0.9, hoehe: 8,
-    grund: [-8, 9, -16, 7],
+    grund: [-8, 9, -12.5, 7],
     fertig() {
       const t = TYPEN.schafstall;
       const out: THREE.BufferGeometry[] = [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach)];
       // Stalltor, Heuballen
       out.push(box(3.2, 2.6, 0.3, 2, G + 1.6, t.d / 2 + 0.2, '#6a4426'), boxR(0.2, 3, 0.25, 2, G + 1.6, t.d / 2 + 0.38, DUNKEL, 0, 0, 0.7));
       out.push(walze(1.0, 1.6, -6.8, G + 1, 4.2, '#d9c070', Math.PI / 2, 0, 9), walze(1.0, 1.6, -5, G + 1, 4.6, '#cfb562', Math.PI / 2, 0, 9));
-      // Weide hinter dem Stall mit Zaun und Schafen
-      const wz = -11;
-      out.push(boxR(15, 0.2, 9, 0, G + 0.05, wz, '#7fae55'));
-      for (const fx of [-7.4, -2.5, 2.5, 7.4]) for (const fz of [-4.4, 4.4]) out.push(boxR(0.3, 1.5, 0.3, fx, G + 0.75, wz + fz, HOLZ));
-      out.push(boxR(15, 0.18, 0.18, 0, G + 1.2, wz - 4.4, HOLZ), boxR(0.18, 0.18, 9, -7.4, G + 1.2, wz, HOLZ), boxR(0.18, 0.18, 9, 7.4, G + 1.2, wz, HOLZ));
-      const schafe = [[-4.5, -2], [-1, 1.5], [2.5, -1.8], [5, 2], [-5.5, 2.2], [1, -3.2]];
+      // Weide hinter dem Stall mit Zaun und Schafen (so tief, dass der Stall in voller Größe ins Hex passt)
+      const wz = -9;
+      out.push(boxR(15, 0.2, 6.6, 0, G + 0.05, wz, '#7fae55'));
+      for (const fx of [-7.4, -2.5, 2.5, 7.4]) for (const fz of [-3.2, 3.2]) out.push(boxR(0.3, 1.5, 0.3, fx, G + 0.75, wz + fz, HOLZ));
+      out.push(boxR(15, 0.18, 0.18, 0, G + 1.2, wz - 3.2, HOLZ), boxR(0.18, 0.18, 6.6, -7.4, G + 1.2, wz, HOLZ), boxR(0.18, 0.18, 6.6, 7.4, G + 1.2, wz, HOLZ));
+      const schafe = anker({ art: 'schafe', x: 0, y: G, z: wz, w: 12.5, d: 5, n: 7 }) ? [] : [[-4.5, -1.4], [-1, 1.1], [2.5, -1.3], [5, 1.4], [-5.5, 1.6], [1, -2.2]];
       schafe.forEach(([sx, sz], i) => {
         const r = i * 0.9;
         out.push(paint(new THREE.SphereGeometry(1.05, 7, 5).scale(1.3, 0.85, 0.9).rotateY(r).translate(sx, G + 1.2, wz + sz), '#f4f1e8'));
@@ -342,6 +387,7 @@ const TYPEN: Record<string, Typ> = {
         for (let k = 0; k < 3; k++) out.push(walze(0.6, 0.45, 6.2, G + 0.85 + e * 1.1, -0.8 + k * 1.3, e === 1 ? '#e8b528' : '#f2c230', 0, 0, 10));
       }
       for (let k = 0; k < 3; k++) out.push(walze(0.42, 1.1, -1.2 + k * 0.9, G + 0.55, t.d / 2 + 1.0, '#eef0ea', 0, 0, 8), walze(0.44, 0.12, -1.2 + k * 0.9, G + 0.5, t.d / 2 + 1.0, '#2f6db5', 0, 0, 8));
+      anker({ art: 'kuehe', x: -9.5, y: G, z: 5, w: 3, d: 2.5, n: 2 });
       // großes Käserad als Aushängeschild
       out.push(walze(0.95, 0.35, -4.2, G + 3.3, t.d / 2 + 0.5, '#f2c230', Math.PI / 2, 0, 12), boxR(0.2, 3, 0.2, -4.2, G + 1.5, t.d / 2 + 0.5, HOLZ));
       return out;
@@ -362,7 +408,8 @@ const TYPEN: Record<string, Typ> = {
       });
       out.push(boxR(10, 0.2, 3.2, 7.5, G + 4.2, 0.3, '#8a5a30', 0.25));
       for (const px of [3, 12]) out.push(boxR(0.3, 3.8, 0.3, px, G + 2.1, -0.9, HOLZ));
-      for (let k = 0; k < 12; k++) out.push(paint(new THREE.SphereGeometry(0.32, 4, 3).translate(3.5 + (k % 6) * 1.6, G + 0.45, 3.2 + Math.floor(k / 6) * 1.1), ['#e05a9a', '#f0d040', '#9a6ad0'][k % 3]));
+      for (let k = 0; k < 12; k++) out.push(paint(new THREE.SphereGeometry(0.32, 7, 5).translate(3.5 + (k % 6) * 1.6, G + 0.45, 3.2 + Math.floor(k / 6) * 1.1), ['#e05a9a', '#f0d040', '#9a6ad0'][k % 3]));
+      anker({ art: 'bienen', x: 7.5, y: G + 2.4, z: 2, w: 8, n: 30 });
       return out;
     },
   },
@@ -380,15 +427,15 @@ const TYPEN: Record<string, Typ> = {
   // ---- M8: Bier, Schnaps, Schänke, Eisen, Lagerhaus
   gerstenfeld: {
     w: 4.5, d: 4, floors: 1, wand: '#efe2c6', dach: '#7a5a3a', laden: '#c9a227', skala: 1, hoehe: 7,
-    grund: [-5, 23, -5, 14],
+    grund: [-5, 18.5, -4, 13.5],
     fertig() {
       const t = TYPEN.gerstenfeld;
       const out: THREE.BufferGeometry[] = [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach), ...laeden(t.w, t.d, t.floors, t.laden)];
       // goldenes Gerstenfeld mit Ähren in Reihen, ein paar Garben am Rand, Sense an der Hütte
-      const ax = 13, az = 4.5;
-      out.push(boxR(17, 0.4, 16, ax, G + 0.15, az, '#8a6a3c'));
-      for (let r = 0; r < 8; r++) for (let k = 0; k < 9; k++) {
-        out.push(paint(new THREE.ConeGeometry(0.55, 1.9, 4).translate(ax - 7.6 + k * 1.9, G + 1.25, az - 7 + r * 2), (k + r) % 3 ? '#d8b45a' : '#e6c46a'));
+      const ax = 11, az = 4.5;
+      out.push(boxR(13, 0.4, 16, ax, G + 0.15, az, '#8a6a3c'));
+      for (let r = 0; r < 8; r++) for (let k = 0; k < 7; k++) {
+        out.push(paint(new THREE.ConeGeometry(0.55, 1.9, 4).translate(ax - 5.7 + k * 1.9, G + 1.25, az - 7 + r * 2), (k + r) % 3 ? '#d8b45a' : '#e6c46a'));
       }
       for (const [gx, gz] of [[4.6, -4], [4.6, -1.8]]) out.push(walze(0.5, 1.8, gx, G + 0.9, gz, '#c9a24a', 0, 0, 7), walze(0.55, 0.15, gx, G + 1.1, gz, '#8a6038', 0, 0, 7));
       out.push(boxR(0.14, 2.8, 0.14, -2.6, G + 1.4, 3.4, HOLZ, 0, 0, 0.25), boxR(1.4, 0.1, 0.3, -2.1, G + 2.7, 3.4, '#b0b8c0', 0, 0, -0.4));
@@ -402,7 +449,7 @@ const TYPEN: Record<string, Typ> = {
       const t = TYPEN.brauerei;
       return [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach), ...laeden(t.w, t.d, t.floors, t.laden),
         // Schornstein mit Dampf, Bierfässer gestapelt, Aushängeschild mit Krug
-        boxR(1.2, 5, 1.2, 3, G + 10, -1.5, '#8a5a4a'), paint(new THREE.SphereGeometry(0.9, 5, 4).translate(3.2, G + 13.2, -1.5), '#eeeeee'),
+        boxR(1.2, 5, 1.2, 3, G + 10, -1.5, '#8a5a4a'), ...rauchOderWolke({ art: 'dampf', x: 3, y: G + 12.6, z: -1.5, staerke: 1.2 }, 3.2, G + 13.2, -1.5),
         ...fass(-6.2, 4.8), ...fass(-7.6, 4.2), ...fass(-6.9, 5.6, G + 1.3), ...fass(6.5, 4.6),
         boxR(0.2, 3.2, 0.2, -3.6, G + 1.6, t.d / 2 + 0.8, HOLZ), boxR(1.8, 0.18, 0.18, -2.8, G + 3.1, t.d / 2 + 0.8, HOLZ),
         walze(0.45, 0.8, -2.2, G + 2.4, t.d / 2 + 0.8, '#9a6a3a', 0, 0, 8), walze(0.5, 0.18, -2.2, G + 2.85, t.d / 2 + 0.8, '#f4f1e8', 0, 0, 8)];
@@ -422,7 +469,7 @@ const TYPEN: Record<string, Typ> = {
         out.push(paint(new THREE.SphereGeometry(0.7, 5, 4).scale(1.4, 0.4, 1.2).translate(bx + 1.4, G + 0.3, bz + 1.2), '#9a5aa8'));
       });
       out.push(walze(0.8, 0.7, -2.4, G + 0.35, 3.4, '#b0844e', 0, 0, 9));
-      for (let k = 0; k < 5; k++) out.push(paint(new THREE.SphereGeometry(0.25, 4, 3).translate(-2.6 + (k % 3) * 0.3, G + 0.8, 3.2 + (k % 2) * 0.3), '#3f4f8a'));
+      for (let k = 0; k < 5; k++) out.push(paint(new THREE.SphereGeometry(0.25, 7, 5).translate(-2.6 + (k % 3) * 0.3, G + 0.8, 3.2 + (k % 2) * 0.3), '#3f4f8a'));
       return out;
     },
   },
@@ -436,7 +483,7 @@ const TYPEN: Record<string, Typ> = {
         walze(1.2, 1.8, 5, G + 0.9, 3, '#b8733a', 0, 0, 12), paint(new THREE.SphereGeometry(1.2, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2).translate(5, G + 1.8, 3), '#c8834a'),
         walze(0.25, 1.4, 5, G + 3.2, 3, '#c8834a', 0, 0, 8), boxR(2.4, 0.22, 0.22, 6.1, G + 3.8, 3, '#c8834a', 0, 0, -0.35),
         walze(0.6, 1.6, 7.2, G + 0.8, 3, '#8a6340', 0, 0, 9),
-        boxR(1, 4, 1, -2, G + 7, -1, '#8a6a5a'), paint(new THREE.SphereGeometry(0.7, 5, 4).translate(-2, G + 9.4, -1), '#e6e6e6'),
+        boxR(1, 4, 1, -2, G + 7, -1, '#8a6a5a'), ...rauchOderWolke({ art: 'dampf', x: -2, y: G + 9.1, z: -1, staerke: 1 }, -2, G + 9.4, -1),
         ...fass(-5, 4.5)];
     },
   },
@@ -450,7 +497,7 @@ const TYPEN: Record<string, Typ> = {
         boxR(0.2, 0.2, 2, -3.5, G + 4.6, t.d / 2 + 1, '#2a2a2a'), boxR(1.5, 1.2, 0.12, -3.5, G + 3.8, t.d / 2 + 1.9, '#e0a830'),
         walze(0.2, 0.9, -3.5, G + 3.8, t.d / 2 + 2, '#cfe6dc', 0, 0, 7),
         boxR(3, 0.2, 1.3, 1.5, G + 1.1, t.d / 2 + 2.3, HOLZ), boxR(3, 0.15, 0.4, 1.5, G + 0.6, t.d / 2 + 1.4, HOLZ), boxR(3, 0.15, 0.4, 1.5, G + 0.6, t.d / 2 + 3.2, HOLZ),
-        ...fass(5.8, 4.4), ...fass(6.6, 5.6)];
+        ...fass(5.8, 4.4), ...fass(6.6, 5.6), ...nurAnker({ art: 'schwaetzer', x: 1.5, y: G, z: t.d / 2 + 4.6, n: 3 })];
     },
   },
   erzgrube: {
@@ -475,7 +522,7 @@ const TYPEN: Record<string, Typ> = {
       // Kohlenmeiler: rauchender Erdkegel, Holzstapel, kleine Köhlerhütte
       return [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach),
         paint(new THREE.SphereGeometry(3.4, 9, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.9, 1).translate(8, G, 0), '#3a3028'),
-        paint(new THREE.SphereGeometry(0.9, 5, 4).translate(8, G + 3.6, 0), '#9a9a9a'), paint(new THREE.SphereGeometry(1.2, 5, 4).translate(8.6, G + 5, -0.3), '#b8b8b8'),
+        ...rauchOderWolke({ art: 'kamin', x: 8, y: G + 3.1, z: 0, staerke: 2.2 }, 8, G + 3.6, 0),
         ...logPile(8, 5.5, 6).map((g) => g.translate(0, G, 0)), ...kiste(-3.5, 3.8, 1.2).map((g) => paint(g, '#2b2b2b'))];
     },
   },
@@ -487,8 +534,9 @@ const TYPEN: Record<string, Typ> = {
       // Hochofen aus Bruchstein mit Glut, Blasebalg-Rad am Bach, Eisenbarren davor (Schleidener Tal)
       return [boxR(t.w, 5, t.d, 0, G + 2.5, 0, '#8f897f'), ...roof(t.w, t.d, 2.4, G + 5, t.dach, '#8f897f'),
         walze(1.9, 9, 3, G + 4.5, -0.5, '#7a7268', 0, 0, 8), walze(1.4, 0.6, 3, G + 9.3, -0.5, '#5a524a', 0, 0, 8),
-        boxR(1.4, 1.4, 0.3, 3, G + 1.2, 1.5, '#ff7a1a'), paint(new THREE.SphereGeometry(1, 5, 4).translate(3.3, G + 10.6, -0.5), '#8a8a8a'),
-        walze(2.2, 0.5, -t.w / 2 - 0.6, G + 2.4, 0, HOLZ, 0, Math.PI / 2, 12), walze(0.3, 1.2, -t.w / 2 - 0.4, G + 2.4, 0, DUNKEL, 0, Math.PI / 2, 6),
+        boxR(1.4, 1.4, 0.3, 3, G + 1.2, 1.5, '#ff7a1a'), ...rauchOderWolke({ art: 'kamin', x: 3, y: G + 9.7, z: -0.5, staerke: 2 }, 3.3, G + 10.6, -0.5),
+        ...radOderStatisch({ art: 'rad', x: -t.w / 2 - 0.6, y: G + 2.4, z: 0, r: 2.2, w: 0.5, achse: 'x' }),
+        walze(0.3, 1.2, -t.w / 2 - 0.4, G + 2.4, 0, DUNKEL, 0, Math.PI / 2, 6),
         boxR(1.4, 0.3, 0.5, -2, G + 0.35, t.d / 2 + 1.2, '#7d8a96'), boxR(1.4, 0.3, 0.5, -2, G + 0.65, t.d / 2 + 1.2, '#6d7a86')];
     },
   },
@@ -502,6 +550,7 @@ const TYPEN: Record<string, Typ> = {
         boxR(4, 0.25, 3, 5, G + 3.2, 2.5, t.dach), boxR(0.25, 3.2, 0.25, 6.8, G + 1.6, 3.8, HOLZ),
         boxR(1.6, 1.1, 1.4, 4.4, G + 0.55, 2, '#7a7268'), boxR(1.0, 0.25, 0.8, 4.4, G + 1.2, 2, '#ff7a1a'),
         walze(0.5, 0.9, 5.8, G + 0.45, 4.6, HOLZ, 0, 0, 8), boxR(1.1, 0.4, 0.45, 5.8, G + 1.1, 4.6, '#3a3a3a'),
+        ...nurAnker({ art: 'esse', x: 4.4, y: G + 1.4, z: 2 }, { art: 'hammer', x: 5.8, y: G + 1.35, z: 4.6 }, { art: 'kamin', x: -2, y: G + 9.1, z: -1, staerke: 1.2 }),
         boxR(1, 4, 1, -2, G + 7, -1, '#7a6a5a'), paint(new THREE.TorusGeometry(0.45, 0.1, 4, 8, Math.PI * 1.4).rotateZ(-0.5).translate(0, G + 3.2, t.d / 2 + 0.2), '#9aa0a6')];
     },
   },
@@ -660,6 +709,10 @@ const TYPEN: Record<string, Typ> = {
         }
       };
       kette(-11, -9, -10, 7.4, G + 12, G + 3.6); kette(-11, -9, 10, 7.4, G + 12, G + 3.6);
+      anker({ art: 'kinder', x: 3, y: G, z: -5, r: 4.5, n: 4 });
+      // Festbesucher im Ring um das Karussell (Mitte 0, −3; Dach Radius 6), frei von Buden und Kirmesbaum
+      anker({ art: 'besucher', x: 0, y: G, z: -3, r: 11, frei: [[-10, 7.5, 4.5], [10, 7.5, 4.5], [-11, -6, 3.5]] });
+      anker({ art: 'feuer', x: 8, y: G, z: -8 });
       return out;
     },
   },
@@ -745,6 +798,8 @@ function phase2(t: Typ): THREE.BufferGeometry[] {
 // ---------------------------------------------------------------- Wimmel-Kleinkram (STIL.md)
 
 function huhn(x: number, z: number, ry: number, farbe = '#f4efe4'): THREE.BufferGeometry[] {
+  // Lebendige Eifel: im Spiel pickt das Huhn (leben.ts), hier nur der Anker
+  if (anker({ art: 'huhn', x, y: G, z, r: ry, farbe })) return [];
   const k = (geo: THREE.BufferGeometry, f: string) => paint(geo.rotateY(ry).translate(x, 0, z), f);
   return [
     k(new THREE.SphereGeometry(0.55, 7, 5).scale(1.25, 1, 0.9).translate(0, G + 0.7, 0), farbe),
@@ -764,6 +819,8 @@ function blumen(x: number, z: number, n: number): THREE.BufferGeometry[] {
 }
 function waesche(x: number, z: number): THREE.BufferGeometry[] {
   const out = [walze(0.14, 3.6, x, G + 1.8, z, HOLZ), walze(0.14, 3.6, x + 6, G + 1.8, z, HOLZ), boxR(6, 0.06, 0.06, x + 3, G + 3.4, z, '#e8e2d0')];
+  // Lebendige Eifel: die Wäsche flattert im Wind (leben.ts)
+  if (anker({ art: 'waesche', x: x + 3, y: G + 3.4, z, w: 6 })) return out;
   ['#e05a5a', '#f4f1e8', '#5a8ad0', '#f0c040'].forEach((f, i) => out.push(boxR(1.0, 1.3 - (i % 2) * 0.35, 0.08, x + 0.9 + i * 1.4, G + 2.7 + (i % 2) * 0.17, z, f)));
   return out;
 }
@@ -824,8 +881,26 @@ function kleinkram(typ: string, t: Typ): THREE.BufferGeometry[] {
     if (typ.length % 3 === 0) out.push(...bienenkorb(x0 + 0.5, z1 - 3));
     else if (typ.length % 3 === 1) out.push(...kuerbisse(x0 - 2.5, z1 - 2));
   }
-  // etwas größer als echt (aus der Spielhöhe lesbar): um den Grundriss-Mittelpunkt vorn skalieren
+  // etwas größer als echt (aus der Spielhöhe lesbar): um den Grundriss-Mittelpunkt vorn skalieren (Anker genauso, in modellRoh)
   return out.map((g) => g.translate(-vx, 0, -vz).scale(KLEINKRAM, KLEINKRAM, KLEINKRAM).translate(vx, 0, vz));
+}
+/**
+ * Kontaktschatten-Anker (Gutachter: „nichts schwebt“): kleine Teile, die auf dem Boden stehen (Fässer, Kürbisse, Körbe, Holzstapel,
+ * Zäune …), bekommen einen weichen Fleck darunter. Nahe Teile werden zu einem Fleck zusammengefasst.
+ */
+function kontaktAnker(teile: THREE.BufferGeometry[]): Anker[] {
+  const out: Anker[] = [];
+  const b = new THREE.Box3();
+  for (const g of teile) {
+    b.setFromBufferAttribute(g.attributes.position as THREE.BufferAttribute);
+    const dx = b.max.x - b.min.x, dz = b.max.z - b.min.z, h = b.max.y - b.min.y;
+    if (b.min.y > G + 0.8 || Math.max(dx, dz) > 7 || h < 0.3 || h > 6) continue;
+    const x = (b.min.x + b.max.x) / 2, z = (b.min.z + b.max.z) / 2, r = Math.max(dx, dz) * 0.6 + 0.3;
+    const nah = out.find((a) => Math.hypot(a.x - x, a.z - z) < Math.max(a.r ?? 0, r) * 0.8);
+    if (nah) nah.r = Math.max(nah.r ?? 0, r, Math.hypot(nah.x - x, nah.z - z) + r * 0.6);
+    else out.push({ art: 'schatten', x, y: G, z, r });
+  }
+  return out;
 }
 /** Kleinkram-Vergrößerung (STIL.md §6). */
 const KLEINKRAM = 1.6;
@@ -839,6 +914,51 @@ function modellTyp(typ: string): string {
 }
 
 const modellCache = new Map<string, THREE.BufferGeometry>();
+/** Anker der Lebendigen Eifel je Modelltyp (Modell-Meter, ab dem Modellnullpunkt; y wie im Modell). */
+const ankerCache = new Map<string, Anker[]>();
+
+/** Lebendige Eifel: Anker eines Gebäudetyps (Rauch, Fenster, Hühner, Wäsche, Räder, Tiere …), samt der des Typs selbst. */
+export function lebenAnker(typ: string): readonly Anker[] {
+  const mt = modellTyp(typ);
+  if (!ankerCache.has(mt)) modell(mt, 3);
+  return [...(ankerCache.get(mt) ?? []), ...(TYP_ANKER[typ] ?? [])];
+}
+/** Platzbedarf des Modells (echte m relativ zur Modellmitte: x0, x1, z0, z1), z. B. für den Meister vor Feldern und Ställen. */
+/**
+ * Jedes Gebäude steht ganz in seinem Hex, hinter der Fahne (Hex-Mitte): Grundriss höchstens HEX_PLATZ_BREITE breit und von 4 m hinter
+ * der Fahne an HEX_PLATZ_TIEFE tief (ein Hex ist rund 104 m breit und 120 m hoch). Größere Modelle (Felder, Schafstall, Kirmesplatz)
+ * werden so weit verkleinert und auf die Hex-Mitte gerückt; sonst ragten sie in die Nachbarhexe und Wege liefen über sie hinweg.
+ */
+export const HEX_PLATZ_BREITE = 104, HEX_PLATZ_TIEFE = 78;
+/** Skala eines Spielgebäude-Modells (HAUS_SKALE × Typ-Skala, verkleinert, bis der Grundriss ins Hex passt). */
+export function modellSkala(typ: string): number {
+  const t = TYPEN[modellTyp(typ)], [x0, x1, z0, z1] = t.grund;
+  return Math.min(HAUS_SKALE * t.skala, HEX_PLATZ_BREITE / (x1 - x0), HEX_PLATZ_TIEFE / (z1 - z0));
+}
+/** Wie stark ein Modell verkleinert wird, damit es ins Hex passt (1 = gar nicht). */
+export function modellSchrumpf(typ: string): number {
+  return modellSkala(typ) / (HAUS_SKALE * TYPEN[modellTyp(typ)].skala);
+}
+/** Ursprung des Modells zur Hex-Mitte (hx, hz): Grundriss mittig in x, Vorderkante 4 m hinter der Fahne. */
+export function modellUrsprung(typ: string, hx: number, hz: number): { s: number; x: number; z: number } {
+  const t = TYPEN[modellTyp(typ)], s = modellSkala(typ), [x0, x1, , z1] = t.grund;
+  return { s, x: hx - ((x0 + x1) / 2) * s, z: hz - 4 - z1 * s };
+}
+
+export function modellGrund(typ: string): readonly [number, number, number, number] {
+  return TYPEN[modellTyp(typ)].grund;
+}
+/** Anker nur für einzelne Typen, die ein fremdes Modell nutzen (z. B. die Senfmühle mit Mühlrad). */
+const TYP_ANKER: Record<string, Anker[]> = {
+  senfmuehle: [{ art: 'rad', x: -4.6, y: G + 2.4, z: 0, r: 2.0, w: 0.9, achse: 'x' }],
+  // Spinnrad vor der Spinnstube (dreht sich bei der Arbeit; ohne Wasser, siehe leben.ts)
+  spinnerei: [{ art: 'rad', x: -4.2, y: G + 1.9, z: 6.5, r: 1.5, w: 0.3, achse: 'z', farbe: 'spinnrad' }],
+  papiermuehle: [{ art: 'rad', x: -6.4, y: G + 2.4, z: -1, r: 2.4, w: 1.0, achse: 'x' }],
+  molkerei: [{ art: 'kuehe', x: -4, y: G, z: 6, w: 4, d: 2.5, n: 3 }],
+  gerstenfeld: [{ art: 'muehle', x: 20, y: G, z: -3 }],
+  lager: [{ art: 'hund', x: -6, y: G, z: 11, r: 3 }, { art: 'laterne', x: 3.6, y: G + 4.6, z: 5.7 }],
+  schaenke: [{ art: 'laterne', x: 3.4, y: G + 3.6, z: 4.3 }],
+};
 function modell(typ: string, phase: number, dach: string | null = null): THREE.BufferGeometry {
   if (dach) {
     const key = `${typ}:${phase}:${dach}`;
@@ -853,15 +973,21 @@ function modellRoh(typ: string, phase: number, key: string): THREE.BufferGeometr
   let g = modellCache.get(key);
   if (!g) {
     const t = TYPEN[modellTyp(typ)];
-    g = mergeGeometries(phase <= 1 ? phase1(t) : phase === 2 ? phase2(t) : t.fertig())!;
+    // fertige Modelle legen Anker für die Lebendige Eifel ab (Rauch, Fenster, Hühner, Räder …)
+    const { wert: teile, anker: am } = phase >= 3 ? mitAnkern(() => t.fertig()) : { wert: phase <= 1 ? phase1(t) : phase2(t), anker: [] as Anker[] };
+    g = mergeGeometries(teile)!;
     // Stil (STIL.md): Häuser stehen leicht schief, jedes Gebäude anders; fertige bekommen Wimmel-Kleinkram dazu
     if (phase >= 2) {
       const lean = (hash(typ.length * 7 + typ.charCodeAt(0), typ.charCodeAt(typ.length - 1)) - 0.5) * 0.06;
       g.applyMatrix4(new THREE.Matrix4().set(1, lean, 0, 0, 0, 1, 0, 0, 0, lean * 0.5, 1, 0, 0, 0, 0, 1));
+      for (const a of am) { a.x += lean * a.y; a.z += lean * 0.5 * a.y; }
     }
     if (phase >= 3) {
-      const extra = kleinkram(typ, t);
+      const { wert: extra, anker: ak } = mitAnkern(() => kleinkram(typ, t));
+      const vx = t.grund[1] - 2.5, vz = t.grund[3] - 1.5;
+      for (const a of ak) { a.x = (a.x - vx) * KLEINKRAM + vx; a.y *= KLEINKRAM; a.z = (a.z - vz) * KLEINKRAM + vz; if (a.w !== undefined) a.w *= KLEINKRAM; }
       if (extra.length) g = mergeGeometries([g, ...extra])!;
+      if (!ankerCache.has(modellTyp(typ))) ankerCache.set(modellTyp(typ), [...am, ...ak, ...kontaktAnker([...teile, ...extra])]);
     }
     if (!g.attributes.normal) g.computeVertexNormals();
     modellCache.set(key, g);
@@ -870,8 +996,12 @@ function modellRoh(typ: string, phase: number, key: string): THREE.BufferGeometr
 }
 
 /** Fertiges Modell eines Gebäudetyps (Vertexfarben, Meter wie im Modell), z. B. für die Icons (src/render/icons.ts). */
-export function gebaeudeGeometrie(typ: string): THREE.BufferGeometry {
-  return modell(typ, 3);
+export function gebaeudeGeometrie(typ: string, ohneKleinkram = false): THREE.BufferGeometry {
+  if (!ohneKleinkram) return modell(typ, 3);
+  // fürs Icon nur das Gebäude selbst (Kleinkram am Rand macht es im Bild sonst winzig); Anker werden gesammelt und verworfen
+  const g = mergeGeometries(mitAnkern(() => TYPEN[modellTyp(typ)].fertig()).wert)!;
+  if (!g.attributes.normal) g.computeVertexNormals();
+  return g;
 }
 
 /** Bauphase 1..3 aus bau (Formel wie in src/sim/typen.ts). */
@@ -881,10 +1011,8 @@ export function bauPhase(bau: number): 1 | 2 | 3 {
 
 /** Für das Geistermodell (geist.ts): fertiges Modell, Skala, Lage (Ausschnitt-Meter) und Bodenversatz auf Hex (q, r), ohne Planieren. */
 export function geistModell(typ: string, grid: HexGrid, q: number, r: number) {
-  const t = TYPEN[modellTyp(typ)];
-  const sk = HAUS_SKALE * t.skala;
-  const w = grid.toWorld({ q, r });
-  return { geo: modell(typ, 3), sk, x: w.x, z: w.z - 4 - t.grund[3] * sk, boden: G * sk };
+  const w = grid.toWorld({ q, r }), u = modellUrsprung(typ, w.x, w.z);
+  return { geo: modell(typ, 3), sk: u.s, x: u.x, z: u.z, boden: G * u.s };
 }
 
 // ---------------------------------------------------------------- Warnzeichen
@@ -1115,11 +1243,10 @@ export class Gebaeude {
   /** Mitte des Modells (Ausschnitt-Meter) und Skala für ein Gebäude auf Hex (q, r). */
   private lage(typ: string, q: number, r: number) {
     const t = TYPEN[modellTyp(typ)];
-    const s = HAUS_SKALE * t.skala;
     const w = this.grid.toWorld({ q, r });
-    // Vorderkante des Platzbedarfs liegt 4 m vor der Fahne (Hex-Mitte)
-    const z = w.z - 4 - t.grund[3] * s;
-    return { t, s, x: w.x, z, hx: w.x, hz: w.z };
+    // Vorderkante des Platzbedarfs liegt 4 m hinter der Fahne (Hex-Mitte), der Grundriss passt ins Hex (modellUrsprung)
+    const { s, x, z } = modellUrsprung(typ, w.x, w.z);
+    return { t, s, x, z, hx: w.x, hz: w.z };
   }
 
   /**
@@ -1200,7 +1327,7 @@ export class Gebaeude {
       // am Hang zeigt die Baustelle bis zum Ende des Planierens nur den abgesteckten Grund
       const phase = g.planiert !== undefined && g.planiert < PROMILLE ? 1 : bauPhase(g.bau);
       // M11: Dach in der Farbe der regionalen Baustoffe des Völkchens
-      const dach = VOLK_DACH.get(sicht.spieler[g.sp]?.voelkchen ?? '') ?? null;
+      const dach = dachFarbe(modellTyp(g.typ), VOLK_DACH.get(sicht.spieler[g.sp]?.voelkchen ?? '') ?? null);
       const key = `${modellTyp(g.typ)}:${phase}:${dach ?? ''}`;
       let satz = this.saetze.get(key);
       if (!satz) {
@@ -1208,7 +1335,7 @@ export class Gebaeude {
         satz.beginne();
         this.saetze.set(key, satz);
       }
-      const sk = HAUS_SKALE * t.skala;
+      const sk = modellSkala(g.typ);
       // Boden des Modells (y = G) liegt auf dem planierten Gelände; Gelände erst nach Planierung neu lesen
       const y = (this.map.heightAt(pl.x, pl.z) - base) * ex - G * sk;
       q.identity();
@@ -1316,6 +1443,17 @@ export class Gebaeude {
     this.funken.length = n;
     pos.needsUpdate = true; col.needsUpdate = true;
     this.feuerwerk.geometry.setDrawRange(0, n);
+  }
+
+  /**
+   * Lebendige Eifel: Modell-Nullpunkt (Ausschnitt-Meter, y wie gezeichnet) und Skala eines fertigen Gebäudes; ein Anker (ax, ay, az)
+   * liegt dann bei (x + ax·sk, y + ay·sk, z + az·sk). null, solange es nicht in der Sicht war.
+   */
+  modellLage(id: Id, typ: string): { x: number; y: number; z: number; sk: number } | null {
+    const pl = this.plaetze.get(id);
+    if (!pl) return null;
+    const sk = modellSkala(typ);
+    return { x: pl.x, y: (this.map.heightAt(pl.x, pl.z) - this.base) * this.ex - G * sk, z: pl.z, sk };
   }
 
   /** Mitte (Ausschnitt-Meter) eines Gebäudes, sobald es einmal in der Sicht war. */

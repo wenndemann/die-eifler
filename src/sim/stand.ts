@@ -32,6 +32,8 @@ export interface SimStand {
   mai?: { trupps: Record<string, unknown>[] };
   /** M15: versetzte Grenzsteine und Jahr des letzten Jahresfests je Ort (fehlt in älteren Spielständen). */
   grenzland?: { steine: Record<string, unknown>[]; ortFest: number[] };
+  /** Gebaute Holzbrücken (Hex-Indizes, sortiert; fehlt in älteren Spielständen: dann hat jeder Weg über einen Bach seine Brücke). */
+  bruecken?: number[];
   log: ProtokollEintrag[];
   ausstehend: ProtokollEintrag[];
   stat: { angekommen: number; verbraucht: number; erzeugt: number; maxWarte: number; verbaut: number };

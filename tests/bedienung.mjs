@@ -64,8 +64,9 @@ export async function bedienungsTest({ browser, url, aus, info, fail }) {
   info(`Bedienung: Ziel-Hex ${ziel.hex.q},${ziel.hex.r} (${ziel.baeume} Bäume im Radius)`);
 
   // Baumenü: Knopf „Bauen“ öffnet es, ein Eintrag je Gebäude außer dem Lager
-  await page.locator('.werkzeug[data-w="menue"]').click();
-  await page.waitForSelector('.baumenue:not([hidden])', { timeout: 30000 });
+  // echter Mausklick; nicht auf „geplante Navigationen“ warten (im Software-Renderer hängt das sonst an langen Bildern)
+  await page.locator('.werkzeug[data-w="menue"]').click({ noWaitAfter: true, timeout: 120000 });
+  await page.waitForSelector('.baumenue:not([hidden])', { timeout: 120000 });
   const menue = await page.evaluate(() => ({
     eintraege: [...document.querySelectorAll('.bm-eintrag')].map((b) => b.dataset.id),
     gruppen: [...document.querySelectorAll('.bm-gruppe h4')].map((h) => h.textContent),

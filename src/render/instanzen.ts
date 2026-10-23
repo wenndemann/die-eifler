@@ -58,7 +58,14 @@ export class Instanzen {
     if (this.n >= this.kap) this.waechst();
     this.mesh.setMatrixAt(this.n, m);
     if (farbe && this.mesh.instanceColor) this.mesh.setColorAt(this.n, farbe);
-    if (extra) this.extra.forEach((e, k) => { for (let c = 0; c < e.size; c++) (e.attr.array as Float32Array)[this.n * e.size + c] = extra[k * e.size + c]; });
+    if (extra) {
+      // Werte der Reihe nach auf die Attribute verteilen (laufender Versatz; fehlende Werte sind 0)
+      let off = 0;
+      for (const e of this.extra) {
+        for (let c = 0; c < e.size; c++) (e.attr.array as Float32Array)[this.n * e.size + c] = extra[off + c] ?? 0;
+        off += e.size;
+      }
+    }
     this.n++;
   }
 

@@ -10,9 +10,11 @@ import type { HexGrid } from '../map/hex';
 import { PROMILLE, type Id, type SichtArbeiter, type SimSicht } from '../sim/typen';
 import { paint } from './mockup';
 import { Instanzen } from './instanzen';
+import { Kontaktschatten } from './kontakt';
 import { TRAEGER_H, WARE_TRAGEN, fernFaktor } from './massstab';
 import { WAREN_ANZAHL, warenGeometrie } from './waren';
-import { dorfLaune, FIGUR_ATTRIBUTE, figur, GESTE, material } from './traeger';
+import leben from '../../data/leben.json';
+import { dorfLaune, FIGUR_ATTRIBUTE, figur, GESTE, material, variante, type Tracht } from './traeger';
 
 type Beruf = 'holzfaeller' | 'foerster' | 'steinbruch' | 'bauarbeiter' | 'planierer';
 const BERUFE: Beruf[] = ['holzfaeller', 'foerster', 'steinbruch'];
@@ -59,6 +61,9 @@ function hammer(): THREE.BufferGeometry {
 }
 const WERKZEUG: Record<Beruf, () => THREE.BufferGeometry> = { holzfaeller: axt, foerster: spaten, steinbruch: spitzhacke, bauarbeiter: hammer, planierer: spaten };
 
+/** Werkzeuge etwas größer als echt (um die Griffstelle): aus der Spielkamera als Axt, Spaten, Hacke erkennbar. */
+const WERKZEUG_GROSS = new THREE.Matrix4().makeScale(1.7, 1.7, 1.7);
+
 /** Schulter und Hand-Griffstelle (rechter Arm der Trägerfigur, traeger.ts). */
 const SCHULTER: [number, number, number] = [0.25, 0.54, 0];
 const GRIFF: [number, number, number] = [0.32, 0.27, 0.03];
@@ -83,7 +88,9 @@ export class Arbeiter {
   private laune = { laune: 0.35, fest: false };
   /** Wenn gesetzt: Figuren wachsen mit dem Kameraabstand (wie die Träger). */
   kamera: THREE.Camera | null = null;
-  private figuren: Instanzen;
+  /** Je Beruf eine Figur mit eigener Tracht (Mütze, Hut, Schürze, Bart: Berufe erkennbar). */
+  private figuren: Record<Beruf, Instanzen>;
+  private kontakt: Kontaktschatten;
   private werkzeuge: Record<Beruf, Instanzen>;
   private waren: Instanzen[] = [];
   private zustand = new Map<Id, Zustand>();
@@ -100,7 +107,10 @@ export class Arbeiter {
 
   constructor(private map: MapData, private grid: HexGrid, private base: number, ex: number) {
     this.ex = ex;
-    this.figuren = new Instanzen(this.group, figur(), material(), true, true, FIGUR_ATTRIBUTE, 32);
+    this.kontakt = new Kontaktschatten(this.group, 64);
+    const mat = material(), tracht = leben.berufe as Record<Beruf, Tracht>;
+    const satz = (b: Beruf, kap: number) => new Instanzen(this.group, figur(tracht[b]), mat, true, true, FIGUR_ATTRIBUTE, kap);
+    this.figuren = { holzfaeller: satz('holzfaeller', 32), foerster: satz('foerster', 32), steinbruch: satz('steinbruch', 32), bauarbeiter: satz('bauarbeiter', 8), planierer: satz('planierer', 8) };
     const matte = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7, flatShading: false });
     this.werkzeuge = {
       holzfaeller: new Instanzen(this.group, WERKZEUG.holzfaeller(), matte, false, true, [], 32),
@@ -120,7 +130,8 @@ export class Arbeiter {
   update(sicht: SimSicht, alpha = 0, dt = 0) {
     this.runde++;
     this.laune = dorfLaune(sicht);
-    this.figuren.beginne();
+    for (const f of Object.values(this.figuren)) f.beginne();
+    this.kontakt.beginne();
     for (const w of Object.values(this.werkzeuge)) w.beginne();
     for (const w of this.waren) w.beginne();
     const { map, base, ex, m, mw, q, p, s, farbe } = this;
@@ -138,7 +149,8 @@ export class Arbeiter {
       const a: SichtArbeiter = { von: b.von, nach: b.nach, fortschritt: b.fortschritt, schritt: b.schritt, tut, ziel: null, ware: -1 };
       this.figurSetzen(b.id, b.beruf, a, alpha, dt, map, base, ex, m, mw, q, p, s, farbe, b.tut === 'arbeitet');
     }
-    this.figuren.fertig();
+    for (const f of Object.values(this.figuren)) f.fertig();
+    this.kontakt.fertig();
     for (const w of Object.values(this.werkzeuge)) w.fertig();
     for (const w of this.waren) w.fertig();
     if (this.zustand.size > n + 8) for (const [id, z] of this.zustand) if (z.benutzt !== this.runde) this.zustand.delete(id);
@@ -183,7 +195,8 @@ export class Arbeiter {
     const cfg = ARBEIT[beruf];
     const arm = traegt ? 1 : arbeitet ? schlag(u, cfg.tief, cfg.hoch, cfg.aus) : 0;
     // Mimik: Laune des Dorfs im Gesicht; die Arme bleiben beim Werkzeug (keine Gesten, sonst schwebt es)
-    this.figuren.fuege(m, farbe.copy(HEMD[beruf]), [st.phase, arm, geht ? 1 : arbeitet ? 0.12 : 0.1, this.laune.laune, GESTE.keine]);
+    this.figuren[beruf].fuege(m, farbe.copy(HEMD[beruf]), [st.phase, arm, geht ? 1 : arbeitet ? 0.12 : 0.1, this.laune.laune, GESTE.keine, variante(id)]);
+    this.kontakt.setze(x, y, z, 0.32 * sk);
     // Werkzeug
     if (!traegt) {
       const wz = this.werkzeuge[beruf];
@@ -192,27 +205,29 @@ export class Arbeiter {
         const ang = -2.75 * arm;
         const t = new THREE.Matrix4().makeTranslation(SCHULTER[0], SCHULTER[1], SCHULTER[2])
           .multiply(new THREE.Matrix4().makeRotationAxis(this.xAchse, ang))
-          .multiply(new THREE.Matrix4().makeTranslation(-SCHULTER[0] + GRIFF[0], -SCHULTER[1] + GRIFF[1], -SCHULTER[2] + GRIFF[2]));
+          .multiply(new THREE.Matrix4().makeTranslation(-SCHULTER[0] + GRIFF[0], -SCHULTER[1] + GRIFF[1], -SCHULTER[2] + GRIFF[2]))
+          .multiply(WERKZEUG_GROSS);
         wz.fuege(mw.copy(m).multiply(t));
       } else {
         // aufrecht in der Hand, Kopf oben, leicht nach vorn geneigt; schwingt mit dem Gang
         const sw = Math.sin(st.phase) * (geht ? 0.12 : 0.02);
         const t = new THREE.Matrix4().makeTranslation(GRIFF[0] + 0.04, GRIFF[1], GRIFF[2] + 0.02)
           .multiply(new THREE.Matrix4().makeRotationX(0.25 + sw))
-          .multiply(new THREE.Matrix4().makeRotationZ(Math.PI));
+          .multiply(new THREE.Matrix4().makeRotationZ(Math.PI))
+          .multiply(WERKZEUG_GROSS);
         wz.fuege(mw.copy(m).multiply(t));
       }
     }
     if (traegt && a.ware >= 0 && a.ware < WAREN_ANZAHL) {
       const wip = Math.abs(Math.sin(st.phase)) * 0.05 * sk;
       s.set(k * WARE_TRAGEN, k * WARE_TRAGEN, k * WARE_TRAGEN);
-      mw.compose(p.set(x, y + 1.24 * sk + wip, z), q, s);
+      mw.compose(p.set(x, y + 1.12 * sk + wip, z), q, s);
       this.waren[a.ware].fuege(mw);
     }
   }
 
   /** Zahl der gezeichneten Arbeiter. */
   get anzahl(): number {
-    return this.figuren.n;
+    return Object.values(this.figuren).reduce((n, f) => n + f.n, 0);
   }
 }

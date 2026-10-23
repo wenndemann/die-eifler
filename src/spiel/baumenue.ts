@@ -24,7 +24,15 @@ const WARE_KURZ: Record<string, [string, string, string]> = {
   bratkartoffeln: ['🍳', 'Bratkartoffel', 'Bratkartoffeln'], honig: ['🍯', 'Honig', 'Honig'], bergkaese: ['🧀', 'Bergkäse', 'Bergkäse'],
   gerste: ['🌾', 'Gerste', 'Gerste'], landbier: ['🍺', 'Landbier', 'Landbier'], wacholder: ['🫐', 'Wacholder', 'Wacholder'],
   schnaps: ['🍶', 'Schnaps', 'Schnaps'], erz: ['🪨', 'Erz', 'Erz'], holzkohle: ['⚫', 'Holzkohle', 'Holzkohle'], eisen: ['🔩', 'Eisen', 'Eisen'],
-  werkzeug: ['🔨', 'Werkzeug', 'Werkzeug'], kaffee: ['☕', 'Kaffee', 'Kaffee'],
+  werkzeug: ['🔨', 'Werkzeug', 'Werkzeug'], kaffee: ['☕', 'Kaffee', 'Kaffee'], bruecke: ['🌉', 'Brücke', 'Brücken'],
+  // Völkchen (M11)
+  wolle: ['🐑', 'Wolle', 'Wolle'], tuch: ['🧣', 'Tuch', 'Tuch'], senf: ['🟡', 'Senf', 'Senf'], fisch: ['🐟', 'Fisch', 'Fische'],
+  raeucherfisch: ['🐠', 'Räucherfisch', 'Räucherfische'], papier: ['📜', 'Papier', 'Papier'], werkstein: ['🧱', 'Werkstein', 'Werksteine'],
+  sprudel: ['💧', 'Sprudel', 'Sprudel'], lavastein: ['🌋', 'Lavastein', 'Lavasteine'], trauben: ['🍇', 'Traube', 'Trauben'],
+  rotwein: ['🍷', 'Rotwein', 'Rotwein'], muehlstein: ['⚙️', 'Mühlstein', 'Mühlsteine'], schiefer: ['🔷', 'Schiefer', 'Schiefer'],
+  hopfen: ['🌿', 'Hopfen', 'Hopfen'], edelbier: ['🍻', 'Edelbier', 'Edelbier'], harz: ['🍯', 'Harz', 'Harz'], butter: ['🧈', 'Butter', 'Butter'],
+  lohe: ['🟤', 'Lohe', 'Lohe'], leder: ['👞', 'Leder', 'Leder'], ham: ['🍖', 'Ham', 'Ham'], garn: ['🧶', 'Garn', 'Garn'],
+  traubenmost: ['🧃', 'Traubenmost', 'Traubenmost'], dachschiefer: ['🏠', 'Dachschiefer', 'Dachschiefer'], torf: ['🟫', 'Torf', 'Torf'],
 };
 
 /** Texte je Warenart (Index = Warenart). Unbekannte Waren bekommen das letzte Wort ihres Anzeigenamens. */

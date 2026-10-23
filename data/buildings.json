@@ -15,6 +15,7 @@
    },
    "wohnraum": 10,
    "vorrat": {
+    "bruecke": 2,
     "bretter": 12,
     "stein": 8,
     "kartoffeln": 8
@@ -107,6 +108,36 @@
     "ware": "bretter",
     "max": 6
    },
+   "laut": true
+  },
+  {
+   "id": "zimmerei",
+   "name": "Zimmerei",
+   "gruppe": "Holz & Stein",
+   "symbol": "🌉",
+   "spruch": "Drei Bretter, ein Geländer, fertig ist die Brücke. Die Kühe gehen trotzdem durchs Wasser.",
+   "funktion": "verarbeiter",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 2,
+    "stein": 1
+   },
+   "arbeiter": 1,
+   "eingang": {
+    "bretter": 6
+   },
+   "wandelt": {
+    "ein": "bretter",
+    "menge": 3,
+    "aus": "bruecke",
+    "dauer_s": 20
+   },
+   "ausgang": {
+    "ware": "bruecke",
+    "max": 2
+   },
+   "modell": "saegewerk",
+   "leistung": "Baut aus Brettern Holzbrücken: jeder Weg über einen Bach braucht eine, sonst bleibt er zu",
    "laut": true
   },
   {
@@ -604,7 +635,7 @@
    "gruppe": "Feste",
    "symbol": "🎡",
    "spruch": "Ohne Kirmes ist ein Dorf nur ein Haufen Häuser mit Meinung.",
-   "funktion": "kirmes",
+      "funktion": "kirmes",
    "groesse": 2,
    "kosten": {
     "bretter": 4,
@@ -718,7 +749,7 @@
    "gruppe": "Feste",
    "symbol": "🎯",
    "spruch": "Einmal im Jahr wird auf den Vogel geschossen. Und danach auf die Theke.",
-   "funktion": "schuetzen",
+      "funktion": "schuetzen",
    "groesse": 2,
    "kosten": {
     "bretter": 4,
@@ -765,7 +796,7 @@
    "voelkchen": [
     "monschau"
    ],
-   "modell": "kaeserei",
+   "modell": "wohnhaus",
    "eingang": {
     "wolle": 4
    },
@@ -1554,7 +1585,7 @@
    "gruppe": "Spezialität",
    "symbol": "⛪",
    "spruch": "Die Mönche beten. Die Steinhauer bitte leise.",
-   "funktion": "zier",
+      "funktion": "zier",
    "groesse": 3,
    "kosten": {
     "bretter": 6,

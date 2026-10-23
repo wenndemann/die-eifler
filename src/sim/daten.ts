@@ -183,6 +183,7 @@ export interface GebaeudeTyp {
   fondsMenge: number;
   /** M11: nur diese Völkchen dürfen es bauen (leer = alle); Darstellung wie Gebäude `modell`; braucht Wasser nah; kein Planieren am Hang. */
   voelkchen: readonly string[]; modell: string; amWasser: boolean; keinPlanieren: boolean;
+  /** Platz mit Hof hinter dem Haus (Kirmesplatz, Schützenhaus, Abtei): hinter ihm führt kein Weg entlang. */
   /** Laut (Laacher: nicht nah an der Abtei); braucht Moor nah; macht eigene Wege schneller (Römerstraße, Vennbahn). */
   laut: boolean; amMoor: boolean; schnellweg: { radius: number; prozent: number; bahn: boolean } | null;
 }

@@ -32,6 +32,8 @@ export class Stage {
   private gegen: THREE.DirectionalLight;
   private grundDunst = new THREE.Color('#d3dccf');
   private tmp = new THREE.Color();
+  /** Bodenfarbe des Halbkugellichts am Tag (nachts violett gemischt). */
+  private hemiBoden = new THREE.Color();
   private ton1 = new THREE.Color();
   private stimmungSig = '';
   private breite = 0;
@@ -49,7 +51,7 @@ export class Stage {
     container.appendChild(this.renderer.domElement);
     this.buch = new Buchpass(this.renderer);
     this.buch.an = q !== 'niedrig';
-    this.buch.qualitaet(this.quali.ao, this.quali.glanz);
+    this.buch.qualitaet(this.quali.ao, this.quali.glanz, this.quali.leuchten);
 
     this.scene.background = this.fogColor;
     this.scene.fog = new THREE.Fog(this.fogColor, 4000, 30000);
@@ -69,6 +71,7 @@ export class Stage {
     this.scene.add(this.sun, this.sun.target);
     // Himmel kühl, Boden warm: weiche, farbige Schatten wie gemalt; Gegenlicht für runde Formen
     this.hemi = new THREE.HemisphereLight('#d6e6f0', '#9a8058', 1.3);
+    this.hemiBoden.copy(this.hemi.groundColor);
     this.scene.add(this.hemi);
     const gegen = new THREE.DirectionalLight('#ffd2a0', 0.55);
     gegen.position.set(-this.sunDir.x, 0.35, -this.sunDir.z).multiplyScalar(1000);
@@ -114,7 +117,7 @@ export class Stage {
     if (sig === this.stimmungSig) return;
     this.stimmungSig = sig;
     const e = Math.sin(2 * Math.PI * (st.tag - 0.25));           // −1 Mitternacht … 1 Mittag
-    const tag = THREE.MathUtils.smoothstep(e, -0.12, 0.3);       // 0 Nacht … 1 Tag
+    const tag = THREE.MathUtils.smoothstep(e, -0.2, 0.2);       // 0 Nacht … 1 Tag
     const flach = 1 - THREE.MathUtils.smoothstep(e, 0.05, 0.55); // Morgen- und Abendlicht
     // Sonne (nachts der Mond auf der Gegenseite): Höhe 14° bis 48°, Richtung Ost (Morgen) über Süd nach West (Abend)
     const elev = THREE.MathUtils.degToRad(14 + 34 * Math.max(0, Math.abs(e)));
@@ -123,23 +126,24 @@ export class Stage {
     this.sunDir.set(Math.cos(elev) * Math.sin(azim), Math.sin(elev), -Math.cos(elev) * Math.cos(azim)).normalize();
     const licht = st.nachtLicht + (1 - st.nachtLicht) * tag;
     const wolke = 1 - 0.45 * st.wolken;
-    this.sun.intensity = 2.75 * (0.25 + 0.75 * tag) * licht * wolke;
+    this.sun.intensity = 2.75 * (0.12 + 0.88 * tag) * licht * wolke;
     this.sun.color.set('#ffe4bc').lerp(this.tmp.set('#ffa560'), flach * tag * 0.75).lerp(this.tmp.set('#9fb6e8'), 1 - tag);
     this.hemi.intensity = 1.3 * licht * (1 + 0.15 * st.wolken);
-    this.hemi.color.set('#d6e6f0').lerp(this.tmp.set('#7d8fbf'), (1 - tag) * 0.7);
+    this.hemi.color.set('#d6e6f0').lerp(this.tmp.set('#7f88d0'), (1 - tag) * 0.85);
+    // nachts auch das Licht von unten violett (sonst bleibt der Boden grau-oliv)
+    this.hemi.groundColor.copy(this.hemiBoden).lerp(this.tmp.set('#4a3a66'), (1 - tag) * 0.8);
     this.gegen.intensity = 0.55 * licht * wolke;
     this.gegen.position.set(-this.sunDir.x, 0.35, -this.sunDir.z).multiplyScalar(1000);
     // Dunst: grau bei Wolken, rosig in der Dämmerung, blau in der Nacht
     const dunst = this.fogColor;
     dunst.copy(this.grundDunst).lerp(this.tmp.set('#b8bfc4'), st.wolken * 0.8).lerp(this.tmp.set('#f0c8a8'), flach * tag * 0.35)
-      .lerp(this.tmp.set('#3a4766'), (1 - tag) * 0.75).lerp(this.tmp.set('#e2d2a6'), st.duerre * 0.4);
-    // Farbton im Bilderbuch-Pass
-    // Farbton im Bilderbuch-Pass: goldenes Morgen- und Abendlicht, blaue Nacht (gedämpft, aber spielbar), graue Regentage
+      .lerp(this.tmp.set('#4a3a72'), (1 - tag) * 0.75).lerp(this.tmp.set('#e2d2a6'), st.duerre * 0.4);
+        // Farbton im Bilderbuch-Pass: goldenes Morgen- und Abendlicht, violettblaue Nacht (gedämpft, aber gemütlich und spielbar), graue Regentage
     const gold = flach * tag, nacht = 1 - tag;
     this.buch.stimmung(
-      this.tmp.setRGB(1, 1, 1).lerp(this.ton1.setRGB(1.26, 0.9, 0.64), gold).lerp(this.ton1.setRGB(0.42, 0.52, 0.95), nacht * 0.92)
+      this.tmp.setRGB(1, 1, 1).lerp(this.ton1.setRGB(1.26, 0.9, 0.64), gold).lerp(this.ton1.setRGB(0.62, 0.58, 1.15), nacht * 0.95)
         .multiplyScalar(1 - 0.12 * st.wolken),
-      (1 - 0.3 * st.wolken - 0.15 * st.duerre) * (1 - 0.6 * nacht) * (1 + 0.15 * gold), st.duerre * 0.06 + gold * 0.05);
+      (1 - 0.3 * st.wolken - 0.15 * st.duerre) * (1 - 0.2 * nacht) * (1 + 0.2 * gold), st.duerre * 0.06 + gold * 0.05);
   }
 
   setShadows(on: boolean) {
@@ -159,7 +163,7 @@ export class Stage {
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, p.pixel));
     if (this.breite) { this.renderer.setSize(this.breite, this.hoehe); this.buch.groesse(this.breite, this.hoehe); }
     this.buch.an = q !== 'niedrig';
-    this.buch.qualitaet(p.ao, p.glanz);
+    this.buch.qualitaet(p.ao, p.glanz, p.leuchten);
   }
 
   /** Ein Bild: mit Bilderbuch-Pass (Linie, Farbkraft) oder direkt. */
