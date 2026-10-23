@@ -959,9 +959,10 @@ export class Simulation {
     const fa = this.fahnen.get(this.hexFahne[a]);
     if (!fa || fa.sp !== sp || fa.segmente.length >= FAHNE_MAX_SEGMENTE) return null;
     if (!this.zielFahneOk(z, sp)) return null;
-    const p = sucheWeg(k, a, z, (h, istZiel) => {
+    const p = sucheWeg(k, a, z, (h, istZiel, vorher) => {
+      if (this.durchsHaus(vorher, h)) return false;
       if (istZiel) return true;
-      return !this.hexFahne[h] && !this.hexGeb[h] && !this.hexWeg[h] && !this.fremdesLand(h, sp);
+      return !this.hexFahne[h] && !this.hexGeb[h] && !this.hexWeg[h] && !this.fremdesLand(h, sp) && !this.hinterGebaeude(h);
     }, WEG_MAX_SCHRITTE);
     return p ? p.map((h) => ({ q: k.qs[h], r: k.rs[h] })) : null;
   }
@@ -969,9 +970,10 @@ export class Simulation {
   /**
    * Teilstück eines selbst geführten Wegs: Pfad von `von` (muss keine Fahne tragen) nach `nach` (Fahne, Weg-Hex oder freier Hex,
    * der eine Fahne tragen kann). Zwischen den Enden nur freie Hexe, Hexe aus `belegt` (schon benutzte Hexe des offenen Wegs)
-   * sind gesperrt, das Ziel darf nicht darunter sein. Höchstens `maxSchritte` Schritte; null, wenn es keinen gibt.
+   * sind gesperrt, das Ziel darf nicht darunter sein. Höchstens `maxSchritte` Schritte; null, wenn es keinen gibt. `neuesHaus`: am
+   * Start entsteht gerade ein Gebäude (der Weg darf dort nicht nach hinten abgehen).
    */
-  wegAbschnitt(von: { q: number; r: number }, nach: { q: number; r: number }, belegt: { q: number; r: number }[], maxSchritte: number, sp = 0): { q: number; r: number }[] | null {
+  wegAbschnitt(von: { q: number; r: number }, nach: { q: number; r: number }, belegt: { q: number; r: number }[], maxSchritte: number, sp = 0, neuesHaus = false): { q: number; r: number }[] | null {
     const k = this.karte;
     const a = k.index(von.q, von.r), z = k.index(nach.q, nach.r);
     if (a < 0 || z < 0 || a === z || !k.begehbar[a] || !k.begehbar[z] || maxSchritte < 1) return null;
@@ -982,11 +984,39 @@ export class Simulation {
     const fa = this.fahnen.get(this.hexFahne[a]);
     if (fa && (fa.sp !== sp || fa.segmente.length >= FAHNE_MAX_SEGMENTE)) return null;
     if (!this.zielFahneOk(z, sp)) return null;
-    const p = sucheWeg(k, a, z, (h, istZiel) => {
+    const p = sucheWeg(k, a, z, (h, istZiel, vorher) => {
+      if (this.durchsHaus(vorher, h) || (neuesHaus && vorher === a && this.hinten(a, h))) return false;
       if (istZiel) return true;
-      return !this.hexFahne[h] && !this.hexGeb[h] && !this.hexWeg[h] && !gesperrt.has(h) && !this.fremdesLand(h, sp);
+      return !this.hexFahne[h] && !this.hexGeb[h] && !this.hexWeg[h] && !gesperrt.has(h) && !this.fremdesLand(h, sp) && !this.hinterGebaeude(h);
     }, Math.min(maxSchritte, WEG_MAX_SCHRITTE));
     return p ? p.map((h) => ({ q: k.qs[h], r: k.rs[h] })) : null;
+  }
+
+  /**
+   * Liegt das Hex hinter einem Platz mit Hof? Das Haus steht auf der Rückseite seines Hexes (die Fahne vorn, Richtung +r); Plätze mit
+   * Hof (data/buildings.json: hof, z. B. der Kirmesplatz) ragen in die beiden hinteren Nachbarn. Dort führt kein neuer Weg entlang,
+   * sonst liefe er über den Platz.
+   */
+  private hinterGebaeude(h: number): boolean {
+    const k = this.karte, q = k.qs[h], r = k.rs[h];
+    for (const n of [k.index(q, r + 1), k.index(q - 1, r + 1)]) {
+      if (n < 0 || !this.hexGeb[n]) continue;
+      const g = this.gebaeude.get(this.hexGeb[n]);
+      if (g && GEBAEUDE[g.typ].hof) return true;
+    }
+    return false;
+  }
+
+  /** Liegt n hinter dem Hex h (einer der beiden Nachbarn Richtung −r, dort steht das Haus)? */
+  private hinten(h: number, n: number): boolean {
+    const k = this.karte;
+    return k.rs[n] === k.rs[h] - 1 && (k.qs[n] === k.qs[h] || k.qs[n] === k.qs[h] + 1);
+  }
+
+  /** Schritt von a nach b durchs Haus: von der Fahne eines Gebäudes nach hinten hinaus bzw. von hinten an sie heran. */
+  private durchsHaus(a: number, b: number): boolean {
+    if (a < 0 || b < 0) return false;
+    return (this.hexGeb[a] !== 0 && this.hinten(a, b)) || (this.hexGeb[b] !== 0 && this.hinten(b, a));
   }
 
   /** Sicht für Spieler `ich`: die ganze Welt, dazu Dorf, freie Bewohner und Ereignisse dieses Spielers. */

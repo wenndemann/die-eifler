@@ -42,10 +42,10 @@ export class ZahlenHeap {
 const K = 1 << 20;
 
 /**
- * Kürzeste Laufzeit von `von` nach `nach` über Hexe, die `frei(hex, istZiel)` zulässt; höchstens `maxSchritte` Schritte.
+ * Kürzeste Laufzeit von `von` nach `nach` über Hexe, die `frei(hex, istZiel, vorher)` zulässt (`vorher`: das Hex davor); höchstens `maxSchritte` Schritte.
  * Gleichstand: kleinerer Index zuerst, bei gleichen Kosten der Vorgänger mit kleinerem Index. Ergebnis: Hex-Indizes.
  */
-export function sucheWeg(karte: SimKarte, von: number, nach: number, frei: (hex: number, istZiel: boolean) => boolean, maxSchritte: number): number[] | null {
+export function sucheWeg(karte: SimKarte, von: number, nach: number, frei: (hex: number, istZiel: boolean, vorher: number) => boolean, maxSchritte: number): number[] | null {
   if (von === nach) return null;
   const g = new Int32Array(karte.count).fill(-1);
   const elter = new Int32Array(karte.count).fill(-1);
@@ -66,7 +66,7 @@ export function sucheWeg(karte: SimKarte, von: number, nach: number, frei: (hex:
     }
     for (let k = 0; k < 6; k++) {
       const v = karte.nachbarn[u * 6 + k];
-      if (v < 0 || zu[v] || !karte.begehbar[v] || !frei(v, v === nach)) continue;
+      if (v < 0 || zu[v] || !karte.begehbar[v] || !frei(v, v === nach, u)) continue;
       const t = tiefe[u] + 1;
       if (t + karte.abstand(v, nach) > maxSchritte) continue;
       const ng = g[u] + karte.schritt(u, v);

@@ -50,7 +50,7 @@ function suchePlatz(sim: Simulation, s: SimSicht, sp: number, typ: string, nahe:
         const fahnen = eigene.slice().sort((a, b) => abstand(a, h) - abstand(b, h) || a.id - b.id);
         for (const f of fahnen.slice(0, 4)) {
           if (abstand(f, h) > 8) break;
-          const weg = sim.wegAbschnitt(h, f, [], 10, sp);
+          const weg = sim.wegAbschnitt(h, f, [], 10, sp, true);
           if (weg) return { h, weg };
         }
       }

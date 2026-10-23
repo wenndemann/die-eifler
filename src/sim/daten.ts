@@ -19,7 +19,7 @@ interface GebaeudeJson {
   zeiten?: { arbeit_s?: number; ruhe_s?: number };
   nahrung_plaetze?: number; ab_stufe?: number; einmalig?: boolean; taste?: string;
   saison?: string; werkzeug?: number; boten?: number; leistung?: string; fonds_menge?: number;
-  voelkchen?: string[]; modell?: string; am_wasser?: boolean; kein_planieren?: boolean;
+  voelkchen?: string[]; modell?: string; am_wasser?: boolean; kein_planieren?: boolean; hof?: boolean;
   laut?: boolean; am_moor?: boolean; schnellweg?: { radius?: number; prozent: number; bahn?: boolean };
 }
 
@@ -183,6 +183,8 @@ export interface GebaeudeTyp {
   fondsMenge: number;
   /** M11: nur diese Völkchen dürfen es bauen (leer = alle); Darstellung wie Gebäude `modell`; braucht Wasser nah; kein Planieren am Hang. */
   voelkchen: readonly string[]; modell: string; amWasser: boolean; keinPlanieren: boolean;
+  /** Platz mit Hof hinter dem Haus (Kirmesplatz, Schützenhaus, Abtei): hinter ihm führt kein Weg entlang. */
+  hof: boolean;
   /** Laut (Laacher: nicht nah an der Abtei); braucht Moor nah; macht eigene Wege schneller (Römerstraße, Vennbahn). */
   laut: boolean; amMoor: boolean; schnellweg: { radius: number; prozent: number; bahn: boolean } | null;
 }
@@ -235,7 +237,7 @@ function baue(j: GebaeudeJson): GebaeudeTyp {
     boten: j.boten ?? 0,
     leistung: j.leistung ?? '',
     fondsMenge: j.fonds_menge ?? 0,
-    voelkchen: j.voelkchen ?? [], modell: j.modell ?? '', amWasser: !!j.am_wasser, keinPlanieren: !!j.kein_planieren,
+    voelkchen: j.voelkchen ?? [], modell: j.modell ?? '', amWasser: !!j.am_wasser, keinPlanieren: !!j.kein_planieren, hof: !!j.hof,
     laut: !!j.laut, amMoor: !!j.am_moor,
     schnellweg: j.schnellweg ? { radius: j.schnellweg.radius ?? 0, prozent: j.schnellweg.prozent, bahn: !!j.schnellweg.bahn } : null,
   };

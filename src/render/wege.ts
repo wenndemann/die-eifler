@@ -9,6 +9,8 @@ import type { HexGrid } from '../map/hex';
 import type { SimSicht } from '../sim/typen';
 import { KULISSE_GLSL, KULISSE_FOG, kulisseUniforms } from './kulisse';
 import { WEG_BREITE } from './massstab';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { box } from './mockup';
 
 export interface Pkt { x: number; z: number }
 
@@ -180,8 +182,47 @@ ${KULISSE_GLSL}`)
   return { mat, farbe, zeit };
 }
 
+/** Sichtbare Mindestbreite je Gewässerart (Fluss, Bach, Kanal), wie rivers.ts. */
+const GEWAESSER_BREITE = [8, 3.5, 4];
+
+/**
+ * Kleine Holzbrücke (Länge entlang x, Mitte im Ursprung, Deck auf y = 0): leicht gewölbte Bohlen, Pfosten und Geländer, steinerne
+ * Widerlager an den Enden. Reine Darstellung (Wege über Bäche und Flüsse).
+ */
+export function brueckeGeometrie(laenge: number, breite: number): THREE.BufferGeometry {
+  const teile: THREE.BufferGeometry[] = [];
+  const n = Math.max(4, Math.round(laenge / 1.6)), bogen = Math.min(3, laenge * 0.09);
+  const hoehe = (x: number) => bogen * Math.cos((x / laenge) * Math.PI);
+  for (let i = 0; i < n; i++) {
+    const x = -laenge / 2 + (i + 0.5) * (laenge / n);
+    teile.push(box(laenge / n - 0.15, 0.55, breite, x, hoehe(x), 0, i % 2 ? '#8a6340' : '#7a5636', 0, -Math.sin((x / laenge) * Math.PI) * 0.25));
+  }
+  const pf = Math.max(2, Math.round(laenge / 4));
+  for (const sz of [1, -1]) {
+    for (let i = 0; i <= pf; i++) {
+      const x = -laenge / 2 + (i * laenge) / pf;
+      teile.push(box(0.5, 2.6, 0.5, x, hoehe(x) + 1.3, sz * (breite / 2 - 0.2), '#5a3c26'));
+    }
+    for (let i = 0; i < pf; i++) {
+      const x0 = -laenge / 2 + (i * laenge) / pf, x1 = x0 + laenge / pf, xm = (x0 + x1) / 2;
+      teile.push(box(laenge / pf + 0.3, 0.35, 0.35, xm, (hoehe(x0) + hoehe(x1)) / 2 + 2.5, sz * (breite / 2 - 0.2), '#6b4a2e', 0, -Math.atan2(hoehe(x1) - hoehe(x0), x1 - x0)));
+    }
+  }
+  for (const sx of [1, -1]) teile.push(box(3, 2.5, breite + 2, sx * (laenge / 2 + 0.8), -1.2, 0, '#9a948a'));
+  const g = mergeGeometries(teile)!;
+  g.computeVertexNormals();
+  return g;
+}
+
 export class Wege {
   readonly group = new THREE.Group();
+  /** Wege und Vorschau liegen in diesem Teil (in y überhöht wie das Gelände); Brücken stehen unskaliert daneben. */
+  private flach = new THREE.Group();
+  private bruecken = new THREE.Group();
+  private brueckenMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 });
+  /** Fluss- und Bachstücke im Raster (Zelle 64 m) zum schnellen Schneiden mit den Wegen. */
+  private flussRaster = new Map<string, { ax: number; az: number; bx: number; bz: number; breite: number }[]>();
+  private ex = 1;
   /** Optional: Bäume entlang neuer Wege entfernen (Trees.lichtePunkte). */
   wald: { lichtePunkte(p: { x: number; z: number }[], radius: number): number } | null = null;
   private gelichtet = new Set<string>();
@@ -207,12 +248,44 @@ export class Wege {
     this.fest.renderOrder = 5;
     this.fest.visible = false;
     this.fest.frustumCulled = false;
-    this.group.add(this.wege, this.vorschau, this.fest);
+    this.flach.add(this.wege, this.vorschau, this.fest);
+    this.group.add(this.flach, this.bruecken);
+    for (const r of map.rivers) {
+      const breite = Math.max(r.w, GEWAESSER_BREITE[r.k] ?? 4);
+      for (let i = 0; i + 5 < r.p.length; i += 3) {
+        const st = { ax: r.p[i], az: r.p[i + 1], bx: r.p[i + 3], bz: r.p[i + 4], breite };
+        const zellen = new Set<string>();
+        for (const [x, z] of [[st.ax, st.az], [st.bx, st.bz], [(st.ax + st.bx) / 2, (st.az + st.bz) / 2]]) zellen.add(`${Math.floor(x / 64)},${Math.floor(z / 64)}`);
+        for (const k of zellen) (this.flussRaster.get(k) ?? this.flussRaster.set(k, []).get(k)!).push(st);
+      }
+    }
     this.setExaggeration(ex);
   }
 
   setExaggeration(ex: number) {
-    this.group.scale.y = ex;
+    this.flach.scale.y = ex;
+    if (ex !== this.ex) { this.ex = ex; this.sig = ''; }
+  }
+
+  /** Wo schneidet die Weglinie einen Fluss oder Bach? Je Kreuzung Mitte, Richtung des Wegs und Breite des Gewässers. */
+  private kreuzungen(linie: { x: number; z: number }[]): { x: number; z: number; yaw: number; breite: number }[] {
+    const aus: { x: number; z: number; yaw: number; breite: number }[] = [];
+    for (let i = 0; i + 1 < linie.length; i++) {
+      const p = linie[i], q = linie[i + 1];
+      const k = `${Math.floor((p.x + q.x) / 2 / 64)},${Math.floor((p.z + q.z) / 2 / 64)}`;
+      for (const f of this.flussRaster.get(k) ?? []) {
+        // Schnitt zweier Strecken p–q und a–b
+        const rx = q.x - p.x, rz = q.z - p.z, sx = f.bx - f.ax, sz = f.bz - f.az;
+        const d = rx * sz - rz * sx;
+        if (Math.abs(d) < 1e-6) continue;
+        const t = ((f.ax - p.x) * sz - (f.az - p.z) * sx) / d, u = ((f.ax - p.x) * rz - (f.az - p.z) * rx) / d;
+        if (t < 0 || t > 1 || u < 0 || u > 1) continue;
+        const x = p.x + rx * t, z = p.z + rz * t;
+        if (aus.some((a) => Math.hypot(a.x - x, a.z - z) < 20)) continue;
+        aus.push({ x, z, yaw: Math.atan2(-rz, rx), breite: f.breite });
+      }
+    }
+    return aus;
   }
 
   private punkte(pfad: { q: number; r: number }[]): Pkt[] {
@@ -233,11 +306,19 @@ export class Wege {
     this.sig = sig;
     const b = neuerPuffer();
     const enden = new Set<string>();
+    const bruecken: THREE.BufferGeometry[] = [];
     for (const s of sicht.segmente) {
       if (s.pfad.length < 2) continue;
       const halb = (WEG_BREITE[0] + (WEG_BREITE[1] - WEG_BREITE[0]) * Math.min(1, s.verkehr / 255)) / 2;
       const linie = mittellinie(this.punkte(s.pfad));
       band(b, linie, halb, this.yOf);
+      // Brücke, wo der Weg einen Fluss oder Bach kreuzt: Deck über dem höheren Ufer
+      for (const k of this.kreuzungen(linie)) {
+        const laenge = k.breite + 16, cx = Math.cos(k.yaw), cz = -Math.sin(k.yaw);
+        const ufer = Math.max(this.map.heightAt(k.x + cx * laenge / 2, k.z + cz * laenge / 2), this.map.heightAt(k.x - cx * laenge / 2, k.z - cz * laenge / 2));
+        const g = brueckeGeometrie(laenge, halb * 2 + 1.5).rotateY(k.yaw).translate(k.x, (ufer - this.base) * this.ex + 0.8, k.z);
+        bruecken.push(g);
+      }
       const gk = `${s.id}:${s.pfad.length}`;
       if (this.wald && !this.gelichtet.has(gk)) {
         this.gelichtet.add(gk);
@@ -254,7 +335,18 @@ export class Wege {
     this.wege.geometry.dispose();
     this.wege.geometry = geometrie(b);
     this.wege.visible = b.idx.length > 0;
+    for (const m of this.bruecken.children as THREE.Mesh[]) m.geometry.dispose();
+    this.bruecken.clear();
+    if (bruecken.length) {
+      const m = new THREE.Mesh(mergeGeometries(bruecken)!, this.brueckenMat);
+      m.castShadow = m.receiveShadow = true;
+      this.bruecken.add(m);
+    }
+    this.anzahlBruecken = bruecken.length;
   }
+
+  /** Zahl der Brücken (Prüfskripte, Tests). */
+  anzahlBruecken = 0;
 
   /**
    * Vorschau beim Wegbau: `pfad` ist das vorläufige Stück (gestrichelt, rot wenn ungültig), `fest` das schon gelegte Stück

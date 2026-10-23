@@ -105,6 +105,31 @@ describe('wegAbschnitt (Simulation)', () => {
     expect(a.some((h) => h.q === 4 && h.r === 0)).toBe(false);
   });
 
+  it('kein Weg von der Fahne nach hinten durchs Haus; hinter einem Platz mit Hof (Kirmesplatz) kein Weg', () => {
+    const sim = neuSim();
+    sim.befehl(sim.tick, 0, { art: 'gebaeude', typ: 'holzfaeller', q: 4, r: 0 });
+    lauf(sim, 1);
+    // hinter dem Haus (Richtung −r) liegen (4, −1) und (5, −1): vom Gebäude aus kein direkter Schritt dorthin
+    const nachHinten = sim.wegAbschnitt({ q: 4, r: 0 }, { q: 4, r: -3 }, [], 60)!;
+    expect(nachHinten).not.toBeNull();
+    const erster = nachHinten[1];
+    expect(erster.r === -1 && (erster.q === 4 || erster.q === 5)).toBe(false);
+    // neues Haus am Start (Bot, Vorschau): auch dort nicht nach hinten
+    const neu = sim.wegAbschnitt({ q: 0, r: 4 }, { q: 0, r: 1 }, [], 60, 0, true)!;
+    expect(neu[1].r === 3 && (neu[1].q === 0 || neu[1].q === 1)).toBe(false);
+    // Kirmesplatz: die beiden Hexe dahinter sind für Wege gesperrt
+    const sim3 = neuSim();
+    let k: { q: number; r: number } | null = null;
+    for (let r = 2; r <= 6 && !k; r++) for (let q = -4; q <= 6 && !k; q++) if (sim3.kannBauen('kirmesplatz', q, r)) k = { q, r };
+    expect(k).not.toBeNull();
+    sim3.befehl(sim3.tick, 0, { art: 'gebaeude', typ: 'kirmesplatz', q: k!.q, r: k!.r });
+    lauf(sim3, 1);
+    expect(sim3.sicht().gebaeude.some((g) => g.typ === 'kirmesplatz')).toBe(true);
+    const quer = sim3.wegAbschnitt({ q: k!.q - 3, r: k!.r - 1 }, { q: k!.q + 3, r: k!.r - 1 }, [], 60);
+    expect(quer).not.toBeNull();
+    expect(quer!.some((h) => h.r === k!.r - 1 && (h.q === k!.q || h.q === k!.q + 1))).toBe(false);
+  });
+
   it('Teilstücke zusammen ergeben einen baubaren Weg; ein Weg-Hex ist ein gültiges Ende', () => {
     const sim = neuSim();
     const w = new OffenerWeg();

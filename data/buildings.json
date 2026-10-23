@@ -604,7 +604,8 @@
    "gruppe": "Feste",
    "symbol": "🎡",
    "spruch": "Ohne Kirmes ist ein Dorf nur ein Haufen Häuser mit Meinung.",
-   "funktion": "kirmes",
+   "hof": true,
+      "funktion": "kirmes",
    "groesse": 2,
    "kosten": {
     "bretter": 4,
@@ -718,7 +719,8 @@
    "gruppe": "Feste",
    "symbol": "🎯",
    "spruch": "Einmal im Jahr wird auf den Vogel geschossen. Und danach auf die Theke.",
-   "funktion": "schuetzen",
+   "hof": true,
+      "funktion": "schuetzen",
    "groesse": 2,
    "kosten": {
     "bretter": 4,
@@ -1554,7 +1556,8 @@
    "gruppe": "Spezialität",
    "symbol": "⛪",
    "spruch": "Die Mönche beten. Die Steinhauer bitte leise.",
-   "funktion": "zier",
+   "hof": true,
+      "funktion": "zier",
    "groesse": 3,
    "kosten": {
     "bretter": 6,
