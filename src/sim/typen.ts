@@ -175,6 +175,7 @@ export interface SichtTraeger {
  * - 'kein_baum'       Holzfäller findet im Radius keinen ausgewachsenen Baum
  * - 'kein_fels'       Steinbruch findet im Radius keinen Felsen mehr
  * - 'kein_platz'      Förster findet im Radius keinen freien Pflanzplatz
+ * - 'kein_feld'       Hof: im Radius kein reifes Feld und kein freier Platz zum Säen
  * - 'voll'            Output-Puffer voll (Rückstau), die Arbeit ruht
  * - 'ruht'            vom Spieler angehalten (Befehl 'ruhen')
  * - 'winter'          Feld ruht im Winter (Drehbuch 7.4)
@@ -185,7 +186,7 @@ export interface SichtTraeger {
  * - 'bereit'          fertig und nichts zu tun (Lager, Kirmesplatz ohne weitere Stufe)
  */
 export type GebaeudeZustand =
-  | 'baustelle' | 'wartet_material' | 'getrennt' | 'kein_arbeiter' | 'kein_baum' | 'kein_fels' | 'kein_platz' | 'voll'
+  | 'baustelle' | 'wartet_material' | 'getrennt' | 'kein_arbeiter' | 'kein_baum' | 'kein_fels' | 'kein_platz' | 'kein_feld' | 'voll'
   | 'kein_planierer' | 'planieren' | 'kein_bauarbeiter' | 'hunger' | 'wohnraum_voll' | 'fest'
   | 'ruht' | 'arbeitet' | 'bereit' | 'winter' | 'saat' | 'hochwasser' | 'kein_werkzeug'
   /** M10: steht auf fremdem Gebiet still; Finder sitzt in der Ausredenstube. */
@@ -287,6 +288,9 @@ export interface SichtNatur {
   felsArt: Uint8Array;
   /** Baumzahl je Hex beim Spielstart (statisch). */
   start?: Uint8Array;
+  /** Höfe und Felder: Feldart je Hex (0 keins, sonst 1 + Index in FELD_ARTEN) und Stadium (1 gesät, 2 wächst, 3 fast reif, 4 reif). */
+  feld?: Uint8Array;
+  feldStufe?: Uint8Array;
 }
 
 /** Bauarbeiter oder Planierer (Drehbuch 4.5), als Figur in der Welt. */

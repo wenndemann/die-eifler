@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { spieleAb } from '../src/sim/replay';
 import { Simulation } from '../src/sim/sim';
-import { ABNEHMER, ABNEHMER_ZAHL, STAT_MAX, STAT_TAKT, VERTEILUNG_JE_WARE, VERTEILUNG_STANDARD, WARE, WAREN } from '../src/sim/daten';
+import { ABNEHMER, GEBAEUDE, ABNEHMER_ZAHL, STAT_MAX, STAT_TAKT, VERTEILUNG_JE_WARE, VERTEILUNG_STANDARD, WARE, WAREN } from '../src/sim/daten';
 import { STAT_KOPF } from '../src/sim/typen';
 import type { Befehl } from '../src/sim/typen';
 import { kopie } from '../src/sim/stand';
@@ -108,7 +108,8 @@ describe('Gebäude ruhen lassen', () => {
     expect(geb(sim, 'kartoffelfeld')).toMatchObject({ ruht: true, zustand: 'ruht', erzeugt: 0 });
     expect(geb(sim, 'lager').ruht).toBe(false);
     tu(sim, { art: 'ruhen', id: feld, an: false });
-    lauf(sim, 60 * 20);
+    // der Bauer sät erst, das Feld muss reifen (Höfe und Felder)
+    lauf(sim, (60 + GEBAEUDE.kartoffelfeld.acker!.wachsenTicks / 20) * 20);
     const g = geb(sim, 'kartoffelfeld');
     expect(g.ruht).toBe(false);
     expect(g.erzeugt).toBeGreaterThan(0);

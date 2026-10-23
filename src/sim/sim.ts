@@ -5,8 +5,8 @@
 import { FLAG } from '../welt/format';
 import { Fnv2 } from '../welt/pruefsumme';
 import {
-  ARBEIT_MITTE_MAX, BAU_JE_WARE, BAUM_HEIDE_PROZENT, BAUM_MOOR_PROZENT, BAUM_WACHSEN, BAUM_WIESE_PROZENT, FAHNE_MAX_SEGMENTE,
-  FELS_LESE, FELS_LESE_START, FELS_STEIL, FELS_STEIN, FLAG_CAP, GEBAEUDE, KIRMES, LESE_PROZENT, NAHRUNG, NAHRUNG_REIHE, NAHRUNG_ZYKLUS,
+  ARBEIT_MITTE_MAX, BAU_JE_WARE, FELD_ARTEN, BAUM_HEIDE_PROZENT, BAUM_MOOR_PROZENT, BAUM_WACHSEN, BAUM_WIESE_PROZENT, FAHNE_MAX_SEGMENTE,
+  FELD_ALT, FELS_LESE, FELS_LESE_START, FELS_STEIL, FELS_STEIN, FLAG_CAP, GEBAEUDE, KIRMES, LESE_PROZENT, NAHRUNG, NAHRUNG_REIHE, NAHRUNG_ZYKLUS,
   NOTNAGEL_FREI_UNTER, NOTNAGEL_TICKS, NOTPLAETZE, planierTicks, PRIO_MAX, PRIO_MIN, PRIO_STANDARD,
   RODUNG_STAMM_MAX, START_BAUARBEITER, START_BEWOHNER, START_PLANIERER, START_STEIN_ABSTAND_MIN, START_STEIN_MIN, START_STEIN_RADIUS,
   START_VORRAT, STAT_MAX, STAT_TAKT, STEIL_GRAD, ABNEHMER_ZAHL, VERTEILUNG_JE_WARE, SUCHE_WARTE, TREE_MAX, UEBERGABE_TICKS, WARE, WAREN, WEG_MAX_SCHRITTE,
@@ -339,7 +339,18 @@ export class Simulation {
   private felsRes: Uint8Array;
   /** Hexe mit Jungbäumen (Einfüge-Reihenfolge). */
   private jungListe: number[] = [];
+  /**
+   * Höfe und Felder: Feldart je Hex (0 keins, sonst 1 + Index in FELD_ARTEN), Reifetick (0 = reif), Stadium für die Sicht (1..3 wächst,
+   * 4 reif), Reservierung des Bauern (wie bei den Bäumen) und die Hexe mit wachsenden Feldern (Einfüge-Reihenfolge).
+   */
+  private feld: Uint8Array;
+  private feldReif: Int32Array;
+  private feldStufe: Uint8Array;
+  private feldRes: Uint8Array;
+  private feldListe: number[] = [];
   private natRev = 0;
+  /** Nur beim Laden: der Spielstand stammt von vor „Höfe und Felder“. */
+  private altHoefeFelder = false;
   /** Gebaute Holzbrücken: Fluss-Hexe, über die ein Weg führen darf (im Spielstand und in der Prüfsumme, sortiert). */
   private bruecken = new Set<number>();
   private log: ProtokollEintrag[] = [];
@@ -432,6 +443,7 @@ export class Simulation {
     this.felsArt = new Uint8Array(n);
     this.baumRes = new Uint8Array(n);
     this.felsRes = new Uint8Array(n);
+    this.feld = new Uint8Array(n); this.feldReif = new Int32Array(n); this.feldStufe = new Uint8Array(n); this.feldRes = new Uint8Array(n);
     this.natureStart();
     this.starts.forEach((st, sp) => {
       const h = this.karte.index(st.q, st.r);
@@ -662,7 +674,7 @@ export class Simulation {
     for (const g of this.gebaeude.values()) this.gebaeudeTick(g);
     this.brueckenEinbauen();
     for (let sp = 0; sp < this.doerfer.length; sp++) this.dorfTick(sp);
-    if (t % 10 === 0) { this.baeumeWachsen(); this.zielePruefen(); }
+    if (t % 10 === 0) { this.baeumeWachsen(); this.felderWachsen(); this.zielePruefen(); }
     if (t % 4 === 0) { this.lagerPull(); for (let sp = 0; sp < this.doerfer.length; sp++) this.bauleuteSchicken(sp); }
     for (const b of [...this.bauleute.values()]) this.baumannSchritt(b);
     for (const b of [...this.boten.values()]) this.boteSchritt(b);
@@ -698,6 +710,8 @@ export class Simulation {
   stand(): SimStand {
     const jr: number[] = [];
     for (let i = 0; i < this.jungReif.length; i++) if (this.jungReif[i]) jr.push(i, this.jungReif[i]);
+    const fr: number[] = [];
+    for (let i = 0; i < this.feldReif.length; i++) if (this.feldReif[i]) fr.push(i, this.feldReif[i]);
     const zahl: Record<(typeof STAND_ZAHLEN)[number], number> = {
       tick: this._tick, rng: this.rng, naechsteId: this.naechsteId, ereignisNr: this.ereignisNr, befehlZahl: this.befehlZahl, natRev: this.natRev,
     };
@@ -712,6 +726,7 @@ export class Simulation {
       natur: {
         baum: inBase64(this.baum), jung: inBase64(this.jung), stufe: inBase64(this.stufe), fels: inBase64(this.fels), felsArt: inBase64(this.felsArt),
         baumRes: inBase64(this.baumRes), felsRes: inBase64(this.felsRes), jungReif: jr, jungListe: this.jungListe,
+        feld: inBase64(this.feld), feldStufe: inBase64(this.feldStufe), feldRes: inBase64(this.feldRes), feldReif: fr, feldListe: this.feldListe,
       },
       log: this.log, ausstehend: this.ausstehend, stat: this.stat, erzeugtJe: this.erzeugtJe,
       boten: [...this.boten.values()] as unknown as Record<string, unknown>[],
@@ -791,6 +806,17 @@ export class Simulation {
     this.jungReif.fill(0);
     for (let i = 0; i + 1 < nat.jungReif.length; i += 2) this.jungReif[nat.jungReif[i]] = nat.jungReif[i + 1];
     this.jungListe = nat.jungListe;
+    // Höfe und Felder; Spielstände von vorher haben keine Felder: jeder alte Feld-Hof bekommt ein paar reife Felder um sich
+    this.feldReif.fill(0);
+    if (typeof nat.feld === 'string') {
+      this.feld = ausBase64(nat.feld, n); this.feldStufe = ausBase64(nat.feldStufe ?? '', n); this.feldRes = ausBase64(nat.feldRes ?? '', n);
+      const fr = nat.feldReif ?? [];
+      for (let i = 0; i + 1 < fr.length; i += 2) this.feldReif[fr[i]] = fr[i + 1];
+      this.feldListe = nat.feldListe ?? [];
+    } else {
+      this.feld.fill(0); this.feldStufe.fill(0); this.feldRes.fill(0); this.feldListe = [];
+      this.altHoefeFelder = true;
+    }
     this.felsArtKopie = this.felsArt.slice();
     this.log = st.log; this.ausstehend = st.ausstehend; this.stat = st.stat;
     // Abgeleitetes neu
@@ -798,6 +824,7 @@ export class Simulation {
     for (const f of this.fahnen.values()) this.hexFahne[f.h] = f.id;
     for (const g of this.gebaeude.values()) this.hexGeb[g.h] = g.id;
     for (const s of this.segmente.values()) for (let i = 1; i < s.pfad.length - 1; i++) this.hexWeg[s.pfad[i]] = s.id;
+    if (this.altHoefeFelder) { this.altHoefeFelder = false; this.felderFuerAlteHoefe(); }
     // Holzbrücken; Spielstände von vorher: jeder Weg, der schon über einen Bach führt, hat seine Brücke
     this.bruecken = new Set(Array.isArray(st.bruecken) ? st.bruecken : []);
     if (!Array.isArray(st.bruecken)) {
@@ -943,9 +970,10 @@ export class Simulation {
    * für die Bauvorschau; (q, r) ist das Gebäude, `mitte` der Arbeitsmittelpunkt (ohne: das Gebäude). n = Menge je Hex, gut = im
    * inneren Ring (Abstand zum Mittelpunkt ≤ radiusGut), summe = Gesamtmenge. art 'keine' bei anderen Typen. Rechnet höchstens ~60 Hexe.
    */
-  arbeitsHexe(typ: string, q: number, r: number, mitte?: { q: number; r: number }): { art: 'baum' | 'fels' | 'platz' | 'keine'; hexe: { q: number; r: number; n: number; gut: boolean }[]; summe: number } {
+  arbeitsHexe(typ: string, q: number, r: number, mitte?: { q: number; r: number }): { art: 'baum' | 'fels' | 'platz' | 'feld' | 'keine'; hexe: { q: number; r: number; n: number; gut: boolean }[]; summe: number } {
     const t = typVon(typ), geb = this.karte.index(q, r);
-    const art = t?.funktion === 'holzfaeller' ? 'baum' : t?.funktion === 'steinbruch' ? 'fels' : t?.funktion === 'foerster' ? 'platz' : 'keine';
+    const art = t?.funktion === 'holzfaeller' ? 'baum' : t?.funktion === 'steinbruch' ? 'fels' : t?.funktion === 'foerster' ? 'platz' : t?.funktion === 'hof' ? 'feld' : 'keine';
+    const fa = t ? FELD_ARTEN.indexOf(t.id) + 1 : 0;
     const aus: { q: number; r: number; n: number; gut: boolean }[] = [];
     let summe = 0;
     if (!t || art === 'keine' || geb < 0) return { art, hexe: aus, summe };
@@ -953,7 +981,8 @@ export class Simulation {
     const c = m >= 0 ? m : geb;
     for (const x of this.hexeImRadius(c, t.radius, c !== geb)) {
       if (x === geb) continue;
-      const n = art === 'baum' ? this.baum[x] : art === 'fels' ? this.fels[x] : this.pflanzbar(x) ? TREE_MAX - this.baum[x] - this.jung[x] : 0;
+      const n = art === 'baum' ? this.baum[x] : art === 'fels' ? this.fels[x] : art === 'feld' ? (this.saebar(x) || this.feld[x] === fa ? 1 : 0)
+        : this.pflanzbar(x) ? TREE_MAX - this.baum[x] - this.jung[x] : 0;
       if (n > 0) { aus.push({ q: this.karte.qs[x], r: this.karte.rs[x], n, gut: this.karte.abstand(c, x) <= t.radiusGut }); summe += n; }
     }
     return { art, hexe: aus, summe };
@@ -1222,7 +1251,10 @@ export class Simulation {
   /** Bäume und Felsen als Kopie; wird nur bei Änderung (rev) neu angelegt. */
   private naturSicht(): SichtNatur {
     if (!this.natCache || this.natCache.rev !== this.natRev) {
-      this.natCache = { rev: this.natRev, baum: this.baum.slice(), jung: this.jung.slice(), stufe: this.stufe.slice(), fels: this.fels.slice(), felsArt: this.felsArtKopie, start: this.baumStartKopie };
+      this.natCache = {
+        rev: this.natRev, baum: this.baum.slice(), jung: this.jung.slice(), stufe: this.stufe.slice(), fels: this.fels.slice(), felsArt: this.felsArtKopie, start: this.baumStartKopie,
+        feld: this.feld.slice(), feldStufe: this.feldStufe.slice(),
+      };
     }
     return this.natCache;
   }
@@ -1289,7 +1321,7 @@ export class Simulation {
     if (t.funktion === 'erzeuger') return g.ausgang[t.ausgangWare] >= t.ausgangMax ? 'voll' : 'arbeitet';
     if (g.ph === PH_SUCHE) {
       if (t.ausgangMax > 0 && g.ausgang[t.ausgangWare] >= t.ausgangMax) return 'voll';
-      if (g.leer) return t.funktion === 'holzfaeller' ? 'kein_baum' : t.funktion === 'steinbruch' ? 'kein_fels' : 'kein_platz';
+      if (g.leer) return t.funktion === 'holzfaeller' ? 'kein_baum' : t.funktion === 'steinbruch' ? 'kein_fels' : t.funktion === 'hof' ? 'kein_feld' : 'kein_platz';
     }
     return 'arbeitet';
   }
@@ -1347,7 +1379,7 @@ export class Simulation {
       traegerJe[t.sp]++;
       if (this.segmente.get(t.seg)?.sp !== t.sp) fehler.push(`Träger ${t.id}: Segment eines anderen Spielers`);
     }
-    const bRes = new Map<number, number>(), fRes = new Map<number, number>();
+    const bRes = new Map<number, number>(), fRes = new Map<number, number>(), feRes = new Map<number, number>();
     for (const g of this.gebaeude.values()) {
       const t = GEBAEUDE[g.typ];
       for (let a = 0; a < WAREN.length; a++) {
@@ -1364,6 +1396,7 @@ export class Simulation {
       if (g.ar && g.zh >= 0 && (g.ph === PH_HIN || g.ph === PH_ARBEIT)) {
         if (t.funktion === 'holzfaeller') bRes.set(g.zh, (bRes.get(g.zh) ?? 0) + 1);
         if (t.funktion === 'steinbruch') fRes.set(g.zh, (fRes.get(g.zh) ?? 0) + 1);
+        if (t.funktion === 'hof') feRes.set(g.zh, (feRes.get(g.zh) ?? 0) + 1);
       }
       if (g.prio < PRIO_MIN || g.prio > PRIO_MAX) fehler.push(`Gebäude ${g.id}: Priorität ${g.prio}`);
       if (t.nahrungPlaetze && summe(g.puffer) > t.nahrungPlaetze) fehler.push(`Gebäude ${g.id}: zu viel Essen`);
@@ -1408,6 +1441,10 @@ export class Simulation {
     for (let i = 0; i < this.karte.count; i++) {
       if ((bRes.get(i) ?? 0) !== this.baumRes[i]) fehler.push(`Hex ${i}: Baum-Reservierung ${this.baumRes[i]} statt ${bRes.get(i) ?? 0}`);
       if ((fRes.get(i) ?? 0) !== this.felsRes[i]) fehler.push(`Hex ${i}: Fels-Reservierung ${this.felsRes[i]} statt ${fRes.get(i) ?? 0}`);
+      if ((feRes.get(i) ?? 0) !== this.feldRes[i]) fehler.push(`Hex ${i}: Feld-Reservierung ${this.feldRes[i]} statt ${feRes.get(i) ?? 0}`);
+      if (this.feld[i] && (this.hexFahne[i] || this.hexGeb[i] || this.hexWeg[i] || this.baum[i] || this.jung[i])) fehler.push(`Hex ${i}: Feld auf belegtem Hex`);
+      if (this.feld[i] > FELD_ARTEN.length) fehler.push(`Hex ${i}: unbekannte Feldart ${this.feld[i]}`);
+      if (!this.feld[i] && this.feldReif[i]) fehler.push(`Hex ${i}: Reifezeit ohne Feld`);
       if (this.baum[i] + this.jung[i] > TREE_MAX) fehler.push(`Hex ${i}: zu viele Bäume`);
       if ((this.hexFahne[i] || this.hexGeb[i] || this.hexWeg[i]) && (this.baum[i] || this.jung[i])) fehler.push(`Hex ${i}: Bäume auf belegtem Hex`);
       let slots = 0;
@@ -1469,10 +1506,18 @@ export class Simulation {
         const v = this.jungReif[i];
         if (v) { n.byte(i); n.byte(i >>> 8); n.byte(i >>> 16); n.byte(v); n.byte(v >>> 8); n.byte(v >>> 16); }
       }
+      // Höfe und Felder: Feldart, Stadium und Reifetick je Feld-Hex
+      for (let i = 0; i < this.karte.count; i++) {
+        if (!this.feld[i]) continue;
+        const v = this.feldReif[i];
+        n.byte(i); n.byte(i >>> 8); n.byte(i >>> 16); n.byte(this.feld[i]); n.byte(this.feldStufe[i]); n.byte(v); n.byte(v >>> 8); n.byte(v >>> 16); n.byte(v >>> 24);
+      }
       this.natHash = { rev: this.natRev, hex: n.hex() };
     }
     f.text(this.natHash.hex);
     liste(this.jungListe);
+    liste(this.feldListe);
+    for (let i = 0; i < this.karte.count; i++) if (this.feldRes[i]) { w(i); w(this.feldRes[i]); }
     // M10: Regeln, Gebiet (nur bei Änderung neu gehasht), Orte, Lieferungen, Ende
     w(this.regeln.gebiet); f.text(this.regeln.ziel);
     w(this.besitzRev);
@@ -2066,6 +2111,8 @@ export class Simulation {
   private hexRaeumen(h: number): void {
     // Klippen und Lesesteine gehen beim Belegen verloren; ein Fels-Hex (Steinfeld) bleibt, wie er ist
     if (this.fels[h] && this.felsArt[h] !== FELS_FELS) { this.fels[h] = 0; this.natRev++; }
+    // ein Weg zertrampelt das Feld, Bauen räumt es (wie die Bäume)
+    if (this.feld[h]) { this.feld[h] = 0; this.feldReif[h] = 0; this.feldStufe[h] = 0; this.natRev++; }
     if (!this.baum[h] && !this.jung[h]) return;
     this.baum[h] = 0; this.jung[h] = 0; this.stufe[h] = 0;
     for (let j = 0; j < TREE_MAX; j++) this.jungReif[h * TREE_MAX + j] = 0;
@@ -2077,8 +2124,51 @@ export class Simulation {
     const k = this.karte, t = k.terrain[x];
     if (t !== 1 && t !== 2 && t !== 3) return false;
     if (k.flags[x] & FLAG.bahn) return false;
-    if (this.hexFahne[x] || this.hexGeb[x] || this.hexWeg[x] || this.fels[x]) return false;
+    if (this.hexFahne[x] || this.hexGeb[x] || this.hexWeg[x] || this.fels[x] || this.feld[x]) return false;
     return this.baum[x] + this.jung[x] < TREE_MAX;
+  }
+
+  /** Bauern-Platz (Höfe und Felder): wie ein Förster-Platz, aber ganz frei – kein Baum, kein Jungbaum, kein Feld. */
+  private saebar(x: number): boolean {
+    return this.pflanzbar(x) && !this.baum[x] && !this.jung[x];
+  }
+
+  /** Der Bauer sät Feldart `fa` (1 + Index in FELD_ARTEN); es reift nach der Wachstumszeit des Hofs. */
+  private saeen(x: number, fa: number): void {
+    const t = GEBAEUDE[FELD_ARTEN[fa - 1]];
+    this.feld[x] = fa; this.feldReif[x] = this._tick + Math.max(1, t.acker!.wachsenTicks); this.feldStufe[x] = 1;
+    if (!this.feldListe.includes(x)) this.feldListe.push(x);
+    this.natRev++;
+  }
+
+  /**
+   * Felder wachsen (alle 10 Ticks, wie die Jungbäume): reife bekommen Reifetick 0 und Stadium 4, sonst Stadium 1..3 nach dem Anteil
+   * der Wachstumszeit. Im Winter ruht das Wachstum (der Reifetick rückt mit).
+   */
+  private felderWachsen(): void {
+    if (!this.feldListe.length) return;
+    const t = this._tick, winter = this.jz === WINTER;
+    for (const x of this.feldListe) {
+      if (!this.feld[x] || !this.feldReif[x]) continue;
+      if (winter) { this.feldReif[x] += 10; continue; }
+      const dauer = Math.max(1, GEBAEUDE[FELD_ARTEN[this.feld[x] - 1]].acker!.wachsenTicks);
+      let st = 4;
+      if (this.feldReif[x] <= t) this.feldReif[x] = 0;
+      else st = Math.min(3, 1 + Math.floor((3 * Math.max(0, dauer - (this.feldReif[x] - t))) / dauer));
+      if (st !== this.feldStufe[x]) { this.feldStufe[x] = st; this.natRev++; }
+    }
+    this.feldListe = this.feldListe.filter((x) => this.feld[x] > 0 && this.feldReif[x] > 0);
+  }
+
+  /** Ältere Spielstände (vor Höfe und Felder): jeder Hof bekommt bis zu FELD_ALT reife Felder auf den nächsten freien Plätzen. */
+  private felderFuerAlteHoefe(): void {
+    for (const g of this.gebaeude.values()) {
+      const fa = FELD_ARTEN.indexOf(g.typ) + 1;
+      if (!fa || !g.fertig) continue;
+      const t = GEBAEUDE[g.typ];
+      const frei = this.arbeitsHexeVon(g, t).filter((x) => this.saebar(x)).sort((a, b) => this.karte.abstand(g.h, a) - this.karte.abstand(g.h, b) || a - b);
+      for (const x of frei.slice(0, FELD_ALT)) { this.feld[x] = fa; this.feldReif[x] = 0; this.feldStufe[x] = 4; this.natRev++; }
+    }
   }
 
   private pflanzen(x: number): void {
@@ -2373,6 +2463,7 @@ export class Simulation {
     if (g.zh >= 0 && (g.ph === PH_HIN || g.ph === PH_ARBEIT)) {
       if (t.funktion === 'holzfaeller' && this.baumRes[g.zh] > 0) this.baumRes[g.zh]--;
       if (t.funktion === 'steinbruch' && this.felsRes[g.zh] > 0) this.felsRes[g.zh]--;
+      if (t.funktion === 'hof' && this.feldRes[g.zh] > 0) this.feldRes[g.zh]--;
     }
   }
 
@@ -2690,7 +2781,9 @@ export class Simulation {
     // Wind, Dürre, Missernte und Frieren bremsen, Ernte und Regen auf den Feldern treiben an
     let extra = false;
     if (t.arbeiter && t.funktion !== 'schaenke') {
-      if (this.stillstand(g, t)) { if (t.funktion === 'erzeuger') g.arbeit = 0; return; }
+      // Höfe: der Bauer geht zu Ende, was er angefangen hat, und sät in der Saatzeit (laeuferTick)
+      const still = this.stillstand(g, t);
+      if (still && !(t.funktion === 'hof' && (still === 'saat' || g.ph !== PH_SUCHE))) { if (t.funktion === 'erzeuger') g.arbeit = 0; return; }
       const p = this.tempoProzent(g, t);
       if (p < 0 && this.bremst(-p, g.id)) return;
       extra = this.schub(p, g.id);
@@ -2698,7 +2791,7 @@ export class Simulation {
     // Ahrtaler: während der Feste ruht die Arbeit
     if (t.arbeiter && this.festPause(g.sp)) return;
     switch (t.funktion) {
-      case 'holzfaeller': case 'steinbruch': case 'foerster': this.laeuferTick(g, t); break;
+      case 'holzfaeller': case 'steinbruch': case 'foerster': case 'hof': this.laeuferTick(g, t); break;
       case 'hecke': if (!this.heckeGross(g)) g.zeit++; break;
       case 'maijungen': {
         // Junggesellenverein: aus einem freien Bewohner und Landbier wird ein Maijunge
@@ -2823,6 +2916,37 @@ export class Simulation {
     return wege.length ? wege[this.zufall(wege.length)] : null;
   }
 
+  /** Saatzeit: die ersten SAAT_TICKS des Frühjahrs (nicht im allerersten). */
+  private inSaat(): boolean {
+    return this.jz === 0 && jahrVon(this._tick) > 0 && inJahreszeit(this._tick) < SAAT_TICKS;
+  }
+
+  /**
+   * Bauer (Höfe und Felder): erntet das nächste reife Feld seiner Art (wie der Holzfäller den nächsten Baum), sonst sät er auf einem
+   * zufälligen freien Platz (wie der Förster). In der Saatzeit wird nur gesät. Samt Gehweg, oder null.
+   */
+  private sucheFeld(g: Gebaeude, t: GebaeudeTyp): number[] | null {
+    const fa = FELD_ARTEN.indexOf(t.id) + 1;
+    if (!this.inSaat()) {
+      let best: number[] | null = null, bk = Infinity, bi = 0;
+      for (const x of this.arbeitsHexeVon(g, t)) {
+        if (this.feld[x] !== fa || this.feldReif[x] || this.feldRes[x]) continue;
+        const weg = this.gehPfad(g.h, x);
+        if (!weg) continue;
+        const kosten = this.karte.pfadKosten(weg);
+        if (kosten < bk || (kosten === bk && x < bi)) { best = weg; bk = kosten; bi = x; }
+      }
+      if (best) return best;
+    }
+    const wege: number[][] = [];
+    for (const x of this.arbeitsHexeVon(g, t)) {
+      if (!this.saebar(x) || this.feldRes[x]) continue;
+      const weg = this.gehPfad(g.h, x);
+      if (weg) wege.push(weg);
+    }
+    return wege.length ? wege[this.zufall(wege.length)] : null;
+  }
+
   private laeuferTick(g: Gebaeude, t: GebaeudeTyp): void {
     const k = this.karte;
     switch (g.ph) {
@@ -2830,12 +2954,13 @@ export class Simulation {
         if (t.ausgangMax > 0 && g.ausgang[t.ausgangWare] >= t.ausgangMax) return; // Rückstau: Arbeit ruht
         if (g.ruht) return; // angehalten: der Arbeiter bleibt an der Hütte
         if (g.pt > 0) { g.pt--; return; }
-        const weg = t.funktion === 'foerster' ? this.suchePflanzplatz(g, t) : this.sucheRessource(g, t);
+        const weg = t.funktion === 'foerster' ? this.suchePflanzplatz(g, t) : t.funktion === 'hof' ? this.sucheFeld(g, t) : this.sucheRessource(g, t);
         if (!weg) { g.leer = 1; g.pt = SUCHE_WARTE; return; }
         g.leer = 0;
         g.weg = weg; g.zh = weg[weg.length - 1];
         if (t.funktion === 'holzfaeller') this.baumRes[g.zh]++;
         else if (t.funktion === 'steinbruch') this.felsRes[g.zh]++;
+        else if (t.funktion === 'hof') this.feldRes[g.zh]++;
         g.wi = 0; g.pt = 0; g.pd = k.schritt(weg[0], weg[1]); g.ph = PH_HIN;
         return;
       }
@@ -2857,6 +2982,13 @@ export class Simulation {
         } else if (t.funktion === 'steinbruch') {
           if (this.felsRes[x] > 0) this.felsRes[x]--;
           if (this.fels[x] > 0) { this.fels[x]--; this.natRev++; g.traegt = t.ausgangWare; }
+        } else if (t.funktion === 'hof') {
+          // reifes Feld der eigenen Art: ernten (das Hex wird wieder frei); sonst auf freiem Platz säen
+          const fa = FELD_ARTEN.indexOf(t.id) + 1;
+          if (this.feldRes[x] > 0) this.feldRes[x]--;
+          if (this.feld[x] === fa && !this.feldReif[x]) {
+            this.feld[x] = 0; this.feldStufe[x] = 0; this.natRev++; g.traegt = t.ausgangWare;
+          } else if (this.saebar(x)) this.saeen(x, fa);
         } else if (this.pflanzbar(x)) this.pflanzen(x);
         g.ph = PH_ZURUECK; g.pt = 0; g.wi = g.weg.length - 1; g.pd = k.schritt(g.weg[g.wi], g.weg[g.wi - 1]);
         return;
@@ -2866,7 +2998,11 @@ export class Simulation {
         if (g.pt < g.pd) return;
         g.pt = 0; g.wi--;
         if (g.wi <= 0) {
-          if (g.traegt >= 0) { this.produziert(g, g.traegt); g.traegt = -1; }
+          if (g.traegt >= 0) {
+            const n = t.acker ? Math.max(1, Math.min(t.acker.ernte, t.ausgangMax - g.ausgang[g.traegt])) : 1;
+            for (let i = 0; i < n; i++) this.produziert(g, g.traegt);
+            g.traegt = -1;
+          }
           g.weg = []; g.zh = -1; g.ph = PH_RUHE; g.pd = t.ruheTicks;
         } else g.pd = k.schritt(g.weg[g.wi], g.weg[g.wi - 1]);
         return;

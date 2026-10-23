@@ -3,9 +3,10 @@
  "jahr_min": 60,
  "jahreszeiten": ["Frühjahr", "Sommer", "Herbst", "Winter"],
  "feld": {
-  "hinweis": "Gebäude mit 'saison': 'feld' (buildings.json): im Frühjahr die ersten 'saat_s' Sekunden Aussaat ohne Ertrag (nicht im allerersten Frühjahr), im Herbst Ernte 'ernte_prozent' schneller, im Winter Ruhe.",
+  "hinweis": "Gebäude mit 'saison': 'feld' (buildings.json): im Frühjahr die ersten 'saat_s' Sekunden Aussaat ohne Ertrag (nicht im allerersten Frühjahr), im Herbst Ernte 'ernte_prozent' schneller, im Winter Ruhe. Höfe (funktion 'hof'): der Bauer sät in der Aussaat nur, sonst erntet er zuerst reife Felder; im Winter ruht er und die Felder wachsen nicht. Spielstände von vor den Höfen: jeder Hof bekommt 'alte_hoefe_felder' reife Felder auf den nächsten freien Plätzen.",
   "saat_s": 120,
-  "ernte_prozent": 50
+  "ernte_prozent": 50,
+  "alte_hoefe_felder": 3
  },
  "winter": {
   "hinweis": "Wintervorrat: Im Winter isst das Dorf alle 'essen_s' Sekunden je angefangene 'je_bewohner' Bewohner 1 Essen aus dem Lager (einfaches zuerst). Fehlt es, frieren die Leute bis zur nächsten vollen Mahlzeit: Gebäude arbeiten 'frieren_prozent' langsamer, Wohnhäuser bringen keinen Nachwuchs. Niemand stirbt (Drehbuch 7.4). Schnee macht Träger und Bauleute 'schnee_prozent' langsamer.",

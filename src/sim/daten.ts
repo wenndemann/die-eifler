@@ -21,6 +21,7 @@ interface GebaeudeJson {
   saison?: string; werkzeug?: number; boten?: number; leistung?: string; fonds_menge?: number;
   voelkchen?: string[]; modell?: string; am_wasser?: boolean; kein_planieren?: boolean;
   laut?: boolean; am_moor?: boolean; schnellweg?: { radius?: number; prozent: number; bahn?: boolean };
+  acker?: { name: string; wachsen_s: number; ernte?: number };
 }
 
 const warenListe = (warenJson as { waren: WareJson[] }).waren;
@@ -133,7 +134,7 @@ export const PRIO_STANDARD = 2;
 export const SUCHE_WARTE = 2 * TICK_HZ;
 
 export type Funktion = 'lager' | 'wohnen' | 'holzfaeller' | 'foerster' | 'steinbruch' | 'erzeuger' | 'verarbeiter' | 'kirmes' | 'schaenke'
-  | 'finder' | 'wache' | 'schuetzen' | 'zier' | 'hecke' | 'boote' | 'schnellweg' | 'fonds' | 'maijungen' | 'funde';
+  | 'finder' | 'wache' | 'schuetzen' | 'zier' | 'hecke' | 'boote' | 'schnellweg' | 'fonds' | 'maijungen' | 'funde' | 'hof';
 
 export interface GebaeudeTyp {
   id: string; name: string; gruppe: string; symbol: string; spruch: string;
@@ -186,6 +187,8 @@ export interface GebaeudeTyp {
   /** Platz mit Hof hinter dem Haus (Kirmesplatz, Schützenhaus, Abtei): hinter ihm führt kein Weg entlang. */
   /** Laut (Laacher: nicht nah an der Abtei); braucht Moor nah; macht eigene Wege schneller (Römerstraße, Vennbahn). */
   laut: boolean; amMoor: boolean; schnellweg: { radius: number; prozent: number; bahn: boolean } | null;
+  /** Hof (Höfe und Felder): das Feld, das der Bauer im Umkreis sät und erntet – Name, Wachstum in Ticks, Ernte je Feld; sonst null. */
+  acker: { name: string; wachsenTicks: number; ernte: number } | null;
 }
 
 const ticks = (s: number | undefined) => Math.round((s ?? 0) * TICK_HZ);
@@ -239,6 +242,7 @@ function baue(j: GebaeudeJson): GebaeudeTyp {
     voelkchen: j.voelkchen ?? [], modell: j.modell ?? '', amWasser: !!j.am_wasser, keinPlanieren: !!j.kein_planieren,
     laut: !!j.laut, amMoor: !!j.am_moor,
     schnellweg: j.schnellweg ? { radius: j.schnellweg.radius ?? 0, prozent: j.schnellweg.prozent, bahn: !!j.schnellweg.bahn } : null,
+    acker: j.acker ? { name: j.acker.name, wachsenTicks: ticks(j.acker.wachsen_s), ernte: Math.max(1, Math.floor(j.acker.ernte ?? 1)) } : null,
   };
 }
 
@@ -253,6 +257,12 @@ const typen = (gebaeudeJson as unknown as { gebaeude: GebaeudeJson[] }).gebaeude
 export const GEBAEUDE: Readonly<Record<string, GebaeudeTyp>> = Object.fromEntries(typen.map((t) => [t.id, t]));
 /** Ids in der Reihenfolge der Datei (für das Baumenü). */
 export const GEBAEUDE_IDS: readonly string[] = typen.map((t) => t.id);
+
+/**
+ * Feldarten (Höfe und Felder): die Höfe in Datei-Reihenfolge; ein Feld-Hex trägt 1 + Index (0 = kein Feld). Neue Höfe nur hinten
+ * anfügen, sonst passen ältere Spielstände nicht mehr.
+ */
+export const FELD_ARTEN: readonly string[] = typen.filter((t) => t.funktion === 'hof').map((t) => t.id);
 
 /** Startvorrat des Lagers je Warenart (12 bretter, 8 stein, 8 kartoffeln). */
 export const START_VORRAT: readonly number[] = GEBAEUDE.lager.vorrat;
@@ -281,7 +291,7 @@ interface WetterJson {
 }
 const jahr = jahrJson as unknown as {
   jahr_min: number; jahreszeiten: string[];
-  feld: { saat_s: number; ernte_prozent: number };
+  feld: { saat_s: number; ernte_prozent: number; alte_hoefe_felder: number };
   winter: { essen_s: number; je_bewohner: number; frieren_prozent: number; schnee_prozent: number };
   wetter: {
     je_jahreszeit_min: number; je_jahreszeit_max: number; dauer_min_s: number; dauer_max_s: number; ankuendigung_s: number;
@@ -296,6 +306,8 @@ export const JAHRESZEITEN: readonly string[] = jahr.jahreszeiten;
 export const WINTER = 3;
 export const SAAT_TICKS = sek(jahr.feld.saat_s);
 export const ERNTE_PROZENT = jahr.feld.ernte_prozent;
+/** Höfe und Felder: so viele reife Felder bekommt ein Hof aus einem älteren Spielstand. */
+export const FELD_ALT = jahr.feld.alte_hoefe_felder;
 export const WINTER_ESSEN_TICKS = sek(jahr.winter.essen_s);
 export const WINTER_JE_BEWOHNER = Math.max(1, jahr.winter.je_bewohner);
 export const FRIEREN_PROZENT = jahr.winter.frieren_prozent;

@@ -492,6 +492,41 @@ describe('Gleichschritt', () => {
     expect(sim(r, 1).pruefsumme()).toBe(sim(r, 0).pruefsumme());
   });
 
+  it('Höfe und Felder im Gleichschritt: säen, wachsen, ernten, Weg zertrampelt ein Feld – bei allen gleich, auch nach dem Neuladen', () => {
+    const r = runde();
+    r.lauf(1000);
+    p(r, 0).setzeTempo(3);
+    p(r, 0).befehl({ art: 'gebaeude', typ: 'kartoffelfeld', q: 0, r: 4 });
+    p(r, 0).befehl({ art: 'weg', pfad: gerade(0, 0, 5, 4) });
+    p(r, 1).befehl({ art: 'gebaeude', typ: 'kartoffelfeld', q: -6, r: -4 });
+    p(r, 1).befehl({ art: 'weg', pfad: gerade(-6, 0, 2, 4) });
+    r.lauf(60_000);
+    // Spieler 1 lädt neu, während die Felder wachsen
+    r.trenne(1);
+    r.lauf(1000);
+    const neu = r.starte(1);
+    r.verbindeAlle();
+    while (!neu.sim || neu.angehalten) r.lauf(16);
+    r.lauf(30_000);
+    // Spieler 1 legt einen Weg über ein Feld (wenn eins am Rand liegt)
+    const s0 = sim(r, 1), k = s0.karte, nat = s0.sicht(1).natur;
+    const f = [...nat.feld!.keys()].find((i) => nat.feld![i] && k.abstand(i, k.index(-6, 0)) === 2 && s0.wegAbschnitt({ q: -6, r: 0 }, { q: k.qs[i], r: k.rs[i] }, [], 4, 1));
+    if (f !== undefined) p(r, 1).befehl({ art: 'weg', pfad: s0.wegAbschnitt({ q: -6, r: 0 }, { q: k.qs[f], r: k.rs[f] }, [], 4, 1)! });
+    r.lauf(30_000);
+    p(r, 0).pause(true);
+    r.lauf(3000);
+    r.gleichziehen();
+    for (const i of [0, 1]) expect(p(r, i).ereignisse.filter((e) => e.art === 'auseinander' || e.art === 'fehler')).toEqual([]);
+    const a = sim(r, 0), b = sim(r, 1);
+    expect(b.tick).toBe(a.tick);
+    expect(b.pruefsumme()).toBe(a.pruefsumme());
+    expect([...b.sicht(1).natur.feld!]).toEqual([...a.sicht(0).natur.feld!]);
+    expect(a.sicht(0).natur.feld!.some((v) => v > 0)).toBe(true);
+    if (f !== undefined) expect(a.sicht(0).natur.feld![f]).toBe(0);
+    for (const sp of [0, 1]) expect(a.sicht(sp).gebaeude.find((g) => g.sp === sp && g.typ === 'kartoffelfeld')!.erzeugt).toBeGreaterThan(0);
+    expect(a.pruefeInnenzustand()).toEqual([]);
+  });
+
   it('kaputte und fremde Nachrichten ändern nichts', () => {
     const r = runde();
     r.lauf(2000);
