@@ -905,7 +905,7 @@ function zaunStueck(x: number, z: number, lang: number): THREE.BufferGeometry[] 
 }
 
 /**
- * Kleinkram je Gebäudetyp, im Grundriss vorn (Stil Wimmelbuch, STIL.md §6): Hühner, Blumen, Wäsche, Brunnen, Vogelscheuche, Fässer,
+ * Kleinkram je Gebäudetyp, im Grundriss vorn (Stil Wimmelbuch, STIL.md §6): Hühner, Blumen, Wäsche, Brunnen, Vogelscheuche (an Höfen), Fässer,
  * Kürbisse, Bienenkörbe, Zaun. Etwas größer als echt, damit er aus der Spielhöhe zu sehen ist.
  */
 function kleinkram(typ: string, t: Typ): THREE.BufferGeometry[] {
@@ -918,7 +918,8 @@ function kleinkram(typ: string, t: Typ): THREE.BufferGeometry[] {
   } else if (typ === 'lager') {
     out.push(...beet(x0 - 3, 0), ...brunnen(x0 + 2, z1 + 1), ...huhn(vx, vz + 1, 0.3), ...huhn(vx - 2, vz + 0.4, 2.8), ...huhn(vx - 1, vz + 2.2, -0.6, '#b8743a'));
     out.push(...blumen(x1 - 1, -1, 6), ...fass(x1 - 4, z1 + 0.5), ...fass(x1 - 5.4, z1 + 0.8), ...kuerbisse(x0 + 5, z1 + 1.5));
-  } else if (t.grund[1] - t.grund[0] > 18) {
+  } else if (GEBAEUDE[typ]?.acker) {
+    // Höfe: Vogelscheuche (die Felder liegen ringsum)
     out.push(...vogelscheuche(x1 - 3, z1 - 3), ...blumen(x0 + 1, z1 - 1, 5), ...huhn(x0 + 3, z1 - 0.5, 1.2), ...kuerbisse(x0 + 4, z1 - 2.5));
   } else {
     out.push(...blumen(vx, vz, 6), ...fass(x0 + 1, z1 - 0.8), ...fass(x0 + 2.3, z1 - 0.3), ...huhn(x0 + 3, z1 - 0.2, 2.0), ...huhn(x0 + 4.4, z1 + 0.9, -0.8, '#b8743a'));
