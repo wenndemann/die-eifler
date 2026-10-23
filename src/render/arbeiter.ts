@@ -14,7 +14,7 @@ import { Kontaktschatten } from './kontakt';
 import { TRAEGER_H, WARE_TRAGEN, fernFaktor } from './massstab';
 import { WAREN_ANZAHL, warenGeometrie } from './waren';
 import leben from '../../data/leben.json';
-import { dorfLaune, FIGUR_ATTRIBUTE, figur, GESTE, material, type Tracht } from './traeger';
+import { dorfLaune, FIGUR_ATTRIBUTE, figur, GESTE, material, variante, type Tracht } from './traeger';
 
 type Beruf = 'holzfaeller' | 'foerster' | 'steinbruch' | 'bauarbeiter' | 'planierer';
 const BERUFE: Beruf[] = ['holzfaeller', 'foerster', 'steinbruch'];
@@ -62,7 +62,7 @@ function hammer(): THREE.BufferGeometry {
 const WERKZEUG: Record<Beruf, () => THREE.BufferGeometry> = { holzfaeller: axt, foerster: spaten, steinbruch: spitzhacke, bauarbeiter: hammer, planierer: spaten };
 
 /** Werkzeuge etwas größer als echt (um die Griffstelle): aus der Spielkamera als Axt, Spaten, Hacke erkennbar. */
-const WERKZEUG_GROSS = new THREE.Matrix4().makeScale(1.3, 1.3, 1.3);
+const WERKZEUG_GROSS = new THREE.Matrix4().makeScale(1.7, 1.7, 1.7);
 
 /** Schulter und Hand-Griffstelle (rechter Arm der Trägerfigur, traeger.ts). */
 const SCHULTER: [number, number, number] = [0.25, 0.54, 0];
@@ -195,7 +195,7 @@ export class Arbeiter {
     const cfg = ARBEIT[beruf];
     const arm = traegt ? 1 : arbeitet ? schlag(u, cfg.tief, cfg.hoch, cfg.aus) : 0;
     // Mimik: Laune des Dorfs im Gesicht; die Arme bleiben beim Werkzeug (keine Gesten, sonst schwebt es)
-    this.figuren[beruf].fuege(m, farbe.copy(HEMD[beruf]), [st.phase, arm, geht ? 1 : arbeitet ? 0.12 : 0.1, this.laune.laune, GESTE.keine]);
+    this.figuren[beruf].fuege(m, farbe.copy(HEMD[beruf]), [st.phase, arm, geht ? 1 : arbeitet ? 0.12 : 0.1, this.laune.laune, GESTE.keine, variante(id)]);
     this.kontakt.setze(x, y, z, 0.32 * sk);
     // Werkzeug
     if (!traegt) {

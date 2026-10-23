@@ -21,10 +21,11 @@ import { kurvenPunkt, type Pkt } from './wege';
 
 // ---- Modell (Einheitshöhe 1, vorn = +z). Teile: 0 Rumpf, 1/2 Bein links/rechts, 3/4 Arm links/rechts,
 // M12 Gesicht: 5 Brauen, 6 Mund, 7 Augen (Mimik im Vertex-Shader, Gelenk = Drehpunkt bzw. Mitte des Teils).
-interface Teil { geo: THREE.BufferGeometry; teil: number; gelenk: [number, number, number]; tint: number }
+// Gesichtsvariante (aVariante): 0 immer sichtbar, +n nur bei Variante n, −n nicht bei Variante n (Instanzwert aVar, VARIANTEN).
+interface Teil { geo: THREE.BufferGeometry; teil: number; gelenk: [number, number, number]; tint: number; variante: number }
 const teile: Teil[] = [];
-const add = (geo: THREE.BufferGeometry, teil = 0, gelenk: [number, number, number] = [0, 0, 0], tint = 0) =>
-  teile.push({ geo, teil, gelenk, tint });
+const add = (geo: THREE.BufferGeometry, teil = 0, gelenk: [number, number, number] = [0, 0, 0], tint = 0, variante = 0) =>
+  teile.push({ geo, teil, gelenk, tint, variante });
 
 /** Walze zwischen zwei Punkten. */
 function rohr(a: [number, number, number], b: [number, number, number], r1: number, r2: number, farbe: string, seg = 6) {
@@ -129,8 +130,8 @@ function hut(t: Tracht, nacken: (g: THREE.BufferGeometry) => THREE.BufferGeometr
 /** Großes Werkzeug je Beruf: in der rechten Hand (Teil 4, schwingt mit dem Arm), der Käselaib vor dem Bauch. Aufrecht, Kopf oben. */
 function werkzeug(w: Werkzeug): void {
   const sch: [number, number, number] = [0.25, 0.54, 0], hx = 0.36, hz = 0.16;
-  // gut 1,5-mal so groß wie echt (um die Hand) und etwas vor dem Körper: aus der Spielkamera als Werkzeug erkennbar
-  const gross = (g: THREE.BufferGeometry) => g.translate(-hx, -0.27, -hz).scale(1.5, 1.5, 1.5).translate(hx, 0.27, hz + 0.04);
+  // fast doppelt so groß wie echt (um die Hand) und etwas vor dem Körper: aus der Spielkamera als Werkzeug erkennbar
+  const gross = (g: THREE.BufferGeometry) => g.translate(-hx, -0.27, -hz).scale(1.9, 1.9, 1.9).translate(hx, 0.27, hz + 0.04);
   const stiel = (unten: number, oben: number, f = '#8a6340', r = 0.026) => add(gross(paint(new THREE.CylinderGeometry(r, r, oben - unten, 6).translate(hx, (oben + unten) / 2, hz), f)), 4, sch);
   const teil = (g: THREE.BufferGeometry, f: string) => add(gross(paint(g, f)), 4, sch);
   switch (w) {
@@ -198,7 +199,22 @@ export function figur(tracht: Tracht = TRAEGER_TRACHT): THREE.BufferGeometry {
     // Brauen: dick und beweglich (hoch bei Freude, innen runter bei Ärger)
     add(paint(new THREE.BoxGeometry(0.12, 0.028, 0.03).rotateZ(sx * 0.2).translate(sx * 0.085, 0.85, 0.215), '#5a3b26'), 5, [sx * 0.085, 0.85, 0.215]);
   }
-  if (!tracht.frau) add(paint(new THREE.BoxGeometry(0.2, 0.05, 0.03).translate(0, 0.655, 0.215), '#b5835a'));  // Schnauzer
+  // Schnauzer (nicht bei der Frau, beim Alten grau); Gesichtsvarianten: Vollbart, Brille, Frau mit Zöpfen, Alter mit grauem Bart
+  if (!tracht.frau) {
+    add(paint(new THREE.BoxGeometry(0.2, 0.05, 0.03).translate(0, 0.655, 0.215), '#b5835a'), 0, [0, 0, 0], 0, -VARIANTE.frau);
+    add(paint(new THREE.SphereGeometry(0.16, 10, 7).scale(1.05, 0.85, 0.7).translate(0, 0.605, 0.15), '#7a4a2a'), 0, [0, 0, 0], 0, VARIANTE.vollbart);
+    for (const sx of [-1, 1]) {
+      add(paint(new THREE.TorusGeometry(0.055, 0.012, 4, 12).translate(sx * 0.09, 0.785, 0.245), '#2a2a2a'), 0, [0, 0, 0], 0, VARIANTE.brille);
+    }
+    // der Alte: weißer Rauschebart
+    add(paint(new THREE.SphereGeometry(0.17, 10, 7).scale(1.1, 0.95, 0.75).translate(0, 0.6, 0.16), '#eeebe4'), 0, [0, 0, 0], 0, VARIANTE.alt);
+    add(paint(new THREE.BoxGeometry(0.06, 0.012, 0.012).translate(0, 0.79, 0.25), '#2a2a2a'), 0, [0, 0, 0], 0, VARIANTE.brille);
+    for (const sx of [-1, 1]) {
+      // Zöpfe seitlich vor den Schultern (von vorn gut zu sehen), mit roter Schleife
+      add(paint(new THREE.CylinderGeometry(0.055, 0.04, 0.36, 7).rotateZ(sx * 0.3).translate(sx * 0.27, 0.6, 0.06), '#c8843a'), 0, [0, 0, 0], 0, VARIANTE.frau);
+      add(paint(new THREE.SphereGeometry(0.05, 6, 5).translate(sx * 0.32, 0.43, 0.06), '#d6262a'), 0, [0, 0, 0], 0, VARIANTE.frau);
+    }
+  }
   else for (const sx of [-1, 1]) {
     // Zöpfe mit Schleife, Wimpern
     add(paint(new THREE.CylinderGeometry(0.045, 0.035, 0.32, 6).rotateZ(sx * 0.25).translate(sx * 0.24, 0.6, -0.08), '#b8743a'));
@@ -235,6 +251,7 @@ export function figur(tracht: Tracht = TRAEGER_TRACHT): THREE.BufferGeometry {
     g.setAttribute('aTeil', new THREE.BufferAttribute(new Float32Array(n).fill(t.teil), 1));
     g.setAttribute('aGelenk', new THREE.BufferAttribute(new Float32Array(n * 3).map((_, k) => t.gelenk[k % 3]), 3));
     g.setAttribute('aTint', new THREE.BufferAttribute(new Float32Array(n).fill(t.tint), 1));
+    g.setAttribute('aVariante', new THREE.BufferAttribute(new Float32Array(n).fill(t.variante), 1));
     return g;
   });
   return mergeGeometries(geos)!;
@@ -258,7 +275,14 @@ const SCHWER_A = WARE.stamm, SCHWER_B = WARE.stein;
 const TRACHT = ['#3f6fb5', '#b5463f', '#4f8a4a', '#d0a030', '#7a4fa0', '#3a8a8a', '#e0709a', '#c8642f'].map((c) => new THREE.Color(c));
 
 /** Instanz-Attribute der Figuren: Animation (Phase, Tragen, Laufen) und Mimik (Laune, Geste). */
-export const FIGUR_ATTRIBUTE = [{ name: 'aAnim', size: 3 }, { name: 'aMimik', size: 2 }];
+export const FIGUR_ATTRIBUTE = [{ name: 'aAnim', size: 3 }, { name: 'aMimik', size: 2 }, { name: 'aVar', size: 1 }];
+/** Gesichtsvarianten (sechster Wert der Figur-Attribute): 0 Schnauzer, 1 Vollbart, 2 Brille, 3 Frau mit Zöpfen, 4 Alter mit grauem Bart. */
+export const VARIANTE = { schnauzer: 0, vollbart: 1, brille: 2, frau: 3, alt: 4 } as const;
+/** Variante aus einer Id (fest je Figur): gut die Hälfte Schnauzer, sonst Bart, Brille, Frau, Alter. */
+export function variante(id: number): number {
+  const v = ((id * 7919) >>> 0) % 9;
+  return v < 3 ? 0 : v < 4 ? 1 : v < 5 ? 2 : v < 8 ? 3 : 4;
+}
 
 /** Gesten (aMimik.y). */
 export const GESTE = { keine: 0, winken: 1, jubeln: 2, schimpfen: 3, kratzen: 4, hand: 5 } as const;
@@ -280,12 +304,14 @@ export function material(): THREE.MeshStandardMaterial {
 gl_FragColor.rgb = min(gl_FragColor.rgb + vec3(1.0, 0.9, 0.72) * smoothstep(0.82, 0.97, 1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0)) * 0.14, vec3(1.0));`);
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', `#include <common>
-attribute float aTeil; attribute vec3 aGelenk; attribute float aTint; attribute vec3 aAnim; attribute vec2 aMimik;`)
+attribute float aTeil; attribute vec3 aGelenk; attribute float aTint; attribute vec3 aAnim; attribute vec2 aMimik; attribute float aVariante; attribute float aVar;`)
       .replace('#include <color_vertex>', `#include <color_vertex>
 #ifdef USE_INSTANCING_COLOR
 vColor.xyz = mix(color.xyz, color.xyz * instanceColor.xyz, aTint);
 #endif`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
+// Gesichtsvariante: nicht passende Teile auf einen Punkt im Kopf zusammenziehen (unsichtbar)
+if ((aVariante > 0.5 && abs(aVariante - aVar) > 0.5) || (aVariante < -0.5 && abs(-aVariante - aVar) < 0.5)) transformed = vec3(0.0, 0.7, 0.0);
 {
   float sw = sin(aAnim.x) * 0.75 * aAnim.z;
   float ang = 0.0, angZ = 0.0;
@@ -346,6 +372,8 @@ vColor.xyz = mix(color.xyz, color.xyz * instanceColor.xyz, aTint);
 }
 
 interface Zustand { phase: number; yaw: number; x: number; z: number; benutzt: number }
+/** Abstand in der Warteschlange (Anteil eines Wegstücks zwischen zwei Hexen, etwa eine Körperbreite). */
+const SCHLANGE = 0.14;
 interface Kante { pts: Pkt[]; i: number; rueck: boolean }
 
 export class Traeger {
@@ -420,9 +448,23 @@ export class Traeger {
     const dl = dorfLaune(sicht);
     // erst alle Plätze, dann das Gedränge auflösen (stehende Träger rücken auseinander und weichen den Meistern aus)
     const plaetze: Platz[] = [], laeuft: boolean[] = [];
-    for (const t of sicht.traeger) {
-      const f = Math.min(1, Math.max(0, (t.fortschritt + (t.tut === 'laeuft' ? alpha * t.schritt : 0)) / PROMILLE));
-      const a = this.ort(t.von, t.nach, f, this.tmpA);
+    // Wartende am selben Fleck stellen sich hintereinander entlang ihres Wegs auf (Schlange statt Knäuel)
+    const schlange = new Map<string, number>(), fs: number[] = [];
+    const reihe = [...sicht.traeger.keys()].sort((i, j) => sicht.traeger[i].id - sicht.traeger[j].id);
+    for (const i of reihe) {
+      const t = sicht.traeger[i];
+      let f = Math.min(1, Math.max(0, (t.fortschritt + (t.tut === 'laeuft' ? alpha * t.schritt : 0)) / PROMILLE));
+      if (t.tut !== 'laeuft') {
+        const h = f < 0.5 ? t.von : t.nach, key = `${h.q},${h.r}`;
+        const k = schlange.get(key) ?? 0;
+        schlange.set(key, k + 1);
+        f = Math.min(1, Math.max(0, f + (f < 0.5 ? 1 : -1) * k * SCHLANGE));
+      }
+      fs[i] = f;
+    }
+    for (let ti = 0; ti < sicht.traeger.length; ti++) {
+      const t = sicht.traeger[ti];
+      const a = this.ort(t.von, t.nach, fs[ti], this.tmpA);
       plaetze.push({ x: a.x, z: a.z, r: TRAEGER_H * 0.55, fest: false });
       laeuft.push(t.tut === 'laeuft');
     }
@@ -431,7 +473,7 @@ export class Traeger {
     for (const p of plaetze) traegerPlaetze.push(p);
     for (let ti = 0; ti < sicht.traeger.length; ti++) {
       const t = sicht.traeger[ti];
-      const f = Math.min(1, Math.max(0, (t.fortschritt + (t.tut === 'laeuft' ? alpha * t.schritt : 0)) / PROMILLE));
+      const f = fs[ti];
       const x = plaetze[ti].x, z = plaetze[ti].z;
       // Blickrichtung: Tangente der Kurve
       const f0 = Math.max(0, f - 0.04), f1 = Math.min(1, f + 0.04);
@@ -463,7 +505,7 @@ export class Traeger {
       const schwer = t.ware === SCHWER_A || t.ware === SCHWER_B;
       const laune = eigen ? (schwer && !dl.fest ? Math.min(dl.laune, -0.3) : dl.laune) : 0.2;
       const geste = t.tut === 'uebergibt' ? GESTE.winken : t.tut === 'wartet' ? (eigen && dl.fest ? GESTE.jubeln : t.id % 3 === 0 ? GESTE.kratzen : GESTE.keine) : GESTE.keine;
-      this.figuren.fuege(m, trachtFarbe(farbe, t.id, sicht.spieler[t.sp]?.voelkchen), [st.phase, trage, lauf ? 1 : t.tut === 'uebergibt' ? 0.35 : 0.1, laune, geste]);
+      this.figuren.fuege(m, trachtFarbe(farbe, t.id, sicht.spieler[t.sp]?.voelkchen), [st.phase, trage, lauf ? 1 : t.tut === 'uebergibt' ? 0.35 : 0.1, laune, geste, variante(t.id)]);
       this.kontakt.setze(x, y, z, 0.32 * sk);
       if (trage && t.ware < WAREN_ANZAHL) {
         // Ware über dem Kopf, wippt mit

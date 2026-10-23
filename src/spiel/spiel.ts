@@ -334,6 +334,7 @@ export class Spiel {
     this.grenzland.kamera = ctx.camera;
     this.leben = new LebenDarstellung(map, base, ex, (id, typ) => this.gebaeude.modellLage(id, typ));
     this.leben.kamera = ctx.camera;
+    this.leben.hexZuWelt = (q, r) => grid.toWorld({ q, r });
     this.gras = new Gras(map, grid, base, ex);
     this.wild = new Wild(map, grid, base, ex);
     this.deko = new Deko(map, grid, base, ex);

@@ -22,6 +22,18 @@ import { GEBAEUDE } from '../sim/daten';
 import { VOELKCHEN } from '../sim/voelkchen';
 
 const VOLK_DACH = new Map(VOELKCHEN.map((v) => [v.id, v.dach] as [string, string]));
+/** Häuser, die ganz in der regionalen Dachfarbe gedeckt sind; Werkstätten behalten ihre eigene Farbe (nur leicht regional getönt),
+ *  damit man sie aus der Übersicht unterscheidet (Gutachter: „alles das gleiche blaue Haus“). */
+const WOHNHAEUSER = new Set(['wohnhaus', 'lager', 'lagerhaus']);
+const dachCache = new Map<string, string>();
+export function dachFarbe(typId: string, regional: string | null): string | null {
+  const typ = modellTyp(typId);
+  if (!regional || WOHNHAEUSER.has(typ)) return regional;
+  const k = `${typ}|${regional}`;
+  let f = dachCache.get(k);
+  if (!f) { f = `#${new THREE.Color(TYPEN[typ]?.dach ?? regional).lerp(new THREE.Color(regional), 0.25).getHexString()}`; dachCache.set(k, f); }
+  return f;
+}
 import { HAUS_SKALE } from './massstab';
 import { hash } from './terrain';
 import type { Trees } from './trees';
@@ -154,7 +166,7 @@ const TYPEN: Record<string, Typ> = {
     },
   },
   holzfaeller: {
-    w: 9, d: 7, floors: 1, wand: '#d8b88a', dach: '#9b4a35', laden: '#b53a2c', skala: 1, hoehe: 9,
+    w: 9, d: 7, floors: 1, wand: '#d8b88a', dach: '#6f5a3a', laden: '#b53a2c', skala: 1, hoehe: 9,
     grund: [-6.5, 12, -4.5, 7],
     fertig() {
       const t = TYPEN.holzfaeller;
@@ -163,7 +175,9 @@ const TYPEN: Record<string, Typ> = {
         ...logPile(8, -1.5, 6).map((g) => g.translate(0, G, 0)), ...logPile(8, 3.2, 6).map((g) => g.translate(0, G, 0)),
         ...[0, 1, 2].map((i) => walze(0.45, 5, 8, G + 3 * 0.7 + 0.1 + i * 0, -0.3 + i * 0.9, HOLZ, 0, Math.PI / 2, 6)),
         // Hackklotz mit Axt
-        walze(0.9, 1, -6, G + 0.5, 5.2, '#8a6a48', 0, 0, 7), boxR(0.14, 1.9, 0.14, -6.2, G + 1.8, 5.2, HOLZ, 0, 0, 0.5), boxR(0.8, 0.5, 0.1, -5.7, G + 2.5, 5.2, '#c0c4c8', 0, 0, 0.5),
+        // groß und deutlich (Erkennungszeichen aus der Spielhöhe): dicker Klotz, langer Stiel, blankes Axtblatt
+        walze(1.4, 1.5, -6, G + 0.75, 5.2, '#8a6a48', 0, 0, 9), walze(1.42, 0.12, -6, G + 1.5, 5.2, '#d8b88a', 0, 0, 9),
+        boxR(0.3, 3.6, 0.3, -6.6, G + 3.0, 5.2, HOLZ, 0, 0, 0.45), boxR(1.7, 1.1, 0.22, -5.9, G + 4.2, 5.2, '#d8dce0', 0, 0, 0.45), boxR(0.5, 1.15, 0.3, -6.5, G + 4.5, 5.2, '#5a5d63', 0, 0, 0.45),
         // gefällte Stämme im Hof
         walze(0.45, 5.5, -1, G + 0.45, 7.5, '#8a6340', 0, Math.PI / 2, 6), walze(0.4, 4.8, 2.5, G + 0.4, 8.2, '#7a5636', 0, Math.PI / 2 + 0.2, 6)];
     },
@@ -201,6 +215,10 @@ const TYPEN: Record<string, Typ> = {
         boxR(0.4, 3.2, 0.4, sx + 2, G + 1.5, 0.2, HOLZ, 0, 0, 0.35), boxR(0.4, 3.2, 0.4, sx + 2, G + 1.5, 0.2, HOLZ, 0, 0, -0.35),
         walze(0.75, 6.4, sx, G + 2.5, 0.2, '#8a6340', 0, Math.PI / 2, 7), walze(0.7, 0.1, sx + 3.2, G + 2.5, 0.2, '#e0bf86', 0, Math.PI / 2, 7),
         ...(anker({ art: 'saege', x: sx - 0.3, y: G + 3.9, z: 0.2 }) ? [] : [boxR(0.12, 2.6, 2.2, sx - 0.3, G + 3.9, 0.2, '#cfd3d6')]), boxR(0.3, 0.3, 2.4, sx - 0.3, G + 5.3, 0.2, HOLZ),
+        // großes Kreissägeblatt am Giebel des Schuppens (Erkennungszeichen aus der Spielhöhe)
+        paint(new THREE.CylinderGeometry(1.7, 1.7, 0.18, 20).rotateX(Math.PI / 2).translate(sx, G + 6.2, 4.9), '#d8dce0'),
+        paint(new THREE.CylinderGeometry(0.5, 0.5, 0.26, 10).rotateX(Math.PI / 2).translate(sx, G + 6.2, 4.95), '#5a5d63'),
+        ...Array.from({ length: 12 }, (_, i) => paint(new THREE.ConeGeometry(0.22, 0.45, 4).rotateZ((i / 12) * Math.PI * 2).translate(sx + Math.sin((i / 12) * Math.PI * 2) * -1.85, G + 6.2 + Math.cos((i / 12) * Math.PI * 2) * 1.85, 4.9), '#b8bcc0')),
         // Wasserrad an der Giebelseite (dreht sich, wenn gesägt wird)
         ...radOderStatisch({ art: 'rad', x: -t.w / 2 - 0.8, y: G + 2.4, z: 0, r: 2.3, w: 0.8, achse: 'x' }),
         // Stämme und Bretter davor
@@ -1289,7 +1307,7 @@ export class Gebaeude {
       // am Hang zeigt die Baustelle bis zum Ende des Planierens nur den abgesteckten Grund
       const phase = g.planiert !== undefined && g.planiert < PROMILLE ? 1 : bauPhase(g.bau);
       // M11: Dach in der Farbe der regionalen Baustoffe des Völkchens
-      const dach = VOLK_DACH.get(sicht.spieler[g.sp]?.voelkchen ?? '') ?? null;
+      const dach = dachFarbe(modellTyp(g.typ), VOLK_DACH.get(sicht.spieler[g.sp]?.voelkchen ?? '') ?? null);
       const key = `${modellTyp(g.typ)}:${phase}:${dach ?? ''}`;
       let satz = this.saetze.get(key);
       if (!satz) {

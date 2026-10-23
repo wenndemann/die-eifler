@@ -7,7 +7,9 @@ import { LebenDarstellung } from '../src/render/leben';
 import { WILD_ARTEN, wildModelle } from '../src/render/wild';
 import { entzerren, type Platz } from '../src/render/gedraenge';
 import { fachwerk, ohneSchindeln } from '../src/render/mockup';
-import { figur, TRAEGER_TRACHT, type Tracht } from '../src/render/traeger';
+import { FIGUR_ATTRIBUTE, figur, TRAEGER_TRACHT, variante, VARIANTE, type Tracht } from '../src/render/traeger';
+import { Instanzen } from '../src/render/instanzen';
+import * as THREE from 'three';
 import { GEBAEUDE, GEBAEUDE_IDS } from '../src/sim/daten';
 import { Simulation } from '../src/sim/sim';
 import { baueTestKarte } from './sim-szenario';
@@ -100,6 +102,27 @@ describe('Lebendige Eifel', () => {
     }
   });
 
+  it('Figur-Attribute: Animation, Mimik und Gesichtsvariante landen je im richtigen Attribut (laufender Versatz)', () => {
+    const satz = new Instanzen(new THREE.Group(), figur(), new THREE.MeshBasicMaterial(), true, false, FIGUR_ATTRIBUTE, 4);
+    satz.beginne();
+    satz.fuege(new THREE.Matrix4(), new THREE.Color(), [1, 2, 3, 4, 5, VARIANTE.brille]);
+    const wert = (name: string) => [...(satz.geo.attributes[name].array as Float32Array).slice(0, (satz.geo.attributes[name] as THREE.BufferAttribute).itemSize)];
+    expect(wert('aAnim')).toEqual([1, 2, 3]);
+    expect(wert('aMimik')).toEqual([4, 5]);
+    expect(wert('aVar')).toEqual([VARIANTE.brille]);
+    // ohne Variante: 0 (Schnauzer)
+    satz.fuege(new THREE.Matrix4(), new THREE.Color(), [1, 2, 3, 4, 5]);
+    expect((satz.geo.attributes.aVar.array as Float32Array)[1]).toBe(0);
+  });
+
+  it('Gesichtsvarianten: fest je Id, alle fünf kommen vor, Schnauzer am häufigsten', () => {
+    const zahl = [0, 0, 0, 0, 0];
+    for (let id = 1; id <= 900; id++) zahl[variante(id)]++;
+    expect(variante(42)).toBe(variante(42));
+    for (const z of zahl) expect(z).toBeGreaterThan(50);
+    expect(zahl[VARIANTE.schnauzer]).toBe(Math.max(...zahl));
+  });
+
   it('Nacht aus der Tageszeit: Mittag hell, Mitternacht dunkel, weiche Dämmerung', () => {
     expect(LebenDarstellung.nacht(0.5)).toBe(0);
     expect(LebenDarstellung.nacht(0)).toBe(1);
@@ -109,7 +132,7 @@ describe('Lebendige Eifel', () => {
   });
 
   it('Werte in data/leben.json sind vollständig; die Darstellung ändert die Simulation nicht', () => {
-    for (const k of ['fern_m', 'rauch', 'dampf', 'tiere', 'voegel', 'fenster', 'wind', 'konfetti', 'feuer', 'gras', 'schild', 'berufe', 'meister', 'wild']) expect(leben).toHaveProperty(k);
+    for (const k of ['fern_m', 'rauch', 'dampf', 'tiere', 'voegel', 'fenster', 'wind', 'konfetti', 'feuer', 'gras', 'schild', 'berufe', 'meister', 'wild', 'laterne', 'fest']) expect(leben).toHaveProperty(k);
     expect(leben.gras.max).toBeGreaterThan(0);
     // reine Darstellung: Anker abfragen lässt Prüfsumme und Zustand der Simulation unberührt
     const sim = new Simulation(baueTestKarte(), 3, { q: 0, r: 0 });

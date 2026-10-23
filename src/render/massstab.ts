@@ -42,4 +42,4 @@ export function fernFaktor(d: number): number {
 }
 
 /** Getragene Waren größer als liegende (STIL.md §2): über dem Kopf aus der Spielkamera als Käselaib, Fass, Brett erkennbar. */
-export const WARE_TRAGEN = 1.45;
+export const WARE_TRAGEN = 1.7;
