@@ -147,11 +147,14 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
     const fps = await Promise.all([host, gast].map((x) => x.evaluate(() => new Promise((ok) => { let n = 0; const t = performance.now(); const f = () => { n++; if (performance.now() - t < 3000) requestAnimationFrame(f); else ok(Math.round((n / (performance.now() - t)) * 10000) / 10); }; requestAnimationFrame(f); }))));
     info(`Mehrspieler: Bilder je Sekunde ${fps.join(' / ')}`);
     await host.waitForTimeout(15000);
+    // bei sehr wenigen Bildern je Sekunde (Software-Grafik, zwei Szenen) brauchen die Befehle über das schlechte Netz länger: bis zu 60 s
+    // warten, bis beide Fenster beide Holzfäller kennen
+    await Promise.all([host, gast].map((x) => x.waitForFunction(() => new Set(window.eifeler.spiel.sicht.gebaeude.filter((g) => g.typ === 'holzfaeller').map((g) => g.sp)).size === 2, null, { timeout: 60000, polling: 500 }).catch(() => undefined)));
     const sicht = await Promise.all([host, gast].map((s) => s.evaluate(() => {
       const v = window.eifeler.spiel.sicht;
       return { tick: v.tick, tempo: window.eifeler.partie.tempo, hf: v.gebaeude.filter((g) => g.typ === 'holzfaeller').map((g) => g.sp).sort() };
     })));
-    info(`Mehrspieler: nach 15 s Tick ${sicht.map((x) => x.tick).join('/')}, Tempo ${sicht[1].tempo}, Holzfäller von ${JSON.stringify(sicht[1].hf)}`);
+    info(`Mehrspieler: nach 15 s (und Warten auf die Holzfäller) Tick ${sicht.map((x) => x.tick).join('/')}, Tempo ${sicht[1].tempo}, Holzfäller von ${JSON.stringify(sicht[1].hf)}`);
     if (sicht[1].tempo !== 3) fail('Tempo 3 kam beim Gast nicht an');
     for (const x of sicht) if (JSON.stringify(x.hf) !== '[0,1]') fail(`Nicht beide Holzfäller sichtbar: ${JSON.stringify(x.hf)}`);
     // M7: Fenster im Mehrspieler – der Gast stellt die Warenverteilung um (Fensterknopf), der Gastgeber lässt seinen Holzfäller ruhen
