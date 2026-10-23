@@ -181,6 +181,11 @@
     "saegewerk": {
       "hut": "zimmermann"
     },
+    "zimmerei": {
+      "hut": "zimmermann",
+      "werkzeug": "hammer",
+      "hemd": "#7a5a3a"
+    },
     "papiermuehle": {
       "hut": "zimmermann"
     },

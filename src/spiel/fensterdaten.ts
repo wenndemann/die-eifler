@@ -276,6 +276,7 @@ export function fahneFenster(id: Id, k: FensterKontext): FensterDaten | null {
   if (f.sp !== k.ich) return { titel: 'Fahne', symbol: '🚩', abschnitte: ab };
   const zeilen: TabZeile[] = f.waren.map((a, i) => {
     const ziel = f.ziele?.[i] ?? 0;
+    if (ziel < 0) return { zellen: [{ text: k.ware[a]?.eins ?? '', ware: a }, { text: 'Brücke am Weg' }], knopf: `weg:${-ziel}` };
     return { zellen: [{ text: k.ware[a]?.eins ?? '', ware: a }, { text: ziel ? gebName(s, ziel) : 'sucht ein Ziel', warn: !ziel }], knopf: ziel ? `geb:${ziel}` : undefined };
   });
   ab.push({ art: 'tabelle', titel: 'Stapel', kopf: ['Ware', 'will nach'], zeilen: zeilen.reverse(), leer: 'Keine Waren an der Fahne.' });
@@ -296,6 +297,7 @@ export function fahneFenster(id: Id, k: FensterKontext): FensterDaten | null {
 }
 
 function traegerZelle(sg: SichtSegment, k: FensterKontext): { text: string; ware?: number; warn?: boolean } {
+  if (sg.bruecken > 0) return { text: 'Brücke fehlt', warn: true };
   if (!sg.traeger) return { text: 'fehlt', warn: true };
   const t = k.sicht.traeger.find((x) => x.id === sg.traeger);
   if (!t) return { text: 'fehlt', warn: true };
@@ -313,9 +315,10 @@ export function wegFenster(id: Id, k: FensterKontext): FensterDaten | null {
   const ende = (fid: Id) => { const f = s.fahnen.find((x) => x.id === fid); return f?.gebaeude ? gebName(s, f.gebaeude) : 'Fahne'; };
   const tz = traegerZelle(sg, k);
   const ab: Abschnitt[] = [];
-  const zustand = tz.warn ? 'Kein Träger – es fehlt ein freier Bewohner' : tz.text === 'kommt' ? 'Der Träger ist auf dem Weg hierher'
+  const zustand = sg.bruecken > 0 ? `Der Weg geht über den Bach: es fehlt ${sg.bruecken === 1 ? 'eine Holzbrücke' : `${sg.bruecken} Holzbrücken`}. Ein Träger bringt sie aus dem Lager, sonst baut die Zimmerei welche.`
+    : tz.warn ? 'Kein Träger – es fehlt ein freier Bewohner' : tz.text === 'kommt' ? 'Der Träger ist auf dem Weg hierher'
     : tz.ware !== undefined ? `Der Träger trägt ${k.ware[tz.ware]?.eins ?? 'etwas'}` : tz.text === 'wartet' ? 'Der Träger wartet auf Ware' : 'Der Träger läuft';
-  ab.push({ art: 'status', text: zustand, warn: !!tz.warn, spruch: 'Ein Weg, ein Träger. So war es immer.' });
+  ab.push({ art: 'status', text: zustand, warn: !!tz.warn, spruch: sg.bruecken > 0 ? 'Durch den Bach waten? Nicht mit der Ware.' : 'Ein Weg, ein Träger. So war es immer.' });
   const verkehr = sg.verkehr > 150 ? 'viel' : sg.verkehr > 40 ? 'mittel' : sg.verkehr > 0 ? 'wenig' : 'keiner';
   ab.push({ art: 'zeilen', zeilen: [`Von ${ende(sg.a)} nach ${ende(sg.b)}`, `${sg.pfad.length - 1} Schritte · Verkehr: ${verkehr}`] });
   if (sg.sp === k.ich) {

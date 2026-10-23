@@ -2,6 +2,7 @@
 // Darf nur src/sim und reine TS-Logik verwenden (wird später auch im Browser abgespielt).
 import { Simulation } from '../src/sim/sim';
 import { SimKarte } from '../src/sim/karte';
+import { FLAG } from '../src/welt/format';
 import type { Befehl, KarteDaten, Protokoll, ProtokollEintrag } from '../src/sim/typen';
 
 export const KARTE_INFO = { version: 'test', q: 0, r: 0, size: 'klein', pruefsumme: 'synthetisch' };
@@ -182,4 +183,13 @@ export function baueSzenarioM4(): { karte: KarteDaten; protokoll: Protokoll } {
   while (probe.tick < 7000) probe.schritt();
   be.push(eintrag(7000, { art: 'abriss_gebaeude', id: gebaeudeId(probe, 'foerster', o.foerster) }));
   return { karte, protokoll };
+}
+
+/** Testkarte mit Bächen entlang q = qs (r von −12 bis 12). */
+export function mitBach(karte: KarteDaten, ...qs: number[]): KarteDaten {
+  let i = 0;
+  for (let r = -karte.n; r <= karte.n; r++) for (let q = Math.max(-karte.n, -r - karte.n); q <= Math.min(karte.n, -r + karte.n); q++, i++) {
+    if (qs.includes(q) && r >= -12 && r <= 12) karte.flags[i] |= FLAG.fluss;
+  }
+  return karte;
 }

@@ -15,6 +15,7 @@
    },
    "wohnraum": 10,
    "vorrat": {
+    "bruecke": 2,
     "bretter": 12,
     "stein": 8,
     "kartoffeln": 8
@@ -107,6 +108,36 @@
     "ware": "bretter",
     "max": 6
    },
+   "laut": true
+  },
+  {
+   "id": "zimmerei",
+   "name": "Zimmerei",
+   "gruppe": "Holz & Stein",
+   "symbol": "🌉",
+   "spruch": "Drei Bretter, ein Geländer, fertig ist die Brücke. Die Kühe gehen trotzdem durchs Wasser.",
+   "funktion": "verarbeiter",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 2,
+    "stein": 1
+   },
+   "arbeiter": 1,
+   "eingang": {
+    "bretter": 6
+   },
+   "wandelt": {
+    "ein": "bretter",
+    "menge": 3,
+    "aus": "bruecke",
+    "dauer_s": 20
+   },
+   "ausgang": {
+    "ware": "bruecke",
+    "max": 2
+   },
+   "modell": "saegewerk",
+   "leistung": "Baut aus Brettern Holzbrücken: jeder Weg über einen Bach braucht eine, sonst bleibt er zu",
    "laut": true
   },
   {

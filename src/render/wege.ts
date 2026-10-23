@@ -189,8 +189,20 @@ const GEWAESSER_BREITE = [8, 3.5, 4];
  * Kleine Holzbrücke (Länge entlang x, Mitte im Ursprung, Deck auf y = 0): leicht gewölbte Bohlen, Pfosten und Geländer, steinerne
  * Widerlager an den Enden. Reine Darstellung (Wege über Bäche und Flüsse).
  */
-export function brueckeGeometrie(laenge: number, breite: number): THREE.BufferGeometry {
+export function brueckeGeometrie(laenge: number, breite: number, fertig = true): THREE.BufferGeometry {
   const teile: THREE.BufferGeometry[] = [];
+  // noch keine Brücke geliefert: nur die Widerlager und zwei Pfähle mit rot-weißem Band (Baustelle)
+  if (!fertig) {
+    for (const sx of [1, -1]) {
+      teile.push(box(3, 2.5, breite + 2, sx * (laenge / 2 + 0.8), -1.2, 0, '#9a948a'));
+      for (const sz of [1, -1]) teile.push(box(0.5, 3.2, 0.5, sx * (laenge / 2 - 0.4), 1.4, sz * (breite / 2), '#5a3c26'));
+      teile.push(box(0.2, 0.5, breite, sx * (laenge / 2 - 0.4), 2.4, 0, '#d6262a'));
+      teile.push(box(0.22, 0.25, breite * 0.5, sx * (laenge / 2 - 0.4), 2.4, 0, '#f4f4ee'));
+    }
+    const g = mergeGeometries(teile)!;
+    g.computeVertexNormals();
+    return g;
+  }
   const n = Math.max(4, Math.round(laenge / 1.6)), bogen = Math.min(3, laenge * 0.09);
   const hoehe = (x: number) => bogen * Math.cos((x / laenge) * Math.PI);
   for (let i = 0; i < n; i++) {
@@ -300,7 +312,7 @@ export class Wege {
     let sig = this.map.groundRev + '#';
     for (const s of sicht.segmente) {
       const p = s.pfad;
-      sig += `${s.id}:${p.length}:${p[0]?.q},${p[0]?.r},${p[p.length - 1]?.q},${p[p.length - 1]?.r}:${s.verkehr >> 5};`;
+      sig += `${s.id}:${p.length}:${p[0]?.q},${p[0]?.r},${p[p.length - 1]?.q},${p[p.length - 1]?.r}:${s.verkehr >> 5}:${s.bruecken ?? 0};`;
     }
     if (sig === this.sig) return;
     this.sig = sig;
@@ -312,11 +324,11 @@ export class Wege {
       const halb = (WEG_BREITE[0] + (WEG_BREITE[1] - WEG_BREITE[0]) * Math.min(1, s.verkehr / 255)) / 2;
       const linie = mittellinie(this.punkte(s.pfad));
       band(b, linie, halb, this.yOf);
-      // Brücke, wo der Weg einen Fluss oder Bach kreuzt: Deck über dem höheren Ufer
+      // Brücke, wo der Weg einen Fluss oder Bach kreuzt: Deck über dem höheren Ufer; fehlt sie noch (Simulation), nur die Baustelle
       for (const k of this.kreuzungen(linie)) {
         const laenge = k.breite + 16, cx = Math.cos(k.yaw), cz = -Math.sin(k.yaw);
         const ufer = Math.max(this.map.heightAt(k.x + cx * laenge / 2, k.z + cz * laenge / 2), this.map.heightAt(k.x - cx * laenge / 2, k.z - cz * laenge / 2));
-        const g = brueckeGeometrie(laenge, halb * 2 + 1.5).rotateY(k.yaw).translate(k.x, (ufer - this.base) * this.ex + 0.8, k.z);
+        const g = brueckeGeometrie(laenge, halb * 2 + 1.5, !s.bruecken).rotateY(k.yaw).translate(k.x, (ufer - this.base) * this.ex + 0.8, k.z);
         bruecken.push(g);
       }
       const gk = `${s.id}:${s.pfad.length}`;
@@ -343,10 +355,13 @@ export class Wege {
       this.bruecken.add(m);
     }
     this.anzahlBruecken = bruecken.length;
+    this.anzahlBaustellen = sicht.segmente.reduce((n, s) => n + (s.bruecken ?? 0), 0);
   }
 
   /** Zahl der Brücken (Prüfskripte, Tests). */
   anzahlBruecken = 0;
+  /** Fehlende Brücken laut Simulation (Prüfskripte). */
+  anzahlBaustellen = 0;
 
   /**
    * Vorschau beim Wegbau: `pfad` ist das vorläufige Stück (gestrichelt, rot wenn ungültig), `fest` das schon gelegte Stück

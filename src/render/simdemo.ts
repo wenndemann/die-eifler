@@ -121,7 +121,7 @@ export class SimDemo {
     const p = pfad ?? this.weg(a, b, gesperrt);
     if (!p || p.length < 2) return null;
     for (const h of p.slice(1, -1)) gesperrt.add(key(h));
-    const seg: SichtSegment = { id: this.nextId++, sp: 0, a: a.id, b: b.id, pfad: p, traeger: 0, verkehr: 40 + Math.floor(hash(a.id, b.id) * 200) };
+    const seg: SichtSegment = { id: this.nextId++, sp: 0, a: a.id, b: b.id, pfad: p, traeger: 0, verkehr: 40 + Math.floor(hash(a.id, b.id) * 200), bruecken: 0 };
     const tr: SichtTraeger = { id: this.nextId++, sp: 0, von: p[0], nach: p[1], fortschritt: 0, schritt: 25, ware, tut: 'laeuft' };
     seg.traeger = tr.id;
     this.sicht.segmente.push(seg);

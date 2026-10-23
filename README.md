@@ -11,7 +11,7 @@ Was ins Spiel kommt, steht im [Drehbuch](DREHBUCH.md), was schon drin ist und wa
 ## Was es gibt
 
 - **Die echte Eifel als Karte:** Ausschnitt frei wählen (oder einen Ort eintippen), Gelände, Flüsse, Wald und Orte von heute.
-- **Wege, Träger, Waren:** Wegenetz selbst bauen, über 40 Waren in Ketten vom Baumstamm bis zum Schnaps.
+- **Wege, Träger, Waren:** Wegenetz selbst bauen (über Bäche nur mit Holzbrücke aus der Zimmerei), über 40 Waren in Ketten vom Baumstamm bis zum Schnaps.
 - **Dorf wachsen lassen:** Bewohner, Wohnhäuser, Kirmes als Tor zur nächsten Dorfstufe, Jahreszeiten, Wetter und Winter.
 - **Nachbarn ohne Krieg:** Gebiet, Orte mit Einstand gewinnen, Handel mit den Flachländern, Finden statt Stehlen,
   Schützenfest, Maibaumklau, Grenzsteine versetzen, Abwerben, Kaffeeschmuggel am Zollhaus und der Große Fund.

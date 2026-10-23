@@ -229,6 +229,16 @@ const FORMEN: Record<string, Form> = {
       paint(new THREE.BoxGeometry(W * 0.3, W * 0.16, W * 0.9).translate(0, W * 0.24, 0), ton(f, 1.15)),
     ],
   }),
+  // Holzbrücke: gewölbter Bohlenbelag mit zwei Geländern, zusammengebunden zum Tragen
+  bruecke: (f) => ({
+    hoehe: W * 0.45,
+    teile: [
+      ...[-0.36, -0.18, 0, 0.18, 0.36].map((x, i) => paint(new THREE.BoxGeometry(W * 0.16, W * 0.08, W * 0.6).translate(x * W, W * (0.1 + 0.08 * Math.cos(x * 4)), 0), i % 2 ? f : ton(f, 0.85))),
+      paint(new THREE.BoxGeometry(W * 0.95, W * 0.06, W * 0.06).translate(0, W * 0.36, W * 0.28), ton(f, 0.7)),
+      paint(new THREE.BoxGeometry(W * 0.95, W * 0.06, W * 0.06).translate(0, W * 0.36, -W * 0.28), ton(f, 0.7)),
+      ...[-0.42, 0.42].flatMap((x) => [-0.28, 0.28].map((z) => paint(new THREE.BoxGeometry(W * 0.06, W * 0.3, W * 0.06).translate(x * W, W * 0.24, z * W), ton(f, 0.7)))),
+    ],
+  }),
   // Werkzeug: Hammer und Schaufel über Kreuz (Drehbuch 4.5)
   werkzeug: (f) => ({
     hoehe: W * 0.4,

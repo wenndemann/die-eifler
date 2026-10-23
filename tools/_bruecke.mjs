@@ -11,7 +11,7 @@ await page.goto('http://127.0.0.1:5209/#v=eifel-2026.10&q=152&r=458&g=klein&o=15
 await page.waitForFunction(() => window.eifeler?.spiel, null, { timeout: 600000, polling: 500 });
 await page.evaluate(() => window.eifeler.skipIntro());
 await page.addStyleTag({ content: '.meldeleiste, .einfuehrung, .meldung, .kampagne-panel, .kalle { display: none !important; }' });
-const r = await page.evaluate(() => {
+const r = await page.evaluate(async () => {
   const e = window.eifeler, sp = e.spiel, sim = sp.sim, L = sp.lagerHex;
   // nächster Flusspunkt zum Lager
   const w = e.grid.toWorld(L);
@@ -25,6 +25,9 @@ const r = await page.evaluate(() => {
   const dx = best.x - w.x, dz = best.z - w.z, l = Math.hypot(dx, dz);
   const ziel = e.grid.fromWorld(best.x + (dx / l) * 60, best.z + (dz / l) * 60);
   const start = sim.sicht(0).fahnen.filter((f) => f.sp === 0).sort((a, b) => Math.hypot(e.grid.toWorld(a).x - best.x, e.grid.toWorld(a).z - best.z) - Math.hypot(e.grid.toWorld(b).x - best.x, e.grid.toWorld(b).z - best.z))[0];
+  const lager = [...sim.gebaeude.values()].find((g) => g.typ === 'lager');
+  const { WARE } = await import('/src/sim/daten.ts');
+  window.__lager = lager; window.__B = WARE.bruecke; lager.vorrat[WARE.bruecke] = 0; // erst die Baustelle zeigen
   const pf = sim.wegVorschau(start, ziel, 0);
   if (pf) sim.befehl(sim.tick, 0, { art: 'weg', pfad: pf });
   sp.schritte(2);
@@ -32,6 +35,10 @@ const r = await page.evaluate(() => {
   return { fluss: best, weg: pf?.length ?? 0 };
 });
 await page.waitForTimeout(6000);
-console.log(JSON.stringify(r), await page.evaluate(() => window.eifeler.spiel["wege"].anzahlBruecken));
+console.log(JSON.stringify(r), await page.evaluate(() => [window.eifeler.spiel["wege"].anzahlBruecken, window.eifeler.spiel["wege"].anzahlBaustellen]));
+await page.screenshot({ path: aus.replace('.png', '-baustelle.png'), timeout: 300000 });
+await page.evaluate(() => { window.__lager.vorrat[window.__B] = 2; window.eifeler.spiel.schritte(200); });
+await page.waitForTimeout(4000);
+console.log('nachher', await page.evaluate(() => [window.eifeler.spiel["wege"].anzahlBruecken, window.eifeler.spiel["wege"].anzahlBaustellen]));
 await page.screenshot({ path: aus, timeout: 300000 });
 await browser.close(); await vite.close();

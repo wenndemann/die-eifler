@@ -213,6 +213,8 @@ export class MeldungsFilter {
         case 'abgeworben': add(ev.wert % 10 ? 'abgeworben_hof' : 'abgeworben', k({ text: namen?.spieler?.(Math.floor(ev.wert / 10)) ?? 'den Nachbarn' }), ev.wert % 10 === 1); break;
         case 'schmuggel': if (ev.tick - this.schmuggelTick >= 3 * 60 * 20) { this.schmuggelTick = ev.tick; add('schmuggel', k({}), false, true, ev.gebaeude); } break;
         case 'kaffee': if (ev.tick - this.kaffeeTick >= 5 * 60 * 20) { this.kaffeeTick = ev.tick; add('kaffee', k({ n: ev.wert }), false, false, ev.gebaeude); } break;
+        case 'bruecke': add('bruecke', k({}), false, false); break;
+        case 'bruecke_fehlt': add('bruecke_fehlt', k({ n: ev.wert }), false, true); break;
         case 'grossfund': add('grossfund', k({ text: FUNDE[ev.wert] ? `${FUNDE[ev.wert].symbol} ${FUNDE[ev.wert].name}` : 'etwas Großes', n: FUNDE[ev.wert]?.punkte ?? 0 }), true, true, ev.gebaeude); break;
         case 'schatzteil': add(ev.wert >= SCHATZ_TEILE ? 'schatz_komplett' : 'schatzteil', k({ n: ev.wert, text: SCHATZ_NAME }), true, true, ev.gebaeude); break;
         case 'jahresfest': add('jahresfest', k({ text: namen?.ort?.(ev.wert) ?? 'Der Ort' }), false, true); break;

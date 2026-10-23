@@ -1,5 +1,5 @@
 {
- "hinweis": "Waren nach DESIGN §6.1. 'nahrung' ist die Nahrungsstufe (1 einfach, 2 veredelt, 3 edel; DESIGN §5). 'form' wählt das lesbare Modell, 'farbe' ist seine Hauptfarbe, 'farbe_fb' die im Farbenblind-Modus (Okabe-Ito-Palette) (Drehbuch 7.6: erst lesbar, dann schön). Die Reihenfolge ist die Warenart (Index in der Simulation) und darf nur am Ende ergänzt werden. 'mischkorb' zählt im Mischkorb der Marktflecken-Kirmes mit, auch ohne Nahrung zu sein (veredelte Ware; Nahrung ab Stufe 2 zählt immer).",
+ "hinweis": "Waren nach DESIGN §6.1. 'nahrung' ist die Nahrungsstufe (1 einfach, 2 veredelt, 3 edel; DESIGN §5). 'form' wählt das lesbare Modell, 'farbe' ist seine Hauptfarbe, 'farbe_fb' die im Farbenblind-Modus (Okabe-Ito-Palette) (Drehbuch 7.6: erst lesbar, dann schön). Die Reihenfolge ist die Warenart (Index in der Simulation) und darf nur am Ende ergänzt werden. Die Holzbrücke (aus der Zimmerei) braucht jeder Weg, der einen Bach oder Fluss kreuzt, einmal je Fluss-Hex; bis sie geliefert ist, bleibt der Weg zu. 'mischkorb' zählt im Mischkorb der Marktflecken-Kirmes mit, auch ohne Nahrung zu sein (veredelte Ware; Nahrung ab Stufe 2 zählt immer).",
  "waren": [
   {"id": "stamm", "name": "Eifeler Baumstamm", "gruppe": "Grundstoff", "form": "stamm", "farbe": "#8a6340", "farbe_fb": "#8a6340"},
   {"id": "bretter", "name": "Eifeler Bretterstapel", "gruppe": "Grundstoff", "form": "bretter", "farbe": "#e0c08a", "farbe_fb": "#e0c08a"},
@@ -45,6 +45,7 @@
   {"id": "traubenmost", "name": "Ahr-Traubenmost", "gruppe": "Völkchen", "nahrung": 1, "form": "krug", "farbe": "#9a3a6a", "farbe_fb": "#cc79a7"},
   {"id": "dachschiefer", "name": "Mayener Dachschiefer", "gruppe": "Völkchen", "mischkorb": true, "form": "bretter", "farbe": "#2f3a48", "farbe_fb": "#0072b2"},
   {"id": "torf", "name": "Venn-Torf", "gruppe": "Völkchen", "form": "kohle", "farbe": "#5a4030", "farbe_fb": "#5a4030"},
-  {"id": "kaffee", "name": "Geschmuggelter Kaffee", "gruppe": "Luxus", "mischkorb": true, "form": "sack", "farbe": "#5b3a22", "farbe_fb": "#e69f00"}
+  {"id": "kaffee", "name": "Geschmuggelter Kaffee", "gruppe": "Luxus", "mischkorb": true, "form": "sack", "farbe": "#5b3a22", "farbe_fb": "#e69f00"},
+  {"id": "bruecke", "name": "Holzbrücke", "gruppe": "Grundstoff", "form": "bruecke", "farbe": "#9a6a3e", "farbe_fb": "#9a6a3e"}
  ]
 }
