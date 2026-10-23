@@ -46,6 +46,8 @@
   {"id": "dachschiefer", "name": "Mayener Dachschiefer", "gruppe": "Völkchen", "mischkorb": true, "form": "bretter", "farbe": "#2f3a48", "farbe_fb": "#0072b2"},
   {"id": "torf", "name": "Venn-Torf", "gruppe": "Völkchen", "form": "kohle", "farbe": "#5a4030", "farbe_fb": "#5a4030"},
   {"id": "kaffee", "name": "Geschmuggelter Kaffee", "gruppe": "Luxus", "mischkorb": true, "form": "sack", "farbe": "#5b3a22", "farbe_fb": "#e69f00"},
-  {"id": "bruecke", "name": "Holzbrücke", "gruppe": "Grundstoff", "form": "bruecke", "farbe": "#9a6a3e", "farbe_fb": "#9a6a3e"}
+  {"id": "bruecke", "name": "Holzbrücke", "gruppe": "Grundstoff", "form": "bruecke", "farbe": "#9a6a3e", "farbe_fb": "#9a6a3e"},
+  {"id": "wildbret", "name": "Eifeler Wildbret", "gruppe": "Grundstoff", "form": "keule", "farbe": "#9a3a2a", "farbe_fb": "#d55e00"},
+  {"id": "wildgulasch", "name": "Eifeler Wildgulasch", "gruppe": "Nahrung (veredelt)", "nahrung": 2, "form": "topf", "farbe": "#7a3a22", "farbe_fb": "#cc79a7"}
  ]
 }

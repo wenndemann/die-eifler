@@ -1,5 +1,5 @@
 {
- "hinweis": "Gebäude nach DESIGN §6.2 und Drehbuch 5.1 (Startwerte, werden beim Spielen eingestellt). Zeiten in Sekunden, Kosten und Waren über Waren-Ids (goods.json). 'funktion' wählt das Verhalten in der Simulation (lager, wohnen, holzfaeller, foerster, steinbruch, erzeuger, verarbeiter, kirmes, schaenke; ab M10 finder, wache, schuetzen, zier); 'radius' ist der Arbeitsradius in Hexen um den Arbeitsmittelpunkt (außen „geht noch“), 'radiusGut' der innere Ring „gut“; 'eingang' der Input-Puffer je Ware, 'ausgang' der Output-Puffer; 'wandelt' macht aus 'menge' Stück 'ein' eine Ware 'aus' ('ein' darf auch mehrere Waren mit Menge nennen, z. B. {\"erz\": 1, \"holzkohle\": 1}); ein Erzeuger macht alle 'arbeit_s' eine Ware; 'nahrung_plaetze' sind die Essensplätze des Wohnhauses; 'ab_stufe' die Dorfstufe, ab der man es bauen kann (0 Weiler, 1 Dorf, 2 Kirchdorf); 'einmalig' heißt höchstens eins je Dorf; 'taste' wählt das Gebäude bei offenem Baumenü (nicht W, A, S, D, Q, E, B, X, P, G). 'saison': 'feld' heißt: ruht im Winter, wird im Frühjahr erst gesät und erntet im Herbst schneller (data/jahr.json). 'werkzeug': so viel Werkzeug braucht die Fachkraft, bevor sie anfängt (Drehbuch 4.5, 5). 'boten': höchstens so viele beschwipste Boten schickt die Schänke los (DESIGN §10.3, data/dorf.json: boten). Ein zweites Gebäude mit 'funktion': 'lager' ist ein Lagerhaus: Lager ohne Gebiet und Bewohner (Drehbuch 6.2). 'leistung': ein Satz fürs Gebäudefenster, was das Gebäude tut (wenn es sich nicht aus den anderen Feldern ergibt). Ab M11: 'voelkchen' = nur diese Völkchen dürfen das Gebäude bauen (Spezialkette, Drehbuch 5.3); 'modell' = Darstellung wie dieses Gebäude; 'am_wasser' = braucht Wasser höchstens 2 Hexe weit; 'kein_planieren' = Hanglage braucht keinen Planierer. 'laut': lautes Gebäude (Laacher: nicht nah an der Abtei); 'am_moor': braucht Moor höchstens 2 Hexe weit; 'schnellweg': macht eigene Wege schneller (radius/prozent oder bahn/prozent); funktion 'hecke' wächst erst heran, 'boote' bringt Punkte. Höfe und Felder (wie Siedler 2): funktion 'hof' ist ein Bauernhof; sein Bauer sät im Arbeitsradius auf freiem Land (kein Baum, kein Feld, kein Weg) das Feld 'acker' (name, wachsen_s bis reif, ernte = Waren je reifem Feld) und erntet reife Felder seiner Art, zuerst das nächste; die Felder sind Natur je Hex wie die Bäume (ein Weg zertrampelt sie, Bauen räumt sie); arbeit_s ist das Säen bzw. Ernten, ruhe_s die Pause danach.",
+ "hinweis": "Gebäude nach DESIGN §6.2 und Drehbuch 5.1 (Startwerte, werden beim Spielen eingestellt). Zeiten in Sekunden, Kosten und Waren über Waren-Ids (goods.json). 'funktion' wählt das Verhalten in der Simulation (lager, wohnen, holzfaeller, foerster, steinbruch, erzeuger, verarbeiter, kirmes, schaenke; ab M10 finder, wache, schuetzen, zier); 'radius' ist der Arbeitsradius in Hexen um den Arbeitsmittelpunkt (außen „geht noch“), 'radiusGut' der innere Ring „gut“; 'eingang' der Input-Puffer je Ware, 'ausgang' der Output-Puffer; 'wandelt' macht aus 'menge' Stück 'ein' eine Ware 'aus' ('ein' darf auch mehrere Waren mit Menge nennen, z. B. {\"erz\": 1, \"holzkohle\": 1}); ein Erzeuger macht alle 'arbeit_s' eine Ware; 'nahrung_plaetze' sind die Essensplätze des Wohnhauses; 'ab_stufe' die Dorfstufe, ab der man es bauen kann (0 Weiler, 1 Dorf, 2 Kirchdorf); 'einmalig' heißt höchstens eins je Dorf; 'taste' wählt das Gebäude bei offenem Baumenü (nicht W, A, S, D, Q, E, B, X, P, G). 'saison': 'feld' heißt: ruht im Winter, wird im Frühjahr erst gesät und erntet im Herbst schneller (data/jahr.json). 'werkzeug': so viel Werkzeug braucht die Fachkraft, bevor sie anfängt (Drehbuch 4.5, 5). 'boten': höchstens so viele beschwipste Boten schickt die Schänke los (DESIGN §10.3, data/dorf.json: boten). Ein zweites Gebäude mit 'funktion': 'lager' ist ein Lagerhaus: Lager ohne Gebiet und Bewohner (Drehbuch 6.2). 'leistung': ein Satz fürs Gebäudefenster, was das Gebäude tut (wenn es sich nicht aus den anderen Feldern ergibt). Ab M11: 'voelkchen' = nur diese Völkchen dürfen das Gebäude bauen (Spezialkette, Drehbuch 5.3); 'modell' = Darstellung wie dieses Gebäude; 'am_wasser' = braucht Wasser höchstens 2 Hexe weit; 'kein_planieren' = Hanglage braucht keinen Planierer. 'laut': lautes Gebäude (Laacher: nicht nah an der Abtei); 'am_moor': braucht Moor höchstens 2 Hexe weit; 'schnellweg': macht eigene Wege schneller (radius/prozent oder bahn/prozent); funktion 'hecke' wächst erst heran, 'boote' bringt Punkte. Höfe und Felder (wie Siedler 2): funktion 'hof' ist ein Bauernhof; sein Bauer sät im Arbeitsradius auf freiem Land (kein Baum, kein Feld, kein Weg) das Feld 'acker' (name, wachsen_s bis reif, ernte = Waren je reifem Feld) und erntet reife Felder seiner Art, zuerst das nächste; die Felder sind Natur je Hex wie die Bäume (ein Weg zertrampelt sie, Bauen räumt sie); arbeit_s ist das Säen bzw. Ernten, ruhe_s die Pause danach. Wald und Wild: funktion 'jaeger' (Jagdhütte) erlegt Wild im Arbeitsradius wie der Holzfäller Bäume und schützt im Radius die Felder vor Wildschweinen; 'schafe': ein Wolf in der Nähe reißt ab und zu ein Schaf (data/wild.json); funktion 'herdenschutz' schützt Gebäude mit Schafen im Radius; acker.wuehlbar: Wildschweine wühlen dieses Feld um.",
  "gebaeude": [
   {
    "id": "lager",
@@ -191,7 +191,8 @@
    "acker": {
     "name": "Kartoffelacker",
     "wachsen_s": 90,
-    "ernte": 1
+    "ernte": 1,
+    "wuehlbar": true
    },
    "saison": "feld"
   },
@@ -325,7 +326,8 @@
    },
    "zeiten": {
     "arbeit_s": 24
-   }
+   },
+   "schafe": true
   },
   {
    "id": "kaeserei",
@@ -433,7 +435,8 @@
    "acker": {
     "name": "Gerstenfeld",
     "wachsen_s": 100,
-    "ernte": 1
+    "ernte": 1,
+    "wuehlbar": true
    },
    "ab_stufe": 1,
    "saison": "feld"
@@ -1527,7 +1530,8 @@
    "voelkchen": [
     "monschau"
    ],
-   "modell": "schafstall"
+   "modell": "schafstall",
+   "schafe": true
   },
   {
    "id": "bootsverleih",
@@ -1699,6 +1703,77 @@
     "prozent": 50
    },
    "leistung": "die alte Bahntrasse: eigene Wege auf Bahn-Hexen sind 50 % schneller"
+  },
+  {
+   "id": "jagdhuette",
+   "name": "Jagdhütte mit Hochsitz",
+   "gruppe": "Essen",
+   "symbol": "🦌",
+   "spruch": "Der Jäger sitzt still. Stundenlang. Das nennt er Arbeit.",
+   "funktion": "jaeger",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 3
+   },
+   "radius": 4,
+   "radiusGut": 2,
+   "arbeiter": 1,
+   "ausgang": {
+    "ware": "wildbret",
+    "max": 6
+   },
+   "zeiten": {
+    "arbeit_s": 8,
+    "ruhe_s": 4
+   },
+   "leistung": "erlegt Rehe und Wildschweine im Umkreis (Wolf und Wildkatze sind geschützt) und hält die Wildschweine von den Feldern fern"
+  },
+  {
+   "id": "wildkueche",
+   "name": "Wildküche",
+   "gruppe": "Essen",
+   "symbol": "🍲",
+   "spruch": "Wildgulasch: drei Stunden auf dem Herd, drei Minuten auf dem Teller.",
+   "funktion": "verarbeiter",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 2,
+    "stein": 2
+   },
+   "arbeiter": 1,
+   "eingang": {
+    "wildbret": 2,
+    "kartoffeln": 2
+   },
+   "wandelt": {
+    "ein": {
+     "wildbret": 1,
+     "kartoffeln": 1
+    },
+    "aus": "wildgulasch",
+    "dauer_s": 16
+   },
+   "ausgang": {
+    "ware": "wildgulasch",
+    "max": 6
+   },
+   "ab_stufe": 1,
+   "modell": "kueche"
+  },
+  {
+   "id": "herdenschutzhund",
+   "name": "Herdenschutzhund",
+   "gruppe": "Essen",
+   "symbol": "🐕‍🦺",
+   "spruch": "Groß, weiß und wach. Der Wolf schaut einmal hin und geht dann lieber.",
+   "funktion": "herdenschutz",
+   "groesse": 1,
+   "kosten": {
+    "bretter": 2
+   },
+   "radius": 3,
+   "modell": "hundehuette",
+   "leistung": "schützt Schafställe und Schafweiden im Umkreis vor dem Wolf"
   }
  ]
 }

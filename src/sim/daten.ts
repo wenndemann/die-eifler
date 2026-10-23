@@ -21,7 +21,8 @@ interface GebaeudeJson {
   saison?: string; werkzeug?: number; boten?: number; leistung?: string; fonds_menge?: number;
   voelkchen?: string[]; modell?: string; am_wasser?: boolean; kein_planieren?: boolean;
   laut?: boolean; am_moor?: boolean; schnellweg?: { radius?: number; prozent: number; bahn?: boolean };
-  acker?: { name: string; wachsen_s: number; ernte?: number };
+  acker?: { name: string; wachsen_s: number; ernte?: number; wuehlbar?: boolean };
+  schafe?: boolean;
 }
 
 const warenListe = (warenJson as { waren: WareJson[] }).waren;
@@ -134,7 +135,7 @@ export const PRIO_STANDARD = 2;
 export const SUCHE_WARTE = 2 * TICK_HZ;
 
 export type Funktion = 'lager' | 'wohnen' | 'holzfaeller' | 'foerster' | 'steinbruch' | 'erzeuger' | 'verarbeiter' | 'kirmes' | 'schaenke'
-  | 'finder' | 'wache' | 'schuetzen' | 'zier' | 'hecke' | 'boote' | 'schnellweg' | 'fonds' | 'maijungen' | 'funde' | 'hof';
+  | 'finder' | 'wache' | 'schuetzen' | 'zier' | 'hecke' | 'boote' | 'schnellweg' | 'fonds' | 'maijungen' | 'funde' | 'hof' | 'jaeger' | 'herdenschutz';
 
 export interface GebaeudeTyp {
   id: string; name: string; gruppe: string; symbol: string; spruch: string;
@@ -188,7 +189,9 @@ export interface GebaeudeTyp {
   /** Laut (Laacher: nicht nah an der Abtei); braucht Moor nah; macht eigene Wege schneller (Römerstraße, Vennbahn). */
   laut: boolean; amMoor: boolean; schnellweg: { radius: number; prozent: number; bahn: boolean } | null;
   /** Hof (Höfe und Felder): das Feld, das der Bauer im Umkreis sät und erntet – Name, Wachstum in Ticks, Ernte je Feld; sonst null. */
-  acker: { name: string; wachsenTicks: number; ernte: number } | null;
+  acker: { name: string; wachsenTicks: number; ernte: number; wuehlbar: boolean } | null;
+  /** Wald und Wild: hält Schafe (der Wolf reißt ab und zu eins, außer ein Herdenschutzhund ist nah). */
+  schafe: boolean;
 }
 
 const ticks = (s: number | undefined) => Math.round((s ?? 0) * TICK_HZ);
@@ -242,7 +245,8 @@ function baue(j: GebaeudeJson): GebaeudeTyp {
     voelkchen: j.voelkchen ?? [], modell: j.modell ?? '', amWasser: !!j.am_wasser, keinPlanieren: !!j.kein_planieren,
     laut: !!j.laut, amMoor: !!j.am_moor,
     schnellweg: j.schnellweg ? { radius: j.schnellweg.radius ?? 0, prozent: j.schnellweg.prozent, bahn: !!j.schnellweg.bahn } : null,
-    acker: j.acker ? { name: j.acker.name, wachsenTicks: ticks(j.acker.wachsen_s), ernte: Math.max(1, Math.floor(j.acker.ernte ?? 1)) } : null,
+    acker: j.acker ? { name: j.acker.name, wachsenTicks: ticks(j.acker.wachsen_s), ernte: Math.max(1, Math.floor(j.acker.ernte ?? 1)), wuehlbar: !!j.acker.wuehlbar } : null,
+    schafe: !!j.schafe,
   };
 }
 

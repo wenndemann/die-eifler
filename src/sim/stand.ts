@@ -25,6 +25,8 @@ export interface SimStand {
     baum: string; jung: string; stufe: string; fels: string; felsArt: string; baumRes: string; felsRes: string; jungReif: number[]; jungListe: number[];
     /** Höfe und Felder: Feldart, Stadium und Reservierung je Hex (Base64), Reifeticks als Paare [Hex, Tick], wachsende Felder (fehlt in älteren Spielständen). */
     feld?: string; feldStufe?: string; feldRes?: string; feldReif?: number[]; feldListe?: number[];
+    /** Wald und Wild: Rehe, Wildschweine, Wolf, Wildkatze und Reservierung des Jägers je Hex (Base64; fehlt in älteren Spielständen). */
+    reh?: string; sau?: string; wolf?: string; katze?: string; wildRes?: string;
   };
   /** Beschwipste Boten und liegengebliebene Waren (ab M8; fehlt in älteren Spielständen). */
   boten?: Record<string, unknown>[];
