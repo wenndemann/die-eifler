@@ -145,6 +145,8 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
     const h0 = await host.evaluate(baue, { typ: 'kartoffelfeld', meiden: b0 ? [b0, ...b0.weg] : [] });
     const h1 = await gast.evaluate(baue, { typ: 'kartoffelfeld', meiden: b1 ? [b1, ...b1.weg] : [] });
     if (!h0 || !h1) fail(`Kein Bauplatz für den Kartoffelhof: ${JSON.stringify([h0, h1])}`);
+    // erst, wenn Holzfäller und Kartoffelhof des Gasts in seiner Simulation stehen (dann sind ihre Plätze belegt)
+    await gast.waitForFunction(() => ['holzfaeller', 'kartoffelfeld'].every((t) => window.eifeler.spiel.sicht.gebaeude.some((g) => g.sp === 1 && g.typ === t)), null, { timeout: 90000, polling: 500 }).catch(() => undefined);
     const j1 = await gast.evaluate(baue, 'jagdhuette');
     if (!j1) fail('Kein Bauplatz für die Jagdhütte des Gasts');
     const fps = await Promise.all([host, gast].map((x) => x.evaluate(() => new Promise((ok) => { let n = 0; const t = performance.now(); const f = () => { n++; if (performance.now() - t < 3000) requestAnimationFrame(f); else ok(Math.round((n / (performance.now() - t)) * 10000) / 10); }; requestAnimationFrame(f); }))));
