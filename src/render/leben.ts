@@ -626,7 +626,7 @@ export class LebenDarstellung {
         // beim Fest: Besucher im Ring um das Karussell (Mitte des Ankers), klatschen, jubeln und winken (Gutachter: „das Fest ist leer“);
         // nicht im Karussell, nicht in den Buden und nicht am Kirmesbaum (Hindernisse in Modell-Metern relativ zum Anker)
         // das Karussell ist ein festes Hindernis: wartende Träger an der Fahne (sie steht unter ihm) rücken davor (Gutachter-Runde 9)
-        meisterPlaetze.push({ x, z, r: 6.5 * sk, fest: true });
+        meisterPlaetze.push({ x, z, r: 8 * sk, fest: true });
         if (!(o.kirmesFest || o.fest)) break;
         const nb = leben.fest.besucher, r = a.r ?? leben.fest.radius, frei = a.frei ?? [];
         let n = 0;
