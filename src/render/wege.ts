@@ -185,9 +185,11 @@ function erdMaterial(): THREE.MeshStandardMaterial {
   erde *= 1.0 - 0.14 * spur;
   diffuseColor.rgb *= erde;
   // Winter: Wege eingeschneit, nur die Spuren bleiben dunkler (Gutachter-Runde 9: „Winterwege grell orange“)
-  vec3 schnee = vec3(0.86, 0.88, 0.92) * (0.94 + 0.08 * wn(vWPos.xz * 0.6));
-  schnee = mix(schnee, diffuseColor.rgb * 0.85 + vec3(0.12), spur * 0.7);
-  diffuseColor.rgb = mix(diffuseColor.rgb, schnee, uSchnee * 0.75);
+  // (Runde 10: rein weiß war das Wegenetz unsichtbar) – festgetretene, graubraune Spur, am Rand Schnee
+  vec3 tritt = mix(vec3(0.62, 0.56, 0.50), vec3(0.72, 0.68, 0.62), wn(vWPos.xz * 0.6));
+  vec3 schnee = mix(tritt, vec3(0.9, 0.91, 0.94), smoothstep(0.45, 0.85, kante));
+  schnee = mix(schnee, tritt * 0.8, spur * 0.6);
+  diffuseColor.rgb = mix(diffuseColor.rgb, schnee, uSchnee * 0.85);
   diffuseColor.a = 1.0 - smoothstep(0.62, 0.98, kante);
   diffuseColor.rgb = kGrau(diffuseColor.rgb, kOut(vWPos.xz));
   vKFade = kFade(vWPos.xz);

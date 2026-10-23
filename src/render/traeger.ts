@@ -222,7 +222,7 @@ export function figur(tracht: Tracht = TRAEGER_TRACHT): THREE.BufferGeometry {
   add(paint(new THREE.SphereGeometry(0.235, 14, 10).translate(0, 0.74, 0), HAUT));
   // Knollennase; die Frau (Tracht oder Gesichtsvariante) hat eine kleine Stupsnase
   if (!tracht.frau) add(paint(new THREE.SphereGeometry(0.1, 9, 7).scale(1, 0.95, 1.1).translate(0, 0.71, 0.24), NASE), 0, [0, 0, 0], 0, -VARIANTE.frau);
-  add(paint(new THREE.SphereGeometry(0.06, 8, 6).scale(1, 0.9, 1.1).translate(0, 0.715, 0.235), NASE), 0, [0, 0, 0], 0, tracht.frau ? 0 : VARIANTE.frau);
+  add(paint(new THREE.SphereGeometry(0.045, 8, 6).scale(1, 0.85, 1.1).rotateX(-0.4).translate(0, 0.725, 0.23), '#f0a890'), 0, [0, 0, 0], 0, tracht.frau ? 0 : VARIANTE.frau);
   for (const sx of [-1, 1]) add(paint(new THREE.SphereGeometry(0.06, 6, 5).scale(0.6, 1, 1).translate(sx * 0.235, 0.73, 0), HAUT));
   for (const sx of [-1, 1]) {
     // Augen (blinzeln): Weißes und Pupille um die Augenmitte
