@@ -282,19 +282,19 @@ const TYPEN: Record<string, Typ> = {
   },
   kartoffelfeld: {
     w: 5.5, d: 4.5, floors: 1, wand: '#efe2c6', dach: '#7a5a3a', laden: '#4f8a3a', skala: 1, hoehe: 7,
-    grund: [-5, 23, -4, 14],
+    grund: [-5, 18.5, -4, 13.5],
     fertig() {
       const t = TYPEN.kartoffelfeld;
       const out: THREE.BufferGeometry[] = [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach), ...laeden(t.w, t.d, t.floors, t.laden)];
-      // großer Acker rechts: braune Furchen, grüne Stauden in Reihen, Zaun
-      const ax = 13, az = 4.5;
-      out.push(boxR(17, 0.4, 16, ax, G + 0.15, az, '#6a4a2c'));
+      // Acker rechts (so schmal, dass das Haus in voller Größe ins Hex passt): braune Furchen, grüne Stauden in Reihen, Zaun
+      const ax = 11, az = 4.5;
+      out.push(boxR(13, 0.4, 16, ax, G + 0.15, az, '#6a4a2c'));
       for (let r = 0; r < 6; r++) {
-        out.push(boxR(16, 0.5, 1.0, ax, G + 0.45, az - 6.5 + r * 2.6, '#7d5634'));
-        for (let k = 0; k < 7; k++) out.push(paint(new THREE.SphereGeometry(0.85, 5, 4).scale(1, 0.7, 1).translate(ax - 7 + k * 2.3, G + 1.1, az - 6.5 + r * 2.6), (k + r) % 3 ? '#4f9a3a' : '#5eaa44'));
+        out.push(boxR(12.2, 0.5, 1.0, ax, G + 0.45, az - 6.5 + r * 2.6, '#7d5634'));
+        for (let k = 0; k < 6; k++) out.push(paint(new THREE.SphereGeometry(0.85, 5, 4).scale(1, 0.7, 1).translate(ax - 5.5 + k * 2.2, G + 1.1, az - 6.5 + r * 2.6), (k + r) % 3 ? '#4f9a3a' : '#5eaa44'));
       }
-      for (const [fx, fz] of [[-8.8, -8.3], [8.8, -8.3], [8.8, 8.3], [-8.8, 8.3], [0, -8.3], [0, 8.3], [8.8, 0], [-8.8, 0]]) out.push(boxR(0.3, 1.6, 0.3, ax + fx, G + 0.8, az + fz, HOLZ));
-      out.push(boxR(17.6, 0.2, 0.18, ax, G + 1.3, az + 8.3, HOLZ), boxR(17.6, 0.2, 0.18, ax, G + 1.3, az - 8.3, HOLZ));
+      for (const [fx, fz] of [[-6.8, -8.3], [6.8, -8.3], [6.8, 8.3], [-6.8, 8.3], [0, -8.3], [0, 8.3], [6.8, 0], [-6.8, 0]]) out.push(boxR(0.3, 1.6, 0.3, ax + fx, G + 0.8, az + fz, HOLZ));
+      out.push(boxR(13.6, 0.2, 0.18, ax, G + 1.3, az + 8.3, HOLZ), boxR(13.6, 0.2, 0.18, ax, G + 1.3, az - 8.3, HOLZ));
       // Hacke und Kartoffelsäcke vor der Hütte
       out.push(boxR(0.14, 2.6, 0.14, -2.5, G + 1.3, 3.6, HOLZ, 0, 0, 0.3), boxR(0.9, 0.25, 0.1, -2.1, G + 0.3, 3.6, '#9aa0a6'));
       out.push(paint(new THREE.SphereGeometry(0.8, 6, 5).scale(1, 0.9, 1).translate(1.6, G + 0.7, 3.6), '#d8c08a'), paint(new THREE.SphereGeometry(0.7, 6, 5).translate(2.8, G + 0.6, 4.2), '#cfb57c'));
@@ -318,12 +318,12 @@ const TYPEN: Record<string, Typ> = {
   },
   obstwiese: {
     w: 4.5, d: 4, floors: 1, wand: '#e9dcbc', dach: '#6d4a2f', laden: '#b53a2c', skala: 1, hoehe: 7,
-    grund: [-5, 22, -6, 14],
+    grund: [-5, 19, -6, 10],
     fertig() {
       const t = TYPEN.obstwiese;
       const out: THREE.BufferGeometry[] = [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach)];
       // sechs Apfelbäume mit roten Äpfeln, Leiter, Körbe
-      const baeume = [[7, -3], [13, -3.5], [19, -2.5], [8, 5], [14, 5.5], [19.5, 6]];
+      const baeume = [[6.5, -3], [11.5, -3.5], [16.3, -2.5], [7, 5], [12, 5.5], [16.3, 6]];
       baeume.forEach(([bx, bz], i) => {
         out.push(walze(0.45, 3.2, bx, G + 1.6, bz, HOLZ, 0, 0, 6), paint(new THREE.SphereGeometry(2.6, 7, 5).scale(1, 0.85, 1).translate(bx, G + 4.6, bz), i % 2 ? '#4f8f3a' : '#5a9a42'));
         for (let k = 0; k < 5; k++) out.push(paint(new THREE.SphereGeometry(0.45, 8, 6).translate(bx + Math.cos(k * 1.3 + i) * 2.2, G + 4.2 + (k % 2) * 1.1, bz + Math.sin(k * 1.3 + i) * 2.2), '#d0312d'));
@@ -352,19 +352,19 @@ const TYPEN: Record<string, Typ> = {
   },
   schafstall: {
     w: 12, d: 6, floors: 1, wand: '#e6d6b4', dach: '#6b5d52', laden: '#8a6340', skala: 0.9, hoehe: 8,
-    grund: [-8, 9, -16, 7],
+    grund: [-8, 9, -12.5, 7],
     fertig() {
       const t = TYPEN.schafstall;
       const out: THREE.BufferGeometry[] = [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach)];
       // Stalltor, Heuballen
       out.push(box(3.2, 2.6, 0.3, 2, G + 1.6, t.d / 2 + 0.2, '#6a4426'), boxR(0.2, 3, 0.25, 2, G + 1.6, t.d / 2 + 0.38, DUNKEL, 0, 0, 0.7));
       out.push(walze(1.0, 1.6, -6.8, G + 1, 4.2, '#d9c070', Math.PI / 2, 0, 9), walze(1.0, 1.6, -5, G + 1, 4.6, '#cfb562', Math.PI / 2, 0, 9));
-      // Weide hinter dem Stall mit Zaun und Schafen
-      const wz = -11;
-      out.push(boxR(15, 0.2, 9, 0, G + 0.05, wz, '#7fae55'));
-      for (const fx of [-7.4, -2.5, 2.5, 7.4]) for (const fz of [-4.4, 4.4]) out.push(boxR(0.3, 1.5, 0.3, fx, G + 0.75, wz + fz, HOLZ));
-      out.push(boxR(15, 0.18, 0.18, 0, G + 1.2, wz - 4.4, HOLZ), boxR(0.18, 0.18, 9, -7.4, G + 1.2, wz, HOLZ), boxR(0.18, 0.18, 9, 7.4, G + 1.2, wz, HOLZ));
-      const schafe = anker({ art: 'schafe', x: 0, y: G, z: wz, w: 12.5, d: 7, n: 7 }) ? [] : [[-4.5, -2], [-1, 1.5], [2.5, -1.8], [5, 2], [-5.5, 2.2], [1, -3.2]];
+      // Weide hinter dem Stall mit Zaun und Schafen (so tief, dass der Stall in voller Größe ins Hex passt)
+      const wz = -9;
+      out.push(boxR(15, 0.2, 6.6, 0, G + 0.05, wz, '#7fae55'));
+      for (const fx of [-7.4, -2.5, 2.5, 7.4]) for (const fz of [-3.2, 3.2]) out.push(boxR(0.3, 1.5, 0.3, fx, G + 0.75, wz + fz, HOLZ));
+      out.push(boxR(15, 0.18, 0.18, 0, G + 1.2, wz - 3.2, HOLZ), boxR(0.18, 0.18, 6.6, -7.4, G + 1.2, wz, HOLZ), boxR(0.18, 0.18, 6.6, 7.4, G + 1.2, wz, HOLZ));
+      const schafe = anker({ art: 'schafe', x: 0, y: G, z: wz, w: 12.5, d: 5, n: 7 }) ? [] : [[-4.5, -1.4], [-1, 1.1], [2.5, -1.3], [5, 1.4], [-5.5, 1.6], [1, -2.2]];
       schafe.forEach(([sx, sz], i) => {
         const r = i * 0.9;
         out.push(paint(new THREE.SphereGeometry(1.05, 7, 5).scale(1.3, 0.85, 0.9).rotateY(r).translate(sx, G + 1.2, wz + sz), '#f4f1e8'));
@@ -427,15 +427,15 @@ const TYPEN: Record<string, Typ> = {
   // ---- M8: Bier, Schnaps, Schänke, Eisen, Lagerhaus
   gerstenfeld: {
     w: 4.5, d: 4, floors: 1, wand: '#efe2c6', dach: '#7a5a3a', laden: '#c9a227', skala: 1, hoehe: 7,
-    grund: [-5, 23, -5, 14],
+    grund: [-5, 18.5, -4, 13.5],
     fertig() {
       const t = TYPEN.gerstenfeld;
       const out: THREE.BufferGeometry[] = [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach), ...laeden(t.w, t.d, t.floors, t.laden)];
       // goldenes Gerstenfeld mit Ähren in Reihen, ein paar Garben am Rand, Sense an der Hütte
-      const ax = 13, az = 4.5;
-      out.push(boxR(17, 0.4, 16, ax, G + 0.15, az, '#8a6a3c'));
-      for (let r = 0; r < 8; r++) for (let k = 0; k < 9; k++) {
-        out.push(paint(new THREE.ConeGeometry(0.55, 1.9, 4).translate(ax - 7.6 + k * 1.9, G + 1.25, az - 7 + r * 2), (k + r) % 3 ? '#d8b45a' : '#e6c46a'));
+      const ax = 11, az = 4.5;
+      out.push(boxR(13, 0.4, 16, ax, G + 0.15, az, '#8a6a3c'));
+      for (let r = 0; r < 8; r++) for (let k = 0; k < 7; k++) {
+        out.push(paint(new THREE.ConeGeometry(0.55, 1.9, 4).translate(ax - 5.7 + k * 1.9, G + 1.25, az - 7 + r * 2), (k + r) % 3 ? '#d8b45a' : '#e6c46a'));
       }
       for (const [gx, gz] of [[4.6, -4], [4.6, -1.8]]) out.push(walze(0.5, 1.8, gx, G + 0.9, gz, '#c9a24a', 0, 0, 7), walze(0.55, 0.15, gx, G + 1.1, gz, '#8a6038', 0, 0, 7));
       out.push(boxR(0.14, 2.8, 0.14, -2.6, G + 1.4, 3.4, HOLZ, 0, 0, 0.25), boxR(1.4, 0.1, 0.3, -2.1, G + 2.7, 3.4, '#b0b8c0', 0, 0, -0.4));
@@ -929,11 +929,15 @@ export function lebenAnker(typ: string): readonly Anker[] {
  * der Fahne an HEX_PLATZ_TIEFE tief (ein Hex ist rund 104 m breit und 120 m hoch). Größere Modelle (Felder, Schafstall, Kirmesplatz)
  * werden so weit verkleinert und auf die Hex-Mitte gerückt; sonst ragten sie in die Nachbarhexe und Wege liefen über sie hinweg.
  */
-export const HEX_PLATZ_BREITE = 92, HEX_PLATZ_TIEFE = 56;
+export const HEX_PLATZ_BREITE = 104, HEX_PLATZ_TIEFE = 78;
 /** Skala eines Spielgebäude-Modells (HAUS_SKALE × Typ-Skala, verkleinert, bis der Grundriss ins Hex passt). */
 export function modellSkala(typ: string): number {
   const t = TYPEN[modellTyp(typ)], [x0, x1, z0, z1] = t.grund;
   return Math.min(HAUS_SKALE * t.skala, HEX_PLATZ_BREITE / (x1 - x0), HEX_PLATZ_TIEFE / (z1 - z0));
+}
+/** Wie stark ein Modell verkleinert wird, damit es ins Hex passt (1 = gar nicht). */
+export function modellSchrumpf(typ: string): number {
+  return modellSkala(typ) / (HAUS_SKALE * TYPEN[modellTyp(typ)].skala);
 }
 /** Ursprung des Modells zur Hex-Mitte (hx, hz): Grundriss mittig in x, Vorderkante 4 m hinter der Fahne. */
 export function modellUrsprung(typ: string, hx: number, hz: number): { s: number; x: number; z: number } {
