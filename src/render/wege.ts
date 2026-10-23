@@ -27,17 +27,17 @@ export function kurvenPunkt(pts: Pkt[], i: number, t: number, out: Pkt = { x: 0,
 }
 
 /**
- * Stützpunkte eines Wegs aus den Hex-Mitten, geglättet: Ein Hex-Pfad schräg übers Gitter springt im Zickzack, die Kurve durch alle
- * Mitten wird dann zur Schlangenlinie. Jeder innere Punkt rückt zur Mitte seiner Nachbarn (WEG_GLAETTEN Durchgänge); die Enden
- * (Fahnen) bleiben. Wegband und Träger benutzen dieselben Punkte.
+ * Stützpunkte eines Wegs aus den Hex-Mitten, leicht geglättet: Ein Hex-Pfad schräg übers Gitter springt im Zickzack, die Kurve durch
+ * alle Mitten wird dann zur Schlangenlinie. Jeder innere Punkt rückt ein Stück (WEG_GLAETTEN) zur Mitte seiner Nachbarn; nur ein
+ * Durchgang, denn ein Hex ist rund 100 m groß – stärker geglättet läge der Weg neben seiner Spur (Trampelpfad, Fahnen, wartende
+ * Träger). Die Enden (Fahnen) bleiben. Wegband und Träger benutzen dieselben Punkte.
  */
-export const WEG_GLAETTEN = 4;
+export const WEG_GLAETTEN = 0.35;
 export function wegPunkte(pfad: { q: number; r: number }[], toWorld: (h: { q: number; r: number }) => Pkt): Pkt[] {
-  let p = pfad.map((h) => { const w = toWorld(h); return { x: w.x, z: w.z }; });
-  for (let k = 0; k < WEG_GLAETTEN; k++) {
-    p = p.map((v, i) => (i === 0 || i === p.length - 1 ? v : { x: v.x * 0.4 + (p[i - 1].x + p[i + 1].x) * 0.3, z: v.z * 0.4 + (p[i - 1].z + p[i + 1].z) * 0.3 }));
-  }
-  return p;
+  const p = pfad.map((h) => { const w = toWorld(h); return { x: w.x, z: w.z }; });
+  return p.map((v, i) => (i === 0 || i === p.length - 1 ? v : {
+    x: v.x + ((p[i - 1].x + p[i + 1].x) / 2 - v.x) * WEG_GLAETTEN, z: v.z + ((p[i - 1].z + p[i + 1].z) / 2 - v.z) * WEG_GLAETTEN,
+  }));
 }
 
 /** Mittellinie dicht abgetastet: Punkte mit Weg-Länge (flow). */

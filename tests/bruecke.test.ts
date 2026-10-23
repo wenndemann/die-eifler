@@ -104,7 +104,7 @@ describe('Holzbrücken', () => {
     expect(mitLuecken(linie, [])).toEqual([linie]);
   });
 
-  it('Darstellung: Wege werden geglättet (Zickzack übers Hex-Gitter wird gerade), die Enden bleiben an den Fahnen', () => {
+  it('Darstellung: Wege werden leicht geglättet (Zickzack übers Hex-Gitter wird ruhiger, der Weg bleibt auf seiner Spur), die Enden bleiben an den Fahnen', () => {
     const zick = [{ q: 0, r: 0 }, { q: 1, r: 0 }, { q: 1, r: 1 }, { q: 2, r: 1 }, { q: 2, r: 2 }, { q: 3, r: 2 }, { q: 3, r: 3 }];
     const welt = (h: { q: number; r: number }) => ({ x: Math.sqrt(3) * 10 * (h.q + h.r / 2), z: 15 * h.r });
     const roh = zick.map(welt), glatt = wegPunkte(zick, welt);
@@ -119,6 +119,8 @@ describe('Holzbrücken', () => {
       }
       return n;
     };
-    expect(knicke(glatt)).toBeLessThan(knicke(roh) * 0.5);
+    expect(knicke(glatt)).toBeLessThan(knicke(roh) * 0.8);
+    // höchstens ein gutes Drittel des Wegs zur Nachbarmitte (Hex rund 100 m: der Weg bleibt auf seiner Hex-Spur)
+    for (let i = 1; i < roh.length - 1; i++) expect(Math.hypot(glatt[i].x - roh[i].x, glatt[i].z - roh[i].z)).toBeLessThan(Math.hypot(roh[i + 1].x - roh[i].x, roh[i + 1].z - roh[i].z) * 0.4);
   });
 });
