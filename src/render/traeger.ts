@@ -38,6 +38,30 @@ function rohr(a: [number, number, number], b: [number, number, number], r1: numb
 }
 
 /**
+ * Geflochtener Zopf von a (Ansatz am Kopf) nach b: ein dunkler Kern, darauf abwechselnd links und rechts schräg gestellte Strähnen
+ * (das Fischgrät-Muster eines Zopfs), unten Schleife und Quaste. Liefert die Teile; `variante` wie bei add.
+ */
+function zopf(a: [number, number, number], b: [number, number, number], dicke: number, farbe: string, schleife: string, variante = 0): void {
+  const va = new THREE.Vector3(...a), vb = new THREE.Vector3(...b);
+  const d = vb.clone().sub(va), len = d.length();
+  const dreh = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.clone().normalize());
+  const lege = (g: THREE.BufferGeometry, y: number) => g.translate(0, y, 0).applyQuaternion(dreh).translate(va.x, va.y, va.z);
+  const dunkel = '#' + new THREE.Color(farbe).multiplyScalar(0.6).getHexString();
+  add(paint(lege(new THREE.CylinderGeometry(dicke * 0.45, dicke * 0.6, len * 0.92, 5).translate(0, len * 0.46, 0), 0), dunkel), 0, [0, 0, 0], 0, variante);
+  const n = 6;
+  for (let i = 0; i < n; i++) {
+    const t = (i + 0.5) / n, s = 1 - 0.3 * t, seite = i % 2 ? 1 : -1;
+    const g = new THREE.SphereGeometry(dicke, 6, 4).scale(0.75 * s, (len / n) * 0.95 / dicke, 0.7 * s)
+      .rotateZ(seite * 0.6).translate(seite * dicke * 0.28 * s, 0, 0);
+    add(paint(lege(g, len * t * 0.92), farbe), 0, [0, 0, 0], 0, variante);
+  }
+  add(paint(lege(new THREE.TorusGeometry(dicke * 0.55, dicke * 0.3, 4, 8).rotateX(Math.PI / 2), len * 0.94), schleife), 0, [0, 0, 0], 0, variante);
+  add(paint(lege(new THREE.SphereGeometry(dicke * 0.4, 5, 3).translate(-dicke * 0.6, 0, 0), len * 0.94), schleife), 0, [0, 0, 0], 0, variante);
+  add(paint(lege(new THREE.SphereGeometry(dicke * 0.4, 5, 3).translate(dicke * 0.6, 0, 0), len * 0.94), schleife), 0, [0, 0, 0], 0, variante);
+  add(paint(lege(new THREE.ConeGeometry(dicke * 0.75, len * 0.16, 6).rotateX(Math.PI), len * 1.04), farbe), 0, [0, 0, 0], 0, variante);
+}
+
+/**
  * Tracht (Berufe erkennbar, Gutachter): Kopfbedeckung, Schürze und Bart. Hut-Farben stehen fest (nur die Kappe der Träger nimmt die
  * Trachtfarbe an), das Hemd färbt weiter die Instanzfarbe.
  */
@@ -211,14 +235,12 @@ export function figur(tracht: Tracht = TRAEGER_TRACHT): THREE.BufferGeometry {
     add(paint(new THREE.BoxGeometry(0.06, 0.012, 0.012).translate(0, 0.79, 0.25), '#2a2a2a'), 0, [0, 0, 0], 0, VARIANTE.brille);
     for (const sx of [-1, 1]) {
       // Zöpfe seitlich vor den Schultern (von vorn gut zu sehen), mit roter Schleife
-      add(paint(new THREE.CylinderGeometry(0.055, 0.04, 0.36, 7).rotateZ(sx * 0.3).translate(sx * 0.27, 0.6, 0.06), '#c8843a'), 0, [0, 0, 0], 0, VARIANTE.frau);
-      add(paint(new THREE.SphereGeometry(0.05, 6, 5).translate(sx * 0.32, 0.43, 0.06), '#d6262a'), 0, [0, 0, 0], 0, VARIANTE.frau);
+      zopf([sx * 0.22, 0.78, 0.02], [sx * 0.33, 0.44, 0.08], 0.065, '#c8843a', '#d6262a', VARIANTE.frau);
     }
   }
   else for (const sx of [-1, 1]) {
     // Zöpfe mit Schleife, Wimpern
-    add(paint(new THREE.CylinderGeometry(0.045, 0.035, 0.32, 6).rotateZ(sx * 0.25).translate(sx * 0.24, 0.6, -0.08), '#b8743a'));
-    add(paint(new THREE.SphereGeometry(0.04, 5, 4).translate(sx * 0.27, 0.46, -0.08), '#d6262a'));
+    zopf([sx * 0.2, 0.78, -0.08], [sx * 0.29, 0.46, -0.08], 0.06, '#b8743a', '#d6262a');
     add(paint(new THREE.BoxGeometry(0.05, 0.015, 0.02).rotateZ(sx * 0.5).translate(sx * 0.15, 0.82, 0.205), '#2a1a12'), 5, [sx * 0.085, 0.85, 0.215]);
   }
   // Mund unter dem Schnauzer: Bogen, im Shader zwischen Lachen (∪), Strich und Flunsch (∩) gebogen, beim Jubeln offen

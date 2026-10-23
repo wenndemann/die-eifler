@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { OffenerWeg, WEG_MAX, naechsteSchritte, nachbarn, type Hx } from '../src/spiel/logik';
 import { Simulation } from '../src/sim/sim';
+import { FLAG } from '../src/welt/format';
 import { baueTestKarte, gerade } from './sim-szenario';
 
 const neuSim = () => new Simulation(baueTestKarte(), 1, { q: 0, r: 0, bewohner: 40 });
@@ -128,6 +129,30 @@ describe('wegAbschnitt (Simulation)', () => {
     const quer = sim3.wegAbschnitt({ q: k!.q - 3, r: k!.r - 1 }, { q: k!.q + 3, r: k!.r - 1 }, [], 60);
     expect(quer).not.toBeNull();
     expect(quer!.some((h) => h.r === k!.r - 1 && (h.q === k!.q || h.q === k!.q + 1))).toBe(false);
+  });
+
+  it('Wege kreuzen Bäche quer und laufen nicht an ihnen entlang', () => {
+    const karte = baueTestKarte();
+    // ein Bach entlang q = −5 (eine zusammenhängende Hex-Linie in r-Richtung)
+    let i = 0;
+    for (let r = -karte.n; r <= karte.n; r++) for (let q = Math.max(-karte.n, -r - karte.n); q <= Math.min(karte.n, -r + karte.n); q++, i++) if (q === -5 && r >= -12 && r <= 12) karte.flags[i] |= FLAG.fluss;
+    const sim = new Simulation(karte, 1, { q: 0, r: 0, bewohner: 40 });
+    const bach = (h: Hx) => h.q === -5 && h.r >= -12 && h.r <= 12;
+    const pruefe = (p: Hx[]) => {
+      for (let j = 1; j < p.length; j++) {
+        expect(bach(p[j - 1]) && bach(p[j])).toBe(false);                          // nie von Bach-Hex zu Bach-Hex
+        if (bach(p[j])) expect(bach({ q: 2 * p[j].q - p[j - 1].q, r: 2 * p[j].r - p[j - 1].r })).toBe(false); // geradeaus dahinter kein Bach
+      }
+    };
+    const quer = sim.wegAbschnitt({ q: -8, r: 0 }, { q: -2, r: 0 }, [], 60)!;
+    expect(quer).not.toBeNull();
+    expect(quer.filter(bach).length).toBe(1);
+    pruefe(quer);
+    // entlang: von einem Bach-Hex zum anderen geht es nur neben dem Bach her
+    const lang = sim.wegAbschnitt({ q: -5, r: -6 }, { q: -5, r: 6 }, [], 60)!;
+    expect(lang).not.toBeNull();
+    expect(lang.filter(bach).length).toBe(2);
+    pruefe(lang);
   });
 
   it('Teilstücke zusammen ergeben einen baubaren Weg; ein Weg-Hex ist ein gültiges Ende', () => {
