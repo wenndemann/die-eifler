@@ -154,7 +154,12 @@ const saegeGeo = () => mergeGeometries([k(0.12, 2.6, 2.2, 0, 0, 0, '#cfd3d6'), k
 const hammerGeo = () => mergeGeometries([k(1.8, 0.16, 0.16, -0.9, 0, 0, '#8a6340'), k(0.45, 0.7, 0.5, -1.8, 0, 0, '#3a3a3a')])!;
 /** Laternenpfahl: Holzpfahl mit Querarm, an dem die Laterne hängt (Licht als eigene Instanz, leben.ts: laternen). */
 const laternenPfahlGeo = () => mergeGeometries([
-  k(0.35, 5.6, 0.35, 0, 2.8, 0, '#5a3c26'), k(1.5, 0.2, 0.22, 0.6, 5.6, 0, '#5a3c26'), k(0.55, 0.7, 0.55, 1.1, 5.25, 0, '#2b2826'),
+  k(0.35, 5.6, 0.35, 0, 2.8, 0, '#5a3c26'), k(1.7, 0.2, 0.22, 0.7, 5.6, 0, '#5a3c26'), k(0.06, 0.35, 0.06, 1.3, 5.35, 0, '#2b2826'),
+  // Laternenkopf (Gutachter-Runde 9: „liest sich als Speer“): Glaskasten mit dunklen Eckstreben, Boden und spitzem Dach
+  k(0.75, 0.9, 0.75, 1.3, 4.6, 0, '#ffe7a0'),
+  ...[[-1, -1], [-1, 1], [1, -1], [1, 1]].map(([a, b]) => k(0.1, 0.95, 0.1, 1.3 + a * 0.38, 4.6, b * 0.38, '#2b2826')),
+  k(0.95, 0.12, 0.95, 1.3, 4.12, 0, '#2b2826'), k(1.0, 0.12, 1.0, 1.3, 5.08, 0, '#2b2826'),
+  paint(new THREE.ConeGeometry(0.62, 0.45, 4).rotateY(Math.PI / 4).translate(1.3, 5.35, 0), '#2b2826'),
   k(0.9, 0.3, 0.9, 0, 0.15, 0, '#8f897f'),
 ])!;
 /** Zunftschild: geschmiedeter Arm aus der Wand (nach +z) mit Schnörkel, Drehpunkt der Ware an der Armspitze (0, 0, 2.2). */
@@ -395,7 +400,8 @@ export class LebenDarstellung {
     // an der vorderen linken Hausecke (vor der Tür steht die Fahne, rechts hängt das Zunftschild), Blick nach vorn
     // ohne Fachwerk (Felder, Ställe): vor die linke vordere Ecke des Grundstücks, nicht in die Wand
     const gr = modellGrund(g.typ);
-    const mx = a ? -a.x - 2.6 : gr[0] + 1.5, mz = a ? a.z + 1.6 : gr[3] + 1.5;
+    // (Gutachter-Runde 9: weiter zur Seite, damit er Tür und Fassade nicht verdeckt)
+    const mx = a ? -a.x - 4.2 : gr[0] + 1.5, mz = a ? a.z + 2.2 : gr[3] + 1.5;
     const x = l.x + mx * l.sk, z = l.z + mz * l.sk;
     const takt = (t * 0.12 + h01(g.id, 9)) % 1;
     const geste = takt < 0.12 ? GESTE.winken : takt > 0.55 && takt < 0.65 ? GESTE.kratzen : GESTE.keine;
@@ -419,16 +425,16 @@ export class LebenDarstellung {
       this.pfaehle.fuege(m);
       this.kontakt.setze(x, y, z, 0.8 * sk);
       if (nacht < 0.05) continue;
-      const ly = y + 5.3 * sk, hell = nacht * (0.9 + 0.1 * Math.sin(t * 5 + f.id));
+      const ly = y + 4.6 * sk, lx = x + 1.3 * sk, hell = nacht * (0.9 + 0.1 * Math.sin(t * 5 + f.id));
       this.c.set(leben.fenster.farbe).multiplyScalar(hell * leben.fenster.hell * 1.4);
-      m.compose(p.set(x + 1.1 * sk, ly, z), q.identity(), sc.setScalar(sk * 1.1));
+      m.compose(p.set(lx, ly, z), q.identity(), sc.setScalar(sk * 0.9));
       this.lampen.fuege(m, this.c);
       this.c.set(leben.fenster.farbe).multiplyScalar(hell * leben.fenster.glanz * 1.3);
       if (this.kamera) q.copy(this.kamera.quaternion);
-      m.compose(p.set(x + 1.1 * sk, ly, z), q, sc.set(8 * sk, 8 * sk, sk));
+      m.compose(p.set(lx, ly, z), q, sc.set(8 * sk, 8 * sk, sk));
       this.schein.fuege(m, this.c);
       this.c.copy(GELB).multiplyScalar(hell * leben.fenster.boden);
-      m.compose(p.set(x + 1.1 * sk, this.hoehe(x, z) + 0.4, z), this.q2.setFromAxisAngle(this.X, -Math.PI / 2), sc.set(12 * sk, 12 * sk, sk));
+      m.compose(p.set(lx, this.hoehe(x, z) + 0.4, z), this.q2.setFromAxisAngle(this.X, -Math.PI / 2), sc.set(12 * sk, 12 * sk, sk));
       this.schein.fuege(m, this.c);
     }
   }
@@ -614,15 +620,22 @@ export class LebenDarstellung {
           const yaw = w + (j % 2 ? 0 : Math.PI) + Math.PI / 2;
           this.figur(px, pz, yaw + Math.PI / 2 * (j % 2 ? -1 : 1), o.t * 11 + j, KIND[j % KIND.length], 1, j === 0 ? GESTE.jubeln : GESTE.keine, 1, 0, 0.7, o.zahl, this.figuren, 1, j % 2 ? VARIANTE.frau : VARIANTE.schnauzer);
         }
-        // beim Fest: Besucher im großen Kreis um den Platz, klatschen, jubeln und winken (Gutachter: „das Fest ist leer“)
-        if (o.kirmesFest || o.fest) {
-          const nb = leben.fest.besucher, rb = leben.fest.radius * sk;
-          for (let j = 0; j < nb; j++) {
-            const w = (j / nb) * 6.283 + 0.3 * Math.sin(o.t * 0.2 + j);
-            const px = x + Math.cos(w) * rb, pz = z + Math.sin(w) * rb * 0.8;
-            const geste = [GESTE.jubeln, GESTE.winken, GESTE.keine, GESTE.jubeln][(j + Math.floor(o.t * 0.5)) % 4];
-            this.figur(px, pz, Math.atan2(x - px, z - pz), o.t * 3 + j, SCHWAETZER[(id + j) % SCHWAETZER.length], 0, geste, 1, 0, 1, o.zahl, this.figuren, 1, variante(id * 11 + j));
-          }
+        break;
+      }
+      case 'besucher': {
+        // beim Fest: Besucher im Ring um das Karussell (Mitte des Ankers), klatschen, jubeln und winken (Gutachter: „das Fest ist leer“);
+        // nicht im Karussell, nicht in den Buden und nicht am Kirmesbaum (Hindernisse in Modell-Metern relativ zum Anker)
+        if (!(o.kirmesFest || o.fest)) break;
+        const nb = leben.fest.besucher, r = a.r ?? leben.fest.radius, frei = a.frei ?? [];
+        let n = 0;
+        for (let j = 0; j < 24 && n < nb; j++) {
+          const w = (j / 24) * 6.283 + 0.04 * Math.sin(o.t * 0.3 + j);
+          const lx = Math.cos(w) * r, lz = Math.sin(w) * r;
+          if (frei.some(([hx, hz, hr]) => Math.hypot(lx - hx, lz - hz) < hr)) continue;
+          const px = x + lx * sk, pz = z + lz * sk;
+          const geste = [GESTE.jubeln, GESTE.winken, GESTE.keine, GESTE.jubeln][(n + Math.floor(o.t * 0.5)) % 4];
+          this.figur(px, pz, Math.atan2(x - px, z - pz), o.t * 3 + n, SCHWAETZER[(id + n) % SCHWAETZER.length], 0, geste, 1, 0, 1, o.zahl, this.figuren, 1, variante(id * 11 + n * 3));
+          n++;
         }
         break;
       }

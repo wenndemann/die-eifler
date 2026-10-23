@@ -5,7 +5,9 @@ import * as THREE from 'three';
 import type { MapData } from '../map/mapdata';
 import { KULISSE_GLSL, KULISSE_FOG, kulisseUniforms } from './kulisse';
 
-const MIN_VISUAL_WIDTH = [8, 3.5, 4]; // Fluss, Bach, Kanal (m)
+/** Breite des ganzen Bands (Wasser plus Ufer) zum Wasser. */
+const UFER = 1.35;
+const MIN_VISUAL_WIDTH = [8, 6, 4]; // Fluss, Bach, Kanal (m); der Bach breiter als echt, sonst ein Strich neben den Figuren
 
 export class Rivers {
   readonly mesh: THREE.Mesh;
@@ -31,7 +33,8 @@ export class Rivers {
       }
       const n = p.length / 3;
       if (n < 2) continue;
-      const half0 = Math.max(r.w, MIN_VISUAL_WIDTH[r.k] ?? 4) * 0.5 + 1.5;
+      // Band um UFER breiter als das Wasser: außen ein Uferstreifen mit Kies und brauner Linie (Gutachter-Runde 9: „Bach ohne Ufer“)
+      const half0 = (Math.max(r.w, MIN_VISUAL_WIDTH[r.k] ?? 4) * 0.5 + 1.5) * UFER;
       const tap = r.k === 1 ? 90 : 40;
       let s = 0;
       const v0 = pos.length / 3;
@@ -127,19 +130,27 @@ float glitzer(vec2 p, float t) {
   float at = abs(vSide);
   float sp = 1.6 + drop * 120.0;            // Fließgeschwindigkeit (m/s, optisch)
   float n = flowN(vFlow, vSide, hw, sp);
-  vec3 shallow = vec3(0.20, 0.40, 0.38), deep = vec3(0.07, 0.22, 0.28);
-  float core = 1.0 - smoothstep(0.0, 0.9, at);
+  // at: 0 Mitte .. 1 Bandrand; das Wasser endet bei 1/UFER, außen liegt das Ufer
+  float aw = at * ${UFER.toFixed(2)};
+  vec3 shallow = vec3(0.17, 0.42, 0.52), deep = vec3(0.06, 0.22, 0.36);
+  float core = 1.0 - smoothstep(0.0, 0.9, aw);
   diffuseColor.rgb = mix(shallow, deep, core * (kind < 0.5 ? 1.0 : 0.45));
   diffuseColor.rgb *= 0.9 + n * 0.25;
   // Schaum: Stromschnellen und Uferkante
   float rapid = smoothstep(0.004, 0.03, drop) * smoothstep(0.55, 0.85, n);
-  float edgeFoam = smoothstep(0.62, 0.8, at) * (1.0 - smoothstep(0.8, 0.95, at)) * (0.35 + 0.5 * n);
+  float edgeFoam = smoothstep(0.62, 0.8, aw) * (1.0 - smoothstep(0.8, 0.95, aw)) * (0.35 + 0.5 * n);
   diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.86, 0.91, 0.9), clamp(rapid * 0.7 + edgeFoam * 0.5, 0.0, 1.0));
   // Lebendige Eifel: Sonnenglitzern, treibt mit der Strömung
   diffuseColor.rgb += vec3(1.0, 0.96, 0.85) * glitzer(vec2(vSide * hw * 0.25, (vFlow - uTime * sp * 0.6) * 0.25), uTime) * 1.4 * (1.0 - smoothstep(400.0, 2000.0, vDist));
   // Weicher Rand + Bäche in der Ferne ausblenden (sonst Flimmern)
   float fade = kind > 0.5 ? 1.0 - smoothstep(2500.0, 6000.0, vDist) : 1.0 - smoothstep(14000.0, 22000.0, vDist);
-  diffuseColor.a = (1.0 - smoothstep(0.82, 1.0, at)) * mix(0.75, 0.93, core) * fade * vTaper;
+  diffuseColor.a = mix(0.86, 0.95, core);
+  // Ufer: brauner Strich an der Wasserkante, dann Kies und feuchte Erde, nach außen weich ins Gras
+  float ufer = smoothstep(0.96, 1.02, aw);
+  vec3 kies = mix(vec3(0.50, 0.43, 0.32), vec3(0.62, 0.56, 0.44), rn(vWP * 0.9));
+  diffuseColor.rgb = mix(diffuseColor.rgb, kies, ufer);
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.30, 0.20, 0.12), (1.0 - smoothstep(0.0, 0.05, abs(aw - 1.0))) * 0.8);
+  diffuseColor.a = mix(diffuseColor.a, 1.0, ufer) * (1.0 - smoothstep(0.86, 1.0, at)) * fade * vTaper;
   diffuseColor.rgb = kGrau(diffuseColor.rgb, kOut(vWP));
   vKFade = kFade(vWP);
 }`)

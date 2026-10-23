@@ -17,7 +17,7 @@ import { Kontaktschatten } from './kontakt';
 import { entzerren, meisterPlaetze, traegerPlaetze, type Platz } from './gedraenge';
 import { TRAEGER_H, WARE_TRAGEN, fernFaktor } from './massstab';
 import { WAREN_ANZAHL, warenGeometrie } from './waren';
-import { kurvenPunkt, type Pkt } from './wege';
+import { kurvenPunkt, wegPunkte, type Pkt } from './wege';
 
 // ---- Modell (Einheitshöhe 1, vorn = +z). Teile: 0 Rumpf, 1/2 Bein links/rechts, 3/4 Arm links/rechts,
 // M12 Gesicht: 5 Brauen, 6 Mund, 7 Augen (Mimik im Vertex-Shader, Gelenk = Drehpunkt bzw. Mitte des Teils).
@@ -82,9 +82,13 @@ function hut(t: Tracht, nacken: (g: THREE.BufferGeometry) => THREE.BufferGeometr
   const walze = (r1: number, r2: number, h: number, y: number, farbe: string, seg = 14) => paint(new THREE.CylinderGeometry(r1, r2, h, seg).translate(0, y, 0), farbe);
   switch (t.hut) {
     case 'kappe':
-      add(nacken(paint(new THREE.SphereGeometry(0.245, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, 0.83, 0), '#d8cfc4')), 0, [0, 0, 0], 1);
-      add(nacken(paint(new THREE.BoxGeometry(0.26, 0.03, 0.12).translate(0, 0.84, 0.2), '#9a9088')), 0, [0, 0, 0], 1);
-      add(nacken(paint(new THREE.SphereGeometry(0.06, 5, 4).translate(0, 1.08, 0), '#f3e9d2')));
+      add(nacken(paint(new THREE.SphereGeometry(0.245, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, 0.83, 0), '#d8cfc4')), 0, [0, 0, 0], 1, -VARIANTE.frau);
+      add(nacken(paint(new THREE.BoxGeometry(0.26, 0.03, 0.12).translate(0, 0.84, 0.2), '#9a9088')), 0, [0, 0, 0], 1, -VARIANTE.frau);
+      add(nacken(paint(new THREE.SphereGeometry(0.06, 5, 4).translate(0, 1.08, 0), '#f3e9d2')), 0, [0, 0, 0], 0, -VARIANTE.frau);
+      // Frau: Kopftuch in der Trachtfarbe, hinten geknotet (statt Kappe mit Bommel)
+      add(nacken(paint(new THREE.SphereGeometry(0.255, 12, 7, 0, Math.PI * 2, 0, Math.PI * 0.55).translate(0, 0.78, -0.01), '#e8e0d4')), 0, [0, 0, 0], 1, VARIANTE.frau);
+      add(nacken(paint(new THREE.SphereGeometry(0.06, 6, 4).scale(1.3, 0.8, 1).translate(0, 0.86, -0.25), '#e8e0d4')), 0, [0, 0, 0], 1, VARIANTE.frau);
+      add(nacken(paint(new THREE.ConeGeometry(0.05, 0.13, 5).rotateX(-2.4).translate(0, 0.8, -0.29), '#e8e0d4')), 0, [0, 0, 0], 1, VARIANTE.frau);
       break;
     case 'pudel': {
       // Strickmütze mit Umschlag und dickem Bommel (Holzfäller, Köhler)
@@ -188,7 +192,7 @@ function zusatz(t: Tracht): void {
     add(paint(new THREE.BoxGeometry(0.16, 0.12, 0.02).translate(0, 0.53, 0.2), t.schuerze));
   }
   // Mitte knapp über 0,6: wächst mit dem Kopf (Stil-Skalierung unten)
-  if (t.bart) add(paint(new THREE.SphereGeometry(0.17, 10, 7).scale(1.05, 0.8, 0.7).translate(0, 0.605, 0.15), t.bart));
+  if (t.bart) add(paint(new THREE.SphereGeometry(0.17, 10, 7).scale(1.05, 0.8, 0.7).translate(0, 0.605, 0.15), t.bart), 0, [0, 0, 0], 0, -VARIANTE.frau);
 }
 
 export function figur(tracht: Tracht = TRAEGER_TRACHT): THREE.BufferGeometry {
@@ -207,13 +211,18 @@ export function figur(tracht: Tracht = TRAEGER_TRACHT): THREE.BufferGeometry {
   add(paint(new THREE.BoxGeometry(0.07, 0.06, 0.02).translate(0, 0.33, 0.235), '#e8c14a'));
   // Hosenträger und heller Hemdkragen: der Rumpf liest sich als Kleidung, nicht als farbige Kugel
   for (const sx of [-1, 1]) {
-    add(paint(new THREE.TorusGeometry(0.245, 0.018, 4, 12, 1.6).rotateY(-Math.PI / 2).rotateX(0.35).translate(sx * 0.09, 0.42, 0), HOSE));
-    add(paint(new THREE.SphereGeometry(0.024, 5, 4).translate(sx * 0.09, 0.47, 0.24), '#e8c14a'));
+    // (die Frau trägt keine Hosenträger)
+    if (!tracht.frau) {
+      add(paint(new THREE.TorusGeometry(0.245, 0.018, 4, 12, 1.6).rotateY(-Math.PI / 2).rotateX(0.35).translate(sx * 0.09, 0.42, 0), HOSE), 0, [0, 0, 0], 0, -VARIANTE.frau);
+      add(paint(new THREE.SphereGeometry(0.024, 5, 4).translate(sx * 0.09, 0.47, 0.24), '#e8c14a'), 0, [0, 0, 0], 0, -VARIANTE.frau);
+    }
   }
   add(paint(new THREE.TorusGeometry(0.12, 0.035, 5, 12).rotateX(Math.PI / 2).translate(0, 0.6, 0), '#f3ead8'));
   // Kopf: groß, Knollennase, Augen, Ohren
   add(paint(new THREE.SphereGeometry(0.235, 14, 10).translate(0, 0.74, 0), HAUT));
-  add(paint(new THREE.SphereGeometry(0.1, 9, 7).scale(1, 0.95, 1.1).translate(0, 0.71, 0.24), NASE));
+  // Knollennase; die Frau (Tracht oder Gesichtsvariante) hat eine kleine Stupsnase
+  if (!tracht.frau) add(paint(new THREE.SphereGeometry(0.1, 9, 7).scale(1, 0.95, 1.1).translate(0, 0.71, 0.24), NASE), 0, [0, 0, 0], 0, -VARIANTE.frau);
+  add(paint(new THREE.SphereGeometry(0.06, 8, 6).scale(1, 0.9, 1.1).translate(0, 0.715, 0.235), NASE), 0, [0, 0, 0], 0, tracht.frau ? 0 : VARIANTE.frau);
   for (const sx of [-1, 1]) add(paint(new THREE.SphereGeometry(0.06, 6, 5).scale(0.6, 1, 1).translate(sx * 0.235, 0.73, 0), HAUT));
   for (const sx of [-1, 1]) {
     // Augen (blinzeln): Weißes und Pupille um die Augenmitte
@@ -221,8 +230,13 @@ export function figur(tracht: Tracht = TRAEGER_TRACHT): THREE.BufferGeometry {
     add(paint(new THREE.SphereGeometry(0.032, 5, 4).translate(sx * 0.09, 0.79, 0.25), '#1b1b1b'), 7, [sx * 0.09, 0.785, 0.2]);
     add(paint(new THREE.SphereGeometry(0.05, 5, 4).translate(sx * 0.16, 0.69, 0.14), '#f08f7a'));   // Wangen
     // Brauen: dick und beweglich (hoch bei Freude, innen runter bei Ärger)
-    add(paint(new THREE.BoxGeometry(0.12, 0.028, 0.03).rotateZ(sx * 0.2).translate(sx * 0.085, 0.85, 0.215), '#5a3b26'), 5, [sx * 0.085, 0.85, 0.215]);
+    if (!tracht.frau) add(paint(new THREE.BoxGeometry(0.12, 0.028, 0.03).rotateZ(sx * 0.2).translate(sx * 0.085, 0.85, 0.215), '#5a3b26'), 5, [sx * 0.085, 0.85, 0.215], 0, -VARIANTE.frau);
+    // Frau: schmale, gebogene Brauen
+    const fv = tracht.frau ? 0 : VARIANTE.frau;
+    add(paint(new THREE.TorusGeometry(0.055, 0.009, 3, 8, 2.2).rotateZ(0.47).translate(sx * 0.09, 0.82, 0.215), '#6a4a30'), 5, [sx * 0.085, 0.85, 0.215], 0, fv);
   }
+  // Frau: Rock über den Hüften (in der Hemdfarbe)
+  add(paint(new THREE.CylinderGeometry(0.21, 0.29, 0.2, 14, 1, true).translate(0, 0.21, 0), '#ffffff'), 0, [0, 0, 0], 1, tracht.frau ? 0 : VARIANTE.frau);
   // Schnauzer (nicht bei der Frau, beim Alten grau); Gesichtsvarianten: Vollbart, Brille, Frau mit Zöpfen, Alter mit grauem Bart
   if (!tracht.frau) {
     add(paint(new THREE.BoxGeometry(0.2, 0.05, 0.03).translate(0, 0.655, 0.215), '#b5835a'), 0, [0, 0, 0], 0, -VARIANTE.frau);
@@ -239,12 +253,12 @@ export function figur(tracht: Tracht = TRAEGER_TRACHT): THREE.BufferGeometry {
     }
   }
   else for (const sx of [-1, 1]) {
-    // Zöpfe mit Schleife, Wimpern
+    // Zöpfe mit Schleife
     zopf([sx * 0.2, 0.78, -0.08], [sx * 0.29, 0.46, -0.08], 0.06, '#b8743a', '#d6262a');
-    add(paint(new THREE.BoxGeometry(0.05, 0.015, 0.02).rotateZ(sx * 0.5).translate(sx * 0.15, 0.82, 0.205), '#2a1a12'), 5, [sx * 0.085, 0.85, 0.215]);
   }
   // Mund unter dem Schnauzer: Bogen, im Shader zwischen Lachen (∪), Strich und Flunsch (∩) gebogen, beim Jubeln offen
-  add(paint(new THREE.TorusGeometry(0.06, 0.017, 4, 9, Math.PI).rotateZ(Math.PI).translate(0, 0.625, 0.205), '#7a2a22'), 6, [0, 0.625, 0.205]);
+  if (!tracht.frau) add(paint(new THREE.TorusGeometry(0.06, 0.017, 4, 9, Math.PI).rotateZ(Math.PI).translate(0, 0.625, 0.205), '#7a2a22'), 6, [0, 0.625, 0.205], 0, -VARIANTE.frau);
+  add(paint(new THREE.TorusGeometry(0.05, 0.02, 4, 9, Math.PI).rotateZ(Math.PI).translate(0, 0.63, 0.205), '#c8303a'), 6, [0, 0.625, 0.205], 0, tracht.frau ? 0 : VARIANTE.frau);
   // Kappe mit Schirm und Bommel
   // Kappe in den Nacken geschoben, damit man das Gesicht auch von schräg oben sieht (Spielkamera)
   const nacken = (g: THREE.BufferGeometry) => g.translate(0, -0.74, 0).rotateX(-0.42).translate(0, 0.74, -0.02);
@@ -439,7 +453,7 @@ export class Traeger {
     this.kanten.clear();
     sig = '';
     for (const s of sicht.segmente) {
-      const pts = s.pfad.map((h) => this.grid.toWorld(h));
+      const pts = wegPunkte(s.pfad, (h) => this.grid.toWorld(h));
       for (let i = 0; i < s.pfad.length - 1; i++) {
         const a = s.pfad[i], b = s.pfad[i + 1];
         this.kanten.set(`${a.q},${a.r}>${b.q},${b.r}`, { pts, i, rueck: false });

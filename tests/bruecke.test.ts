@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { Simulation } from '../src/sim/sim';
 import { GEBAEUDE, WARE } from '../src/sim/daten';
 import { baueTestKarte, mitBach } from './sim-szenario';
-import { mitLuecken } from '../src/render/wege';
+import { mitLuecken, wegPunkte } from '../src/render/wege';
 
 type Intern = { karte: { index(q: number, r: number): number }; gebaeudeErzeugen(t: string, h: number, sofort: boolean, sp: number): { id: number; vorrat: number[] } };
 const intern = (sim: Simulation) => sim as unknown as Intern;
@@ -102,5 +102,23 @@ describe('Holzbrücken', () => {
     expect(teile[1][0].x).toBeCloseTo(25, 3);
     for (const t of teile) for (const p of t) expect(Math.abs(p.x - 20)).toBeGreaterThanOrEqual(5 - 1e-3);
     expect(mitLuecken(linie, [])).toEqual([linie]);
+  });
+
+  it('Darstellung: Wege werden geglättet (Zickzack übers Hex-Gitter wird gerade), die Enden bleiben an den Fahnen', () => {
+    const zick = [{ q: 0, r: 0 }, { q: 1, r: 0 }, { q: 1, r: 1 }, { q: 2, r: 1 }, { q: 2, r: 2 }, { q: 3, r: 2 }, { q: 3, r: 3 }];
+    const welt = (h: { q: number; r: number }) => ({ x: Math.sqrt(3) * 10 * (h.q + h.r / 2), z: 15 * h.r });
+    const roh = zick.map(welt), glatt = wegPunkte(zick, welt);
+    expect(glatt[0]).toEqual(roh[0]);
+    expect(glatt.at(-1)).toEqual(roh.at(-1));
+    // die Knicke (Summe der Richtungswechsel) werden viel kleiner
+    const knicke = (ps: { x: number; z: number }[]) => {
+      let n = 0;
+      for (let i = 1; i < ps.length - 1; i++) {
+        const w1 = Math.atan2(ps[i].z - ps[i - 1].z, ps[i].x - ps[i - 1].x), w2 = Math.atan2(ps[i + 1].z - ps[i].z, ps[i + 1].x - ps[i].x);
+        n += Math.abs(Math.atan2(Math.sin(w2 - w1), Math.cos(w2 - w1)));
+      }
+      return n;
+    };
+    expect(knicke(glatt)).toBeLessThan(knicke(roh) * 0.5);
   });
 });

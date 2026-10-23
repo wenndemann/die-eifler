@@ -119,10 +119,12 @@ let dachErsatz: string | null = null;
  */
 export interface Anker {
   art: 'kamin' | 'fenster' | 'huhn' | 'waesche' | 'rad' | 'saege' | 'hammer' | 'esse' | 'schafe' | 'kuehe' | 'bienen' | 'muehle'
-    | 'kinder' | 'schwaetzer' | 'feuer' | 'dampf' | 'hund' | 'laterne' | 'schild' | 'schatten';
+    | 'kinder' | 'schwaetzer' | 'feuer' | 'dampf' | 'hund' | 'laterne' | 'schild' | 'schatten' | 'besucher';
   x: number; y: number; z: number;
   /** je nach Art: Drehung/Blickrichtung (rad), Radius bzw. Breite, Tiefe, Anzahl, Stärke, Farbe. */
   r?: number; w?: number; d?: number; n?: number; staerke?: number; farbe?: string; achse?: 'x' | 'z'; seite?: number;
+  /** besucher: Hindernisse [x, z, Radius] relativ zum Anker, dort steht keiner. */
+  frei?: number[][];
 }
 let sammler: Anker[] | null = null;
 /** f() mit Anker-Sammler ausführen: liefert Ergebnis und gesammelte Anker. */

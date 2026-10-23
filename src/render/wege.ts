@@ -26,6 +26,20 @@ export function kurvenPunkt(pts: Pkt[], i: number, t: number, out: Pkt = { x: 0,
   return out;
 }
 
+/**
+ * Stützpunkte eines Wegs aus den Hex-Mitten, geglättet: Ein Hex-Pfad schräg übers Gitter springt im Zickzack, die Kurve durch alle
+ * Mitten wird dann zur Schlangenlinie. Jeder innere Punkt rückt zur Mitte seiner Nachbarn (WEG_GLAETTEN Durchgänge); die Enden
+ * (Fahnen) bleiben. Wegband und Träger benutzen dieselben Punkte.
+ */
+export const WEG_GLAETTEN = 4;
+export function wegPunkte(pfad: { q: number; r: number }[], toWorld: (h: { q: number; r: number }) => Pkt): Pkt[] {
+  let p = pfad.map((h) => { const w = toWorld(h); return { x: w.x, z: w.z }; });
+  for (let k = 0; k < WEG_GLAETTEN; k++) {
+    p = p.map((v, i) => (i === 0 || i === p.length - 1 ? v : { x: v.x * 0.4 + (p[i - 1].x + p[i + 1].x) * 0.3, z: v.z * 0.4 + (p[i - 1].z + p[i + 1].z) * 0.3 }));
+  }
+  return p;
+}
+
 /** Mittellinie dicht abgetastet: Punkte mit Weg-Länge (flow). */
 export function mittellinie(pts: Pkt[], je = 9): { x: number; z: number; flow: number }[] {
   const out: { x: number; z: number; flow: number }[] = [];
@@ -170,6 +184,10 @@ function erdMaterial(): THREE.MeshStandardMaterial {
   float spur = 1.0 - smoothstep(0.0, 0.09, abs(s - 0.42));
   erde *= 1.0 - 0.14 * spur;
   diffuseColor.rgb *= erde;
+  // Winter: Wege eingeschneit, nur die Spuren bleiben dunkler (Gutachter-Runde 9: „Winterwege grell orange“)
+  vec3 schnee = vec3(0.86, 0.88, 0.92) * (0.94 + 0.08 * wn(vWPos.xz * 0.6));
+  schnee = mix(schnee, diffuseColor.rgb * 0.85 + vec3(0.12), spur * 0.7);
+  diffuseColor.rgb = mix(diffuseColor.rgb, schnee, uSchnee * 0.75);
   diffuseColor.a = 1.0 - smoothstep(0.62, 0.98, kante);
   diffuseColor.rgb = kGrau(diffuseColor.rgb, kOut(vWPos.xz));
   vKFade = kFade(vWPos.xz);
@@ -212,7 +230,9 @@ ${KULISSE_GLSL}`)
 }
 
 /** Sichtbare Mindestbreite je Gewässerart (Fluss, Bach, Kanal), wie rivers.ts. */
-const GEWAESSER_BREITE = [8, 3.5, 4];
+const GEWAESSER_BREITE = [8, 6, 4];
+/** Länge einer Brücke über ein Gewässer dieser Breite: Wasser, Ufer (wie rivers.ts) und beidseits Anlauf. */
+const brueckenLaenge = (breite: number) => breite * 1.35 + 20;
 
 /**
  * Kleine Holzbrücke (Länge entlang x, Mitte im Ursprung, Deck auf y = 0): leicht gewölbte Bohlen, Pfosten und Geländer, steinerne
@@ -330,7 +350,7 @@ export class Wege {
   }
 
   private punkte(pfad: { q: number; r: number }[]): Pkt[] {
-    return pfad.map((h) => this.grid.toWorld(h));
+    return wegPunkte(pfad, (h) => this.grid.toWorld(h));
   }
 
   private yOf = (x: number, z: number) => this.map.heightAt(x, z) - this.base + 0.35;
@@ -354,12 +374,12 @@ export class Wege {
       const linie = mittellinie(this.punkte(s.pfad));
       const kr = this.kreuzungen(linie);
       // unter der Brücke und an der Baustelle kein Wegband übers Wasser: es endet am Widerlager
-      for (const teil of mitLuecken(linie, kr.map((k) => ({ x: k.x, z: k.z, r: (k.breite + 16) / 2 + 0.5 })))) band(b, teil, halb, this.yOf);
+      for (const teil of mitLuecken(linie, kr.map((k) => ({ x: k.x, z: k.z, r: brueckenLaenge(k.breite) / 2 + 0.5 })))) band(b, teil, halb, this.yOf);
       // Brücke, wo der Weg einen Fluss oder Bach kreuzt: Deck über dem höheren Ufer; fehlt sie noch (Simulation), nur die Baustelle
       for (const k of kr) {
-        const laenge = k.breite + 16, cx = Math.cos(k.yaw), cz = -Math.sin(k.yaw);
+        const laenge = brueckenLaenge(k.breite), cx = Math.cos(k.yaw), cz = -Math.sin(k.yaw);
         const ufer = Math.max(this.map.heightAt(k.x + cx * laenge / 2, k.z + cz * laenge / 2), this.map.heightAt(k.x - cx * laenge / 2, k.z - cz * laenge / 2));
-        const g = brueckeGeometrie(laenge, halb * 2 + 1.5, !s.bruecken).rotateY(k.yaw).translate(k.x, (ufer - this.base) * this.ex + 0.8, k.z);
+        const g = brueckeGeometrie(laenge, halb * 2 + 3.5, !s.bruecken).rotateY(k.yaw).translate(k.x, (ufer - this.base) * this.ex + 0.8, k.z);
         bruecken.push(g);
       }
       const gk = `${s.id}:${s.pfad.length}`;

@@ -710,6 +710,8 @@ const TYPEN: Record<string, Typ> = {
       };
       kette(-11, -9, -10, 7.4, G + 12, G + 3.6); kette(-11, -9, 10, 7.4, G + 12, G + 3.6);
       anker({ art: 'kinder', x: 3, y: G, z: -5, r: 4.5, n: 4 });
+      // Festbesucher im Ring um das Karussell (Mitte 0, −3; Dach Radius 6), frei von Buden und Kirmesbaum
+      anker({ art: 'besucher', x: 0, y: G, z: -3, r: 8.5, frei: [[-10, 8, 4.5], [10, 8, 4.5], [-11, -6, 3]] });
       anker({ art: 'feuer', x: 8, y: G, z: -8 });
       return out;
     },

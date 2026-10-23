@@ -25,7 +25,16 @@ describe('Lebendige Eifel', () => {
     expect(arten('schafstall').has('schafe')).toBe(true);
     expect(arten('kaeserei').has('kuehe')).toBe(true);
     expect(arten('bienenstock').has('bienen')).toBe(true);
-    expect([...arten('kirmesplatz')]).toEqual(expect.arrayContaining(['kinder', 'feuer']));
+    expect([...arten('kirmesplatz')]).toEqual(expect.arrayContaining(['kinder', 'feuer', 'besucher']));
+    // Festbesucher: Ring um das Karussell (Dach Radius 6) mit Platz neben Buden und Kirmesbaum
+    const ring = lebenAnker('kirmesplatz').find((a) => a.art === 'besucher')!;
+    expect(ring.r!).toBeGreaterThan(7);
+    let frei = 0;
+    for (let j = 0; j < 24; j++) {
+      const lx = Math.cos((j / 24) * 6.283) * ring.r!, lz = Math.sin((j / 24) * 6.283) * ring.r!;
+      if (!(ring.frei ?? []).some(([hx, hz, hr]) => Math.hypot(lx - hx, lz - hz) < hr)) frei++;
+    }
+    expect(frei).toBeGreaterThanOrEqual(leben.fest.besucher);
     expect(arten('schaenke').has('schwaetzer')).toBe(true);
     expect([...arten('brauerei')]).toEqual(expect.arrayContaining(['dampf']));
     expect(arten('eisenhuette').has('rad')).toBe(true);
@@ -122,6 +131,11 @@ describe('Lebendige Eifel', () => {
     for (const a of ['aTeil', 'aGelenk', 'aTint', 'aVariante']) expect(b.getAttribute(a)).toBeTruthy();
     const frau = figur({ ...TRAEGER_TRACHT, frau: true });
     expect(frau.getAttribute('aVariante').count).toBe(frau.getAttribute('position').count);
+    // Zopf-Variante: Bart der Tracht, Knollennase, Schnauzer und Kappe sind bei ihr aus (−frau), Kopftuch, Rock und Lippen an (+frau)
+    const mitBart = figur({ ...TRAEGER_TRACHT, bart: '#eeeeee' });
+    const werte = new Set(Array.from(mitBart.getAttribute('aVariante').array as Float32Array));
+    expect(werte.has(-VARIANTE.frau)).toBe(true);
+    expect(werte.has(VARIANTE.frau)).toBe(true);
   });
 
   it('Gesichtsvarianten: fest je Id, alle fünf kommen vor, Schnauzer am häufigsten', () => {
