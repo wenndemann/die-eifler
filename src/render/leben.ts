@@ -202,7 +202,7 @@ const KIND = ['#e05a5a', '#5a8ad0', '#f0c040', '#7ab06a'].map((c) => new THREE.C
 const SCHWAETZER = ['#3f6fb5', '#8a4a32', '#4f8a4a'].map((c) => new THREE.Color(c));
 const HUHN_BRAUN = new THREE.Color('#d0905a');
 const WEISS = new THREE.Color(1, 1, 1);
-const GELB = new THREE.Color('#ffd27a');
+const GELB = new THREE.Color('#ffcf7a');
 
 /** Weicher runder Lichtschein (Mitte hell, außen durchsichtig) für Fenster in der Nacht. */
 function scheinTextur(): THREE.Texture {
@@ -445,7 +445,7 @@ export class LebenDarstellung {
         // Lichtfleck auf dem Boden vor den unteren Fenstern: das Haus wärmt den Weg
         if (a.y < 4) {
           const bz = z + seite * 2.2 * sk;
-          this.c.set(leben.fenster.farbe).lerp(GELB, 0.35).multiplyScalar(o.nacht * leben.fenster.boden * flacker);
+          this.c.copy(GELB).multiplyScalar(o.nacht * leben.fenster.boden * flacker);
           m.compose(p.set(x, this.hoehe(x, bz) + 0.4, bz), this.q2.setFromAxisAngle(this.X, -Math.PI / 2), sc.set(13 * sk, 10 * sk, sk));
           this.schein.fuege(m, this.c);
         }
