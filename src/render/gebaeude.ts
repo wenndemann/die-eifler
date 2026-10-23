@@ -924,6 +924,23 @@ export function lebenAnker(typ: string): readonly Anker[] {
   return [...(ankerCache.get(mt) ?? []), ...(TYP_ANKER[typ] ?? [])];
 }
 /** Platzbedarf des Modells (echte m relativ zur Modellmitte: x0, x1, z0, z1), z. B. für den Meister vor Feldern und Ställen. */
+/**
+ * Jedes Gebäude steht ganz in seinem Hex, hinter der Fahne (Hex-Mitte): Grundriss höchstens HEX_PLATZ_BREITE breit und von 4 m hinter
+ * der Fahne an HEX_PLATZ_TIEFE tief (ein Hex ist rund 104 m breit und 120 m hoch). Größere Modelle (Felder, Schafstall, Kirmesplatz)
+ * werden so weit verkleinert und auf die Hex-Mitte gerückt; sonst ragten sie in die Nachbarhexe und Wege liefen über sie hinweg.
+ */
+export const HEX_PLATZ_BREITE = 92, HEX_PLATZ_TIEFE = 56;
+/** Skala eines Spielgebäude-Modells (HAUS_SKALE × Typ-Skala, verkleinert, bis der Grundriss ins Hex passt). */
+export function modellSkala(typ: string): number {
+  const t = TYPEN[modellTyp(typ)], [x0, x1, z0, z1] = t.grund;
+  return Math.min(HAUS_SKALE * t.skala, HEX_PLATZ_BREITE / (x1 - x0), HEX_PLATZ_TIEFE / (z1 - z0));
+}
+/** Ursprung des Modells zur Hex-Mitte (hx, hz): Grundriss mittig in x, Vorderkante 4 m hinter der Fahne. */
+export function modellUrsprung(typ: string, hx: number, hz: number): { s: number; x: number; z: number } {
+  const t = TYPEN[modellTyp(typ)], s = modellSkala(typ), [x0, x1, , z1] = t.grund;
+  return { s, x: hx - ((x0 + x1) / 2) * s, z: hz - 4 - z1 * s };
+}
+
 export function modellGrund(typ: string): readonly [number, number, number, number] {
   return TYPEN[modellTyp(typ)].grund;
 }
@@ -990,10 +1007,8 @@ export function bauPhase(bau: number): 1 | 2 | 3 {
 
 /** Für das Geistermodell (geist.ts): fertiges Modell, Skala, Lage (Ausschnitt-Meter) und Bodenversatz auf Hex (q, r), ohne Planieren. */
 export function geistModell(typ: string, grid: HexGrid, q: number, r: number) {
-  const t = TYPEN[modellTyp(typ)];
-  const sk = HAUS_SKALE * t.skala;
-  const w = grid.toWorld({ q, r });
-  return { geo: modell(typ, 3), sk, x: w.x, z: w.z - 4 - t.grund[3] * sk, boden: G * sk };
+  const w = grid.toWorld({ q, r }), u = modellUrsprung(typ, w.x, w.z);
+  return { geo: modell(typ, 3), sk: u.s, x: u.x, z: u.z, boden: G * u.s };
 }
 
 // ---------------------------------------------------------------- Warnzeichen
@@ -1224,11 +1239,10 @@ export class Gebaeude {
   /** Mitte des Modells (Ausschnitt-Meter) und Skala für ein Gebäude auf Hex (q, r). */
   private lage(typ: string, q: number, r: number) {
     const t = TYPEN[modellTyp(typ)];
-    const s = HAUS_SKALE * t.skala;
     const w = this.grid.toWorld({ q, r });
-    // Vorderkante des Platzbedarfs liegt 4 m vor der Fahne (Hex-Mitte)
-    const z = w.z - 4 - t.grund[3] * s;
-    return { t, s, x: w.x, z, hx: w.x, hz: w.z };
+    // Vorderkante des Platzbedarfs liegt 4 m hinter der Fahne (Hex-Mitte), der Grundriss passt ins Hex (modellUrsprung)
+    const { s, x, z } = modellUrsprung(typ, w.x, w.z);
+    return { t, s, x, z, hx: w.x, hz: w.z };
   }
 
   /**
@@ -1317,7 +1331,7 @@ export class Gebaeude {
         satz.beginne();
         this.saetze.set(key, satz);
       }
-      const sk = HAUS_SKALE * t.skala;
+      const sk = modellSkala(g.typ);
       // Boden des Modells (y = G) liegt auf dem planierten Gelände; Gelände erst nach Planierung neu lesen
       const y = (this.map.heightAt(pl.x, pl.z) - base) * ex - G * sk;
       q.identity();
@@ -1434,7 +1448,7 @@ export class Gebaeude {
   modellLage(id: Id, typ: string): { x: number; y: number; z: number; sk: number } | null {
     const pl = this.plaetze.get(id);
     if (!pl) return null;
-    const sk = HAUS_SKALE * TYPEN[modellTyp(typ)].skala;
+    const sk = modellSkala(typ);
     return { x: pl.x, y: (this.map.heightAt(pl.x, pl.z) - this.base) * this.ex - G * sk, z: pl.z, sk };
   }
 

@@ -973,7 +973,7 @@ export class Simulation {
     const p = sucheWeg(k, a, z, (h, istZiel, vorher) => {
       if (this.durchsHaus(vorher, h) || (!istZiel && this.amBach(vorher, h))) return false;
       if (istZiel) return true;
-      return !this.hexFahne[h] && !this.hexGeb[h] && !this.hexWeg[h] && !this.fremdesLand(h, sp) && !this.hinterGebaeude(h);
+      return !this.hexFahne[h] && !this.hexGeb[h] && !this.hexWeg[h] && !this.fremdesLand(h, sp);
     }, WEG_MAX_SCHRITTE);
     return p ? p.map((h) => ({ q: k.qs[h], r: k.rs[h] })) : null;
   }
@@ -998,24 +998,9 @@ export class Simulation {
     const p = sucheWeg(k, a, z, (h, istZiel, vorher) => {
       if (this.durchsHaus(vorher, h) || (!istZiel && this.amBach(vorher, h)) || (neuesHaus && vorher === a && this.hinten(a, h))) return false;
       if (istZiel) return true;
-      return !this.hexFahne[h] && !this.hexGeb[h] && !this.hexWeg[h] && !gesperrt.has(h) && !this.fremdesLand(h, sp) && !this.hinterGebaeude(h);
+      return !this.hexFahne[h] && !this.hexGeb[h] && !this.hexWeg[h] && !gesperrt.has(h) && !this.fremdesLand(h, sp);
     }, Math.min(maxSchritte, WEG_MAX_SCHRITTE));
     return p ? p.map((h) => ({ q: k.qs[h], r: k.rs[h] })) : null;
-  }
-
-  /**
-   * Liegt das Hex hinter einem Platz mit Hof? Das Haus steht auf der Rückseite seines Hexes (die Fahne vorn, Richtung +r); Plätze mit
-   * Hof (data/buildings.json: hof, z. B. der Kirmesplatz) ragen in die beiden hinteren Nachbarn. Dort führt kein neuer Weg entlang,
-   * sonst liefe er über den Platz.
-   */
-  private hinterGebaeude(h: number): boolean {
-    const k = this.karte, q = k.qs[h], r = k.rs[h];
-    for (const n of [k.index(q, r + 1), k.index(q - 1, r + 1)]) {
-      if (n < 0 || !this.hexGeb[n]) continue;
-      const g = this.gebaeude.get(this.hexGeb[n]);
-      if (g && GEBAEUDE[g.typ].hof) return true;
-    }
-    return false;
   }
 
   /** Liegt n hinter dem Hex h (einer der beiden Nachbarn Richtung −r, dort steht das Haus)? */

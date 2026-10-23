@@ -2,7 +2,7 @@
 // Wasserrad, Säge, Schmiede, Tiere, Leute, Feuer), Nacht aus der Tageszeit, Werte in data/leben.json; reine Darstellung (keine Prüfsumme).
 import { describe, expect, it } from 'vitest';
 import leben from '../data/leben.json';
-import { lebenAnker } from '../src/render/gebaeude';
+import { lebenAnker, modellGrund, modellUrsprung, HEX_PLATZ_BREITE, HEX_PLATZ_TIEFE } from '../src/render/gebaeude';
 import { LebenDarstellung } from '../src/render/leben';
 import { WILD_ARTEN, wildModelle } from '../src/render/wild';
 import { entzerren, type Platz } from '../src/render/gedraenge';
@@ -43,6 +43,17 @@ describe('Lebendige Eifel', () => {
     expect(arten('papiermuehle').has('rad')).toBe(true);
     // jeder Gebäudetyp liefert Anker ohne Fehler, alle Zahlen endlich
     for (const id of GEBAEUDE_IDS) for (const a of lebenAnker(id)) expect([a.x, a.y, a.z].every(Number.isFinite), `${id}:${a.art}`).toBe(true);
+  });
+
+  it('Jedes Gebäude steht ganz in seinem Hex hinter der Fahne (Felder und Kirmesplatz verkleinert), damit kein Weg über es läuft', () => {
+    for (const id of GEBAEUDE_IDS) {
+      const [x0, x1, z0, z1] = modellGrund(id), u = modellUrsprung(id, 0, 0);
+      const a = u.x + x0 * u.s, b = u.x + x1 * u.s, vorn = u.z + z1 * u.s, hinten = u.z + z0 * u.s;
+      expect(Math.abs(a + b), id).toBeLessThan(1e-6);                    // mittig
+      expect(b - a, id).toBeLessThanOrEqual(HEX_PLATZ_BREITE + 1e-6);   // nicht ins Nachbarhex links/rechts (Hex rund 104 m breit)
+      expect(vorn, id).toBeCloseTo(-4, 6);                               // Vorderkante 4 m hinter der Fahne
+      expect(hinten, id).toBeGreaterThanOrEqual(-4 - HEX_PLATZ_TIEFE - 1e-6);
+    }
   });
 
   it('Fenster liegen auf der Fassade (vorn und hinten), Hühner am Boden, Rauch über dem Dach', () => {
