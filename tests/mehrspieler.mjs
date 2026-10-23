@@ -6,7 +6,8 @@
 // M10: Regeln (Gebiet, Ziel), Gebiet und Eifel-Punkte bei beiden gleich, Ortsfenster. M11: Völkchen beider Dörfer bei beiden gleich. M12: Uhrzeit
 // und Wetter-Optik (Talnebel/Aue) bei beiden gleich. M14: Mainacht und Maibäume bei beiden gleich. M15: Nacht, Zollhäuser, Grenzsteine,
 // Teile des Großen Funds und Reiz bei beiden gleich, Grenzstein-Befehl des Gasts im Protokoll beider; Lebendige Eifel läuft in beiden;
-// Holzbrücken (gebaute Brücken, fehlende je Weg) bei beiden gleich.
+// Holzbrücken (gebaute Brücken, fehlende je Weg) bei beiden gleich. Höfe und Felder: beide bauen einen Kartoffelhof, die Felder
+// (Natur je Hex) sind bei beiden gleich und werden gezeichnet.
 //
 // Läuft in npm run test:smoke mit; allein:  node tests/mehrspieler.mjs   (Server und Vite startet es selbst)
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
@@ -133,6 +134,9 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
     const b0 = await host.evaluate(baue, 'holzfaeller');
     const b1 = await gast.evaluate(baue, 'holzfaeller');
     if (!b0 || !b1) fail(`Kein Bauplatz gefunden: ${JSON.stringify([b0, b1])}`);
+    const h0 = await host.evaluate(baue, 'kartoffelfeld');
+    const h1 = await gast.evaluate(baue, 'kartoffelfeld');
+    if (!h0 || !h1) fail(`Kein Bauplatz für den Kartoffelhof: ${JSON.stringify([h0, h1])}`);
     const fps = await Promise.all([host, gast].map((x) => x.evaluate(() => new Promise((ok) => { let n = 0; const t = performance.now(); const f = () => { n++; if (performance.now() - t < 3000) requestAnimationFrame(f); else ok(Math.round((n / (performance.now() - t)) * 10000) / 10); }; requestAnimationFrame(f); }))));
     info(`Mehrspieler: Bilder je Sekunde ${fps.join(' / ')}`);
     await host.waitForTimeout(15000);
@@ -254,6 +258,9 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
         kaffee: s.dorf.verteilung.length === s.dorf.erzeugt.length,
         leben: !!sp.leben?.zahlen && sp.gras?.anzahl >= 0 && sp.leben.group.children.length > 0,
         bruecken: JSON.stringify([sim.stand().bruecken, s.segmente.map((x) => x.bruecken)]),
+        felder: (() => { const n = sim.sicht(0).natur; let h = 0, z = 0; n.feld.forEach((v, i) => { if (v) { z++; h = (h * 31 + i * 7 + v * 3 + n.feldStufe[i]) % 1000003; } }); return `${z}:${h}`; })(),
+        hoefe: [0, 1].map((i) => sim.sicht(i).gebaeude.filter((g) => g.sp === i && g.typ === 'kartoffelfeld').map((g) => `${g.zustand}/${g.erzeugt}`).join('')).join(','),
+        gezeichnet: sp.felder.anzahl,
       };
     })));
     info(`Mehrspieler M15: Nacht ${m15.map((x) => x.nacht).join('/')}, Zollhäuser ${m15[0].zoll}, Grenzsteine ${m15[0].steine}, Teile ${m15.map((x) => x.teile).join(' / ')}, Reiz ${m15.map((x) => x.reiz).join(' / ')}`);
@@ -264,6 +271,11 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
     if (m15.some((x) => !x.kaffee)) fail('Mehrspieler M15: Kaffee fehlt in Verteilung oder Statistik');
     info(`Mehrspieler Brücken: ${m15.map((x) => x.bruecken).join(' / ')}`);
     if (m15[0].tick === m15[1].tick && m15[0].bruecken !== m15[1].bruecken) fail(`Mehrspieler: Holzbrücken verschieden: ${m15.map((x) => x.bruecken).join(' / ')}`);
+    info(`Mehrspieler Höfe: Felder (Zahl:Hash) ${m15.map((x) => x.felder).join(' / ')}, Höfe ${m15.map((x) => x.hoefe).join(' / ')}, gezeichnet ${m15.map((x) => x.gezeichnet).join(' / ')}`);
+    if (m15[0].tick === m15[1].tick && m15[0].felder !== m15[1].felder) fail(`Mehrspieler: Felder verschieden: ${m15.map((x) => x.felder).join(' / ')}`);
+    if (m15.some((x) => x.hoefe.split(',').length !== 2 || x.hoefe.split(',').some((h) => !h))) fail(`Mehrspieler: Kartoffelhöfe fehlen: ${m15.map((x) => x.hoefe).join(' / ')}`);
+    // gezeichnet wird im nächsten Bild: bei wenigen Bildern je Sekunde kann ein frisch gesätes Feld noch fehlen
+    if (m15.some((x) => Number(x.felder.split(':')[0]) >= 3 && x.gezeichnet === 0)) fail(`Mehrspieler: Felder werden nicht gezeichnet: ${m15.map((x) => `${x.gezeichnet} von ${x.felder}`).join(' / ')}`);
     if (m15.some((x) => !x.leben)) fail('Mehrspieler M15: Lebendige Eifel (Rauch, Tiere, Gras) läuft nicht in beiden Fenstern');
     if (Math.abs(m12[0].tick - m12[1].tick) < 40 && Math.abs(Number(m12[0].uhr) - Number(m12[1].uhr)) > 1) fail(`Mehrspieler M12: Uhrzeit verschieden: ${m12.map((x) => x.uhr).join(' / ')}`);
     info(`Mehrspieler M7: Verteilung gleich ${m7b[0].vert === m7b[1].vert}, Holzfäller ruht ${m7b.map((x) => x.ruht).join('/')}, Statistik-Punkte ${m7b.map((x) => x.stat).join('/')}`);
