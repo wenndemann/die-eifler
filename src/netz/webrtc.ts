@@ -18,6 +18,9 @@ interface Peer {
   teile: Map<string, string[]>;
   /** Letzte geplante Sendezeit (schlechtes Netz, Reihenfolge erhalten). */
   letzte: number;
+  /** Schlechtes Netz: wartende Sendungen in Reihenfolge (eine Uhr je Peer, damit keine Nachricht eine frühere überholt). */
+  warte: { zeit: number; raus: () => void }[];
+  uhr: ReturnType<typeof setTimeout> | null;
   kandidaten: RTCIceCandidateInit[];
 }
 
@@ -75,7 +78,16 @@ export class Netz {
     if (Math.random() * 100 < a.stau_prozent) d += a.stau_ms;
     const zeit = Math.max(performance.now() + d, p.letzte);
     p.letzte = zeit;
-    setTimeout(raus, zeit - performance.now());
+    // nicht je Nachricht eine eigene Uhr: gerundete Wartezeiten ließen eine spätere Nachricht eine frühere überholen
+    p.warte.push({ zeit, raus });
+    if (!p.uhr) this.weiter(p);
+  }
+
+  /** Schlechtes Netz: fällige Sendungen eines Peers der Reihe nach hinaus, dann die Uhr auf die nächste stellen. */
+  private weiter(p: Peer): void {
+    p.uhr = null;
+    while (p.warte.length && p.warte[0].zeit <= performance.now()) p.warte.shift()!.raus();
+    if (p.warte.length) p.uhr = setTimeout(() => this.weiter(p), Math.max(0, p.warte[0].zeit - performance.now()));
   }
 
   /** Signal vom Vermittlungs-Server (Angebot, Antwort oder ICE-Kandidat). */
@@ -112,7 +124,7 @@ export class Netz {
 
   private neuerPeer(platz: number): Peer {
     const pc = new RTCPeerConnection({ iceServers: this.ice });
-    const p: Peer = { pc, kanal: null, offen: false, teile: new Map(), letzte: 0, kandidaten: [] };
+    const p: Peer = { pc, kanal: null, offen: false, teile: new Map(), letzte: 0, warte: [], uhr: null, kandidaten: [] };
     this.peers.set(platz, p);
     pc.onicecandidate = (e) => { if (e.candidate) this.signal(platz, { art: 'kandidat', kandidat: e.candidate.toJSON() }); };
     pc.ondatachannel = (e) => this.kanalDran(platz, p, e.channel);
@@ -174,6 +186,8 @@ export class Netz {
     const p = this.peers.get(platz);
     if (!p) return;
     this.peers.delete(platz);
+    if (p.uhr) clearTimeout(p.uhr);
+    p.uhr = null; p.warte = [];
     const war = p.offen;
     p.offen = false;
     try { p.kanal?.close(); } catch { /* schon zu */ }
