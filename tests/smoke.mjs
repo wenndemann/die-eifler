@@ -246,7 +246,7 @@ try {
         if (nat.felsArt[i] === 3 && nat.fels[i] === 8) natur.haufen++; else natur.umkreisVor += nat.fels[i];
       }
     }
-    // Wege über einen Bach brauchen eine Holzbrücke (2 im Startlager): der Aufbau nimmt nur Wege ohne Bach, damit nichts auf Brücken wartet
+    // Wege über einen Bach brauchen eine Holzbrücke (2 im Startlager): der Aufbau nimmt lieber Wege ohne Bach
     const ohneBach = (p) => p.slice(1, -1).every((h) => !(sp.sim.karte.flags[sp.sim.karte.index(h.q, h.r)] & 2));
     // 1) Wege vom Lager in verschiedene Richtungen, jeweils zu einem freien Hex (dort entsteht eine Fahne)
     for (let d = 0; d < 6 && wege < 4; d++) {
@@ -275,7 +275,9 @@ try {
       const fs = sp.sicht.fahnen.slice().sort((a, b) => dist(a, c) - dist(b, c) || a.id - b.id).slice(0, 6);
       // Weg vom neuen Haus zur Fahne (wie im Spiel: nicht hinten aus dem Haus hinaus), erst prüfen, dann bauen
       let p = null;
-      for (const f of fs) { p = sp.sim.wegAbschnitt(c, f, [], 30, 0, true); if (p && ohneBach(p)) break; p = null; }
+      // lieber ohne Bach; sonst über eine Holzbrücke
+      const moeglich = fs.map((f) => sp.sim.wegAbschnitt(c, f, [], 30, 0, true)).filter(Boolean);
+      p = moeglich.find(ohneBach) ?? moeglich[0] ?? null;
       if (!p) return false;
       sp.befehl({ art: 'gebaeude', typ, q: c.q, r: c.r });
       sp.befehl({ art: 'weg', pfad: p });
@@ -340,6 +342,9 @@ try {
       maxUnterwegs, maxMitWare, statistik: sp.sim.statistik(), innen: sp.sim.pruefeInnenzustand(), pruefsumme: sp.pruefsumme(),
       protokoll: JSON.parse(JSON.stringify(sp.protokoll())), eigenReplay: sp.nachspielen(sp.protokoll()),
       getrennt: sp.sicht.gebaeude.filter((g) => g.getrennt).length,
+      // Wege, die auf eine Holzbrücke warten, obwohl keine mehr im Lager ist (dann ist „getrennt“ richtig: erst die Zimmerei hilft)
+      brueckeFehlt: sp.sicht.segmente.filter((x) => x.bruecken > 0).length,
+      brueckenImLager: sp.sicht.gebaeude.filter((g) => g.typ === 'lager').reduce((n, g) => n + (g.vorrat?.at(-1) ?? 0), 0), // die Holzbrücke ist die letzte Ware
       zustaende: sp.sicht.gebaeude.map((g) => `${g.typ} ${g.zustand}`),
     };
   });
@@ -364,7 +369,8 @@ try {
   }
   if (!(aufbau.statistik.angekommen > 0)) fail(`Spiel: keine Ware angekommen (${JSON.stringify(aufbau.statistik)})`);
   if (aufbau.innen.length) fail(`Spiel: Innenzustand widersprüchlich: ${aufbau.innen.join('; ')}`);
-  if (aufbau.getrennt) fail(`Spiel: ${aufbau.getrennt} Gebäude ohne Verbindung zum Lager`);
+  if (aufbau.getrennt && aufbau.brueckeFehlt && !aufbau.brueckenImLager) info(`Spiel: ${aufbau.getrennt} Gebäude warten auf eine Holzbrücke (${aufbau.brueckeFehlt} Wege, keine Brücke mehr im Lager)`);
+  else if (aufbau.getrennt) fail(`Spiel: ${aufbau.getrennt} Gebäude ohne Verbindung zum Lager`);
   if (aufbau.eigenReplay !== aufbau.pruefsumme) fail(`Spiel: Replay im selben Browser ${aufbau.eigenReplay} ungleich live ${aufbau.pruefsumme}`);
   if (aufbau.protokoll.karte.pruefsumme !== a1.pruefsumme) fail('Spiel: Karten-Prüfsumme im Protokoll passt nicht zum Ausschnitt');
 
