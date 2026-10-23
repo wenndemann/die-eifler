@@ -146,7 +146,8 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
     // M7: Fenster im Mehrspieler – der Gast stellt die Warenverteilung um (Fensterknopf), der Gastgeber lässt seinen Holzfäller ruhen
     await gast.evaluate(() => window.eifeler.spiel.fensterUmschalten('verteilung'));
     await gast.waitForSelector('.fenster[data-fenster="verteilung"] .fe-platz:not([disabled])', { timeout: 30000 });
-    await gast.locator('.fenster[data-fenster="verteilung"] .fe-platz:not([disabled])').first().click();
+    // Software-Grafik mit zwei Szenen ist sehr langsam (unter 1 Bild/s): nicht auf die Navigation nach dem Klick warten
+    await gast.locator('.fenster[data-fenster="verteilung"] .fe-platz:not([disabled])').first().click({ noWaitAfter: true, timeout: 90000 });
     const hfId = await host.evaluate(() => { const sp = window.eifeler.spiel; const g = sp.sicht.gebaeude.find((x) => x.sp === sp.ich && x.typ === 'holzfaeller'); sp.oeffneGebaeude(g.id); return g.id; });
     await host.waitForSelector(`.fenster[data-fenster="geb:${hfId}"]`, { timeout: 30000 });
     await host.evaluate(() => window.eifeler.spiel.fensterUmschalten('statistik'));
@@ -195,9 +196,9 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
     const lagerId = async (s) => s.evaluate(() => { const sp = window.eifeler.spiel; const g = sp.sicht.gebaeude.find((x) => x.sp === sp.ich && x.typ === 'lager'); sp.oeffneGebaeude(g.id); return g.id; });
     const lg = await lagerId(gast), lh = await lagerId(host);
     await gast.waitForSelector(`.fenster[data-fenster="geb:${lg}"] [data-knopf="regel:2"]`, { timeout: 30000 });
-    await gast.locator(`.fenster[data-fenster="geb:${lg}"] [data-knopf="regel:2"]`).click();
+    await gast.locator(`.fenster[data-fenster="geb:${lg}"] [data-knopf="regel:2"]`).click({ noWaitAfter: true, timeout: 90000 });
     await host.waitForSelector(`.fenster[data-fenster="geb:${lh}"] [data-knopf="bau:+"]`, { timeout: 30000 });
-    await host.locator(`.fenster[data-fenster="geb:${lh}"] [data-knopf="bau:+"]`).click();
+    await host.locator(`.fenster[data-fenster="geb:${lh}"] [data-knopf="bau:+"]`).click({ noWaitAfter: true, timeout: 90000 });
     await host.waitForTimeout(1500);
     // M7: Verteilung des Gasts und das Ruhen des Gastgebers sind bei beiden gleich (auch nach dem Neuladen des Gasts)
     await gast.evaluate(() => window.eifeler.spiel.pauseUmschalten());

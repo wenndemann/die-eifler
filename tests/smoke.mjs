@@ -246,12 +246,14 @@ try {
         if (nat.felsArt[i] === 3 && nat.fels[i] === 8) natur.haufen++; else natur.umkreisVor += nat.fels[i];
       }
     }
+    // Wege über einen Bach brauchen eine Holzbrücke (2 im Startlager): der Aufbau nimmt nur Wege ohne Bach, damit nichts auf Brücken wartet
+    const ohneBach = (p) => p.slice(1, -1).every((h) => !(sp.sim.karte.flags[sp.sim.karte.index(h.q, h.r)] & 2));
     // 1) Wege vom Lager in verschiedene Richtungen, jeweils zu einem freien Hex (dort entsteht eine Fahne)
     for (let d = 0; d < 6 && wege < 4; d++) {
       for (const k of [4, 3, 5, 2]) {
         const T = { q: L.q + RICHT[d][0] * k, r: L.r + RICHT[d][1] * k };
         const p = sp.sim.wegVorschau(L, T);
-        if (p && p.length <= 8) { sp.befehl({ art: 'weg', pfad: p }); wege++; break; }
+        if (p && p.length <= 8 && ohneBach(p)) { sp.befehl({ art: 'weg', pfad: p }); wege++; break; }
       }
     }
     // 2) eine Fahne mitten auf den ersten Weg (teilt das Segment)
@@ -273,7 +275,7 @@ try {
       const fs = sp.sicht.fahnen.slice().sort((a, b) => dist(a, c) - dist(b, c) || a.id - b.id).slice(0, 6);
       // Weg vom neuen Haus zur Fahne (wie im Spiel: nicht hinten aus dem Haus hinaus), erst prüfen, dann bauen
       let p = null;
-      for (const f of fs) { p = sp.sim.wegAbschnitt(c, f, [], 30, 0, true); if (p) break; }
+      for (const f of fs) { p = sp.sim.wegAbschnitt(c, f, [], 30, 0, true); if (p && ohneBach(p)) break; p = null; }
       if (!p) return false;
       sp.befehl({ art: 'gebaeude', typ, q: c.q, r: c.r });
       sp.befehl({ art: 'weg', pfad: p });
