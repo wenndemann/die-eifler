@@ -70,8 +70,11 @@ export function spieleM8(minuten = 120, saat = 2026, abstandS = 60, offenMax = 3
       // nächster Auftrag: erst die Liste der eigenen Stufe, dann die der Stufen davor (falls etwas nicht ging)
       let liste = -1;
       for (let st = Math.min(stufe, M8_PLAN.length - 1); st >= 0; st--) if (naechster[st] < M8_PLAN[st].length) { liste = st; break; }
-      if (sim.tick - letzter >= abstandS * TICK_HZ && offen < offenMax && (liste >= 0 || knapp)) {
-        const auftrag = knapp ? { typ: 'wohnhaus' } as { typ: string; nahe?: Hx } : M8_PLAN[liste][naechster[liste]];
+      // Wald und Wild: haben Wildschweine Felder umgewühlt, baut der Bot (wie ein Mensch nach der Meldung) eine Jagdhütte an den Hof
+      const hof = s.gebaeude.find((g) => GEBAEUDE[g.typ].acker?.wuehlbar);
+      const jagd = (s.dorf.wild?.umgewuehlt ?? 0) > 0 && !!hof && !s.gebaeude.some((g) => g.typ === 'jagdhuette');
+      if (sim.tick - letzter >= abstandS * TICK_HZ && offen < offenMax && (liste >= 0 || knapp || jagd)) {
+        const auftrag = jagd ? { typ: 'jagdhuette', nahe: { q: hof!.q, r: hof!.r } } : knapp ? { typ: 'wohnhaus' } as { typ: string; nahe?: Hx } : M8_PLAN[liste][naechster[liste]];
         const lager = s.gebaeude.find((g) => g.typ === 'lager')!.vorrat!;
         const genug = GEBAEUDE[auftrag.typ].kosten.every((n, a) => n <= lager[a] + (a === WARE.bretter ? 2 : 0));
         const p = genug ? (auftrag.nahe ? suchePlatz(sim, s, auftrag.typ, auftrag.nahe) : platzNahLager(sim, s, auftrag.typ)) : null;
@@ -81,8 +84,8 @@ export function spieleM8(minuten = 120, saat = 2026, abstandS = 60, offenMax = 3
           for (let i = 3; i < p.weg.length - 1; i += 3) tu({ art: 'fahne', ...p.weg[i] });
           lauf.auftraege.push({ tick: sim.tick, typ: auftrag.typ, ...p.h });
           letzter = sim.tick;
-          if (knapp) wohnhaeuser++; else naechster[liste]++;
-        } else if (genug && !knapp) naechster[liste]++; // kein Platz: weiter mit dem nächsten
+          if (jagd) { /* Extra-Auftrag */ } else if (knapp) wohnhaeuser++; else naechster[liste]++;
+        } else if (genug && !knapp && !jagd) naechster[liste]++; // kein Platz: weiter mit dem nächsten
       }
     }
     if (sim.tick % (90 * TICK_HZ) === 45 * TICK_HZ) zweiterWeg(sim, tu, lauf);

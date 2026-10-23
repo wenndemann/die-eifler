@@ -2268,30 +2268,32 @@ export class Simulation {
   /**
    * Alle WILD_TAKT Ticks: Wild wächst im Wald nach (nur, wo es selbst oder nebenan schon lebt), Wolf und Wildkatze ziehen umher,
    * Wildschweine wühlen Felder um (außer im Jagdrevier), der Wolf reißt Schafe (außer beim Herdenschutzhund), die Wildkatze bringt
-   * dem Dorf, auf dessen Land ihr Wald steht, Ansehen. Zufall aus der Saat, Reihenfolge nach Hex-Index.
+   * dem Dorf, auf dessen Land ihr Wald steht, Ansehen. Zufall: fester Hash aus Hex und Takt (verschiebt den übrigen Zufall nicht), Reihenfolge nach Hex-Index.
    */
   private wildTick(): void {
-    const k = this.karte, n = k.count;
+    const k = this.karte, n = k.count, takt = Math.floor(this._tick / WILD_TAKT);
+    // eigener Zufall des Wilds (fester Hash aus Hex, Takt und Wurf), damit es den Zufall der übrigen Simulation nicht verschiebt
+    const wurf = (i: number, salz: number, m: number) => hashMit(i, takt, 60 + salz) % m;
     let neu = false;
     // Nachwuchs (Rehe, Wildschweine)
-    for (const [a, p] of [[this.reh, WILD_NACHWUCHS.reh], [this.sau, WILD_NACHWUCHS.sau]] as [Uint8Array, number][]) {
+    for (const [a, p, salz] of [[this.reh, WILD_NACHWUCHS.reh, 0], [this.sau, WILD_NACHWUCHS.sau, 1]] as [Uint8Array, number, number][]) {
       for (let i = 0; i < n; i++) {
         if (a[i] >= WILD_MAX || !this.waldHex(i)) continue;
         let da = a[i] > 0;
         for (let d = 0; d < 6 && !da; d++) { const x = k.nachbarn[i * 6 + d]; if (x >= 0 && a[x] > 0) da = true; }
-        if (da && this.zufall(100) < p) { a[i]++; neu = true; }
+        if (da && wurf(i, salz, 100) < p) { a[i]++; neu = true; }
       }
     }
     // Wolf und Wildkatze ziehen weiter (einzeln, nur durch vollen Wald)
-    for (const [a, p] of [[this.wolf, WOLF_WANDERT], [this.katze, KATZE_WANDERT]] as [Uint8Array, number][]) {
+    for (const [a, p, salz] of [[this.wolf, WOLF_WANDERT, 2], [this.katze, KATZE_WANDERT, 4]] as [Uint8Array, number, number][]) {
       const da: number[] = [];
       for (let i = 0; i < n; i++) if (a[i]) da.push(i);
       for (const i of da) {
-        if (this.zufall(100) >= p) continue;
+        if (wurf(i, salz, 100) >= p) continue;
         const ziele: number[] = [];
         for (let d = 0; d < 6; d++) { const x = k.nachbarn[i * 6 + d]; if (x >= 0 && !a[x] && this.waldHex(x)) ziele.push(x); }
         if (!ziele.length) continue;
-        a[ziele[this.zufall(ziele.length)]] = 1; a[i] = 0; neu = true;
+        a[ziele[wurf(i, salz + 1, ziele.length)]] = 1; a[i] = 0; neu = true;
       }
     }
     // Wildschaden: jedes Wildschwein im Umkreis eines wühlbaren Felds ist eine Gelegenheit
@@ -2300,7 +2302,7 @@ export class Simulation {
       if (!this.feld[f] || !GEBAEUDE[FELD_ARTEN[this.feld[f] - 1]].acker!.wuehlbar) continue;
       let saeue = 0;
       for (const x of this.hexeImRadius(f, SAU_RADIUS, true)) saeue += this.sau[x];
-      if (!saeue || this.zufall(100) >= Math.min(100, SAU_PROZENT * saeue) || this.imRadiusVon(f, 'jaeger')) continue;
+      if (!saeue || wurf(f, 6, 100) >= Math.min(100, SAU_PROZENT * saeue) || this.imRadiusVon(f, 'jaeger')) continue;
       const fa = this.feld[f];
       this.feldReif[f] = this._tick + Math.max(1, GEBAEUDE[FELD_ARTEN[fa - 1]].acker!.wachsenTicks); this.feldStufe[f] = 1;
       if (!this.feldListe.includes(f)) this.feldListe.push(f);
@@ -2313,7 +2315,7 @@ export class Simulation {
       if (!GEBAEUDE[g.typ].schafe || !g.fertig || !g.ar) continue;
       let nah = false;
       for (const x of this.hexeImRadius(g.h, WOLF_RADIUS, true)) if (this.wolf[x]) { nah = true; break; }
-      if (!nah || this.imRadiusVon(g.h, 'herdenschutz') || this.zufall(100) >= WOLF_RISS) continue;
+      if (!nah || this.imRadiusVon(g.h, 'herdenschutz') || wurf(g.h, 7, 100) >= WOLF_RISS) continue;
       g.zeit = -WOLF_AUSFALL;
       this.doerfer[g.sp].risse++;
       this.ereignis(g.sp, 'wolf', g.id, 0);
