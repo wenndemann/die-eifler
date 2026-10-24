@@ -1,8 +1,8 @@
-// Wildtiere am Waldrand (Lebendige Eifel): Rehe, Hirsche, Wildschweine mit Frischlingen, Füchse und Hasen, selten Wildkatze und ein
-// Wolfsrudel – die Eifel hat wieder Wölfe, und die Wildkatze lebt hier. Gruppen stehen auf Wiese, Heide oder Moor nahe am Wald (oder
-// im lichten Wald), fern von Gebäuden und Wegen; Lage fest aus einem Raster (Hash je Zelle) um den Blickpunkt, neu gelegt, wenn er
-// weiterwandert. Die Tiere ziehen langsam umher, äsen, sichern (Kopf hoch), Wildschweine wühlen, Füchse und Wölfe traben. Reiner
-// Schmuck, kein Spielzustand. Werte in data/leben.json (wild).
+// Wildtiere (Lebendige Eifel, Wald und Wild): Rehe, Wildschweine (mit Frischlingen), Wolf und Wildkatze führt die Simulation je Hex
+// (SimSicht.natur: reh, sau, wolf, katze) – genau dort stehen sie hier, so viele, wie es gibt (der Wolf mit seinem Rudel). Hirsche,
+// Füchse und Hasen sind Schmuck am Waldrand: Lage fest aus einem Raster (Hash je Zelle) um den Blickpunkt, fern von Gebäuden und
+// Wegen. Neu gelegt, wenn der Blickpunkt weiterwandert oder sich das Wild in der Simulation ändert. Die Tiere ziehen langsam umher,
+// äsen, sichern (Kopf hoch), Wildschweine wühlen, Füchse und Wölfe traben. Werte in data/leben.json (wild).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import leben from '../../data/leben.json';
@@ -132,6 +132,8 @@ const MODELL: Record<WildArt, () => THREE.BufferGeometry> = {
 
 interface Gruppe { art: WildArt; x: number; z: number; n: number; seed: number }
 const hash = (a: number, b: number) => { const x = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return x - Math.floor(x); };
+/** Diese Arten führt die Simulation (Wald und Wild). */
+const SIM_ARTEN = new Set<WildArt>(['reh', 'wildschwein', 'frischling', 'wildkatze', 'wolf']);
 const ARTEN = W.arten as Record<WildArt, { anteil: number; n: [number, number]; tempo: number; groesse: number; wald: boolean }>;
 
 export class Wild {
@@ -141,6 +143,8 @@ export class Wild {
   private gruppen: Gruppe[] = [];
   private mitte = { x: NaN, z: NaN };
   private sig = '';
+  private natRev = -1;
+  private nat: SimSicht['natur'] | null = null;
   private belegt = new Set<number>();
   private zeit = 0;
   private m = new THREE.Matrix4(); private q = new THREE.Quaternion(); private q2 = new THREE.Quaternion(); private p = new THREE.Vector3(); private s = new THREE.Vector3();
@@ -171,6 +175,8 @@ export class Wild {
       for (const o of sicht.orte) for (let dq = -2; dq <= 2; dq++) for (let dr = -2; dr <= 2; dr++) b.add(idx(o.q + dq, o.r + dr));
       this.mitte = { x: NaN, z: NaN };
     }
+    // das Wild der Simulation hat sich bewegt (Nachwuchs, Jagd, Umzug): neu legen
+    if (sicht.natur.rev !== this.natRev) { this.natRev = sicht.natur.rev; this.nat = sicht.natur; this.mitte = { x: NaN, z: NaN }; }
     if (!(Math.hypot(ziel.x - this.mitte.x, ziel.z - this.mitte.z) <= W.neu_ab_m)) { this.mitte = { ...ziel }; this.legen(); }
     this.zeichnen();
   }
@@ -179,7 +185,8 @@ export class Wild {
   private legen(): void {
     const { x: cx, z: cz } = this.mitte, R = W.radius_m, Z = W.zelle_m;
     this.gruppen = [];
-    const arten = WILD_ARTEN.filter((a) => a !== 'frischling');
+    // Schmuck sind nur die Arten, die die Simulation nicht führt
+    const arten = WILD_ARTEN.filter((a) => !SIM_ARTEN.has(a));
     const summe = arten.reduce((s, a) => s + ARTEN[a].anteil, 0);
     for (let j = Math.floor((cz - R) / Z); j <= Math.floor((cz + R) / Z); j++) for (let i = Math.floor((cx - R) / Z); i <= Math.floor((cx + R) / Z); i++) {
       if (hash(i * 3 + 1, j * 7 + 2) > W.anteil) continue;
@@ -196,7 +203,31 @@ export class Wild {
       if (!(offen && randWald) && !(ARTEN[art].wald && cov === 3)) continue;
       const [n0, n1] = ARTEN[art].n;
       this.gruppen.push({ art, x, z, n: n0 + Math.floor(hash(i, j * 3) * (n1 - n0 + 1)), seed: i * 1000 + j });
-      if (this.gruppen.length >= W.max_gruppen) return;
+      if (this.gruppen.length >= W.max_gruppen) break;
+    }
+    this.simWild();
+  }
+
+  /** Wild der Simulation: je Hex mit Rehen, Wildschweinen, Wolf oder Wildkatze eine Gruppe in diesem Hex (Mitte mit festem Versatz). */
+  private simWild(): void {
+    const nat = this.nat, f = this.grid.feld;
+    if (!nat?.reh || !nat.sau || !nat.wolf || !nat.katze) return;
+    const { x: cx, z: cz } = this.mitte, R = W.radius_m;
+    const c = this.grid.fromWorld(cx, cz), rad = Math.ceil(R / 100) + 1;
+    for (let dr = -rad; dr <= rad; dr++) for (let dq = Math.max(-rad, -dr - rad); dq <= Math.min(rad, -dr + rad); dq++) {
+      const q = c.q + dq, r = c.r + dr, i = f.index(q, r);
+      if (i < 0) continue;
+      const w = this.grid.toWorld({ q, r });
+      if (Math.hypot(w.x - cx, w.z - cz) > R) continue;
+      const setze = (art: WildArt, n: number, k: number) => {
+        const a = hash(q * 7 + k, r * 3 + 11) * Math.PI * 2, ab = 14 + 22 * hash(q + k * 5, r - 7);
+        this.gruppen.push({ art, x: w.x + Math.cos(a) * ab, z: w.z + Math.sin(a) * ab, n, seed: (q * 4099 + r) * 8 + k });
+      };
+      if (nat.reh[i]) setze('reh', nat.reh[i], 1);
+      // jede Bache führt ihre Frischlinge
+      for (let k = 0; k < nat.sau[i]; k++) setze('wildschwein', 1 + W.frischlinge, 10 + k);
+      if (nat.wolf[i]) setze('wolf', W.rudel, 3);
+      if (nat.katze[i]) setze('wildkatze', 1, 4);
     }
   }
 

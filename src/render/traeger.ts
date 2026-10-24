@@ -65,7 +65,7 @@ function zopf(a: [number, number, number], b: [number, number, number], dicke: n
  * Tracht (Berufe erkennbar, Gutachter): Kopfbedeckung, Schürze und Bart. Hut-Farben stehen fest (nur die Kappe der Träger nimmt die
  * Trachtfarbe an), das Hemd färbt weiter die Instanzfarbe.
  */
-export type Hut = 'kappe' | 'pudel' | 'jaeger' | 'leder' | 'zimmermann' | 'stroh' | 'koch' | 'haube' | 'stirnband' | 'imker' | 'ohne' | 'schieber';
+export type Hut = 'kappe' | 'pudel' | 'jaeger' | 'leder' | 'zimmermann' | 'stroh' | 'koch' | 'haube' | 'stirnband' | 'imker' | 'ohne' | 'schieber' | 'loden';
 export type Werkzeug = 'hammer' | 'kaese' | 'loeffel' | 'krug' | 'gabel' | 'angel' | 'schaufel' | 'smoker' | 'kelle';
 export interface Tracht {
   hut: Hut; hutFarbe?: string; schuerze?: string; bart?: string;
@@ -131,6 +131,15 @@ function hut(t: Tracht, nacken: (g: THREE.BufferGeometry) => THREE.BufferGeometr
       add(nacken(halbkugel(0.255, 0.82, f ?? '#7a6248', 0.62)));
       add(nacken(paint(new THREE.SphereGeometry(0.2, 10, 4, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.25, 0.8).translate(0, 0.86, 0.16), f ?? '#6a5440')));
       break;
+    case 'loden': {
+      // Jäger: grauer Lodenhut mit Gamsbart hinten
+      const c = f ?? '#6a6f5a';
+      add(nacken(walze(0.34, 0.34, 0.03, 0.88, c, 16)));
+      add(nacken(walze(0.17, 0.2, 0.2, 0.98, c)));
+      add(nacken(walze(0.202, 0.202, 0.04, 0.91, '#3a2e22')));
+      add(nacken(paint(new THREE.ConeGeometry(0.06, 0.3, 6).translate(0, 1.15, -0.17), '#d8cdb8')));
+      break;
+    }
     case 'koch':
       // hohe weiße Kochmütze
       add(walze(0.2, 0.2, 0.22, 1.0, '#fbfbf8'));

@@ -105,7 +105,9 @@ export function leistungText(t: GebaeudeTyp, w: readonly WareText[]): string[] {
     z.push(`sät und erntet ${t.acker.name} im Umkreis von ${t.radius} Hexen: je Feld ${mengeText(t.acker.ernte, w[t.ausgangWare])}, reif nach ${Math.round(t.acker.wachsenTicks / TICK_HZ)} s`);
     z.push('Felder brauchen freies Land: ein Weg zertrampelt sie, Bauen räumt sie');
   } else if (t.radius > 0 && t.ausgangWare >= 0) z.push(`holt ${w[t.ausgangWare]?.mehr ?? ''} im Umkreis von ${t.radius} Hexen`);
-  else if (t.radius > 0) z.push(`arbeitet im Umkreis von ${t.radius} Hexen (pflanzt, wo Platz ist)`);
+  else if (t.radius > 0 && !t.leistung) z.push(`arbeitet im Umkreis von ${t.radius} Hexen (pflanzt, wo Platz ist)`);
+  if (t.schafe) z.push('Schafe: ein Wolf in der Nähe reißt ab und zu eins – ein Herdenschutzhund hilft');
+  if (t.acker?.wuehlbar) z.push('Wildschweine aus dem Wald wühlen die Felder um – ein Jäger in der Nähe hält sie fern');
   if (t.funktion === 'wohnen') z.push(`${t.nahrungPlaetze} Essensplätze · besseres Essen bringt schneller Nachwuchs`);
   if (t.acker) z.push('Jahr: im Winter Ruhe, im Frühjahr erst Aussaat, im Herbst Ernte (schneller); Wetter wirkt mit');
   else if (t.feld) z.push('Feld: ruht im Winter, im Frühjahr erst Aussaat, im Herbst Ernte (schneller); Wetter wirkt mit');
@@ -500,6 +502,7 @@ export function warnungen(s: SimSicht, ich: number): Warnung[] {
     ['kein_fels', 'ohne Fels in Reichweite', (g) => !g.getrennt && g.zustand === 'kein_fels'],
     ['kein_platz', 'ohne Pflanzplatz', (g) => !g.getrennt && g.zustand === 'kein_platz'],
     ['kein_feld', 'ohne Platz für Felder', (g) => !g.getrennt && g.zustand === 'kein_feld'],
+    ['kein_wild', 'ohne Wild in Reichweite', (g) => !g.getrennt && g.zustand === 'kein_wild'],
     ['kein_werkzeug', 'ohne Werkzeug', (g) => !g.getrennt && g.zustand === 'kein_werkzeug'],
     ['hochwasser', 'im Hochwasser', (g) => g.zustand === 'hochwasser'],
   ];

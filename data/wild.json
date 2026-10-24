@@ -1,0 +1,32 @@
+{
+ "hinweis": "Wald und Wild (Startwerte, werden beim Spielen eingestellt). Das Wild lebt in der Simulation je Hex wie der Wald: Rehe und Wildschweine (je Art höchstens 'max_je_hex') nur auf Hexen mit mindestens 'wald_min' ausgewachsenen Bäumen. Beim Start tragen 'start_prozent' der Wald-Hexe (fester Hash) ein Tier. Alle 'takt_s' Sekunden: auf jedem Wald-Hex kommt mit 'nachwuchs_prozent' ein Tier dazu, wenn dort oder nebenan eins lebt (leer gejagter Wald bleibt leer, bis Wild von nebenan kommt); wird der Wald gerodet, zieht das Wild ins Nachbar-Hex mit dem meisten Wald oder verschwindet. Wildschaden: jedes Wildschwein wühlt mit 'wildschaden.prozent' ein wuehlbares Feld (buildings.json acker.wuehlbar) im Umkreis 'wildschaden.radius' um – das Feld beginnt von vorn –, außer im Jagdrevier einer arbeitenden Jagdhütte. Wolf und Wildkatze sind geschützt (nicht jagbar), leben einzeln auf Wald-Hexen mit vollem Wald ('start_promille' der Hexe) und ziehen mit 'wandert_prozent' je Takt weiter. Wolf: steht ein Gebäude mit Schafen (buildings.json schafe) im 'radius', reißt er mit 'riss_prozent' je Takt ein Schaf (das Gebäude arbeitet 'ausfall_s' nicht), außer ein Herdenschutzhund ist in Reichweite. Wildkatze: bringt dem Dorf, auf dessen Land ihr Wald steht, alle 'takt_s' Sekunden 'punkte' Eifel-Punkte (Ansehen, höchstens 'max_punkte').",
+ "takt_s": 20,
+ "wald_min": 2,
+ "max_je_hex": 2,
+ "start_prozent": {
+  "reh": 14,
+  "sau": 9
+ },
+ "nachwuchs_prozent": {
+  "reh": 7,
+  "sau": 6
+ },
+ "wildschaden": {
+  "radius": 2,
+  "prozent": 4
+ },
+ "wolf": {
+  "start_promille": 3,
+  "wandert_prozent": 35,
+  "radius": 5,
+  "riss_prozent": 10,
+  "ausfall_s": 60
+ },
+ "wildkatze": {
+  "start_promille": 5,
+  "wandert_prozent": 8,
+  "takt_s": 120,
+  "punkte": 2,
+  "max_punkte": 60
+ }
+}

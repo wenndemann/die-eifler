@@ -37,7 +37,11 @@ import {
   KAFFEE_JE, KAFFEE_MAX, KAFFEE_PUNKTE, KAFFEE_TAKT, REIZ, SCHATZ_PUNKTE, SCHATZ_TEILE, STEIN_HECKE_PROZENT, STEIN_HECKE_RADIUS, STEIN_MAX,
   STEIN_RADIUS, TEIL_PROZENT, TEIL_PROZENT_ORT, ZOLL_BEUTE, ZOLL_RABATT, ZOLL_SCHMUGGLER, ZOLL_WACHSAMKEIT, zollAusKarte,
 } from './grenzland';
-import { FELS_FELS, FELS_KLIPPE, FELS_LESE as ART_LESE, hashHex, hashHex2, hashHex3 } from './natur';
+import { FELS_FELS, FELS_KLIPPE, FELS_LESE as ART_LESE, hashHex, hashHex2, hashHex3, hashMit } from './natur';
+import {
+  KATZE_MAX, KATZE_PUNKTE, KATZE_START, KATZE_TAKT, KATZE_WANDERT, SAU_PROZENT, SAU_RADIUS, WILD_MAX, WILD_NACHWUCHS, WILD_START, WILD_TAKT,
+  WILD_WALD, WOLF_AUSFALL, WOLF_RADIUS, WOLF_RISS, WOLF_START, WOLF_WANDERT,
+} from './wild';
 import { sucheWeg, ZahlenHeap } from './pfad';
 import { PROMILLE, STAT_KOPF } from './typen';
 import type {
@@ -199,6 +203,13 @@ interface Dorf {
    */
   funde: number[]; grossP: number; gewehr: number; kaffeeP: number; teile: number[]; helferP: number; jfestP: number; jfest: number; jfestOrt: number;
   abgeworben: number; verloren: number;
+  /** Wald und Wild: Punkte durch die Wildkatze (Ansehen), gerissene Schafe, umgewühlte Felder, erlegtes Wild. */
+  katzeP: number; risse: number; umgewuehlt: number; erlegt: number;
+}
+
+/** Wald und Wild (auch für ältere Spielstände). */
+function dorfWild(): Pick<Dorf, 'katzeP' | 'risse' | 'umgewuehlt' | 'erlegt'> {
+  return { katzeP: 0, risse: 0, umgewuehlt: 0, erlegt: 0 };
 }
 
 function dorfM15(): Pick<Dorf, 'funde' | 'grossP' | 'gewehr' | 'kaffeeP' | 'teile' | 'helferP' | 'jfestP' | 'jfest' | 'jfestOrt' | 'abgeworben' | 'verloren'> {
@@ -225,7 +236,7 @@ function neuesDorf(bewohner: number): Dorf {
     bewohner, frei: bewohner, bauGesamt: START_BAUARBEITER, bauFrei: START_BAUARBEITER, planGesamt: START_PLANIERER, planFrei: START_PLANIERER,
     stufe: 0, fest: 0, notnagelT: 0, verwalter: 0, ereignisse: [], wohnFrei: 0,
     vert: standardVerteilung(), erzeugt: new Array<number>(WAREN.length).fill(0), statPunkte: [], statTakt: STAT_TAKT, statNaechst: 0,
-    ...dorfM8(), ...dorfM10(), vk: -1, bootP: 0, ...dorfM14(), ...dorfM15(),
+    ...dorfM8(), ...dorfM10(), vk: -1, bootP: 0, ...dorfM14(), ...dorfM15(), ...dorfWild(),
   };
 }
 
@@ -348,6 +359,12 @@ export class Simulation {
   private feldStufe: Uint8Array;
   private feldRes: Uint8Array;
   private feldListe: number[] = [];
+  /** Wald und Wild: Rehe und Wildschweine je Hex, Wolf und Wildkatze (0/1) je Hex, Reservierung des Jägers (wie bei den Bäumen). */
+  private reh: Uint8Array;
+  private sau: Uint8Array;
+  private wolf: Uint8Array;
+  private katze: Uint8Array;
+  private wildRes: Uint8Array;
   private natRev = 0;
   /** Nur beim Laden: der Spielstand stammt von vor „Höfe und Felder“. */
   private altHoefeFelder = false;
@@ -444,7 +461,9 @@ export class Simulation {
     this.baumRes = new Uint8Array(n);
     this.felsRes = new Uint8Array(n);
     this.feld = new Uint8Array(n); this.feldReif = new Int32Array(n); this.feldStufe = new Uint8Array(n); this.feldRes = new Uint8Array(n);
+    this.reh = new Uint8Array(n); this.sau = new Uint8Array(n); this.wolf = new Uint8Array(n); this.katze = new Uint8Array(n); this.wildRes = new Uint8Array(n);
     this.natureStart();
+    this.wildStart();
     this.starts.forEach((st, sp) => {
       const h = this.karte.index(st.q, st.r);
       if (h < 0 || !this.karte.begehbar[h]) throw new Error(`Startlager von Spieler ${sp} liegt nicht auf begehbarem Boden`);
@@ -675,6 +694,7 @@ export class Simulation {
     this.brueckenEinbauen();
     for (let sp = 0; sp < this.doerfer.length; sp++) this.dorfTick(sp);
     if (t % 10 === 0) { this.baeumeWachsen(); this.felderWachsen(); this.zielePruefen(); }
+    if (t % WILD_TAKT === WILD_TAKT - 1) this.wildTick();
     if (t % 4 === 0) { this.lagerPull(); for (let sp = 0; sp < this.doerfer.length; sp++) this.bauleuteSchicken(sp); }
     for (const b of [...this.bauleute.values()]) this.baumannSchritt(b);
     for (const b of [...this.boten.values()]) this.boteSchritt(b);
@@ -727,6 +747,7 @@ export class Simulation {
         baum: inBase64(this.baum), jung: inBase64(this.jung), stufe: inBase64(this.stufe), fels: inBase64(this.fels), felsArt: inBase64(this.felsArt),
         baumRes: inBase64(this.baumRes), felsRes: inBase64(this.felsRes), jungReif: jr, jungListe: this.jungListe,
         feld: inBase64(this.feld), feldStufe: inBase64(this.feldStufe), feldRes: inBase64(this.feldRes), feldReif: fr, feldListe: this.feldListe,
+        reh: inBase64(this.reh), sau: inBase64(this.sau), wolf: inBase64(this.wolf), katze: inBase64(this.katze), wildRes: inBase64(this.wildRes),
       },
       log: this.log, ausstehend: this.ausstehend, stat: this.stat, erzeugtJe: this.erzeugtJe,
       boten: [...this.boten.values()] as unknown as Record<string, unknown>[],
@@ -780,6 +801,8 @@ export class Simulation {
       for (const key of Object.keys(m14)) if ((d as unknown as Record<string, unknown>)[key] === undefined) (d as unknown as Record<string, unknown>)[key] = m14[key];
       const m15 = dorfM15() as unknown as Record<string, unknown>;
       for (const key of Object.keys(m15)) if ((d as unknown as Record<string, unknown>)[key] === undefined) (d as unknown as Record<string, unknown>)[key] = m15[key];
+      const wi = dorfWild() as unknown as Record<string, unknown>;
+      for (const key of Object.keys(wi)) if ((d as unknown as Record<string, unknown>)[key] === undefined) (d as unknown as Record<string, unknown>)[key] = wi[key];
     }
     this.steine = (st.grenzland?.steine ?? []) as unknown as Stein[];
     if (Array.isArray(st.grenzland?.ortFest) && st.grenzland!.ortFest.length === this.orte.length) this.ortFest = st.grenzland!.ortFest.slice();
@@ -816,6 +839,14 @@ export class Simulation {
     } else {
       this.feld.fill(0); this.feldStufe.fill(0); this.feldRes.fill(0); this.feldListe = [];
       this.altHoefeFelder = true;
+    }
+    // Wald und Wild; Spielstände von vorher: das Wild verteilt sich wie beim Start auf den heutigen Wald
+    if (typeof nat.reh === 'string') {
+      this.reh = ausBase64(nat.reh, n); this.sau = ausBase64(nat.sau ?? '', n); this.wolf = ausBase64(nat.wolf ?? '', n);
+      this.katze = ausBase64(nat.katze ?? '', n); this.wildRes = ausBase64(nat.wildRes ?? '', n);
+    } else {
+      this.reh.fill(0); this.sau.fill(0); this.wolf.fill(0); this.katze.fill(0); this.wildRes.fill(0);
+      this.wildStart();
     }
     this.felsArtKopie = this.felsArt.slice();
     this.log = st.log; this.ausstehend = st.ausstehend; this.stat = st.stat;
@@ -970,9 +1001,9 @@ export class Simulation {
    * für die Bauvorschau; (q, r) ist das Gebäude, `mitte` der Arbeitsmittelpunkt (ohne: das Gebäude). n = Menge je Hex, gut = im
    * inneren Ring (Abstand zum Mittelpunkt ≤ radiusGut), summe = Gesamtmenge. art 'keine' bei anderen Typen. Rechnet höchstens ~60 Hexe.
    */
-  arbeitsHexe(typ: string, q: number, r: number, mitte?: { q: number; r: number }): { art: 'baum' | 'fels' | 'platz' | 'feld' | 'keine'; hexe: { q: number; r: number; n: number; gut: boolean }[]; summe: number } {
+  arbeitsHexe(typ: string, q: number, r: number, mitte?: { q: number; r: number }): { art: 'baum' | 'fels' | 'platz' | 'feld' | 'wild' | 'keine'; hexe: { q: number; r: number; n: number; gut: boolean }[]; summe: number } {
     const t = typVon(typ), geb = this.karte.index(q, r);
-    const art = t?.funktion === 'holzfaeller' ? 'baum' : t?.funktion === 'steinbruch' ? 'fels' : t?.funktion === 'foerster' ? 'platz' : t?.funktion === 'hof' ? 'feld' : 'keine';
+    const art = t?.funktion === 'holzfaeller' ? 'baum' : t?.funktion === 'steinbruch' ? 'fels' : t?.funktion === 'foerster' ? 'platz' : t?.funktion === 'hof' ? 'feld' : t?.funktion === 'jaeger' ? 'wild' : 'keine';
     const fa = t ? FELD_ARTEN.indexOf(t.id) + 1 : 0;
     const aus: { q: number; r: number; n: number; gut: boolean }[] = [];
     let summe = 0;
@@ -981,7 +1012,7 @@ export class Simulation {
     const c = m >= 0 ? m : geb;
     for (const x of this.hexeImRadius(c, t.radius, c !== geb)) {
       if (x === geb) continue;
-      const n = art === 'baum' ? this.baum[x] : art === 'fels' ? this.fels[x] : art === 'feld' ? (this.saebar(x) || this.feld[x] === fa ? 1 : 0)
+      const n = art === 'baum' ? this.baum[x] : art === 'fels' ? this.fels[x] : art === 'wild' ? this.reh[x] + this.sau[x] : art === 'feld' ? (this.saebar(x) || this.feld[x] === fa ? 1 : 0)
         : this.pflanzbar(x) ? TREE_MAX - this.baum[x] - this.jung[x] : 0;
       if (n > 0) { aus.push({ q: this.karte.qs[x], r: this.karte.rs[x], n, gut: this.karte.abstand(c, x) <= t.radiusGut }); summe += n; }
     }
@@ -1235,6 +1266,7 @@ export class Simulation {
         teile: d.teile.slice(), teilP: d.teile.length * SCHATZ_PUNKTE, helferP: d.helferP, jfestP: d.jfestP, jfest: d.jfest, jfestOrt: d.jfestOrt,
         abgeworben: d.abgeworben, verloren: d.verloren, reiz: this.reiz(sp), steine: this.steine.filter((x) => x.sp === sp && x.art === 0).length,
       },
+      wild: { katzeP: d.katzeP, risse: d.risse, umgewuehlt: d.umgewuehlt, erlegt: d.erlegt },
     };
   }
 
@@ -1254,6 +1286,7 @@ export class Simulation {
       this.natCache = {
         rev: this.natRev, baum: this.baum.slice(), jung: this.jung.slice(), stufe: this.stufe.slice(), fels: this.fels.slice(), felsArt: this.felsArtKopie, start: this.baumStartKopie,
         feld: this.feld.slice(), feldStufe: this.feldStufe.slice(),
+        reh: this.reh.slice(), sau: this.sau.slice(), wolf: this.wolf.slice(), katze: this.katze.slice(),
       };
     }
     return this.natCache;
@@ -1303,7 +1336,7 @@ export class Simulation {
     if (t.funktion === 'fonds') return g.ausgang[t.ausgangWare] + t.fondsMenge > t.ausgangMax ? 'voll' : this.dorfArm(g.sp) ? 'arbeitet' : 'bereit';
     if (t.funktion === 'funde') return g.puffer[WARE.kaffee] >= KAFFEE_JE && this.doerfer[g.sp].kaffeeP < KAFFEE_MAX ? 'arbeitet' : 'bereit';
     if (t.arbeiter && this.festPause(g.sp)) return 'fest';
-    if (t.funktion === 'zier' || (t.funktion === 'wache' && !t.arbeiter) || t.funktion === 'schnellweg') return 'bereit';
+    if (t.funktion === 'zier' || (t.funktion === 'wache' && !t.arbeiter) || t.funktion === 'schnellweg' || t.funktion === 'herdenschutz') return 'bereit';
     if (t.arbeiter && !g.ar) return t.werkzeug && this.doerfer[g.sp].frei > 0 ? 'kein_werkzeug' : 'kein_arbeiter';
     if (t.funktion === 'wache') return 'arbeitet';
     if (t.funktion === 'finder') return g.ph === FI_UNTERWEGS || g.ph === FI_STEIN || g.ph === FI_HEIM ? 'arbeitet' : 'bereit';
@@ -1321,7 +1354,7 @@ export class Simulation {
     if (t.funktion === 'erzeuger') return g.ausgang[t.ausgangWare] >= t.ausgangMax ? 'voll' : 'arbeitet';
     if (g.ph === PH_SUCHE) {
       if (t.ausgangMax > 0 && g.ausgang[t.ausgangWare] >= t.ausgangMax) return 'voll';
-      if (g.leer) return t.funktion === 'holzfaeller' ? 'kein_baum' : t.funktion === 'steinbruch' ? 'kein_fels' : t.funktion === 'hof' ? 'kein_feld' : 'kein_platz';
+      if (g.leer) return t.funktion === 'holzfaeller' ? 'kein_baum' : t.funktion === 'steinbruch' ? 'kein_fels' : t.funktion === 'hof' ? 'kein_feld' : t.funktion === 'jaeger' ? 'kein_wild' : 'kein_platz';
     }
     return 'arbeitet';
   }
@@ -1379,7 +1412,7 @@ export class Simulation {
       traegerJe[t.sp]++;
       if (this.segmente.get(t.seg)?.sp !== t.sp) fehler.push(`Träger ${t.id}: Segment eines anderen Spielers`);
     }
-    const bRes = new Map<number, number>(), fRes = new Map<number, number>(), feRes = new Map<number, number>();
+    const bRes = new Map<number, number>(), fRes = new Map<number, number>(), feRes = new Map<number, number>(), wRes = new Map<number, number>();
     for (const g of this.gebaeude.values()) {
       const t = GEBAEUDE[g.typ];
       for (let a = 0; a < WAREN.length; a++) {
@@ -1397,6 +1430,7 @@ export class Simulation {
         if (t.funktion === 'holzfaeller') bRes.set(g.zh, (bRes.get(g.zh) ?? 0) + 1);
         if (t.funktion === 'steinbruch') fRes.set(g.zh, (fRes.get(g.zh) ?? 0) + 1);
         if (t.funktion === 'hof') feRes.set(g.zh, (feRes.get(g.zh) ?? 0) + 1);
+        if (t.funktion === 'jaeger') wRes.set(g.zh, (wRes.get(g.zh) ?? 0) + 1);
       }
       if (g.prio < PRIO_MIN || g.prio > PRIO_MAX) fehler.push(`Gebäude ${g.id}: Priorität ${g.prio}`);
       if (t.nahrungPlaetze && summe(g.puffer) > t.nahrungPlaetze) fehler.push(`Gebäude ${g.id}: zu viel Essen`);
@@ -1445,6 +1479,9 @@ export class Simulation {
       if (this.feld[i] && (this.hexFahne[i] || this.hexGeb[i] || this.hexWeg[i] || this.baum[i] || this.jung[i])) fehler.push(`Hex ${i}: Feld auf belegtem Hex`);
       if (this.feld[i] > FELD_ARTEN.length) fehler.push(`Hex ${i}: unbekannte Feldart ${this.feld[i]}`);
       if (!this.feld[i] && this.feldReif[i]) fehler.push(`Hex ${i}: Reifezeit ohne Feld`);
+      if ((wRes.get(i) ?? 0) !== this.wildRes[i]) fehler.push(`Hex ${i}: Wild-Reservierung ${this.wildRes[i]} statt ${wRes.get(i) ?? 0}`);
+      if ((this.reh[i] | this.sau[i] | this.wolf[i] | this.katze[i]) && !this.waldHex(i)) fehler.push(`Hex ${i}: Wild ohne Wald`);
+      if (this.reh[i] > WILD_MAX || this.sau[i] > WILD_MAX || this.wolf[i] > 1 || this.katze[i] > 1) fehler.push(`Hex ${i}: zu viel Wild`);
       if (this.baum[i] + this.jung[i] > TREE_MAX) fehler.push(`Hex ${i}: zu viele Bäume`);
       if ((this.hexFahne[i] || this.hexGeb[i] || this.hexWeg[i]) && (this.baum[i] || this.jung[i])) fehler.push(`Hex ${i}: Bäume auf belegtem Hex`);
       let slots = 0;
@@ -1506,6 +1543,11 @@ export class Simulation {
         const v = this.jungReif[i];
         if (v) { n.byte(i); n.byte(i >>> 8); n.byte(i >>> 16); n.byte(v); n.byte(v >>> 8); n.byte(v >>> 16); }
       }
+      // Wald und Wild je Hex
+      for (let i = 0; i < this.karte.count; i++) {
+        if (!(this.reh[i] | this.sau[i] | this.wolf[i] | this.katze[i])) continue;
+        n.byte(i); n.byte(i >>> 8); n.byte(i >>> 16); n.byte(this.reh[i]); n.byte(this.sau[i]); n.byte(this.wolf[i] | (this.katze[i] << 1));
+      }
       // Höfe und Felder: Feldart, Stadium und Reifetick je Feld-Hex
       for (let i = 0; i < this.karte.count; i++) {
         if (!this.feld[i]) continue;
@@ -1518,6 +1560,8 @@ export class Simulation {
     liste(this.jungListe);
     liste(this.feldListe);
     for (let i = 0; i < this.karte.count; i++) if (this.feldRes[i]) { w(i); w(this.feldRes[i]); }
+    for (let i = 0; i < this.karte.count; i++) if (this.wildRes[i]) { w(i); w(this.wildRes[i]); }
+    for (const d of this.doerfer) { w(d.katzeP); w(d.risse); w(d.umgewuehlt); w(d.erlegt); }
     // M10: Regeln, Gebiet (nur bei Änderung neu gehasht), Orte, Lieferungen, Ende
     w(this.regeln.gebiet); f.text(this.regeln.ziel);
     w(this.besitzRev);
@@ -2005,7 +2049,7 @@ export class Simulation {
     const d = this.doerfer[sp];
     if (!d) return 0;
     return PUNKTE_STUFE[Math.min(d.stufe, PUNKTE_STUFE.length - 1)] + PUNKTE_KIRMES * d.stufe + d.festPunkte + d.einstandP + d.fundP
-      + (d.bootP ?? 0) + (d.maiP ?? 0) + d.grossP + d.kaffeeP + d.teile.length * SCHATZ_PUNKTE + d.helferP + d.jfestP + PUNKTE_SCHUETZENFEST * d.schuetzenN + PUNKTE_KOENIG * d.koenigN + PUNKTE_BEWOHNER * d.bewohner + Math.floor(this.hexeVon(sp) / HEXE_JE_PUNKT);
+      + (d.bootP ?? 0) + (d.maiP ?? 0) + d.grossP + d.kaffeeP + d.teile.length * SCHATZ_PUNKTE + d.helferP + d.jfestP + d.katzeP + PUNKTE_SCHUETZENFEST * d.schuetzenN + PUNKTE_KOENIG * d.koenigN + PUNKTE_BEWOHNER * d.bewohner + Math.floor(this.hexeVon(sp) / HEXE_JE_PUNKT);
   }
 
   /** Ende der Partie: Wettlauf (zuerst Marktflecken) oder Zielpunktzahl erreicht; bei mehreren gewinnt der mit den meisten Punkten. */
@@ -2115,6 +2159,7 @@ export class Simulation {
     if (this.feld[h]) { this.feld[h] = 0; this.feldReif[h] = 0; this.feldStufe[h] = 0; this.natRev++; }
     if (!this.baum[h] && !this.jung[h]) return;
     this.baum[h] = 0; this.jung[h] = 0; this.stufe[h] = 0;
+    this.wildVertreiben(h);
     for (let j = 0; j < TREE_MAX; j++) this.jungReif[h * TREE_MAX + j] = 0;
     this.natRev++;
   }
@@ -2158,6 +2203,135 @@ export class Simulation {
       if (st !== this.feldStufe[x]) { this.feldStufe[x] = st; this.natRev++; }
     }
     this.feldListe = this.feldListe.filter((x) => this.feld[x] > 0 && this.feldReif[x] > 0);
+  }
+
+  // ------------------------------------------------------------------ Wald und Wild
+
+  /** Wald fürs Wild: mindestens WILD_WALD ausgewachsene Bäume. */
+  private waldHex(x: number): boolean { return this.baum[x] >= WILD_WALD; }
+
+  /** Start-Wild aus den Welt-Hex-Koordinaten (fester Hash, nicht die Saat), wie die Start-Natur: gleiche Karte, gleiches Wild. */
+  private wildStart(): void {
+    const k = this.karte;
+    for (let i = 0; i < k.count; i++) {
+      if (!this.waldHex(i)) continue;
+      const q = k.qs[i], r = k.rs[i];
+      if (hashMit(q, r, 40) % 100 < WILD_START.reh) this.reh[i] = 1;
+      if (hashMit(q, r, 41) % 100 < WILD_START.sau) this.sau[i] = 1;
+      if (this.baum[i] >= TREE_MAX && hashMit(q, r, 42) % 1000 < WOLF_START) this.wolf[i] = 1;
+      if (this.baum[i] >= TREE_MAX && hashMit(q, r, 43) % 1000 < KATZE_START) this.katze[i] = 1;
+    }
+    this.natRev++;
+  }
+
+  /** Nachbar-Hex mit dem meisten Wald (Gleichstand: kleinerer Index), wo `frei` gilt, oder -1. */
+  private waldNachbar(h: number, frei: (x: number) => boolean): number {
+    const k = this.karte;
+    let best = -1;
+    for (let d = 0; d < 6; d++) {
+      const x = k.nachbarn[h * 6 + d];
+      if (x < 0 || !this.waldHex(x) || !frei(x)) continue;
+      if (best < 0 || this.baum[x] > this.baum[best] || (this.baum[x] === this.baum[best] && x < best)) best = x;
+    }
+    return best;
+  }
+
+  /** Der Wald auf h ist weg (gerodet, belegt): das Wild zieht ins waldreichste Nachbar-Hex oder verschwindet. */
+  private wildVertreiben(h: number): void {
+    if (!(this.reh[h] | this.sau[h] | this.wolf[h] | this.katze[h])) return;
+    for (const a of [this.reh, this.sau]) {
+      while (a[h] > 0) {
+        const x = this.waldNachbar(h, (y) => a[y] < WILD_MAX);
+        if (x >= 0) a[x]++;
+        a[h]--;
+      }
+    }
+    for (const a of [this.wolf, this.katze]) {
+      if (!a[h]) continue;
+      const x = this.waldNachbar(h, (y) => !a[y]);
+      if (x >= 0) a[x] = 1;
+      a[h] = 0;
+    }
+    this.natRev++;
+  }
+
+  /** Steht im Radius eines fertigen, besetzten Gebäudes der Funktion `f` (Mittelpunkt: Arbeitsbereich)? */
+  private imRadiusVon(h: number, f: 'jaeger' | 'herdenschutz'): Gebaeude | null {
+    for (const g of this.gebaeude.values()) {
+      const t = GEBAEUDE[g.typ];
+      if (t.funktion !== f || !g.fertig || (t.arbeiter && !g.ar)) continue;
+      if (this.karte.abstand(this.arbeitsMitte(g), h) <= t.radius) return g;
+    }
+    return null;
+  }
+
+  /**
+   * Alle WILD_TAKT Ticks: Wild wächst im Wald nach (nur, wo es selbst oder nebenan schon lebt), Wolf und Wildkatze ziehen umher,
+   * Wildschweine wühlen Felder um (außer im Jagdrevier), der Wolf reißt Schafe (außer beim Herdenschutzhund), die Wildkatze bringt
+   * dem Dorf, auf dessen Land ihr Wald steht, Ansehen. Zufall: fester Hash aus Hex und Takt (verschiebt den übrigen Zufall nicht), Reihenfolge nach Hex-Index.
+   */
+  private wildTick(): void {
+    const k = this.karte, n = k.count, takt = Math.floor(this._tick / WILD_TAKT);
+    // eigener Zufall des Wilds (fester Hash aus Hex, Takt und Wurf), damit es den Zufall der übrigen Simulation nicht verschiebt
+    const wurf = (i: number, salz: number, m: number) => hashMit(i, takt, 60 + salz) % m;
+    let neu = false;
+    // Nachwuchs (Rehe, Wildschweine)
+    for (const [a, p, salz] of [[this.reh, WILD_NACHWUCHS.reh, 0], [this.sau, WILD_NACHWUCHS.sau, 1]] as [Uint8Array, number, number][]) {
+      for (let i = 0; i < n; i++) {
+        if (a[i] >= WILD_MAX || !this.waldHex(i)) continue;
+        let da = a[i] > 0;
+        for (let d = 0; d < 6 && !da; d++) { const x = k.nachbarn[i * 6 + d]; if (x >= 0 && a[x] > 0) da = true; }
+        if (da && wurf(i, salz, 100) < p) { a[i]++; neu = true; }
+      }
+    }
+    // Wolf und Wildkatze ziehen weiter (einzeln, nur durch vollen Wald)
+    for (const [a, p, salz] of [[this.wolf, WOLF_WANDERT, 2], [this.katze, KATZE_WANDERT, 4]] as [Uint8Array, number, number][]) {
+      const da: number[] = [];
+      for (let i = 0; i < n; i++) if (a[i]) da.push(i);
+      for (const i of da) {
+        if (wurf(i, salz, 100) >= p) continue;
+        const ziele: number[] = [];
+        for (let d = 0; d < 6; d++) { const x = k.nachbarn[i * 6 + d]; if (x >= 0 && !a[x] && this.waldHex(x)) ziele.push(x); }
+        if (!ziele.length) continue;
+        a[ziele[wurf(i, salz + 1, ziele.length)]] = 1; a[i] = 0; neu = true;
+      }
+    }
+    // Wildschaden: jedes Wildschwein im Umkreis eines wühlbaren Felds ist eine Gelegenheit
+    const gewuehlt = new Set<number>();
+    for (let f = 0; f < n; f++) {
+      if (!this.feld[f] || !GEBAEUDE[FELD_ARTEN[this.feld[f] - 1]].acker!.wuehlbar) continue;
+      let saeue = 0;
+      for (const x of this.hexeImRadius(f, SAU_RADIUS, true)) saeue += this.sau[x];
+      if (!saeue || wurf(f, 6, 100) >= Math.min(100, SAU_PROZENT * saeue) || this.imRadiusVon(f, 'jaeger')) continue;
+      const fa = this.feld[f];
+      this.feldReif[f] = this._tick + Math.max(1, GEBAEUDE[FELD_ARTEN[fa - 1]].acker!.wachsenTicks); this.feldStufe[f] = 1;
+      if (!this.feldListe.includes(f)) this.feldListe.push(f);
+      neu = true;
+      const sp = this.besitz[f];
+      if (sp >= 0 && sp < this.doerfer.length) { this.doerfer[sp].umgewuehlt++; if (!gewuehlt.has(sp)) { gewuehlt.add(sp); this.ereignis(sp, 'wildschaden', 0, fa - 1); } }
+    }
+    // Wolf: reißt ein Schaf bei einem Gebäude mit Schafen in seiner Nähe, außer ein Herdenschutzhund passt auf
+    for (const g of this.gebaeude.values()) {
+      if (!GEBAEUDE[g.typ].schafe || !g.fertig || !g.ar) continue;
+      let nah = false;
+      for (const x of this.hexeImRadius(g.h, WOLF_RADIUS, true)) if (this.wolf[x]) { nah = true; break; }
+      if (!nah || this.imRadiusVon(g.h, 'herdenschutz') || wurf(g.h, 7, 100) >= WOLF_RISS) continue;
+      g.zeit = -WOLF_AUSFALL;
+      this.doerfer[g.sp].risse++;
+      this.ereignis(g.sp, 'wolf', g.id, 0);
+    }
+    // Wildkatze: Ansehen für das Dorf, auf dessen Land ihr Wald steht
+    if (this._tick % KATZE_TAKT < WILD_TAKT) {
+      for (let i = 0; i < n; i++) {
+        if (!this.katze[i]) continue;
+        const sp = this.besitz[i];
+        if (sp < 0 || sp >= this.doerfer.length) continue;
+        const d = this.doerfer[sp], vorher = d.katzeP;
+        d.katzeP = Math.min(KATZE_MAX, d.katzeP + KATZE_PUNKTE);
+        if (vorher === 0 && d.katzeP > 0) this.ereignis(sp, 'wildkatze', 0, KATZE_PUNKTE);
+      }
+    }
+    if (neu) this.natRev++;
   }
 
   /** Ältere Spielstände (vor Höfe und Felder): jeder Hof bekommt bis zu FELD_ALT reife Felder auf den nächsten freien Plätzen. */
@@ -2464,6 +2638,7 @@ export class Simulation {
       if (t.funktion === 'holzfaeller' && this.baumRes[g.zh] > 0) this.baumRes[g.zh]--;
       if (t.funktion === 'steinbruch' && this.felsRes[g.zh] > 0) this.felsRes[g.zh]--;
       if (t.funktion === 'hof' && this.feldRes[g.zh] > 0) this.feldRes[g.zh]--;
+      if (t.funktion === 'jaeger' && this.wildRes[g.zh] > 0) this.wildRes[g.zh]--;
     }
   }
 
@@ -2791,7 +2966,7 @@ export class Simulation {
     // Ahrtaler: während der Feste ruht die Arbeit
     if (t.arbeiter && this.festPause(g.sp)) return;
     switch (t.funktion) {
-      case 'holzfaeller': case 'steinbruch': case 'foerster': case 'hof': this.laeuferTick(g, t); break;
+      case 'holzfaeller': case 'steinbruch': case 'foerster': case 'hof': case 'jaeger': this.laeuferTick(g, t); break;
       case 'hecke': if (!this.heckeGross(g)) g.zeit++; break;
       case 'maijungen': {
         // Junggesellenverein: aus einem freien Bewohner und Landbier wird ein Maijunge
@@ -2892,11 +3067,17 @@ export class Simulation {
 
   /** Hex im Arbeitsbereich mit freiem Baum/Fels, der vom Gebäude aus am schnellsten erreichbar ist (Gleichstand: kleinerer Index), samt Gehweg, oder null. */
   private sucheRessource(g: Gebaeude, t: GebaeudeTyp): number[] | null {
+    // der Jäger nimmt zuerst die Wildschweine (sie wühlen die Felder um), erst wenn keins in Reichweite ist, die Rehe
+    if (t.funktion === 'jaeger') return this.sucheNaechstes(g, t, (x) => this.sau[x] - this.wildRes[x]) ?? this.sucheNaechstes(g, t, (x) => this.reh[x] + this.sau[x] - this.wildRes[x]);
     const baum = t.funktion === 'holzfaeller';
+    return this.sucheNaechstes(g, t, baum ? (x) => this.baum[x] - this.baumRes[x] : (x) => this.fels[x] - this.felsRes[x]);
+  }
+
+  /** Hex im Arbeitsbereich mit frei(x) > 0, der vom Gebäude aus am schnellsten erreichbar ist (Gleichstand: kleinerer Index), samt Gehweg. */
+  private sucheNaechstes(g: Gebaeude, t: GebaeudeTyp, frei: (x: number) => number): number[] | null {
     let best: number[] | null = null, bk = Infinity, bi = 0;
     for (const x of this.arbeitsHexeVon(g, t)) {
-      const frei = baum ? this.baum[x] - this.baumRes[x] : this.fels[x] - this.felsRes[x];
-      if (frei <= 0) continue;
+      if (frei(x) <= 0) continue;
       const weg = this.gehPfad(g.h, x);
       if (!weg) continue;
       const kosten = this.karte.pfadKosten(weg);
@@ -2904,6 +3085,7 @@ export class Simulation {
     }
     return best;
   }
+
 
   /** Förster: zufälliger Pflanzplatz unter allen erreichbaren Kandidaten im Arbeitsbereich, samt Gehweg, oder null. */
   private suchePflanzplatz(g: Gebaeude, t: GebaeudeTyp): number[] | null {
@@ -2968,6 +3150,7 @@ export class Simulation {
         if (t.funktion === 'holzfaeller') this.baumRes[g.zh]++;
         else if (t.funktion === 'steinbruch') this.felsRes[g.zh]++;
         else if (t.funktion === 'hof') this.feldRes[g.zh]++;
+        else if (t.funktion === 'jaeger') this.wildRes[g.zh]++;
         g.wi = 0; g.pt = 0; g.pd = k.schritt(weg[0], weg[1]); g.ph = PH_HIN;
         return;
       }
@@ -2985,10 +3168,15 @@ export class Simulation {
         g.traegt = -1;
         if (t.funktion === 'holzfaeller') {
           if (this.baumRes[x] > 0) this.baumRes[x]--;
-          if (this.baum[x] > 0) { this.baum[x]--; this.natRev++; g.traegt = t.ausgangWare; }
+          if (this.baum[x] > 0) { this.baum[x]--; this.natRev++; g.traegt = t.ausgangWare; if (!this.waldHex(x)) this.wildVertreiben(x); }
         } else if (t.funktion === 'steinbruch') {
           if (this.felsRes[x] > 0) this.felsRes[x]--;
           if (this.fels[x] > 0) { this.fels[x]--; this.natRev++; g.traegt = t.ausgangWare; }
+        } else if (t.funktion === 'jaeger') {
+          // erst die Wildschweine (sie wühlen die Felder um), dann die Rehe; Wolf und Wildkatze sind geschützt
+          if (this.wildRes[x] > 0) this.wildRes[x]--;
+          const art = this.sau[x] > 0 ? this.sau : this.reh[x] > 0 ? this.reh : null;
+          if (art) { art[x]--; this.natRev++; g.traegt = t.ausgangWare; this.doerfer[g.sp].erlegt++; }
         } else if (t.funktion === 'hof') {
           // reifes Feld der eigenen Art: ernten (das Hex wird wieder frei); sonst auf freiem Platz säen
           const fa = FELD_ARTEN.indexOf(t.id) + 1;

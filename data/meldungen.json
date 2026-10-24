@@ -227,6 +227,18 @@
   "Der Finder kommt mit Bohnenkaffee zurück. Gefunden. Am Zollhaus. Rein zufällig.",
   "Wieder ein Sack Kaffee. In Mützenich nennt man das „Heimatkunde“."
  ],
+ "wildschaden": [
+  "Die Wildschweine waren im {feld}. Alles umgewühlt – der Bauer fängt von vorn an. Eine Jagdhütte in der Nähe hält sie fern.",
+  "Wildschaden im {feld}! Die Sau hat gewühlt, der Bauer flucht. Ein Jäger mit Hochsitz wäre jetzt was."
+ ],
+ "wolf": [
+  "Der Wolf war am Schafstall und hat ein Schaf geholt. Er ist geschützt – aber ein Herdenschutzhund passt auf.",
+  "Ein Schaf weniger. Der Wolf hat zugeschlagen. Jagen darf man ihn nicht, ein großer weißer Hund am Stall hilft."
+ ],
+ "wildkatze": [
+  "Im Wald lebt eine Wildkatze! Solange ihr Wald stehen bleibt, bringt sie dem Dorf Ansehen (+{n} Punkte).",
+  "Die Wildkatze ist da – scheu und selten. Lasst ihren Wald stehen, das spricht sich rum (+{n} Punkte)."
+ ],
  "bruecke": [
   "Die Brücke liegt. Jetzt kommt man trockenen Fußes rüber. Die Kühe gehen trotzdem durchs Wasser.",
   "Neue Holzbrücke über den Bach. Hält. Hat der Zimmermann gesagt. Der wohnt aber auf der anderen Seite."

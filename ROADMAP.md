@@ -391,13 +391,19 @@ Felder sind keine großen Gebäude mehr, sondern wachsen wie der Wald – ohne S
 
 **Startwerte:** Radius 3 (gut 2), Säen bzw. Ernten 3 s, Ruhe 2 s, 1 Ware je reifem Feld; reif nach 90 s (Kartoffel, Hopfen), 100 s (Gerste, Wein, Lohe), 110 s (Obst), 120 s (Wacholder). Der M8-Bot setzt seine Höfe ins freie Land und erreicht Dorf, Kirchdorf und Marktflecken nach 26, 50 und 95 Minuten (vorher 26, 51, 82).
 
-## Vorschlag: Wald und Wild (Jäger)
+## Wald und Wild (Jäger) ✅ (erster Stand) → 🔨 Spieltest
 
-Wild gibt es schon als Leben (siehe oben); als Spiel könnte daraus werden:
-- **Jäger mit Hochsitz** (Gebäude am Waldrand): erlegt Rehe und Wildschweine im Umkreis → **Wildbret** für Küche und Schänke (Wildgulasch als Festessen); Wild wächst im Wald nach, zu viel Jagd leert den Wald
-- **Wildschaden:** ohne Jäger wühlen Wildschweine Kartoffel- und Gerstenfelder um (weniger Ernte); der Jäger hält sie fern
-- **Wolf und Wildkatze sind geschützt** (wie in echt): nicht jagbar; ein Wolf reißt ab und zu ein Schaf, dagegen helfen Zaun und **Herdenschutzhund** am Schafstall; die Wildkatze bringt Glück (Ansehen), wenn man ihren Wald stehen lässt
-- Zahlen in `data/`, deterministisch in der Simulation, Mehrspieler- und Unit-Tests wie üblich
+Das Wild gab es bisher nur als Leben; jetzt führt es die Simulation, die Darstellung zeigt es (baut auf „Höfe und Felder“ auf):
+- [x] **Wild je Hex wie der Wald:** Rehe und Wildschweine (je bis zu 2) leben auf Hexen mit mindestens 2 Bäumen, Startbestand fest aus der Karte. Nachwuchs alle 20 s nur, wo es selbst oder nebenan schon lebt – **zu viel Jagd leert den Wald**, bis Wild von nebenan einwandert. Wird der Wald gerodet oder bebaut, zieht das Wild ins waldreichste Nachbar-Hex
+- [x] **Jagdhütte mit Hochsitz** (Jäger mit Lodenhut und Flinte): erlegt im Umkreis zuerst Wildschweine, dann Rehe → **Wildbret**; die **Wildküche** (ab Dorf) macht aus Wildbret und Kartoffeln **Wildgulasch** (veredelte Nahrung, zählt im Mischkorb)
+- [x] **Wildschaden:** Wildschweine wühlen Kartoffel- und Gerstenfelder in ihrer Nähe um (das Feld fängt von vorn an, weniger Ernte); im Revier einer arbeitenden Jagdhütte nicht. Meldung der Erzählfigur
+- [x] **Wolf und Wildkatze sind geschützt** (nicht jagbar), leben einzeln im vollen Wald und ziehen umher: der **Wolf** reißt ab und zu ein Schaf am Schafstall oder an der Schafweide (das Gebäude steht eine Minute), der **Herdenschutzhund** (Gebäude) schützt im Umkreis; die **Wildkatze** bringt dem Dorf, auf dessen Land ihr Wald steht, Ansehen (Eifel-Punkte, bis 60), solange ihr Wald bleibt
+- [x] Darstellung: Rehe, Wildschweine mit Frischlingen, Wolfsrudel und Wildkatze stehen, wo die Simulation sie führt; Hirsch, Fuchs und Hase bleiben Schmuck am Waldrand
+- [x] Zahlen in `data/wild.json` (dazu Jagdhütte, Wildküche, Herdenschutzhund, `schafe` und `acker.wuehlbar` in `data/buildings.json`, Wildbret und Wildgulasch in `data/goods.json`); deterministisch, in Spielstand und Prüfsumme; ältere Spielstände bekommen das Start-Wild auf den heutigen Wald
+- [x] Tests: `tests/wild.test.ts`, Gleichschritt mit Neuladen in `tests/partie.test.ts`, Jagdhütte des Gasts und Wild bei beiden in `tests/mehrspieler.mjs`; Bilder `tools/_jagd.mjs`
+- [ ] Spieltest: Nachwuchs, Wildschaden und Wolf mit Menschen einstellen
+
+**Startwerte (`data/wild.json`):** Takt 20 s; Start 14 % der Wald-Hexe mit Reh, 9 % mit Wildschwein; Nachwuchs 7 % (Reh) bzw. 6 % (Sau) je Takt; Wildschaden 4 % je Wildschwein und Feld im Umkreis 2; Wolf auf 0,3 % der vollen Wald-Hexe, zieht mit 35 % weiter, reißt im Umkreis 5 mit 10 % je Takt; Wildkatze auf 0,5 %, 2 Punkte alle 2 min; Jagdhütte Radius 4, 8 s Ansitz; Herdenschutzhund Radius 3.
 
 ## Danach (offen)
 

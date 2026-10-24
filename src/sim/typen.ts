@@ -176,6 +176,7 @@ export interface SichtTraeger {
  * - 'kein_fels'       Steinbruch findet im Radius keinen Felsen mehr
  * - 'kein_platz'      Förster findet im Radius keinen freien Pflanzplatz
  * - 'kein_feld'       Hof: im Radius kein reifes Feld und kein freier Platz zum Säen
+ * - 'kein_wild'       Jagdhütte: im Radius kein Reh und kein Wildschwein
  * - 'voll'            Output-Puffer voll (Rückstau), die Arbeit ruht
  * - 'ruht'            vom Spieler angehalten (Befehl 'ruhen')
  * - 'winter'          Feld ruht im Winter (Drehbuch 7.4)
@@ -186,7 +187,7 @@ export interface SichtTraeger {
  * - 'bereit'          fertig und nichts zu tun (Lager, Kirmesplatz ohne weitere Stufe)
  */
 export type GebaeudeZustand =
-  | 'baustelle' | 'wartet_material' | 'getrennt' | 'kein_arbeiter' | 'kein_baum' | 'kein_fels' | 'kein_platz' | 'kein_feld' | 'voll'
+  | 'baustelle' | 'wartet_material' | 'getrennt' | 'kein_arbeiter' | 'kein_baum' | 'kein_fels' | 'kein_platz' | 'kein_feld' | 'kein_wild' | 'voll'
   | 'kein_planierer' | 'planieren' | 'kein_bauarbeiter' | 'hunger' | 'wohnraum_voll' | 'fest'
   | 'ruht' | 'arbeitet' | 'bereit' | 'winter' | 'saat' | 'hochwasser' | 'kein_werkzeug'
   /** M10: steht auf fremdem Gebiet still; Finder sitzt in der Ausredenstube. */
@@ -291,6 +292,11 @@ export interface SichtNatur {
   /** Höfe und Felder: Feldart je Hex (0 keins, sonst 1 + Index in FELD_ARTEN) und Stadium (1 gesät, 2 wächst, 3 fast reif, 4 reif). */
   feld?: Uint8Array;
   feldStufe?: Uint8Array;
+  /** Wald und Wild: Rehe und Wildschweine je Hex, Wolf und Wildkatze (0/1) je Hex. */
+  reh?: Uint8Array;
+  sau?: Uint8Array;
+  wolf?: Uint8Array;
+  katze?: Uint8Array;
 }
 
 /** Bauarbeiter oder Planierer (Drehbuch 4.5), als Figur in der Welt. */
@@ -314,7 +320,8 @@ export interface SichtEreignis {
     | 'jahreszeit' | 'wetter' | 'friert' | 'satt' | 'kleines_fest' | 'bauleute' | 'verloren'
     | 'einstand' | 'zu_spaet' | 'handel' | 'fund' | 'erwischt' | 'ertappt' | 'schuetzenfest' | 'koenig' | 'ende' | 'altstein' | 'fonds'
     | 'mainacht' | 'maibaum' | 'maiklau' | 'maibesuch' | 'mailoese' | 'mailehen'
-    | 'grenzstein' | 'grenzstein_weg' | 'abwerben' | 'abgeworben' | 'schmuggel' | 'grossfund' | 'schatzteil' | 'jahresfest' | 'spuk' | 'kaffee' | 'bruecke' | 'bruecke_fehlt';
+    | 'grenzstein' | 'grenzstein_weg' | 'abwerben' | 'abgeworben' | 'schmuggel' | 'grossfund' | 'schatzteil' | 'jahresfest' | 'spuk' | 'kaffee' | 'bruecke' | 'bruecke_fehlt'
+    | 'wildschaden' | 'wolf' | 'wildkatze';
   /** Gebäude (bewohner, fertig, kirmes, kleines_fest) oder 0. */
   gebaeude: Id;
   /**
@@ -372,6 +379,8 @@ export interface SichtDorf {
   koenig?: boolean;
   /** M11: Völkchen (Id) oder ''. */
   voelkchen?: string;
+  /** Wald und Wild: Eifel-Punkte durch die Wildkatze (Ansehen), vom Wolf gerissene Schafe, umgewühlte Felder, erlegtes Wild. */
+  wild?: { katzeP: number; risse: number; umgewuehlt: number; erlegt: number };
 }
 
 /**

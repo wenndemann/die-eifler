@@ -527,6 +527,38 @@ describe('Gleichschritt', () => {
     expect(a.pruefeInnenzustand()).toEqual([]);
   });
 
+  it('Wald und Wild im Gleichschritt: Jäger, Nachwuchs, Wildkatze und Herdenschutzhund bei allen gleich, auch nach dem Neuladen', () => {
+    const r = runde();
+    r.lauf(1000);
+    p(r, 0).setzeTempo(3);
+    p(r, 0).befehl({ art: 'gebaeude', typ: 'jagdhuette', q: 1, r: -1 });
+    p(r, 0).befehl({ art: 'weg', pfad: gerade(0, 0, 1, 1) });
+    p(r, 1).befehl({ art: 'gebaeude', typ: 'schafstall', q: -6, r: 2 });
+    p(r, 1).befehl({ art: 'weg', pfad: gerade(-6, 0, 5, 2) });
+    p(r, 1).befehl({ art: 'gebaeude', typ: 'herdenschutzhund', q: -4, r: 0 });
+    p(r, 1).befehl({ art: 'weg', pfad: gerade(-6, 0, 0, 2) });
+    r.lauf(40_000);
+    r.trenne(1);
+    r.lauf(1000);
+    const neu = r.starte(1);
+    r.verbindeAlle();
+    while (!neu.sim || neu.angehalten) r.lauf(16);
+    r.lauf(40_000);
+    p(r, 0).pause(true);
+    r.lauf(3000);
+    r.gleichziehen();
+    for (const i of [0, 1]) expect(p(r, i).ereignisse.filter((e) => e.art === 'auseinander' || e.art === 'fehler')).toEqual([]);
+    const a = sim(r, 0), b = sim(r, 1);
+    expect(b.tick).toBe(a.tick);
+    expect(b.pruefsumme()).toBe(a.pruefsumme());
+    const na = a.sicht(0).natur, nb = b.sicht(1).natur;
+    for (const k of ['reh', 'sau', 'wolf', 'katze'] as const) expect([...nb[k]!]).toEqual([...na[k]!]);
+    expect(na.reh!.some((v) => v > 0) || na.sau!.some((v) => v > 0)).toBe(true);
+    expect(JSON.stringify(b.sicht(0).dorf.wild)).toBe(JSON.stringify(a.sicht(0).dorf.wild));
+    expect(a.sicht(1).gebaeude.some((g) => g.sp === 1 && g.typ === 'herdenschutzhund')).toBe(true);
+    expect(a.pruefeInnenzustand()).toEqual([]);
+  });
+
   it('kaputte und fremde Nachrichten ändern nichts', () => {
     const r = runde();
     r.lauf(2000);
