@@ -378,13 +378,18 @@ Noch nicht drin (kommt später): Schützenhaus und Schützenfest (M10), Regler B
 
 - [x] README und README-platt neu: kurz, was das Spiel ist und kann, Schnellstart, Mehrspieler betreiben, Befehle; die Details der Meilensteine stehen nur noch hier in der Roadmap und im Drehbuch
 
-## Vorschlag: Höfe und Felder (wie Siedler 2)
+## Höfe und Felder (wie Siedler 2) ✅ (erster Stand) → 🔨 Spieltest
 
 Felder sind keine großen Gebäude mehr, sondern wachsen wie der Wald – ohne Sonderregeln, mit denselben Regeln wie Bäume:
-- **Hof** (Kartoffel-, Gersten-, Hopfenhof, Obstwiese, Weinberg …): ein normales Gebäude in seinem Hex; der Bauer sät auf freien Hexen im Umkreis (wie der Förster pflanzt) und erntet reife Felder (wie der Holzfäller fällt)
-- **Feld als Natur je Hex** (gesät, wächst, reif, abgeerntet), im Winter Ruhe, im Frühjahr Saat (wie bisher die Feld-Saison)
-- **Platz zählt:** wer dicht baut, hat weniger Felder; ein neuer Weg über ein Feld zertrampelt es (wie Wege Bäume roden), Bauen auf einem Feld räumt es
-- Zahlen in `data/`, deterministisch (Natur je Hex in Spielstand und Prüfsumme wie die Bäume), alte Spielstände laden (bestehende Feld-Gebäude werden zu Höfen), Mehrspieler- und Unit-Tests wie üblich
+- [x] **Hof** (Kartoffel-, Gersten-, Obst-, Wacholder-, Winzer-, Hopfen- und Lohhof; Ids wie bisher): ein normales Gebäude in seinem Hex (Wohnhaus mit Scheune, in voller Größe); der Bauer sät auf freien Hexen im Umkreis (wie der Förster pflanzt) und erntet das nächste reife Feld seiner Art (wie der Holzfäller fällt). Der Bienenstock bleibt ein Erzeuger
+- [x] **Feld als Natur je Hex** (gesät, wächst in 3 Stadien, reif, abgeerntet), im Winter ruhen Bauer und Wachstum, in der Saatzeit im Frühjahr wird nur gesät (wie bisher die Feld-Saison); Ernte im Herbst und Wetter wirken auf den Bauern
+- [x] **Platz zählt:** gesät wird nur auf freiem Land (kein Baum, kein Feld, keine Fahne, kein Weg, kein Fels); ein neuer Weg über ein Feld zertrampelt es (wie Wege Bäume roden), Bauen räumt es; ohne Platz meldet der Hof „Kein Platz für Felder“. Der Förster pflanzt nicht auf Felder
+- [x] **Darstellung** (`src/render/felder.ts`): Furchen in der Bodenfarbe der Art, Pflanzen in Reihen (Kartoffelstauden, Ähren, Ranken an Stangen, Obstbäumchen, Wacholdersäulen, Eichenbüsche), reif mit Erntefarbe und Früchten; Reihen je Hex in eine von drei Richtungen (Flickenteppich); kein Gras auf Äckern; Bauer mit Schiebermütze und Hacke
+- [x] Zahlen in `data/buildings.json` (`acker`: Name, Wachstum, Ernte; Radius, Säen/Ernten), `data/jahr.json` (Saat, alte Spielstände) und `data/leben.json` (`felder`); deterministisch (Felder in Spielstand und Prüfsumme wie die Bäume); alte Spielstände laden (die Feld-Gebäude sind jetzt Höfe und bekommen 3 reife Felder)
+- [x] Tests: `tests/hoefe.test.ts`, Gleichschritt mit Neuladen und Weg über ein Feld in `tests/partie.test.ts`, Kartoffelhöfe beider Fenster in `tests/mehrspieler.mjs`; Bilder `tools/_hoefe.mjs`
+- [ ] Spieltest: Wachstum und Radius mit Menschen einstellen
+
+**Startwerte:** Radius 3 (gut 2), Säen bzw. Ernten 3 s, Ruhe 2 s, 1 Ware je reifem Feld; reif nach 90 s (Kartoffel, Hopfen), 100 s (Gerste, Wein, Lohe), 110 s (Obst), 120 s (Wacholder). Der M8-Bot setzt seine Höfe ins freie Land und erreicht Dorf, Kirchdorf und Marktflecken nach 26, 50 und 95 Minuten (vorher 26, 51, 82).
 
 ## Vorschlag: Wald und Wild (Jäger)
 

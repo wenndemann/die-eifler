@@ -11,6 +11,7 @@ Wat noch kütt, steiht em [Drehbuch](DREHBUCH.md), wat ald dren es, en d'r [Road
 - **De echte Eifel als Kaat:** Usschnitt selvs wähle (oder ene Ort enjevve), Jelände, Flöss, Bösch un Dörfer vun hück.
 - **Wäje, Dräjer, Wore:** Wäje selvs baue (övver de Baach nur met Holzbröck us d'r Zimmerei), mieh als 40 Wore vum Boumstamm bes zom Schnaps.
 - **Et Dorf wähße looße:** Lück, Hüüser, Kirmes als Döör noh d'r nächste Dorfstuf, Johreszigge, Wedder un Winter.
+- **Höff un Felder wie bei Siedler 2:** Dä Buur sieht rund öm singe Hoff Ääpel, Jääsch, Obs, Wacholder, Wing, Hoppe oder Loh un brengk eren, wat riev es; Felder bruche frei Land, ene Wääch trampelt se kapott.
 - **Nohbere ohne Kreech:** Jebiet, Dörfer met Ensteiht jewenne, Handel met de Flachländer, Finge statt Klaue,
   Schötzefess, Maibaumklau, Jrenzsteen versetze, Lück avwerbe, Kaffeeschmuggel am Zollhuus un dä Jruße Fund.
 - **De Eifel läv:** Rauch us de Schornsteen, Wasserräder, Schof un Hohner, Pänz om Kirmesplatz, Wind en Bäum un Jras,

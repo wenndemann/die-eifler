@@ -1,5 +1,5 @@
 {
- "hinweis": "Gebäude nach DESIGN §6.2 und Drehbuch 5.1 (Startwerte, werden beim Spielen eingestellt). Zeiten in Sekunden, Kosten und Waren über Waren-Ids (goods.json). 'funktion' wählt das Verhalten in der Simulation (lager, wohnen, holzfaeller, foerster, steinbruch, erzeuger, verarbeiter, kirmes, schaenke; ab M10 finder, wache, schuetzen, zier); 'radius' ist der Arbeitsradius in Hexen um den Arbeitsmittelpunkt (außen „geht noch“), 'radiusGut' der innere Ring „gut“; 'eingang' der Input-Puffer je Ware, 'ausgang' der Output-Puffer; 'wandelt' macht aus 'menge' Stück 'ein' eine Ware 'aus' ('ein' darf auch mehrere Waren mit Menge nennen, z. B. {\"erz\": 1, \"holzkohle\": 1}); ein Erzeuger macht alle 'arbeit_s' eine Ware; 'nahrung_plaetze' sind die Essensplätze des Wohnhauses; 'ab_stufe' die Dorfstufe, ab der man es bauen kann (0 Weiler, 1 Dorf, 2 Kirchdorf); 'einmalig' heißt höchstens eins je Dorf; 'taste' wählt das Gebäude bei offenem Baumenü (nicht W, A, S, D, Q, E, B, X, P, G). 'saison': 'feld' heißt: ruht im Winter, wird im Frühjahr erst gesät und erntet im Herbst schneller (data/jahr.json). 'werkzeug': so viel Werkzeug braucht die Fachkraft, bevor sie anfängt (Drehbuch 4.5, 5). 'boten': höchstens so viele beschwipste Boten schickt die Schänke los (DESIGN §10.3, data/dorf.json: boten). Ein zweites Gebäude mit 'funktion': 'lager' ist ein Lagerhaus: Lager ohne Gebiet und Bewohner (Drehbuch 6.2). 'leistung': ein Satz fürs Gebäudefenster, was das Gebäude tut (wenn es sich nicht aus den anderen Feldern ergibt). Ab M11: 'voelkchen' = nur diese Völkchen dürfen das Gebäude bauen (Spezialkette, Drehbuch 5.3); 'modell' = Darstellung wie dieses Gebäude; 'am_wasser' = braucht Wasser höchstens 2 Hexe weit; 'kein_planieren' = Hanglage braucht keinen Planierer. 'laut': lautes Gebäude (Laacher: nicht nah an der Abtei); 'am_moor': braucht Moor höchstens 2 Hexe weit; 'schnellweg': macht eigene Wege schneller (radius/prozent oder bahn/prozent); funktion 'hecke' wächst erst heran, 'boote' bringt Punkte.",
+ "hinweis": "Gebäude nach DESIGN §6.2 und Drehbuch 5.1 (Startwerte, werden beim Spielen eingestellt). Zeiten in Sekunden, Kosten und Waren über Waren-Ids (goods.json). 'funktion' wählt das Verhalten in der Simulation (lager, wohnen, holzfaeller, foerster, steinbruch, erzeuger, verarbeiter, kirmes, schaenke; ab M10 finder, wache, schuetzen, zier); 'radius' ist der Arbeitsradius in Hexen um den Arbeitsmittelpunkt (außen „geht noch“), 'radiusGut' der innere Ring „gut“; 'eingang' der Input-Puffer je Ware, 'ausgang' der Output-Puffer; 'wandelt' macht aus 'menge' Stück 'ein' eine Ware 'aus' ('ein' darf auch mehrere Waren mit Menge nennen, z. B. {\"erz\": 1, \"holzkohle\": 1}); ein Erzeuger macht alle 'arbeit_s' eine Ware; 'nahrung_plaetze' sind die Essensplätze des Wohnhauses; 'ab_stufe' die Dorfstufe, ab der man es bauen kann (0 Weiler, 1 Dorf, 2 Kirchdorf); 'einmalig' heißt höchstens eins je Dorf; 'taste' wählt das Gebäude bei offenem Baumenü (nicht W, A, S, D, Q, E, B, X, P, G). 'saison': 'feld' heißt: ruht im Winter, wird im Frühjahr erst gesät und erntet im Herbst schneller (data/jahr.json). 'werkzeug': so viel Werkzeug braucht die Fachkraft, bevor sie anfängt (Drehbuch 4.5, 5). 'boten': höchstens so viele beschwipste Boten schickt die Schänke los (DESIGN §10.3, data/dorf.json: boten). Ein zweites Gebäude mit 'funktion': 'lager' ist ein Lagerhaus: Lager ohne Gebiet und Bewohner (Drehbuch 6.2). 'leistung': ein Satz fürs Gebäudefenster, was das Gebäude tut (wenn es sich nicht aus den anderen Feldern ergibt). Ab M11: 'voelkchen' = nur diese Völkchen dürfen das Gebäude bauen (Spezialkette, Drehbuch 5.3); 'modell' = Darstellung wie dieses Gebäude; 'am_wasser' = braucht Wasser höchstens 2 Hexe weit; 'kein_planieren' = Hanglage braucht keinen Planierer. 'laut': lautes Gebäude (Laacher: nicht nah an der Abtei); 'am_moor': braucht Moor höchstens 2 Hexe weit; 'schnellweg': macht eigene Wege schneller (radius/prozent oder bahn/prozent); funktion 'hecke' wächst erst heran, 'boote' bringt Punkte. Höfe und Felder (wie Siedler 2): funktion 'hof' ist ein Bauernhof; sein Bauer sät im Arbeitsradius auf freiem Land (kein Baum, kein Feld, kein Weg) das Feld 'acker' (name, wachsen_s bis reif, ernte = Waren je reifem Feld) und erntet reife Felder seiner Art, zuerst das nächste; die Felder sind Natur je Hex wie die Bäume (ein Weg zertrampelt sie, Bauen räumt sie); arbeit_s ist das Säen bzw. Ernten, ruhe_s die Pause danach.",
  "gebaeude": [
   {
    "id": "lager",
@@ -168,11 +168,11 @@
   {
    "id": "kartoffelfeld",
    "taste": "K",
-   "name": "Kartoffelfeld",
+   "name": "Kartoffelhof",
    "gruppe": "Essen",
    "symbol": "🥔",
    "spruch": "Die Kartoffel wächst überall. Sogar in der Eifel. Vor allem in der Eifel.",
-   "funktion": "erzeuger",
+   "funktion": "hof",
    "groesse": 2,
    "kosten": {
     "bretter": 2
@@ -182,8 +182,16 @@
     "ware": "kartoffeln",
     "max": 8
    },
+   "radius": 3,
+   "radiusGut": 2,
    "zeiten": {
-    "arbeit_s": 20
+    "arbeit_s": 3,
+    "ruhe_s": 2
+   },
+   "acker": {
+    "name": "Kartoffelacker",
+    "wachsen_s": 90,
+    "ernte": 1
    },
    "saison": "feld"
   },
@@ -242,11 +250,11 @@
   {
    "id": "obstwiese",
    "taste": "N",
-   "name": "Obstwiese",
+   "name": "Obsthof",
    "gruppe": "Essen",
    "symbol": "🍏",
    "spruch": "Der Apfel fällt nicht weit vom Stamm. Er rollt höchstens den Hang runter.",
-   "funktion": "erzeuger",
+   "funktion": "hof",
    "groesse": 2,
    "kosten": {
     "bretter": 2
@@ -256,8 +264,16 @@
     "ware": "aepfel",
     "max": 6
    },
+   "radius": 3,
+   "radiusGut": 2,
    "zeiten": {
-    "arbeit_s": 24
+    "arbeit_s": 3,
+    "ruhe_s": 2
+   },
+   "acker": {
+    "name": "Obstwiese",
+    "wachsen_s": 110,
+    "ernte": 1
    },
    "saison": "feld"
   },
@@ -394,11 +410,11 @@
   {
    "id": "gerstenfeld",
    "taste": "V",
-   "name": "Gerstenfeld",
+   "name": "Gerstenhof",
    "gruppe": "Getränke",
    "symbol": "🌾",
    "spruch": "Gerste wächst auch auf magerem Boden. Wie die Eifeler.",
-   "funktion": "erzeuger",
+   "funktion": "hof",
    "groesse": 2,
    "kosten": {
     "bretter": 2
@@ -408,8 +424,16 @@
     "ware": "gerste",
     "max": 6
    },
+   "radius": 3,
+   "radiusGut": 2,
    "zeiten": {
-    "arbeit_s": 22
+    "arbeit_s": 3,
+    "ruhe_s": 2
+   },
+   "acker": {
+    "name": "Gerstenfeld",
+    "wachsen_s": 100,
+    "ernte": 1
    },
    "ab_stufe": 1,
    "saison": "feld"
@@ -444,11 +468,11 @@
   },
   {
    "id": "wacholderheide",
-   "name": "Wacholderheide",
+   "name": "Wacholderhof",
    "gruppe": "Getränke",
    "symbol": "🫐",
    "spruch": "Der Wacholder sticht. Der Schnaps später auch.",
-   "funktion": "erzeuger",
+   "funktion": "hof",
    "groesse": 2,
    "kosten": {
     "bretter": 2
@@ -458,8 +482,16 @@
     "ware": "wacholder",
     "max": 6
    },
+   "radius": 3,
+   "radiusGut": 2,
    "zeiten": {
-    "arbeit_s": 26
+    "arbeit_s": 3,
+    "ruhe_s": 2
+   },
+   "acker": {
+    "name": "Wacholderheide",
+    "wachsen_s": 120,
+    "ernte": 1
    },
    "ab_stufe": 1,
    "saison": "feld"
@@ -635,7 +667,7 @@
    "gruppe": "Feste",
    "symbol": "🎡",
    "spruch": "Ohne Kirmes ist ein Dorf nur ein Haufen Häuser mit Meinung.",
-      "funktion": "kirmes",
+   "funktion": "kirmes",
    "groesse": 2,
    "kosten": {
     "bretter": 4,
@@ -749,7 +781,7 @@
    "gruppe": "Feste",
    "symbol": "🎯",
    "spruch": "Einmal im Jahr wird auf den Vogel geschossen. Und danach auf die Theke.",
-      "funktion": "schuetzen",
+   "funktion": "schuetzen",
    "groesse": 2,
    "kosten": {
     "bretter": 4,
@@ -1059,11 +1091,11 @@
   },
   {
    "id": "weinberg",
-   "name": "Weinberg",
+   "name": "Winzerhof",
    "gruppe": "Spezialität",
    "symbol": "🍇",
    "spruch": "Steil ist gut. Steiler ist besser. Ganz steil ist Ahr.",
-   "funktion": "erzeuger",
+   "funktion": "hof",
    "groesse": 2,
    "kosten": {
     "bretter": 3,
@@ -1074,8 +1106,16 @@
     "ware": "trauben",
     "max": 6
    },
+   "radius": 3,
+   "radiusGut": 2,
    "zeiten": {
-    "arbeit_s": 22
+    "arbeit_s": 3,
+    "ruhe_s": 2
+   },
+   "acker": {
+    "name": "Weinberg",
+    "wachsen_s": 100,
+    "ernte": 1
    },
    "ab_stufe": 2,
    "voelkchen": [
@@ -1184,11 +1224,11 @@
   },
   {
    "id": "hopfengarten",
-   "name": "Hopfengarten",
+   "name": "Hopfenhof",
    "gruppe": "Spezialität",
    "symbol": "🌿",
    "spruch": "Hopfen und Malz, Gott erhalt's.",
-   "funktion": "erzeuger",
+   "funktion": "hof",
    "groesse": 2,
    "kosten": {
     "bretter": 3,
@@ -1199,8 +1239,16 @@
     "ware": "hopfen",
     "max": 6
    },
+   "radius": 3,
+   "radiusGut": 2,
    "zeiten": {
-    "arbeit_s": 20
+    "arbeit_s": 3,
+    "ruhe_s": 2
+   },
+   "acker": {
+    "name": "Hopfengarten",
+    "wachsen_s": 90,
+    "ernte": 1
    },
    "ab_stufe": 2,
    "voelkchen": [
@@ -1364,11 +1412,11 @@
   },
   {
    "id": "lohhecke",
-   "name": "Lohhecke",
+   "name": "Lohhof",
    "gruppe": "Spezialität",
    "symbol": "🌳",
    "spruch": "Die Eichenrinde wird geschält. Die Eiche guckt beleidigt.",
-   "funktion": "erzeuger",
+   "funktion": "hof",
    "groesse": 2,
    "kosten": {
     "bretter": 3,
@@ -1379,14 +1427,23 @@
     "ware": "lohe",
     "max": 6
    },
+   "radius": 3,
+   "radiusGut": 2,
    "zeiten": {
-    "arbeit_s": 22
+    "arbeit_s": 3,
+    "ruhe_s": 2
+   },
+   "acker": {
+    "name": "Lohhecke",
+    "wachsen_s": 100,
+    "ernte": 1
    },
    "ab_stufe": 2,
    "voelkchen": [
     "oesling"
    ],
-   "modell": "obstwiese"
+   "modell": "obstwiese",
+   "saison": "feld"
   },
   {
    "id": "gerberei",
@@ -1585,7 +1642,7 @@
    "gruppe": "Spezialität",
    "symbol": "⛪",
    "spruch": "Die Mönche beten. Die Steinhauer bitte leise.",
-      "funktion": "zier",
+   "funktion": "zier",
    "groesse": 3,
    "kosten": {
     "bretter": 6,

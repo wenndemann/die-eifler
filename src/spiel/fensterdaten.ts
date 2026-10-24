@@ -101,10 +101,14 @@ export function leistungText(t: GebaeudeTyp, w: readonly WareText[]): string[] {
   const z: string[] = [];
   if (t.wandelt) z.push(`${t.wandelt.ein.map((x) => mengeText(x.n, w[x.a])).join(' + ')} → 1 ${w[t.wandelt.aus]?.eins ?? ''} in ${Math.round(t.wandelt.ticks / TICK_HZ)} s`);
   else if (t.funktion === 'erzeuger' && t.ausgangWare >= 0) z.push(`alle ${Math.round(t.arbeitTicks / TICK_HZ)} s 1 ${w[t.ausgangWare]?.eins ?? ''}`);
-  else if (t.radius > 0 && t.ausgangWare >= 0) z.push(`holt ${w[t.ausgangWare]?.mehr ?? ''} im Umkreis von ${t.radius} Hexen`);
+  else if (t.acker && t.ausgangWare >= 0) {
+    z.push(`sät und erntet ${t.acker.name} im Umkreis von ${t.radius} Hexen: je Feld ${mengeText(t.acker.ernte, w[t.ausgangWare])}, reif nach ${Math.round(t.acker.wachsenTicks / TICK_HZ)} s`);
+    z.push('Felder brauchen freies Land: ein Weg zertrampelt sie, Bauen räumt sie');
+  } else if (t.radius > 0 && t.ausgangWare >= 0) z.push(`holt ${w[t.ausgangWare]?.mehr ?? ''} im Umkreis von ${t.radius} Hexen`);
   else if (t.radius > 0) z.push(`arbeitet im Umkreis von ${t.radius} Hexen (pflanzt, wo Platz ist)`);
   if (t.funktion === 'wohnen') z.push(`${t.nahrungPlaetze} Essensplätze · besseres Essen bringt schneller Nachwuchs`);
-  if (t.feld) z.push('Feld: ruht im Winter, im Frühjahr erst Aussaat, im Herbst Ernte (schneller); Wetter wirkt mit');
+  if (t.acker) z.push('Jahr: im Winter Ruhe, im Frühjahr erst Aussaat, im Herbst Ernte (schneller); Wetter wirkt mit');
+  else if (t.feld) z.push('Feld: ruht im Winter, im Frühjahr erst Aussaat, im Herbst Ernte (schneller); Wetter wirkt mit');
   if (t.werkzeug) z.push(`die Fachkraft braucht ${mengeText(t.werkzeug, w[WAREN.indexOf('werkzeug')])}, bevor sie anfängt`);
   if (t.boten) z.push(`macht aus 1 Schnaps einen beschwipsten Boten (höchstens ${t.boten}): trägt querfeldein zu weiten Abnehmern`);
   if (t.funktion === 'lager' && !t.wohnraum) z.push('Lager für lange Wege: nimmt Waren auf und gibt sie aus, Lagerregeln je Ware');
@@ -495,6 +499,7 @@ export function warnungen(s: SimSicht, ich: number): Warnung[] {
     ['kein_baum', 'ohne Bäume in Reichweite', (g) => !g.getrennt && g.zustand === 'kein_baum'],
     ['kein_fels', 'ohne Fels in Reichweite', (g) => !g.getrennt && g.zustand === 'kein_fels'],
     ['kein_platz', 'ohne Pflanzplatz', (g) => !g.getrennt && g.zustand === 'kein_platz'],
+    ['kein_feld', 'ohne Platz für Felder', (g) => !g.getrennt && g.zustand === 'kein_feld'],
     ['kein_werkzeug', 'ohne Werkzeug', (g) => !g.getrennt && g.zustand === 'kein_werkzeug'],
     ['hochwasser', 'im Hochwasser', (g) => g.zustand === 'hochwasser'],
   ];

@@ -6,7 +6,7 @@
     { "id": "saegewerk", "auftrag": "Sägewerk bauen", "hilfe": "Aus Stämmen werden Bretter, und ohne Bretter baut hier keiner was.", "geschafft": "Säge läuft. Hört ihr's?" },
     { "id": "steinbruch", "auftrag": "Steinbruch an Felsen bauen", "hilfe": "Steinbruch dorthin, wo graue Felsen liegen (die Hilfe beim Bauen zeigt, wie viele in Reichweite sind).", "geschafft": "Stein auf Stein. Wie die Alten." },
     { "id": "wohnhaus", "auftrag": "Wohnhaus bauen", "hilfe": "Mehr Wohnraum, mehr Leute – wenn sie satt sind.", "geschafft": "Neues Haus, frische Gardinen. Die Nachbarn gucken schon." },
-    { "id": "essen", "auftrag": "Kartoffelfeld und Küche", "hilfe": "Kartoffelfeld (Essen) und Küche: aus zwei Kartoffeln wird eine Pfanne Bratkartoffeln.", "geschafft": "Et jitt Bratkartoffeln! Jetzt kommen die Leute von selbst." },
+    { "id": "essen", "auftrag": "Kartoffelhof und Küche", "hilfe": "Kartoffelhof (Essen) auf freies Land – der Bauer sät rundum seine Äcker – und eine Küche: aus zwei Kartoffeln wird eine Pfanne Bratkartoffeln.", "geschafft": "Et jitt Bratkartoffeln! Jetzt kommen die Leute von selbst." },
     { "id": "kirmesplatz", "auftrag": "Kirmesplatz bauen", "hilfe": "Der Kirmesplatz sammelt, was die Kirmes braucht. Das Fenster des Platzes zeigt die Liste.", "geschafft": "Der Platz steht. Jetzt fehlt nur noch alles andere." },
     { "id": "kirmes", "auftrag": "Erste Kirmes feiern", "hilfe": "Liefert alles auf der Kirmesliste, dann wird gefeiert – und aus dem Weiler wird ein Dorf.", "geschafft": "Kirmes! Fast so schön wie die Annakirmes in Düren. Fast." }
   ]

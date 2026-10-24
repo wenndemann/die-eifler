@@ -1,5 +1,5 @@
 {
-  "hinweis": "Lebendige Eifel (ROADMAP M15, aus M9): Werte nur für die Darstellung, nicht für die Simulation. fern_m: Leben (Rauch, Tiere, Leute, Licht) nur an Gebäuden bis so weit von der Kamera. rauch: Teilchen je Sekunde bei Stärke 1 (rate), Steigen und Wachsen je Sekunde (m), Lebensdauer, Höchstzahl; arbeitet_faktor für arbeitende Gebäude, ruhig_faktor sonst (nur Herdfeuer), winter_faktor und nacht_faktor dazu. tiere: Tempo in m/s (Modell-Meter). voegel: je Feld ein Schwarm (n Vögel) in hoehe_m über dem Feld, Kreis mit radius_m. fenster: Farbe und Helligkeit des Fensterlichts nachts, Schein ums Fenster (glanz) und Lichtfleck auf dem Boden vor den unteren Fenstern (boden). wind: Grundwind und Wind bei Sturm (0..1). konfetti: Teilchen je Ausbruch, Dauer. feuer: Funken je Sekunde beim Martinsfeuer und an der Esse. gras: Grasbüschel um den Blickpunkt im Umkreis radius_m, je Rasterzelle (zelle_m) mit Wahrscheinlichkeit dichte, Höhe in m, höchstens max, neu gelegt ab neu_ab_m Weg, nur bis bis_abstand_m Kameraabstand. schild: Zunftschild mit der erzeugten Ware neben der Tür, Größe relativ zur Ware (WARE_M). berufe: Tracht der Arbeiter (Hut, Hutfarbe, Schürze, Bart), meister: Tracht der Figur, die vor einem arbeitenden Gebäude steht (Berufe erkennbar). wild: Wildtiere um den Blickpunkt (radius_m), je Rasterzelle (zelle_m) mit Wahrscheinlichkeit anteil eine Gruppe am Waldrand (Wald im Umkreis rand_m) bzw. im Wald (wald), streifen in streif_m umher; skala Modell-Meter → m; je Art Anteil, Gruppengröße n, Tempo, Größe; Frischlinge folgen der Bache, Hirschkühe dem Hirsch. laterne: Laternenpfahl an Wegkreuzungen (Größe skala, Abstand von der Fahne versatz_m). fest: Besucher im Kreis um den Kirmesplatz während eines Festes (Anzahl, Radius in Modell-Metern).",
+  "hinweis": "Lebendige Eifel (ROADMAP M15, aus M9): Werte nur für die Darstellung, nicht für die Simulation. fern_m: Leben (Rauch, Tiere, Leute, Licht) nur an Gebäuden bis so weit von der Kamera. rauch: Teilchen je Sekunde bei Stärke 1 (rate), Steigen und Wachsen je Sekunde (m), Lebensdauer, Höchstzahl; arbeitet_faktor für arbeitende Gebäude, ruhig_faktor sonst (nur Herdfeuer), winter_faktor und nacht_faktor dazu. tiere: Tempo in m/s (Modell-Meter). voegel: je Feld ein Schwarm (n Vögel) in hoehe_m über dem Feld, Kreis mit radius_m. fenster: Farbe und Helligkeit des Fensterlichts nachts, Schein ums Fenster (glanz) und Lichtfleck auf dem Boden vor den unteren Fenstern (boden). wind: Grundwind und Wind bei Sturm (0..1). konfetti: Teilchen je Ausbruch, Dauer. feuer: Funken je Sekunde beim Martinsfeuer und an der Esse. gras: Grasbüschel um den Blickpunkt im Umkreis radius_m, je Rasterzelle (zelle_m) mit Wahrscheinlichkeit dichte, Höhe in m, höchstens max, neu gelegt ab neu_ab_m Weg, nur bis bis_abstand_m Kameraabstand. schild: Zunftschild mit der erzeugten Ware neben der Tür, Größe relativ zur Ware (WARE_M). berufe: Tracht der Arbeiter (Hut, Hutfarbe, Schürze, Bart), meister: Tracht der Figur, die vor einem arbeitenden Gebäude steht (Berufe erkennbar). wild: Wildtiere um den Blickpunkt (radius_m), je Rasterzelle (zelle_m) mit Wahrscheinlichkeit anteil eine Gruppe am Waldrand (Wald im Umkreis rand_m) bzw. im Wald (wald), streifen in streif_m umher; skala Modell-Meter → m; je Art Anteil, Gruppengröße n, Tempo, Größe; Frischlinge folgen der Bache, Hirschkühe dem Hirsch. laterne: Laternenpfahl an Wegkreuzungen (Größe skala, Abstand von der Fahne versatz_m). fest: Besucher im Kreis um den Kirmesplatz während eines Festes (Anzahl, Radius in Modell-Metern). felder: Höfe und Felder je Hex (Darstellung): Feldfläche radius (Anteil des Hex-Radius), Furchenbreite furche und Reihenabstand reihe (m), Größe der Pflanzen je Stadium (wuchs, Index 1 gesät … 4 reif); je Feldart Bodenfarbe, Pflanzenform, Farbe jung und reif, Frucht (reif), Höhe und Abstand der Pflanzen (m).",
   "fern_m": 2200,
   "rauch": {
     "rate": 1.4,
@@ -62,7 +62,7 @@
     "bis_abstand_m": 1600
   },
   "schild": {
-    "groesse": 1.0
+    "groesse": 1
   },
   "berufe": {
     "holzfaeller": {
@@ -81,6 +81,10 @@
     },
     "planierer": {
       "hut": "stroh"
+    },
+    "bauer": {
+      "hut": "schieber",
+      "bart": "#8a5a32"
     }
   },
   "meister": {
@@ -370,5 +374,80 @@
   "fest": {
     "besucher": 10,
     "radius": 9
+  },
+  "felder": {
+    "radius": 0.8,
+    "furche": 7.6,
+    "reihe": 8,
+    "wuchs": [
+      0,
+      0.22,
+      0.5,
+      0.8,
+      1
+    ],
+    "arten": {
+      "kartoffelfeld": {
+        "boden": "#6a4a2c",
+        "form": "staude",
+        "jung": "#8cc45a",
+        "reif": "#4f9a3a",
+        "frucht": "#f4efe0",
+        "hoehe": 3.2,
+        "abstand": 8
+      },
+      "obstwiese": {
+        "boden": "#6f9a46",
+        "form": "baeumchen",
+        "jung": "#7ab85a",
+        "reif": "#4f8f3a",
+        "frucht": "#d0312d",
+        "hoehe": 13,
+        "abstand": 20
+      },
+      "gerstenfeld": {
+        "boden": "#8a6a3c",
+        "form": "aehre",
+        "jung": "#9cc860",
+        "reif": "#e2bf5c",
+        "hoehe": 5,
+        "abstand": 5
+      },
+      "wacholderheide": {
+        "boden": "#8a7a52",
+        "form": "saeule",
+        "jung": "#5a8a5a",
+        "reif": "#2f5a3a",
+        "frucht": "#3f4f8a",
+        "hoehe": 9,
+        "abstand": 14
+      },
+      "weinberg": {
+        "boden": "#7a5a3a",
+        "form": "ranke",
+        "jung": "#7ab04e",
+        "reif": "#4f8a3a",
+        "frucht": "#5a2466",
+        "hoehe": 5,
+        "abstand": 8
+      },
+      "hopfengarten": {
+        "boden": "#6a4a2c",
+        "form": "ranke",
+        "jung": "#6aa84a",
+        "reif": "#5a9a42",
+        "frucht": "#cfe58a",
+        "hoehe": 13,
+        "abstand": 12
+      },
+      "lohhecke": {
+        "boden": "#5d6a3a",
+        "form": "busch",
+        "jung": "#7aa850",
+        "reif": "#557f36",
+        "hoehe": 8,
+        "abstand": 12
+      }
+    }
   }
 }

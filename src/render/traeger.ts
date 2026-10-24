@@ -65,7 +65,7 @@ function zopf(a: [number, number, number], b: [number, number, number], dicke: n
  * Tracht (Berufe erkennbar, Gutachter): Kopfbedeckung, Schürze und Bart. Hut-Farben stehen fest (nur die Kappe der Träger nimmt die
  * Trachtfarbe an), das Hemd färbt weiter die Instanzfarbe.
  */
-export type Hut = 'kappe' | 'pudel' | 'jaeger' | 'leder' | 'zimmermann' | 'stroh' | 'koch' | 'haube' | 'stirnband' | 'imker' | 'ohne';
+export type Hut = 'kappe' | 'pudel' | 'jaeger' | 'leder' | 'zimmermann' | 'stroh' | 'koch' | 'haube' | 'stirnband' | 'imker' | 'ohne' | 'schieber';
 export type Werkzeug = 'hammer' | 'kaese' | 'loeffel' | 'krug' | 'gabel' | 'angel' | 'schaufel' | 'smoker' | 'kelle';
 export interface Tracht {
   hut: Hut; hutFarbe?: string; schuerze?: string; bart?: string;
@@ -125,6 +125,11 @@ function hut(t: Tracht, nacken: (g: THREE.BufferGeometry) => THREE.BufferGeometr
       add(nacken(walze(0.46, 0.46, 0.03, 0.88, f ?? '#e6c46a', 18)));
       add(nacken(walze(0.19, 0.22, 0.16, 0.97, f ?? '#dcb85a')));
       add(nacken(walze(0.222, 0.222, 0.045, 0.92, '#c0392b')));
+      break;
+    case 'schieber':
+      // Schiebermütze mit kurzem Schirm (Bauer auf dem Feld)
+      add(nacken(halbkugel(0.255, 0.82, f ?? '#7a6248', 0.62)));
+      add(nacken(paint(new THREE.SphereGeometry(0.2, 10, 4, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.25, 0.8).translate(0, 0.86, 0.16), f ?? '#6a5440')));
       break;
     case 'koch':
       // hohe weiße Kochmütze

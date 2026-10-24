@@ -7,7 +7,7 @@
  "erste_schritte": [
   "Tipp: Ein Holzfäller am Waldrand und ein Weg zum Lager – dann laufen die Stämme.",
   "Tipp: Das Sägewerk macht aus Stämmen Bretter. Ohne Bretter baut hier keiner was.",
-  "Tipp: Kartoffelfeld und Wohnhaus – mit vollem Teller kommen die Leute von selbst.",
+  "Tipp: Kartoffelhof und Wohnhaus – mit vollem Teller kommen die Leute von selbst. Der Hof braucht freies Land für seine Äcker.",
   "Tipp: Für die Kirmes braucht es {liste}. Und einen Kirmesplatz."
  ],
  "fertig": [
@@ -46,7 +46,7 @@
   "Die Kirmes hat {n} Neue angelockt. Hat sich rumgesprochen."
  ],
  "jahreszeit_0": [
-  "Frühjahr! Die Felder werden gesät – erst in ein paar Minuten gibt es wieder Ertrag."
+  "Frühjahr! Die Bauern säen – erst wenn die Felder reif sind, gibt es wieder Ertrag."
  ],
  "jahreszeit_1": [
   "Sommer in der Eifel. Also: Regenjacke griffbereit."

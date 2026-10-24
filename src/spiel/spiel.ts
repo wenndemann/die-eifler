@@ -46,6 +46,7 @@ import {
 import { Klang } from '../klang/klang';
 import { setzeSchnee } from '../render/kulisse';
 import { Natur } from '../render/natur';
+import { Felder } from '../render/felder';
 import { Gebaeude, type GebaeudeHaken } from '../render/gebaeude';
 import { Markierung, type RingArt } from '../render/markierung';
 import { Bauplaetze } from '../render/bauplaetze';
@@ -219,6 +220,7 @@ export class Spiel {
   private nachbarNr = 0;
   private klangRechts = new THREE.Vector3();
   private readonly natur: Natur;
+  private readonly felder: Felder;
   private readonly gebaeude: Gebaeude;
   private readonly markierung: Markierung;
   private readonly bauplaetze: Bauplaetze;
@@ -341,12 +343,13 @@ export class Spiel {
     this.gebiet = new GebietDarstellung(map, grid, base, ex);
     this.wetterOptik = new WetterOptik(map, grid, base, ex);
     this.natur = new Natur(map, grid, base, ex, ctx.haken.trees);
+    this.felder = new Felder(map, grid, base, ex);
     this.markierung = new Markierung(map, grid, base, ex);
     this.bauplaetze = new Bauplaetze(map, grid, base, ex);
     this.geist = new Geist(map, grid, base, ex);
     this.wege.wald = ctx.haken.trees ?? null;
     this.fahnen.kamera = ctx.camera; this.traeger.kamera = ctx.camera; this.gebaeude.kamera = ctx.camera; this.arbeiter.kamera = ctx.camera; this.boten.kamera = ctx.camera;
-    this.group.add(this.wege.group, this.fahnen.group, this.traeger.group, this.gebaeude.group, this.arbeiter.group, this.boten.group, this.mai.group, this.grenzland.group, this.leben.group, this.gras.group, this.wild.group, this.deko.group, this.gebiet.group, this.wetterOptik.group, this.natur.group,
+    this.group.add(this.wege.group, this.fahnen.group, this.traeger.group, this.gebaeude.group, this.arbeiter.group, this.boten.group, this.mai.group, this.grenzland.group, this.leben.group, this.gras.group, this.wild.group, this.deko.group, this.gebiet.group, this.wetterOptik.group, this.natur.group, this.felder.group,
       this.bauplaetze.group, this.geist.group, this.markierung.group);
     ctx.scene.add(this.group);
 
@@ -510,7 +513,7 @@ export class Spiel {
     this.ctx.ex = ex;
     this.wege.setExaggeration(ex); this.fahnen.setExaggeration(ex); this.traeger.setExaggeration(ex);
     this.gebaeude.setExaggeration(ex); this.markierung.setExaggeration(ex);
-    this.arbeiter.setExaggeration(ex); this.natur.setExaggeration(ex); this.boten.setExaggeration(ex); this.deko.setExaggeration(ex); this.gebiet.setExaggeration(ex); this.mai.setExaggeration(ex); this.grenzland.setExaggeration(ex); this.leben.setExaggeration(ex); this.gras.setExaggeration(ex); this.wild.setExaggeration(ex); this.wetterOptik.setExaggeration(ex);
+    this.arbeiter.setExaggeration(ex); this.natur.setExaggeration(ex); this.felder.setExaggeration(ex); this.boten.setExaggeration(ex); this.deko.setExaggeration(ex); this.gebiet.setExaggeration(ex); this.mai.setExaggeration(ex); this.grenzland.setExaggeration(ex); this.leben.setExaggeration(ex); this.gras.setExaggeration(ex); this.wild.setExaggeration(ex); this.wetterOptik.setExaggeration(ex);
     this.bauplaetze.setExaggeration(ex); this.geist.setExaggeration(ex);
   }
 
@@ -553,6 +556,7 @@ export class Spiel {
     this.fahnen.update(this._sicht, a, dt);
     this.traeger.update(this._sicht, a, dt);
     this.natur.update(this._sicht);
+    this.felder.update(this._sicht);
     this.arbeiter.update(this._sicht, a, dt);
     this.boten.update(this._sicht, a, dt);
     this.mai.update(this._sicht, a, dt);

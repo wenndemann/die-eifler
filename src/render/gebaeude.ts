@@ -133,6 +133,25 @@ export function radGeometrie(r: number, breite: number): THREE.BufferGeometry[] 
   return out;
 }
 
+// ---------------------------------------------------------------- Höfe (Höfe und Felder)
+
+/** Hofhaus eines Hofs: Fachwerk mit Läden und Blumen, Bank an der Tür (die Felder liegen als Natur im Umkreis). */
+function hofHaus(t: { w: number; d: number; floors: number; wand: string; dach: string; laden: string }): THREE.BufferGeometry[] {
+  return [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach), ...laeden(t.w, t.d, t.floors, t.laden), ...blumenkasten(t.w, t.d, t.floors),
+    boxR(1.9, 0.18, 0.6, -t.w / 2 + 1.4, G + 0.8, t.d / 2 + 0.6, HOLZ), boxR(0.18, 0.8, 0.5, -t.w / 2 + 0.6, G + 0.4, t.d / 2 + 0.6, HOLZ), boxR(0.18, 0.8, 0.5, -t.w / 2 + 2.2, G + 0.4, t.d / 2 + 0.6, HOLZ)];
+}
+/** Angebaute Scheune rechts am Haus (Eifeler Quereinhaus): ab x0, Breite b, Tiefe d, großes Tor mit Kreuzbalken. */
+function scheune(x0: number, b: number, d: number, wand: string, dach: string): THREE.BufferGeometry[] {
+  const x = x0 + b / 2, h = 4.4;
+  return [boxR(b, h, d, x, G + h / 2, 0, wand), ...roof(b - 1, d, 2.6, G + h, dach, wand).map((g) => g.translate(x, 0, 0)),
+    box(b * 0.62, 3.4, 0.3, x, G + 1.7, d / 2 + 0.16, '#6a4426'), box(0.25, 3.4, 0.4, x, G + 1.7, d / 2 + 0.3, DUNKEL),
+    boxR(0.22, 3.9, 0.3, x, G + 1.7, d / 2 + 0.36, DUNKEL, 0, 0, 0.75), boxR(0.22, 3.9, 0.3, x, G + 1.7, d / 2 + 0.36, DUNKEL, 0, 0, -0.75),
+    box(b * 0.7, 0.3, 0.45, x, G + 3.5, d / 2 + 0.25, DUNKEL)];
+}
+function sack(x: number, z: number, y = G): THREE.BufferGeometry[] {
+  return [paint(new THREE.SphereGeometry(0.8, 6, 5).scale(1, 0.9, 0.85).translate(x, y + 0.7, z), '#d8c08a'), paint(new THREE.SphereGeometry(0.28, 5, 4).translate(x, y + 1.5, z), '#b89a62')];
+}
+
 // ---------------------------------------------------------------- Typen
 
 interface Typ {
@@ -281,23 +300,19 @@ const TYPEN: Record<string, Typ> = {
     },
   },
   kartoffelfeld: {
-    w: 5.5, d: 4.5, floors: 1, wand: '#efe2c6', dach: '#7a5a3a', laden: '#4f8a3a', skala: 1, hoehe: 7,
-    grund: [-5, 18.5, -4, 13.5],
+    // Kartoffelhof: Wohnhaus mit angebauter Scheune, davor Säcke, Kiepe und die Kartoffelmiete (die Felder wachsen im Umkreis)
+    w: 8, d: 7, floors: 2, wand: '#efe2c6', dach: '#7a5a3a', laden: '#4f8a3a', skala: 1, hoehe: 12,
+    grund: [-9, 11.5, -5, 9],
     fertig() {
       const t = TYPEN.kartoffelfeld;
-      const out: THREE.BufferGeometry[] = [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach), ...laeden(t.w, t.d, t.floors, t.laden)];
-      // Acker rechts (so schmal, dass das Haus in voller Größe ins Hex passt): braune Furchen, grüne Stauden in Reihen, Zaun
-      const ax = 11, az = 4.5;
-      out.push(boxR(13, 0.4, 16, ax, G + 0.15, az, '#6a4a2c'));
-      for (let r = 0; r < 6; r++) {
-        out.push(boxR(12.2, 0.5, 1.0, ax, G + 0.45, az - 6.5 + r * 2.6, '#7d5634'));
-        for (let k = 0; k < 6; k++) out.push(paint(new THREE.SphereGeometry(0.85, 5, 4).scale(1, 0.7, 1).translate(ax - 5.5 + k * 2.2, G + 1.1, az - 6.5 + r * 2.6), (k + r) % 3 ? '#4f9a3a' : '#5eaa44'));
-      }
-      for (const [fx, fz] of [[-6.8, -8.3], [6.8, -8.3], [6.8, 8.3], [-6.8, 8.3], [0, -8.3], [0, 8.3], [6.8, 0], [-6.8, 0]]) out.push(boxR(0.3, 1.6, 0.3, ax + fx, G + 0.8, az + fz, HOLZ));
-      out.push(boxR(13.6, 0.2, 0.18, ax, G + 1.3, az + 8.3, HOLZ), boxR(13.6, 0.2, 0.18, ax, G + 1.3, az - 8.3, HOLZ));
-      // Hacke und Kartoffelsäcke vor der Hütte
-      out.push(boxR(0.14, 2.6, 0.14, -2.5, G + 1.3, 3.6, HOLZ, 0, 0, 0.3), boxR(0.9, 0.25, 0.1, -2.1, G + 0.3, 3.6, '#9aa0a6'));
-      out.push(paint(new THREE.SphereGeometry(0.8, 6, 5).scale(1, 0.9, 1).translate(1.6, G + 0.7, 3.6), '#d8c08a'), paint(new THREE.SphereGeometry(0.7, 6, 5).translate(2.8, G + 0.6, 4.2), '#cfb57c'));
+      const out = [...hofHaus(t), ...scheune(4, 6.5, 6.4, '#d9c39a', t.dach)];
+      // Kartoffelmiete (Erdhügel mit Stroh), Säcke, Kiepe, Hacke
+      out.push(paint(new THREE.SphereGeometry(2.4, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2).scale(1.4, 0.55, 0.9).translate(-6.6, G, 5.6), '#7d5634'));
+      out.push(paint(new THREE.SphereGeometry(2.0, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2).scale(1.4, 0.35, 0.9).translate(-6.6, G + 1.1, 5.6), '#d9c070'));
+      out.push(...sack(2.2, 5.2), ...sack(3.3, 5.8), ...sack(2.8, 6.8, G + 1.1));
+      out.push(walze(0.7, 1.4, -2.4, G + 0.7, 5.4, '#a8804e', 0, 0, 9), walze(0.72, 0.14, -2.4, G + 1.3, 5.4, DUNKEL, 0, 0, 9));
+      for (let k = 0; k < 4; k++) out.push(paint(new THREE.SphereGeometry(0.33, 6, 5).translate(-2.6 + (k % 2) * 0.45, G + 1.5, 5.2 + Math.floor(k / 2) * 0.4), '#c9a46a'));
+      out.push(boxR(0.14, 2.6, 0.14, -4.2, G + 1.3, 4.4, HOLZ, 0, 0, 0.3), boxR(0.9, 0.25, 0.1, -3.8, G + 0.3, 4.4, '#9aa0a6'));
       return out;
     },
   },
@@ -317,20 +332,19 @@ const TYPEN: Record<string, Typ> = {
     },
   },
   obstwiese: {
-    w: 4.5, d: 4, floors: 1, wand: '#e9dcbc', dach: '#6d4a2f', laden: '#b53a2c', skala: 1, hoehe: 7,
-    grund: [-5, 19, -6, 10],
+    // Obsthof: kleines Hofhaus mit Scheune, zwei alte Apfelbäume am Haus, Körbe und Leiter (die Obstwiesen wachsen im Umkreis)
+    w: 7, d: 6.5, floors: 1, wand: '#e9dcbc', dach: '#6d4a2f', laden: '#b53a2c', skala: 1, hoehe: 9,
+    grund: [-11, 10, -5, 9],
     fertig() {
       const t = TYPEN.obstwiese;
-      const out: THREE.BufferGeometry[] = [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach)];
-      // sechs Apfelbäume mit roten Äpfeln, Leiter, Körbe
-      const baeume = [[6.5, -3], [11.5, -3.5], [16.3, -2.5], [7, 5], [12, 5.5], [16.3, 6]];
-      baeume.forEach(([bx, bz], i) => {
-        out.push(walze(0.45, 3.2, bx, G + 1.6, bz, HOLZ, 0, 0, 6), paint(new THREE.SphereGeometry(2.6, 7, 5).scale(1, 0.85, 1).translate(bx, G + 4.6, bz), i % 2 ? '#4f8f3a' : '#5a9a42'));
-        for (let k = 0; k < 5; k++) out.push(paint(new THREE.SphereGeometry(0.45, 8, 6).translate(bx + Math.cos(k * 1.3 + i) * 2.2, G + 4.2 + (k % 2) * 1.1, bz + Math.sin(k * 1.3 + i) * 2.2), '#d0312d'));
-      });
-      out.push(boxR(0.2, 5, 0.2, 10.6, G + 2.4, 1.1, HOLZ, 0, 0, 0.3), boxR(0.2, 5, 0.2, 11.4, G + 2.4, 1.1, HOLZ, 0, 0, 0.3));
-      out.push(walze(0.9, 0.8, -2.5, G + 0.4, 4.4, '#b0844e', 0, 0, 9), walze(0.9, 0.8, -0.3, G + 0.4, 4.6, '#b0844e', 0, 0, 9));
-      for (let k = 0; k < 4; k++) out.push(paint(new THREE.SphereGeometry(0.35, 8, 6).translate(-2.5 + (k % 2) * 0.4, G + 1.0, 4.2 + Math.floor(k / 2) * 0.4), '#d0312d'));
+      const out = [...hofHaus(t), ...scheune(3.5, 5.5, 6, '#d6c49c', t.dach)];
+      for (const [bx, bz, i] of [[-7.5, -1.5, 0], [-7.8, 4.2, 1]]) {
+        out.push(walze(0.45, 3.2, bx, G + 1.6, bz, HOLZ, 0, 0, 6), paint(new THREE.SphereGeometry(2.4, 7, 5).scale(1, 0.85, 1).translate(bx, G + 4.4, bz), i ? '#4f8f3a' : '#5a9a42'));
+        for (let k = 0; k < 5; k++) out.push(paint(new THREE.SphereGeometry(0.42, 8, 6).translate(bx + Math.cos(k * 1.3 + i) * 2.0, G + 4.0 + (k % 2) * 1.0, bz + Math.sin(k * 1.3 + i) * 2.0), '#d0312d'));
+      }
+      out.push(boxR(0.2, 5, 0.2, -5.6, G + 2.4, 2.0, HOLZ, 0, 0, 0.3), boxR(0.2, 5, 0.2, -4.8, G + 2.4, 2.0, HOLZ, 0, 0, 0.3));
+      out.push(walze(0.9, 0.8, -2.2, G + 0.4, 4.9, '#b0844e', 0, 0, 9), walze(0.9, 0.8, 0, G + 0.4, 5.3, '#b0844e', 0, 0, 9));
+      for (let k = 0; k < 6; k++) out.push(paint(new THREE.SphereGeometry(0.35, 8, 6).translate(-2.4 + (k % 3) * 0.3 + (k > 2 ? 2.2 : 0), G + 1.0, 4.8 + (k % 2) * 0.4), '#d0312d'));
       return out;
     },
   },
@@ -426,19 +440,15 @@ const TYPEN: Record<string, Typ> = {
   },
   // ---- M8: Bier, Schnaps, Schänke, Eisen, Lagerhaus
   gerstenfeld: {
-    w: 4.5, d: 4, floors: 1, wand: '#efe2c6', dach: '#7a5a3a', laden: '#c9a227', skala: 1, hoehe: 7,
-    grund: [-5, 18.5, -4, 13.5],
+    // Gerstenhof: Haus mit großer Scheune, Garben zum Trocknen, Dreschflegel; links die Bockwindmühle (Anker 'muehle')
+    w: 7, d: 6.5, floors: 1, wand: '#efe2c6', dach: '#7a5a3a', laden: '#c9a227', skala: 1, hoehe: 12,
+    grund: [-14, 9.5, -5, 9],
     fertig() {
       const t = TYPEN.gerstenfeld;
-      const out: THREE.BufferGeometry[] = [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach), ...laeden(t.w, t.d, t.floors, t.laden)];
-      // goldenes Gerstenfeld mit Ähren in Reihen, ein paar Garben am Rand, Sense an der Hütte
-      const ax = 11, az = 4.5;
-      out.push(boxR(13, 0.4, 16, ax, G + 0.15, az, '#8a6a3c'));
-      for (let r = 0; r < 8; r++) for (let k = 0; k < 7; k++) {
-        out.push(paint(new THREE.ConeGeometry(0.55, 1.9, 4).translate(ax - 5.7 + k * 1.9, G + 1.25, az - 7 + r * 2), (k + r) % 3 ? '#d8b45a' : '#e6c46a'));
-      }
-      for (const [gx, gz] of [[4.6, -4], [4.6, -1.8]]) out.push(walze(0.5, 1.8, gx, G + 0.9, gz, '#c9a24a', 0, 0, 7), walze(0.55, 0.15, gx, G + 1.1, gz, '#8a6038', 0, 0, 7));
-      out.push(boxR(0.14, 2.8, 0.14, -2.6, G + 1.4, 3.4, HOLZ, 0, 0, 0.25), boxR(1.4, 0.1, 0.3, -2.1, G + 2.7, 3.4, '#b0b8c0', 0, 0, -0.4));
+      const out = [...hofHaus(t), ...scheune(3.5, 6, 6.6, '#d9c39a', '#8f3b2b')];
+      for (const [gx, gz] of [[-6, 5.5], [-4.4, 6.4], [-2.8, 5.6]]) out.push(paint(new THREE.ConeGeometry(0.9, 2.4, 7).translate(gx, G + 1.2, gz), '#d8b45a'), walze(0.55, 0.15, gx, G + 1.4, gz, '#8a6038', 0, 0, 7));
+      out.push(boxR(0.14, 2.8, 0.14, 1.8, G + 1.4, 4.2, HOLZ, 0, 0, 0.25), boxR(1.4, 0.1, 0.3, 2.3, G + 2.7, 4.2, '#b0b8c0', 0, 0, -0.4));
+      out.push(...sack(4.6, 5.4), ...sack(5.6, 5.9));
       return out;
     },
   },
@@ -456,20 +466,18 @@ const TYPEN: Record<string, Typ> = {
     },
   },
   wacholderheide: {
-    w: 4, d: 3.6, floors: 1, wand: '#e3d6b6', dach: '#5a4a3c', laden: '#3f4f8a', skala: 1, hoehe: 6,
-    grund: [-4.5, 21, -6, 12],
+    // Wacholderhof: Schäferhaus in der Heide mit Schuppen, zwei Wacholdersäulen, Beerenkörbe (die Heide wächst im Umkreis)
+    w: 6.5, d: 6, floors: 1, wand: '#e3d6b6', dach: '#5a4a3c', laden: '#3f4f8a', skala: 1, hoehe: 9,
+    grund: [-10, 9.5, -5, 9],
     fertig() {
       const t = TYPEN.wacholderheide;
-      const out: THREE.BufferGeometry[] = [...fachwerk(t.w, t.d, t.floors, t.wand, t.dach)];
-      // Heide mit Wacholdersäulen (schmale dunkelgrüne Kegel), Erika in Lila, Körbe mit Beeren
-      out.push(boxR(17, 0.25, 16, 12, G + 0.08, 3, '#8a7a52'));
-      const busch = [[6, -3], [9, 1], [12.5, -4], [15, 0.5], [18, -3], [7.5, 5.5], [11, 7], [14.5, 5], [18.5, 7.5], [16.5, -6]];
-      busch.forEach(([bx, bz], i) => {
-        out.push(paint(new THREE.ConeGeometry(0.9 + (i % 3) * 0.2, 4 + (i % 4) * 0.8, 6).translate(bx, G + 2 + (i % 4) * 0.4, bz), i % 2 ? '#2f5a3a' : '#3b6a44'));
-        out.push(paint(new THREE.SphereGeometry(0.7, 5, 4).scale(1.4, 0.4, 1.2).translate(bx + 1.4, G + 0.3, bz + 1.2), '#9a5aa8'));
-      });
-      out.push(walze(0.8, 0.7, -2.4, G + 0.35, 3.4, '#b0844e', 0, 0, 9));
-      for (let k = 0; k < 5; k++) out.push(paint(new THREE.SphereGeometry(0.25, 7, 5).translate(-2.6 + (k % 3) * 0.3, G + 0.8, 3.2 + (k % 2) * 0.3), '#3f4f8a'));
+      const out = [...hofHaus(t), ...scheune(3.25, 5, 5.4, '#cdbd96', t.dach)];
+      for (const [bx, bz, i] of [[-6.2, -1.8, 0], [-7.6, 2.4, 1], [-5.4, 5.4, 2]]) {
+        out.push(paint(new THREE.ConeGeometry(0.9 + i * 0.15, 4.2 + i * 0.6, 6).translate(bx, G + 2.1 + i * 0.3, bz), i % 2 ? '#2f5a3a' : '#3b6a44'));
+        out.push(paint(new THREE.SphereGeometry(0.7, 5, 4).scale(1.4, 0.4, 1.2).translate(bx + 1.3, G + 0.3, bz + 1.1), '#9a5aa8'));
+      }
+      out.push(walze(0.8, 0.7, -1.8, G + 0.35, 4.6, '#b0844e', 0, 0, 9));
+      for (let k = 0; k < 5; k++) out.push(paint(new THREE.SphereGeometry(0.25, 7, 5).translate(-2.0 + (k % 3) * 0.3, G + 0.8, 4.4 + (k % 2) * 0.3), '#3f4f8a'));
       return out;
     },
   },
@@ -955,7 +963,7 @@ const TYP_ANKER: Record<string, Anker[]> = {
   spinnerei: [{ art: 'rad', x: -4.2, y: G + 1.9, z: 6.5, r: 1.5, w: 0.3, achse: 'z', farbe: 'spinnrad' }],
   papiermuehle: [{ art: 'rad', x: -6.4, y: G + 2.4, z: -1, r: 2.4, w: 1.0, achse: 'x' }],
   molkerei: [{ art: 'kuehe', x: -4, y: G, z: 6, w: 4, d: 2.5, n: 3 }],
-  gerstenfeld: [{ art: 'muehle', x: 20, y: G, z: -3 }],
+  gerstenfeld: [{ art: 'muehle', x: -11, y: G, z: -2.5 }],
   lager: [{ art: 'hund', x: -6, y: G, z: 11, r: 3 }, { art: 'laterne', x: 3.6, y: G + 4.6, z: 5.7 }],
   schaenke: [{ art: 'laterne', x: 3.4, y: G + 3.6, z: 4.3 }],
 };
@@ -1034,10 +1042,10 @@ function warnTextur(): THREE.CanvasTexture {
 }
 
 /** Symbole für Stillstand: Abzeichen mit gezeichnetem Bild (ohne Schriftzeichen, damit es überall gleich aussieht). */
-type Symbol = 'kein_baum' | 'kein_fels' | 'kein_platz' | 'kein_arbeiter' | 'voll' | 'hunger' | 'kein_bauarbeiter' | 'kein_planierer'
+type Symbol = 'kein_baum' | 'kein_fels' | 'kein_platz' | 'kein_feld' | 'kein_arbeiter' | 'voll' | 'hunger' | 'kein_bauarbeiter' | 'kein_planierer'
   | 'kein_werkzeug' | 'hochwasser' | 'winter';
 const SYMBOL_ZUSTAENDE: Partial<Record<GebaeudeZustand, Symbol>> = {
-  kein_baum: 'kein_baum', kein_fels: 'kein_fels', kein_platz: 'kein_platz', kein_arbeiter: 'kein_arbeiter', voll: 'voll',
+  kein_baum: 'kein_baum', kein_fels: 'kein_fels', kein_platz: 'kein_platz', kein_feld: 'kein_feld', kein_arbeiter: 'kein_arbeiter', voll: 'voll',
   hunger: 'hunger', kein_bauarbeiter: 'kein_bauarbeiter', kein_planierer: 'kein_planierer',
   kein_werkzeug: 'kein_werkzeug', hochwasser: 'hochwasser', winter: 'winter',
 };
@@ -1055,6 +1063,13 @@ function symbolTextur(art: Symbol): THREE.CanvasTexture {
     g.beginPath(); g.moveTo(64, 20); g.lineTo(90, 62); g.lineTo(38, 62); g.closePath(); g.fill();
     g.beginPath(); g.moveTo(64, 42); g.lineTo(96, 88); g.lineTo(32, 88); g.closePath(); g.fill();
     g.fillStyle = '#6b4a2e'; g.fillRect(58, 88, 12, 16);
+  } else if (art === 'kein_feld') {
+    // Acker mit Furchen und Ähren
+    g.fillStyle = '#8a5a34'; g.beginPath(); g.moveTo(22, 96); g.lineTo(40, 58); g.lineTo(88, 58); g.lineTo(106, 96); g.closePath(); g.fill();
+    g.strokeStyle = '#5e3a20'; g.lineWidth = 5;
+    for (const x of [44, 64, 84]) { g.beginPath(); g.moveTo(x - (64 - x) * 0.1, 60); g.lineTo(x - (64 - x) * 0.6, 94); g.stroke(); }
+    g.strokeStyle = '#c9a227'; g.lineWidth = 6;
+    for (const x of [48, 64, 80]) { g.beginPath(); g.moveTo(x, 58); g.lineTo(x, 26); g.stroke(); g.beginPath(); g.ellipse(x, 30, 5, 10, 0, 0, Math.PI * 2); g.fillStyle = '#e0b84a'; g.fill(); }
   } else if (art === 'kein_fels') {
     g.fillStyle = '#8f8a80'; g.strokeStyle = '#3a2a10'; g.lineWidth = 5;
     g.beginPath(); g.moveTo(26, 90); g.lineTo(40, 50); g.lineTo(64, 36); g.lineTo(92, 52); g.lineTo(104, 90); g.closePath(); g.fill(); g.stroke();

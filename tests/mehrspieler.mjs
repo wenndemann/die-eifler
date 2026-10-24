@@ -6,7 +6,8 @@
 // M10: Regeln (Gebiet, Ziel), Gebiet und Eifel-Punkte bei beiden gleich, Ortsfenster. M11: Völkchen beider Dörfer bei beiden gleich. M12: Uhrzeit
 // und Wetter-Optik (Talnebel/Aue) bei beiden gleich. M14: Mainacht und Maibäume bei beiden gleich. M15: Nacht, Zollhäuser, Grenzsteine,
 // Teile des Großen Funds und Reiz bei beiden gleich, Grenzstein-Befehl des Gasts im Protokoll beider; Lebendige Eifel läuft in beiden;
-// Holzbrücken (gebaute Brücken, fehlende je Weg) bei beiden gleich.
+// Holzbrücken (gebaute Brücken, fehlende je Weg) bei beiden gleich. Höfe und Felder: beide bauen einen Kartoffelhof, die Felder
+// (Natur je Hex) sind bei beiden gleich und werden gezeichnet.
 //
 // Läuft in npm run test:smoke mit; allein:  node tests/mehrspieler.mjs   (Server und Vite startet es selbst)
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
@@ -33,20 +34,27 @@ export async function starteVermittlung() {
   return { port, schliessen: () => s.schliessen() };
 }
 
-/** Im Spiel eines Fensters: ein Gebäude nahe dem eigenen Lager mit Weg zur Lagerfahne bauen. */
-function baue(typ) {
+/**
+ * Im Spiel eines Fensters: ein Gebäude nahe dem eigenen Lager mit Weg zur Lagerfahne bauen. `arg`: Typ oder { typ, meiden } – Hexe, auf
+ * die gerade erst ein Bauauftrag ging (der Befehl wirkt erst ein paar Ticks später), samt Weg und Nachbar-Hexen meiden.
+ */
+function baue(arg) {
+  const typ = typeof arg === 'string' ? arg : arg.typ, meiden = typeof arg === 'string' ? [] : arg.meiden;
   const s = window.eifeler.spiel, sim = s.sim, ich = s.ich, L = s.lagerHex;
   const ab = (a, b) => (Math.abs(a.q - b.q) + Math.abs(a.r - b.r) + Math.abs(a.q - b.q + a.r - b.r)) / 2;
-  for (let d = 2; d <= 7; d++) {
+  for (let d = 2; d <= 9; d++) {
     for (let dr = -d; dr <= d; dr++) {
       for (let dq = -d; dq <= d; dq++) {
         const h = { q: L.q + dq, r: L.r + dr };
-        if (ab(h, L) !== d || !sim.kannBauen(typ, h.q, h.r, ich)) continue;
-        const weg = sim.wegAbschnitt(h, L, [], 12, ich);
+        if (ab(h, L) !== d || !sim.kannBauen(typ, h.q, h.r, ich) || meiden.some((m) => ab(m, h) <= 1)) continue;
+        // Weg zur Lagerfahne, sonst zur nächsten eigenen Fahne (an der Lagerfahne ist nicht in jeder Richtung Platz)
+        const ziele = [L, ...sim.sicht(ich).fahnen.filter((f) => f.sp === ich && ab(f, h) <= 6).sort((a, b) => ab(a, h) - ab(b, h)).slice(0, 4)];
+        let weg = null;
+        for (const z of ziele) if (!weg) weg = sim.wegAbschnitt(h, z, meiden.filter((m) => m.q !== z.q || m.r !== z.r), 12, ich);
         if (!weg) continue;
         s.befehl({ art: 'gebaeude', typ, q: h.q, r: h.r });
         s.befehl({ art: 'weg', pfad: weg });
-        return { ...h, ich };
+        return { ...h, ich, weg };
       }
     }
   }
@@ -133,14 +141,20 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
     const b0 = await host.evaluate(baue, 'holzfaeller');
     const b1 = await gast.evaluate(baue, 'holzfaeller');
     if (!b0 || !b1) fail(`Kein Bauplatz gefunden: ${JSON.stringify([b0, b1])}`);
+    const h0 = await host.evaluate(baue, { typ: 'kartoffelfeld', meiden: b0 ? [b0, ...b0.weg] : [] });
+    const h1 = await gast.evaluate(baue, { typ: 'kartoffelfeld', meiden: b1 ? [b1, ...b1.weg] : [] });
+    if (!h0 || !h1) fail(`Kein Bauplatz für den Kartoffelhof: ${JSON.stringify([h0, h1])}`);
     const fps = await Promise.all([host, gast].map((x) => x.evaluate(() => new Promise((ok) => { let n = 0; const t = performance.now(); const f = () => { n++; if (performance.now() - t < 3000) requestAnimationFrame(f); else ok(Math.round((n / (performance.now() - t)) * 10000) / 10); }; requestAnimationFrame(f); }))));
     info(`Mehrspieler: Bilder je Sekunde ${fps.join(' / ')}`);
     await host.waitForTimeout(15000);
+    // bei sehr wenigen Bildern je Sekunde (Software-Grafik, zwei Szenen) brauchen die Befehle über das schlechte Netz länger: bis zu 60 s
+    // warten, bis beide Fenster beide Holzfäller kennen
+    await Promise.all([host, gast].map((x) => x.waitForFunction(() => new Set(window.eifeler.spiel.sicht.gebaeude.filter((g) => g.typ === 'holzfaeller').map((g) => g.sp)).size === 2, null, { timeout: 60000, polling: 500 }).catch(() => undefined)));
     const sicht = await Promise.all([host, gast].map((s) => s.evaluate(() => {
       const v = window.eifeler.spiel.sicht;
       return { tick: v.tick, tempo: window.eifeler.partie.tempo, hf: v.gebaeude.filter((g) => g.typ === 'holzfaeller').map((g) => g.sp).sort() };
     })));
-    info(`Mehrspieler: nach 15 s Tick ${sicht.map((x) => x.tick).join('/')}, Tempo ${sicht[1].tempo}, Holzfäller von ${JSON.stringify(sicht[1].hf)}`);
+    info(`Mehrspieler: nach 15 s (und Warten auf die Holzfäller) Tick ${sicht.map((x) => x.tick).join('/')}, Tempo ${sicht[1].tempo}, Holzfäller von ${JSON.stringify(sicht[1].hf)}`);
     if (sicht[1].tempo !== 3) fail('Tempo 3 kam beim Gast nicht an');
     for (const x of sicht) if (JSON.stringify(x.hf) !== '[0,1]') fail(`Nicht beide Holzfäller sichtbar: ${JSON.stringify(x.hf)}`);
     // M7: Fenster im Mehrspieler – der Gast stellt die Warenverteilung um (Fensterknopf), der Gastgeber lässt seinen Holzfäller ruhen
@@ -254,6 +268,9 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
         kaffee: s.dorf.verteilung.length === s.dorf.erzeugt.length,
         leben: !!sp.leben?.zahlen && sp.gras?.anzahl >= 0 && sp.leben.group.children.length > 0,
         bruecken: JSON.stringify([sim.stand().bruecken, s.segmente.map((x) => x.bruecken)]),
+        felder: (() => { const n = sim.sicht(0).natur; let h = 0, z = 0; n.feld.forEach((v, i) => { if (v) { z++; h = (h * 31 + i * 7 + v * 3 + n.feldStufe[i]) % 1000003; } }); return `${z}:${h}`; })(),
+        hoefe: [0, 1].map((i) => sim.sicht(i).gebaeude.filter((g) => g.sp === i && g.typ === 'kartoffelfeld').map((g) => `${g.zustand}/${g.erzeugt}`).join('')).join(','),
+        gezeichnet: sp.felder.anzahl,
       };
     })));
     info(`Mehrspieler M15: Nacht ${m15.map((x) => x.nacht).join('/')}, Zollhäuser ${m15[0].zoll}, Grenzsteine ${m15[0].steine}, Teile ${m15.map((x) => x.teile).join(' / ')}, Reiz ${m15.map((x) => x.reiz).join(' / ')}`);
@@ -264,6 +281,11 @@ export async function mehrspielerTest({ basis, param, aus, info, fail, exe }) {
     if (m15.some((x) => !x.kaffee)) fail('Mehrspieler M15: Kaffee fehlt in Verteilung oder Statistik');
     info(`Mehrspieler Brücken: ${m15.map((x) => x.bruecken).join(' / ')}`);
     if (m15[0].tick === m15[1].tick && m15[0].bruecken !== m15[1].bruecken) fail(`Mehrspieler: Holzbrücken verschieden: ${m15.map((x) => x.bruecken).join(' / ')}`);
+    info(`Mehrspieler Höfe: Felder (Zahl:Hash) ${m15.map((x) => x.felder).join(' / ')}, Höfe ${m15.map((x) => x.hoefe).join(' / ')}, gezeichnet ${m15.map((x) => x.gezeichnet).join(' / ')}`);
+    if (m15[0].tick === m15[1].tick && m15[0].felder !== m15[1].felder) fail(`Mehrspieler: Felder verschieden: ${m15.map((x) => x.felder).join(' / ')}`);
+    if (m15.some((x) => x.hoefe.split(',').length !== 2 || x.hoefe.split(',').some((h) => !h))) fail(`Mehrspieler: Kartoffelhöfe fehlen: ${m15.map((x) => x.hoefe).join(' / ')}`);
+    // gezeichnet wird im nächsten Bild: bei wenigen Bildern je Sekunde kann ein frisch gesätes Feld noch fehlen
+    if (m15.some((x) => Number(x.felder.split(':')[0]) >= 3 && x.gezeichnet === 0)) fail(`Mehrspieler: Felder werden nicht gezeichnet: ${m15.map((x) => `${x.gezeichnet} von ${x.felder}`).join(' / ')}`);
     if (m15.some((x) => !x.leben)) fail('Mehrspieler M15: Lebendige Eifel (Rauch, Tiere, Gras) läuft nicht in beiden Fenstern');
     if (Math.abs(m12[0].tick - m12[1].tick) < 40 && Math.abs(Number(m12[0].uhr) - Number(m12[1].uhr)) > 1) fail(`Mehrspieler M12: Uhrzeit verschieden: ${m12.map((x) => x.uhr).join(' / ')}`);
     info(`Mehrspieler M7: Verteilung gleich ${m7b[0].vert === m7b[1].vert}, Holzfäller ruht ${m7b.map((x) => x.ruht).join('/')}, Statistik-Punkte ${m7b.map((x) => x.stat).join('/')}`);

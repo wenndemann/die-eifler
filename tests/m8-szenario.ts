@@ -16,14 +16,15 @@ type Hx = { q: number; r: number };
 export const M8_PLAN: { typ: string; nahe?: Hx }[][] = [
   M5_PLAN,
   [
-    { typ: 'reifekeller' }, { typ: 'gerstenfeld' }, { typ: 'brauerei' }, { typ: 'wacholderheide' }, { typ: 'brennerei' },
+    // Höfe brauchen Platz für ihre Felder: der Bot setzt sie wie ein Mensch, der das weiß, ins freie Land
+    { typ: 'reifekeller' }, { typ: 'gerstenfeld', nahe: { q: -9, r: 3 } }, { typ: 'brauerei' }, { typ: 'wacholderheide', nahe: { q: 1, r: 9 } }, { typ: 'brennerei' },
     { typ: 'schafstall', nahe: { q: -6, r: 8 } }, { typ: 'kaeserei' }, { typ: 'bienenstock', nahe: { q: 7, r: 4 } },
-    { typ: 'gerstenfeld' }, { typ: 'foerster', nahe: { q: -7, r: -4 } }, { typ: 'holzfaeller', nahe: { q: 10, r: 0 } },
-    { typ: 'reifekeller' }, { typ: 'bienenstock', nahe: { q: -8, r: 0 } }, { typ: 'kartoffelfeld' }, { typ: 'schaenke' },
+    { typ: 'gerstenfeld', nahe: { q: -3, r: 10 } }, { typ: 'foerster', nahe: { q: -7, r: -4 } }, { typ: 'holzfaeller', nahe: { q: 10, r: 0 } },
+    { typ: 'reifekeller' }, { typ: 'bienenstock', nahe: { q: -8, r: 0 } }, { typ: 'kartoffelfeld', nahe: { q: -11, r: -2 } }, { typ: 'schaenke' },
   ],
   [
     { typ: 'koehlerei' }, { typ: 'erzgrube', nahe: { q: 8, r: -8 } }, { typ: 'eisenhuette' }, { typ: 'schmiede' },
-    { typ: 'holzfaeller', nahe: { q: 4, r: -6 } }, { typ: 'foerster', nahe: { q: 6, r: -6 } }, { typ: 'obstwiese' }, { typ: 'mostkeller' },
+    { typ: 'holzfaeller', nahe: { q: 4, r: -6 } }, { typ: 'foerster', nahe: { q: 6, r: -6 } }, { typ: 'obstwiese', nahe: { q: 6, r: 9 } }, { typ: 'mostkeller' },
     { typ: 'erzgrube', nahe: { q: -8, r: 6 } }, { typ: 'schafstall' }, { typ: 'kaeserei' }, { typ: 'holzfaeller', nahe: { q: -5, r: -6 } },
   ],
 ];
