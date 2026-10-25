@@ -32,6 +32,7 @@ Voraussetzungen: Node.js ≥ 20 (für eigene Weltdaten zusätzlich Python ≥ 3.
     cd die-eifler
     npm ci
     tools/welt-laden.sh eifel               # fertige Weltdaten der ganzen Eifel aus dem GitHub-Release
+                                            # Windows: powershell -ExecutionPolicy Bypass -File tools\welt-laden.ps1 eifel
     npm run dev                             # http://localhost:5173
 
 Kleinere Gebiete: `tools/welt-laden.sh nideggen` (oder `nordeifel`, `eifelsteig`, ein Völkchen-Gebiet). Selbst rechnen:

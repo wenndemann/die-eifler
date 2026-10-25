@@ -28,6 +28,7 @@ Wat mer bruche deit: Node.js ≥ 20 (för eijene Weltdate och Python ≥ 3.10).
     cd die-eifler
     npm ci
     tools/welt-laden.sh eifel               # fäädije Weltdate vun d'r janze Eifel usem GitHub-Release
+                                            # Windows: powershell -ExecutionPolicy Bypass -File tools\welt-laden.ps1 eifel
     npm run dev                             # http://localhost:5173
 
 Kleener Jebiete: `tools/welt-laden.sh nideggen` (oder `nordeifel`, `eifelsteig`). Selvs rechne:
