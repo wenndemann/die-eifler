@@ -1,0 +1,53 @@
+# Die Eifeler mit Docker Compose: Spiel, Weltdaten und Vermittlung in einem Dienst (http://localhost:8787).
+#
+#   docker compose up -d --build
+#   WELT_GEBIET=nideggen docker compose up -d --build                  # kleineres Gebiet ins Image
+#   docker compose --profile welt run --rm welt-laden nordeifel        # weiteres Gebiet ins Volume laden
+#
+# Die Weltdaten liegen im Volume „welt-daten“. Beim ersten Start füllt Docker es mit den Daten aus dem Image; danach bleibt
+# es, wie es ist (neues Image mit neueren Daten: docker compose down -v, dann wieder up). Eigene Daten statt Volume:
+# unten „welt-daten:/app/welt-daten“ durch „./welt-daten:/app/welt-daten:ro“ ersetzen.
+services:
+  spiel:
+    build:
+      context: .
+      args:
+        WELT_GEBIET: ${WELT_GEBIET:-eifel}
+    image: die-eifeler
+    ports:
+      - "${PORT:-8787}:8787"
+    environment:
+      # Notfall-Relais für schwierige Netze (siehe Dienst coturn unten und server/coturn/turnserver.conf)
+      TURN_URLS: ${TURN_URLS:-}
+      TURN_SECRET: ${TURN_SECRET:-}
+      STUN_URLS: ${STUN_URLS:-}
+    volumes:
+      - welt-daten:/app/welt-daten
+    restart: unless-stopped
+
+  # Lädt Gebiete aus dem GitHub-Release ins selbe Volume (tools/welt-laden.sh); nur mit --profile welt
+  welt-laden:
+    profiles: [welt]
+    build:
+      context: .
+      target: welt
+      args:
+        WELT_GEBIET: ""
+    volumes:
+      - welt-daten:/app/welt-daten
+
+  # Notfall-Relais (coturn), nur nötig, wenn sich zwei Browser nicht direkt erreichen. Vorher in server/coturn/turnserver.conf
+  # realm, static-auth-secret und Zertifikate eintragen; dasselbe Geheimnis als TURN_SECRET, dazu z. B.
+  # TURN_URLS=turn:turn.example.de:3478,turns:turn.example.de:5349. Start: docker compose --profile relais up -d
+  coturn:
+    profiles: [relais]
+    image: coturn/coturn:4.6
+    network_mode: host
+    command: ["-c", "/etc/coturn/turnserver.conf"]
+    volumes:
+      - ./server/coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    restart: unless-stopped
+
+volumes:
+  welt-daten:
