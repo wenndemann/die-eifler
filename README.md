@@ -48,6 +48,22 @@ Vermittlungs-Server und für schwierige Netze ein TURN-Relais ([coturn](https://
 
 Mit `STATISCH=dist WELT_DATEN=welt-daten` liefert derselbe Prozess auch das gebaute Spiel und die Weltdaten aus.
 
+## Mit Docker
+
+Ein Image mit gebautem Spiel, Weltdaten (aus dem GitHub-Release) und Vermittlungs-Server, ein Port für alles:
+
+    docker build -t die-eifeler .                                      # Weltdaten der ganzen Eifel ins Image
+    docker run -p 8787:8787 die-eifeler                                # http://localhost:8787
+    docker run -p 8787:8787 -e TURN_URLS=turn:turn.example.de:3478 -e TURN_SECRET=<geheim> die-eifeler
+
+Ohne Weltdaten im Image (`--build-arg WELT_GEBIET=`) und stattdessen eigene einhängen:
+`docker run -p 8787:8787 -v "$PWD/welt-daten:/app/welt-daten:ro" die-eifeler`. Mit Compose (Weltdaten im Volume, coturn als
+Profil `relais`, Vorlage `server/coturn/turnserver.conf`):
+
+    docker compose up -d --build
+    docker compose --profile welt run --rm welt-laden eifel            # Weltdaten im Volume neu laden
+    docker compose --profile relais up -d                              # dazu das Notfall-Relais
+
 ## Befehle
 
 | Befehl | Zweck |

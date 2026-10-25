@@ -33,6 +33,16 @@ Wat mer bruche deit: Node.js ≥ 20 (för eijene Weltdate och Python ≥ 3.10).
 Kleener Jebiete: `tools/welt-laden.sh nideggen` (oder `nordeifel`, `eifelsteig`). Selvs rechne:
 `npm run setup -- --gebiet nideggen` (~10 Minütche, luur [tools/map/README.md](tools/map/README.md)).
 
+## Met Docker
+
+Alles en eenem Kiss – Spill, Weltdate un Vermittlung, eene Port:
+
+    docker build -t die-eifeler .
+    docker run -p 8787:8787 die-eifeler                                # http://localhost:8787
+    docker compose up -d --build                                       # oder met Compose (Relais: --profile relais)
+
+Eijene Weltdate enhänge: `-v "$PWD/welt-daten:/app/welt-daten:ro"`. Mieh dovun steiht em [README](README.md#mit-docker).
+
 ## Befehle
 
 | Befehl | För wat |
