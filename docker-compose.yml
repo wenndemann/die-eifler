@@ -1,0 +1,52 @@
+# Die Eifeler mit Docker Compose: Spiel, Weltdaten und Vermittlung in einem Dienst (http://localhost:8787).
+#
+# Weltdaten, beides geht:
+#  - Ordner welt-daten/ neben dieser Datei (eingehängt nach /welt, nur lesend), also das, was tools/welt-laden.sh bzw. unter
+#    Windows tools\welt-laden.ps1 dort ablegt. Liegt dort eine versions.json, gewinnt der Ordner. Anderer Ordner: WELT_ORDNER=…
+#  - sonst die Weltdaten im Image (beim Bauen geladen, Gebiet WELT_GEBIET, Standard eifel; WELT_GEBIET= baut ohne).
+#
+#   docker compose up -d --build
+#   docker compose --profile welt run --rm welt-laden eifel            # Weltdaten per Docker in den Ordner laden
+#
+# Neue Weltdaten im Ordner gelten sofort (Seite neu laden); nur beim ersten Befüllen eines leeren Ordners einmal neu starten.
+services:
+  spiel:
+    build:
+      context: .
+      args:
+        WELT_GEBIET: ${WELT_GEBIET-eifel}
+    image: die-eifeler
+    ports:
+      - "${PORT:-8787}:8787"
+    environment:
+      # Notfall-Relais für schwierige Netze (siehe Dienst coturn unten und server/coturn/turnserver.conf)
+      TURN_URLS: ${TURN_URLS:-}
+      TURN_SECRET: ${TURN_SECRET:-}
+      STUN_URLS: ${STUN_URLS:-}
+    volumes:
+      - ${WELT_ORDNER:-./welt-daten}:/welt:ro
+    restart: unless-stopped
+
+  # Lädt Gebiete aus dem GitHub-Release in denselben Ordner (tools/welt-laden.sh); nur mit --profile welt
+  welt-laden:
+    profiles: [welt]
+    build:
+      context: .
+      target: welt
+      args:
+        WELT_GEBIET: ""
+    volumes:
+      - ${WELT_ORDNER:-./welt-daten}:/app/welt-daten
+
+  # Notfall-Relais (coturn), nur nötig, wenn sich zwei Browser nicht direkt erreichen. Vorher in server/coturn/turnserver.conf
+  # realm, static-auth-secret und Zertifikate eintragen; dasselbe Geheimnis als TURN_SECRET, dazu z. B.
+  # TURN_URLS=turn:turn.example.de:3478,turns:turn.example.de:5349. Start: docker compose --profile relais up -d
+  coturn:
+    profiles: [relais]
+    image: coturn/coturn:4.6
+    network_mode: host
+    command: ["-c", "/etc/coturn/turnserver.conf"]
+    volumes:
+      - ./server/coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    restart: unless-stopped

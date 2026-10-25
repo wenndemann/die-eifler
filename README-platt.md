@@ -28,10 +28,23 @@ Wat mer bruche deit: Node.js ≥ 20 (för eijene Weltdate och Python ≥ 3.10).
     cd die-eifler
     npm ci
     tools/welt-laden.sh eifel               # fäädije Weltdate vun d'r janze Eifel usem GitHub-Release
+                                            # Windows: powershell -ExecutionPolicy Bypass -File tools\welt-laden.ps1 eifel
     npm run dev                             # http://localhost:5173
 
 Kleener Jebiete: `tools/welt-laden.sh nideggen` (oder `nordeifel`, `eifelsteig`). Selvs rechne:
 `npm run setup -- --gebiet nideggen` (~10 Minütche, luur [tools/map/README.md](tools/map/README.md)).
+
+## Met Docker
+
+Alles en eenem Kiss – Spill, Weltdate un Vermittlung, eene Port:
+
+    docker build -t die-eifeler .
+    docker run -p 8787:8787 die-eifeler                                # http://localhost:8787
+    docker compose up -d --build                                       # oder met Compose (Relais: --profile relais)
+
+De Weltdate us dem Ordner `welt-daten/` (jelade met `tools/welt-laden.sh` oder `tools\welt-laden.ps1`) enhänge:
+`-v "$PWD/welt-daten:/welt:ro"` (Windows: `-v "${PWD}\welt-daten:/welt:ro"`). Es dä Ordner leer, nimmp hä de Date usem Image;
+Compose mäht dat vun selvs. Mieh dovun steiht em [README](README.md#mit-docker).
 
 ## Befehle
 

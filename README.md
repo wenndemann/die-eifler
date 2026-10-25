@@ -32,6 +32,7 @@ Voraussetzungen: Node.js ≥ 20 (für eigene Weltdaten zusätzlich Python ≥ 3.
     cd die-eifler
     npm ci
     tools/welt-laden.sh eifel               # fertige Weltdaten der ganzen Eifel aus dem GitHub-Release
+                                            # Windows: powershell -ExecutionPolicy Bypass -File tools\welt-laden.ps1 eifel
     npm run dev                             # http://localhost:5173
 
 Kleinere Gebiete: `tools/welt-laden.sh nideggen` (oder `nordeifel`, `eifelsteig`, ein Völkchen-Gebiet). Selbst rechnen:
@@ -47,6 +48,31 @@ Vermittlungs-Server und für schwierige Netze ein TURN-Relais ([coturn](https://
     TURN_URLS=turn:turn.example.de:3478 TURN_SECRET=<geheim> npm run vermittlung
 
 Mit `STATISCH=dist WELT_DATEN=welt-daten` liefert derselbe Prozess auch das gebaute Spiel und die Weltdaten aus.
+
+## Mit Docker
+
+Ein Image mit gebautem Spiel, Weltdaten (aus dem GitHub-Release) und Vermittlungs-Server, ein Port für alles:
+
+    docker build -t die-eifeler .                                      # Weltdaten der ganzen Eifel ins Image
+    docker run -p 8787:8787 die-eifeler                                # http://localhost:8787
+    docker run -p 8787:8787 -e TURN_URLS=turn:turn.example.de:3478 -e TURN_SECRET=<geheim> die-eifeler
+
+Eigene Weltdaten aus einem Ordner gehen auch, etwa die mit `tools/welt-laden.sh eifel` bzw. unter Windows
+`tools\welt-laden.ps1 eifel` geladenen: den Ordner nach `/welt` einhängen. Liegt dort eine `versions.json`, nimmt der Container
+diese Daten, sonst die im Image (dann kann das Image auch ohne gebaut werden: `--build-arg WELT_GEBIET=`):
+
+    docker run -p 8787:8787 -v "$PWD/welt-daten:/welt:ro" die-eifeler            # Linux/macOS
+    docker run -p 8787:8787 -v "${PWD}\welt-daten:/welt:ro" die-eifeler          # Windows PowerShell
+
+Docker Compose macht das von selbst mit dem Ordner `welt-daten/` neben der `docker-compose.yml` (anderer Ordner:
+`WELT_ORDNER=…`); ist er leer, gelten die Daten im Image. coturn gibt es als Profil `relais` (Vorlage `server/coturn/turnserver.conf`):
+
+    docker compose up -d --build
+    docker compose --profile welt run --rm welt-laden eifel            # Weltdaten per Docker in den Ordner laden
+    docker compose --profile relais up -d                              # dazu das Notfall-Relais
+
+Auf einem NAS (z. B. Synology Container Manager): Projektordner mit dem Repo als Projekt aus der `docker-compose.yml` anlegen,
+oder beim Container unter „Volume“ einen freigegebenen Ordner mit den Weltdaten nach `/welt` einhängen.
 
 ## Befehle
 
