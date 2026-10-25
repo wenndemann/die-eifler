@@ -1,18 +1,20 @@
 # Die Eifeler mit Docker Compose: Spiel, Weltdaten und Vermittlung in einem Dienst (http://localhost:8787).
 #
-#   docker compose up -d --build
-#   WELT_GEBIET=nideggen docker compose up -d --build                  # kleineres Gebiet ins Image
-#   docker compose --profile welt run --rm welt-laden nordeifel        # weiteres Gebiet ins Volume laden
+# Weltdaten, beides geht:
+#  - Ordner welt-daten/ neben dieser Datei (eingehängt nach /welt, nur lesend), also das, was tools/welt-laden.sh bzw. unter
+#    Windows tools\welt-laden.ps1 dort ablegt. Liegt dort eine versions.json, gewinnt der Ordner. Anderer Ordner: WELT_ORDNER=…
+#  - sonst die Weltdaten im Image (beim Bauen geladen, Gebiet WELT_GEBIET, Standard eifel; WELT_GEBIET= baut ohne).
 #
-# Die Weltdaten liegen im Volume „welt-daten“. Beim ersten Start füllt Docker es mit den Daten aus dem Image; danach bleibt
-# es, wie es ist (neues Image mit neueren Daten: docker compose down -v, dann wieder up). Eigene Daten statt Volume:
-# unten „welt-daten:/app/welt-daten“ durch „./welt-daten:/app/welt-daten:ro“ ersetzen.
+#   docker compose up -d --build
+#   docker compose --profile welt run --rm welt-laden eifel            # Weltdaten per Docker in den Ordner laden
+#
+# Neue Weltdaten im Ordner gelten sofort (Seite neu laden); nur beim ersten Befüllen eines leeren Ordners einmal neu starten.
 services:
   spiel:
     build:
       context: .
       args:
-        WELT_GEBIET: ${WELT_GEBIET:-eifel}
+        WELT_GEBIET: ${WELT_GEBIET-eifel}
     image: die-eifeler
     ports:
       - "${PORT:-8787}:8787"
@@ -22,10 +24,10 @@ services:
       TURN_SECRET: ${TURN_SECRET:-}
       STUN_URLS: ${STUN_URLS:-}
     volumes:
-      - welt-daten:/app/welt-daten
+      - ${WELT_ORDNER:-./welt-daten}:/welt:ro
     restart: unless-stopped
 
-  # Lädt Gebiete aus dem GitHub-Release ins selbe Volume (tools/welt-laden.sh); nur mit --profile welt
+  # Lädt Gebiete aus dem GitHub-Release in denselben Ordner (tools/welt-laden.sh); nur mit --profile welt
   welt-laden:
     profiles: [welt]
     build:
@@ -34,7 +36,7 @@ services:
       args:
         WELT_GEBIET: ""
     volumes:
-      - welt-daten:/app/welt-daten
+      - ${WELT_ORDNER:-./welt-daten}:/app/welt-daten
 
   # Notfall-Relais (coturn), nur nötig, wenn sich zwei Browser nicht direkt erreichen. Vorher in server/coturn/turnserver.conf
   # realm, static-auth-secret und Zertifikate eintragen; dasselbe Geheimnis als TURN_SECRET, dazu z. B.
@@ -48,6 +50,3 @@ services:
       - ./server/coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
     restart: unless-stopped
-
-volumes:
-  welt-daten:

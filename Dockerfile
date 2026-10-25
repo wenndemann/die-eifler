@@ -3,8 +3,9 @@
 #
 #   docker build -t die-eifeler .                              # mit Weltdaten der ganzen Eifel
 #   docker build --build-arg WELT_GEBIET=nideggen -t … .       # kleineres Gebiet (mehrere: "nideggen nordeifel")
-#   docker build --build-arg WELT_GEBIET= -t … .               # ohne Weltdaten, dann als Volume nach /app/welt-daten
+#   docker build --build-arg WELT_GEBIET= -t … .               # ohne Weltdaten im Image
 #   docker run -p 8787:8787 die-eifeler                        # http://localhost:8787
+#   docker run -p 8787:8787 -v ./welt-daten:/welt:ro die-eifeler   # eigene Weltdaten aus einem Ordner (gehen vor)
 
 ARG NODE_VERSION=22
 
@@ -39,12 +40,12 @@ COPY server server
 COPY data data
 COPY --from=build /app/dist dist
 COPY --from=welt --chown=node:node /app/welt-daten welt-daten
+# Weltdaten: ein nach /welt eingehängter Ordner mit versions.json geht vor, sonst die im Image (server/docker-start.sh).
 # Weitere Umgebung beim Start (docker run -e …): TURN_URLS, TURN_SECRET, STUN_URLS für das Notfall-Relais (server/coturn/)
 ENV PORT=8787 \
-    STATISCH=/app/dist \
-    WELT_DATEN=/app/welt-daten
+    STATISCH=/app/dist
 EXPOSE 8787
 USER node
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s \
   CMD node -e "fetch('http://127.0.0.1:'+process.env.PORT+'/vermittlung/status').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
-CMD ["node", "server/vermittlung.mjs"]
+CMD ["sh", "server/docker-start.sh"]
