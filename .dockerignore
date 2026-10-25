@@ -1,0 +1,17 @@
+# Nur Quellen ins Build-Kontext; Pakete, Builds und Weltdaten entstehen im Image
+.git
+.github
+.claude
+node_modules
+dist
+dist-share
+welt-daten
+test-results
+playwright-report
+tools/map/raw
+tools/map/arbeit
+**/__pycache__
+Dockerfile
+docker-compose.yml
+.dockerignore
+*.md
