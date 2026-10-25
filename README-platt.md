@@ -42,7 +42,9 @@ Alles en eenem Kiss – Spill, Weltdate un Vermittlung, eene Port:
     docker run -p 8787:8787 die-eifeler                                # http://localhost:8787
     docker compose up -d --build                                       # oder met Compose (Relais: --profile relais)
 
-Eijene Weltdate enhänge: `-v "$PWD/welt-daten:/app/welt-daten:ro"`. Mieh dovun steiht em [README](README.md#mit-docker).
+De Weltdate us dem Ordner `welt-daten/` (jelade met `tools/welt-laden.sh` oder `tools\welt-laden.ps1`) enhänge:
+`-v "$PWD/welt-daten:/welt:ro"` (Windows: `-v "${PWD}\welt-daten:/welt:ro"`). Es dä Ordner leer, nimmp hä de Date usem Image;
+Compose mäht dat vun selvs. Mieh dovun steiht em [README](README.md#mit-docker).
 
 ## Befehle
 
